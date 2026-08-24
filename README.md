@@ -23,7 +23,7 @@ Conçue pour être utilisée **localement**, sans serveur ni télémétrie : tou
 
 ## Essayer TraCflux
 
-**[Ouvrir l'application](https://thierryclm.github.io/Diagramme_Feux/?example=carrefour)** — un carrefour d'exemple s'ouvre directement, sans compte à créer et sans rien installer.
+**[Ouvrir l'application](https://tracflux.com/?example=carrefour)** — un carrefour d'exemple s'ouvre directement, sans compte à créer et sans rien installer.
 
 Pour l'avoir sous la main : le bouton **« Installer cette app »** de la barre d'adresse (Chrome ou Edge) en fait un raccourci sur le bureau, et l'application fonctionne ensuite hors connexion.
 
