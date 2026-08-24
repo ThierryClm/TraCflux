@@ -2917,12 +2917,12 @@ const GreenWavePage = () => {
                                 <div style={{ marginTop: '4px' }}>
                                     Code source :{' '}
                                     <a
-                                        href="https://github.com/ThierryClm/Diagramme_Feux"
+                                        href="https://github.com/ThierryClm/TraCflux"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         style={{ color: '#4ecdc4' }}
                                     >
-                                        github.com/ThierryClm/Diagramme_Feux
+                                        github.com/ThierryClm/TraCflux
                                     </a>
                                 </div>
                             </div>

@@ -4,7 +4,7 @@
 
 Si vous identifiez une vulnérabilité de sécurité dans TraCflux, merci de **ne pas ouvrir d'issue publique**. Contactez-moi directement via :
 
-- **GitHub Security Advisory** : [ouvrir un rapport privé](https://github.com/ThierryClm/Diagramme_Feux/security/advisories/new)
+- **GitHub Security Advisory** : [ouvrir un rapport privé](https://github.com/ThierryClm/TraCflux/security/advisories/new)
 
 Incluez autant de détails que possible :
 - Description de la vulnérabilité

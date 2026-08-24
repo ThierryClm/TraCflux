@@ -1,6 +1,6 @@
 # Questions fréquentes
 
-Cette FAQ répond aux questions courantes sur **TraCflux**. Si la réponse à votre question ne s'y trouve pas, ouvrez une [issue GitHub](https://github.com/ThierryClm/Diagramme_Feux/issues).
+Cette FAQ répond aux questions courantes sur **TraCflux**. Si la réponse à votre question ne s'y trouve pas, ouvrez une [issue GitHub](https://github.com/ThierryClm/TraCflux/issues).
 
 ---
 
@@ -45,7 +45,7 @@ Pour les autres outils, l'import natif reste aujourd'hui limité (Excel partiel,
 
 L'application étant **libre et open source**, l'ajout d'un parseur pour un format donné reste tout à fait envisageable :
 
-- **Faites remonter le besoin :** ouvrez une [issue GitHub](https://github.com/ThierryClm/Diagramme_Feux/issues) en précisant l'outil source, le format de sortie et un exemple de fichier (anonymisé si nécessaire). Plus le besoin est partagé, plus l'effort de développement peut être priorisé.
+- **Faites remonter le besoin :** ouvrez une [issue GitHub](https://github.com/ThierryClm/TraCflux/issues) en précisant l'outil source, le format de sortie et un exemple de fichier (anonymisé si nécessaire). Plus le besoin est partagé, plus l'effort de développement peut être priorisé.
 - **Contribuez ou faites contribuer :** un développeur tiers peut proposer un parseur via une *pull request*. Le format `.json` natif sert de structure cible.
 
 **En pratique, en attendant qu'un parseur existe :** l'approche pragmatique consiste à démarrer par **un ou deux carrefours pilotes** que vous ressaisissez intégralement. Cela vous permet de valider concrètement l'apport de l'outil sur votre activité avant d'engager une migration plus large. Une fois la valeur ajoutée confirmée, vous pouvez soit demander le développement d'un parseur (issue GitHub avec un échantillon de votre format), soit organiser la ressaisie progressive du parc.
@@ -56,7 +56,7 @@ L'application étant **libre et open source**, l'ajout d'un parseur pour un form
 
 > ⚠️ **Fonctionnalité en cours de finalisation.** L'importateur a été construit à partir du schéma XML officiel du format et de la documentation de DiagFeux, mais sa **validation sur des fichiers `.dfe` réels est encore en cours**. Considérez le résultat comme une **base de reprise à vérifier**, pas comme une conversion garantie au dixième de seconde près.
 >
-> Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/Diagramme_Feux/issues) : cela accélérera directement la mise au point de l'import.
+> Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) : cela accélérera directement la mise au point de l'import.
 
 **Ce qui est repris :**
 
@@ -88,7 +88,7 @@ Oui, mais avec une réserve importante : l'import Excel intégré à TraCflux es
 
 Un **import sur mesure reste possible**, à condition de réaliser un **développement spécifique** fondé sur la connaissance exacte de la structure du fichier source. Cette piste devient pertinente lors d'un **basculement de parc** vers TraCflux, lorsque le volume de projets à reprendre rend la ressaisie manuelle peu réaliste.
 
-Si vous êtes dans cette situation, le canal recommandé est le dépôt GitHub du projet : ouvrez une [issue](https://github.com/ThierryClm/Diagramme_Feux/issues) décrivant le besoin (volume de projets concernés, exemple de fichier anonymisé, format de vos feuilles) afin qu'un développement *open source* puisse être discuté ou contribué. Le format `.json` natif de TraCflux sert de structure cible — la valeur ajoutée d'un parseur consiste uniquement à bien lire votre format Excel source.
+Si vous êtes dans cette situation, le canal recommandé est le dépôt GitHub du projet : ouvrez une [issue](https://github.com/ThierryClm/TraCflux/issues) décrivant le besoin (volume de projets concernés, exemple de fichier anonymisé, format de vos feuilles) afin qu'un développement *open source* puisse être discuté ou contribué. Le format `.json` natif de TraCflux sert de structure cible — la valeur ajoutée d'un parseur consiste uniquement à bien lire votre format Excel source.
 
 ### L'import Excel est-il sûr ?
 
@@ -388,7 +388,7 @@ Oui, sans aucune restriction. La licence AGPL couvre le **logiciel**, pas les **
 
 ### Comment signaler un bug ou demander une fonctionnalité ?
 
-Ouvrez une [issue GitHub](https://github.com/ThierryClm/Diagramme_Feux/issues). Pour un bug, joignez le **rapport de diagnostic** (menu **À propos → Rapport de diagnostic**) qui contient le contexte technique nécessaire — sans aucune donnée envoyée sur le réseau, c'est vous qui le copiez ou le téléchargez.
+Ouvrez une [issue GitHub](https://github.com/ThierryClm/TraCflux/issues). Pour un bug, joignez le **rapport de diagnostic** (menu **À propos → Rapport de diagnostic**) qui contient le contexte technique nécessaire — sans aucune donnée envoyée sur le réseau, c'est vous qui le copiez ou le téléchargez.
 
 ### Comment contribuer au code ?
 

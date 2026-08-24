@@ -4,7 +4,7 @@ Merci de l'intérêt que vous portez au projet. Ce document décrit comment prop
 
 ## Signaler un bug
 
-1. Vérifiez que le bug n'est pas déjà signalé dans les [issues GitHub](https://github.com/ThierryClm/Diagramme_Feux/issues).
+1. Vérifiez que le bug n'est pas déjà signalé dans les [issues GitHub](https://github.com/ThierryClm/TraCflux/issues).
 2. Dans l'application, ouvrez **À propos → Rapport de diagnostic** et joignez le contenu (copier ou télécharger .json) à votre issue. Ce rapport contient le contexte technique nécessaire (version, navigateur, état du projet, journal d'erreurs), sans aucune donnée envoyée sur le réseau.
 3. Décrivez les étapes pour reproduire le bug, le résultat attendu, et le résultat observé.
 

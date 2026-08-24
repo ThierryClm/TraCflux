@@ -7,7 +7,7 @@
     "author": "Thierry Colmon",
     "repository": {
         "type": "git",
-        "url": "https://github.com/ThierryClm/Diagramme_Feux.git"
+        "url": "https://github.com/ThierryClm/TraCflux.git"
     },
     "type": "module",
     "scripts": {

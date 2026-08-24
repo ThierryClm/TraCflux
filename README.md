@@ -54,7 +54,7 @@ La prise en compte des transports en commun est pensée comme une **orientation 
 
 ### Reprendre les études DiagFeux
 
-> ⚠️ **Fonctionnalité en cours de développement.** L'importateur est construit à partir du schéma XML officiel et de la documentation de DiagFeux, et testé sur des jeux d'essai construits pour cela. Il **n'a pas encore été confronté à un fichier `.dfe` réel**. Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/Diagramme_Feux/issues) — cela accélérera directement la mise au point.
+> ⚠️ **Fonctionnalité en cours de développement.** L'importateur est construit à partir du schéma XML officiel et de la documentation de DiagFeux, et testé sur des jeux d'essai construits pour cela. Il **n'a pas encore été confronté à un fichier `.dfe` réel**. Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) — cela accélérera directement la mise au point.
 
 **DiagFeux**, le logiciel de conception de diagrammes de feux du CERTU (aujourd'hui Cerema), **n'est plus maintenu**. TraCflux permet d'importer ses projets (`.dfe`) — groupes, décalages, verts, matrice d'interverts, propriétés.
 
@@ -115,8 +115,8 @@ Pour travailler sur le code. L'usage courant ne demande rien de tout cela — vo
 Prérequis : [Node.js](https://nodejs.org/) 18 ou plus.
 
 ```bash
-git clone https://github.com/ThierryClm/Diagramme_Feux.git
-cd Diagramme_Feux
+git clone https://github.com/ThierryClm/TraCflux.git
+cd TraCflux
 npm install
 npm run dev
 ```
@@ -213,7 +213,7 @@ Les évolutions notables sont consignées dans le [CHANGELOG](CHANGELOG.md). Le 
 
 ## Contribuer
 
-Les contributions sont les bienvenues. Pour un bug ou une suggestion, ouvrez une [issue GitHub](https://github.com/ThierryClm/Diagramme_Feux/issues). Pour proposer un patch, forkez puis ouvrez une pull request.
+Les contributions sont les bienvenues. Pour un bug ou une suggestion, ouvrez une [issue GitHub](https://github.com/ThierryClm/TraCflux/issues). Pour proposer un patch, forkez puis ouvrez une pull request.
 
 Un rapport de diagnostic peut être généré depuis l'app (**À propos → Rapport de diagnostic**) et joint à une issue pour faciliter le débogage.
 
