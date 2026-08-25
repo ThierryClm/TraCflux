@@ -2039,8 +2039,9 @@ function App() {
         if (!showFloatingDiagram) return;
         const noop = () => {};
         diagramPopup.renderToPopup(
-            <div style={{ padding: '8px', height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
+            <div style={{ padding: '8px', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
                 <TimelineDiagram
+                    scrollable
                     readOnly
                     groups={groups}
                     globalTime={globalTime}
@@ -2723,10 +2724,17 @@ function App() {
                                 height: diagramHeight !== null ? `${diagramHeight}px` : 'auto',
                                 minHeight: diagramHeight !== null ? `${diagramHeight}px` : 'auto',
                                 maxHeight: diagramHeight !== null ? `${diagramHeight}px` : 'none',
-                                overflow: diagramHeight !== null ? 'auto' : 'visible'
+                                // Le défilement appartient désormais au diagramme lui-même
+                                // (prop scrollable) : le panneau ne doit pas en ajouter un second.
+                                overflow: 'hidden',
+                                // Sans hauteur imposée par le séparateur horizontal, on borne le
+                                // diagramme à la place disponible : il défile chez lui au lieu de
+                                // faire défiler toute la zone centrale, en-têtes compris.
+                                '--timeline-max-height': diagramHeight !== null ? undefined : 'calc(100vh - 320px)'
                             }}
                         >
                             <TimelineDiagram
+                                scrollable
                                 readOnly={dossierReadOnly || activePfReadOnly}
                                 groups={groups}
                                 globalTime={globalTime}
@@ -3252,12 +3260,12 @@ function App() {
                         <div style={{ marginTop: '4px' }}>
                             Code source :{' '}
                             <a
-                                href="https://github.com/ThierryClm/Diagramme_Feux"
+                                href="https://github.com/ThierryClm/TraCflux"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ color: '#4ecdc4' }}
                             >
-                                github.com/ThierryClm/Diagramme_Feux
+                                github.com/ThierryClm/TraCflux
                             </a>
                         </div>
                     </div>

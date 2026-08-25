@@ -1459,3 +1459,53 @@ body.sepia-mode .rest-point-label {
     margin-left: 12px;
     vertical-align: middle;
 }
+
+/* Diagramme défilant : le bloc des groupes prend en charge son propre
+   défilement, la règle des temps et l'en-tête des colonnes restant en place.
+   Sans la classe .scrollable (aperçus d'impression), rien ne change — un
+   débordement y découperait le diagramme imprimé.
+
+   Les deux colonnes défilent ensemble parce que c'est leur parent commun
+   .timeline-layout qui porte le débordement : des ascenseurs séparés
+   désynchroniseraient les noms de groupes et leurs barres. */
+.timeline-container.scrollable {
+    height: 100%;
+    min-height: 0;
+}
+
+.timeline-container.scrollable .timeline-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Hauteur libre par défaut ; le conteneur d'accueil la borne en
+       définissant --timeline-max-height. Tant qu'un diagramme tient dans
+       la place disponible, aucun ascenseur n'apparaît. */
+    max-height: var(--timeline-max-height, none);
+    overflow: auto;
+}
+
+/* CSS ne sait pas mêler les axes : demander overflow-y déclenche aussi
+   l'horizontale. On en tire parti — sur un cycle long, le diagramme défile
+   chez lui au lieu d'élargir toute la page — mais la colonne des noms doit
+   alors rester accrochée à gauche, sinon les barres perdent leur libellé. */
+.timeline-container.scrollable .timeline-sidebar {
+    position: sticky;
+    left: 0;
+    z-index: 160;
+}
+
+/* Une fois les en-têtes figés, le contenu défile dessous : il faut donc les
+   hausser au-dessus des couches qui passent devant eux — SVG de dépendance
+   (50 et 100), étiquettes de barres (50), poignées de glisser (25). Sans ça,
+   les tracés rouges traversent la bande des temps.
+
+   Le curseur de temps fait exception et reste au-dessus de la règle : le
+   masquer derrière l'échelle qu'il désigne n'aurait pas de sens. Il passe en
+   revanche sous la colonne des noms, comme le reste du contenu. */
+.timeline-container.scrollable .timeline-ruler {
+    z-index: 150;
+}
+
+.timeline-container.scrollable .playhead,
+.timeline-container.scrollable .simulation-playhead {
+    z-index: 155;
+}
