@@ -7,6 +7,30 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.2.1] — 2026-08-25
+
+### Corrigé
+
+- **Le diagramme prend en charge son propre défilement.** L'ascenseur agissait sur toute
+  la zone centrale : dès qu'on descendait dans un carrefour à quinze ou vingt groupes, la
+  règle des temps et l'en-tête des colonnes partaient avec le reste, et il fallait remonter
+  pour savoir à quelle seconde on lisait. Ces deux repères restent désormais en place,
+  seules les lignes de groupes défilent. Sur un cycle long, le diagramme défile aussi
+  horizontalement chez lui au lieu d'élargir la page, la colonne des noms restant accrochée
+  à gauche. Le comportement existait déjà pour qui pensait à redimensionner le panneau à la
+  main ; il devient celui par défaut, dans la fenêtre principale comme dans la fenêtre
+  détachée. Les aperçus d'impression sont laissés intacts — un débordement y découperait le
+  diagramme imprimé.
+
+### Modifié
+
+- **L'application est servie sur [tracflux.com](https://tracflux.com/).** L'adresse
+  précédente, sous `github.io`, ne répond plus.
+- **Le dépôt est renommé `TraCflux`** : les liens de la documentation et ceux affichés dans
+  l'application suivent le nouveau nom. Les anciennes adresses GitHub restent redirigées.
+
+---
+
 ## [1.2.0] — 2026-08-20
 
 ### Ajouté
