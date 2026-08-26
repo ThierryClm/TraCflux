@@ -7,6 +7,45 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.2.2] — 2026-08-26
+
+### Corrigé
+
+- **Le recadrage de l'image du carrefour appartient au projet.** Il était rangé dans les
+  préférences du navigateur : un projet héritait du cadrage du précédent, et les curseurs
+  n'étaient jamais à zéro au premier détachement. Le rognage redevient une action
+  volontaire, propre à chaque projet et enregistrée avec lui. Les projets qui portaient déjà
+  un cadrage sont convertis à l'ouverture — seul ce qui mordait réellement dans l'image est
+  conservé.
+- **La fenêtre détachée de l'image s'ajuste à l'image.** Elle s'ouvrait au gabarit d'une
+  boîte fixe quel que soit le format de la photo : une vue en portrait ou en panoramique s'y
+  retrouvait encadrée de bandes vides, dans une fenêtre bien plus grande qu'elle et pourvue
+  d'ascenseurs. Ces bandes sont désormais retirées d'office, les curseurs de rognage ne
+  mordent plus que dans l'image, et la fenêtre absorbe ce qui dépasserait encore — sur
+  mesure du contenu plutôt que sur estimation.
+- **Les sous-menus passent devant le diagramme.** La barre de menus formait un contexte
+  d'empilement qui plafonnait ses menus au niveau des en-têtes collants du diagramme et des
+  tableaux. Le menu déroulant, qui se déploie au-dessus du panneau latéral, n'en souffrait
+  pas ; les sous-menus, qui débordent sur la zone du diagramme, passaient dessous.
+- **Les menus ne sont plus masqués par les fenêtres détachées.** Celles-ci remontaient au
+  premier plan une seconde après n'importe quel clic dans la fenêtre principale, couvrant un
+  menu ouvert sans que rien n'ait été fait. Ce sont des fenêtres du système : aucun ordre
+  d'affichage ne peut passer devant. Cette remontée est donc suspendue tant qu'un menu ou
+  une liste déroulante est déployé, sans rien retirer au confort multi-écrans.
+
+### Modifié
+
+- **Une flèche ne se pose plus sans courant.** Le clic déposait une flèche « tout droit » par
+  défaut sur un groupe dont la colonne Courant était vide — un symbole muet sur le mouvement
+  qu'il est censé représenter. Il reste désormais sans effet, avec une notification qui
+  désigne le groupe en cause, ou invite à renseigner la colonne si aucun courant ne l'est.
+- **Le tableau des conditions de micro-régulation gagne un centimètre de hauteur.** L'espace
+  qui le séparait de la barre de redimensionnement ne faisait que répéter une séparation
+  déjà assurée par celle-ci. Le bloc entier remonte, et la hauteur libérée revient au
+  tableau.
+
+---
+
 ## [1.2.1] — 2026-08-25
 
 ### Corrigé
