@@ -7,6 +7,28 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.2.3] — 2026-08-26
+
+### Corrigé
+
+- **Une fenêtre détachée s'ouvre au centre de l'écran.** À l'ouverture d'un projet qui en
+  rouvre une, elle retombait dans l'angle supérieur gauche, par-dessus la barre de menus. La
+  position demandée à l'ouverture n'est qu'un souhait, que le navigateur écarte lorsque la
+  fenêtre ne naît pas d'un geste direct — le cas d'un projet qui restaure ses détachements —
+  ou lorsqu'il a retenu la géométrie précédente. Elle est désormais reposée explicitement,
+  une fois la taille définitive connue, et centrée sur la zone utile de l'écran plutôt que
+  sur la fenêtre principale : centrée sur une fenêtre étroite ou déportée, une détachée
+  finissait hors champ.
+- **La hauteur du diagramme et l'affichage du panneau des paramètres ne débordent plus d'un
+  projet sur l'autre.** Tous deux sont enregistrés avec le projet, mais n'étaient restaurés
+  que lorsque le fichier les portait : un projet qui les ignorait conservait ceux du projet
+  précédemment ouvert. Ils reviennent maintenant à leur valeur par défaut — hauteur
+  automatique, panneau affiché — à l'ouverture comme à la création d'un projet. La hauteur
+  mémorisée par le navigateur est effacée du même geste, sans quoi elle serait revenue au
+  rechargement suivant.
+
+---
+
 ## [1.2.2] — 2026-08-26
 
 ### Corrigé
