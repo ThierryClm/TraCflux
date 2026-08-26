@@ -37,6 +37,11 @@ desktop.ini
 /samples/
 /bn/
 
+# Export JPEG de la vignette de partage, produit pour le téléversement manuel
+# dans les réglages GitHub. Les vignettes du dépôt sont les .png (docs/ et
+# public/), seules référencées par index.html.
+/docs/social-preview.jpg
+
 # Dev-only temporary artifacts
 /package_new.json
 /bn_viewer.html
