@@ -266,6 +266,40 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
         } catch { /* resize refusé par le navigateur */ }
     }, []);
 
+    // Recentre la fenêtre sur l'écran, une fois sa taille définitive connue.
+    //
+    // Le `left`/`top` passé à window.open n'est qu'un souhait : le navigateur
+    // l'ignore dans plusieurs cas — ouverture hors geste utilisateur (c'est le
+    // cas au chargement d'un projet, qui rouvre les fenêtres mémorisées), ou
+    // réutilisation d'une fenêtre nommée dont il a retenu la géométrie. La
+    // fenêtre retombait alors dans l'angle supérieur gauche, par-dessus la
+    // barre de menus. On repose donc la position explicitement.
+    //
+    // Le centrage se fait sur la zone utile de l'ÉCRAN et non sur la fenêtre
+    // principale : celle-ci peut être étroite ou déportée, et une fenêtre
+    // détachée centrée sur elle finit hors champ.
+    const centerOnScreen = useCallback(() => {
+        const popup = popupRef.current;
+        if (!popup || popup.closed) return;
+        try {
+            const scr = popup.screen;
+            if (!scr) return;
+            const availLeft = typeof scr.availLeft === 'number' ? scr.availLeft : 0;
+            const availTop = typeof scr.availTop === 'number' ? scr.availTop : 0;
+            const availW = scr.availWidth || 0;
+            const availH = scr.availHeight || 0;
+            if (!availW || !availH) return;
+            const w = popup.outerWidth || popup.innerWidth || 0;
+            const h = popup.outerHeight || popup.innerHeight || 0;
+            if (!w || !h) return;
+            // Jamais hors de la zone utile, même si la fenêtre est plus grande
+            // que l'écran : on privilégie alors l'angle visible.
+            const x = Math.max(availLeft, Math.round(availLeft + (availW - w) / 2));
+            const y = Math.max(availTop, Math.round(availTop + (availH - h) / 2));
+            popup.moveTo(x, y);
+        } catch { /* déplacement refusé par le navigateur : on garde la place */ }
+    }, []);
+
     // Open/close popup based on isOpen
     useEffect(() => {
         if (isOpen) {
@@ -365,6 +399,8 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             // puis absorbe ce qui dépasse encore une fois le contenu rendu.
             setTimeout(fitToContent, 0);
             setTimeout(absorbOverflow, 150);
+            // En dernier : la position se calcule sur la taille définitive.
+            setTimeout(centerOnScreen, contentSizeRef.current ? 220 : 20);
 
             // When this popup gains focus, bring all other popups to front too
             popup.addEventListener('focus', () => {
