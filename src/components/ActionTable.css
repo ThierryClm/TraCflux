@@ -3,9 +3,15 @@
 .action-table-container {
     background: #1e1e1e;
     border-top: 1px solid #333;
-    padding: 1rem calc(1rem + 10px) 1rem 1rem;
+    /* Coiffe réduite : la barre de séparation redimensionnable est déjà un
+       repère visuel fort juste au-dessus, et l'espace qui l'en séparait —
+       16px de marge + 16px de retrait — ne servait qu'à répéter cette
+       séparation. Le bloc entier remonte d'environ un centimètre, hauteur
+       rendue au tableau puisque le conteneur occupe toute la place du
+       panneau. Les retraits latéraux et bas sont conservés. */
+    padding: 0.25rem calc(1rem + 10px) 1rem 1rem;
     overflow: hidden;
-    margin-top: 1rem;
+    margin-top: 0;
     display: grid;
     grid-template-columns: minmax(0, max-content) 1fr;
     grid-template-rows: auto 1fr auto auto auto;
@@ -29,7 +35,7 @@
 }
 
 .action-table-container h3 {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.25rem 0;
     font-size: 1rem;
     color: #eee;
 }
@@ -43,7 +49,7 @@
 }
 
 .action-table-title {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.25rem 0;
 }
 
 .detach-btn {
