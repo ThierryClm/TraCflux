@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
+import { BOX_W, BOX_H, fitImageBox } from '../utils/floatingImageBox';
 
 /**
  * Gère le rendu du contenu de la popup "Image du carrefour" :
@@ -13,6 +14,7 @@ const useFloatingImageRenderer = ({
     showCropControls, setShowCropControls,
     intersectionArrows,
     groups,
+    imageNaturalDims,
     hoveredArrowGroupId,
     hoveredDiagramTime,
     simulationEnabled,
@@ -54,6 +56,19 @@ const useFloatingImageRenderer = ({
             groupMap[arrow.groupId].push({ x: px, y: py });
         });
 
+        // Cadre utile de l'image dans la boîte 750×530. L'image est centrée en
+        // « contain » : hors survol, les bandes vides encadraient la photo et la
+        // fenêtre détachée s'ouvrait bien plus grande que l'image, ascenseurs
+        // compris. On les retire du cadrage sans toucher aux coordonnées des
+        // flèches, qui restent en % de la boîte de référence.
+        const { dispW, dispH, padX, padY } = fitImageBox(imageNaturalDims);
+        const maxCropX = Math.max(0, Math.floor(dispW / 2) - 10);
+        const maxCropY = Math.max(0, Math.floor(dispH / 2) - 10);
+        const cropL = Math.min(floatingCrop.left, maxCropX);
+        const cropR = Math.min(floatingCrop.right, maxCropX);
+        const cropT = Math.min(floatingCrop.top, maxCropY);
+        const cropB = Math.min(floatingCrop.bottom, maxCropY);
+
         // Use simulation time when playing, otherwise use hovered time
         const activeTime = (simulationEnabled && isPlayingSimulation)
             ? simulationCurrentTime
@@ -79,42 +94,44 @@ const useFloatingImageRenderer = ({
                     <div className="floating-crop-controls">
                         <div className="crop-control">
                             <label>Haut</label>
-                            <input type="range" min="0" max="250" value={floatingCrop.top} onChange={(e) => setFloatingCrop(prev => ({ ...prev, top: parseInt(e.target.value) }))} />
-                            <span>{floatingCrop.top}px</span>
+                            <input type="range" min="0" max={maxCropY} value={cropT} onChange={(e) => setFloatingCrop(prev => ({ ...prev, top: parseInt(e.target.value) }))} />
+                            <span>{cropT}px</span>
                         </div>
                         <div className="crop-control">
                             <label>Bas</label>
-                            <input type="range" min="0" max="250" value={floatingCrop.bottom} onChange={(e) => setFloatingCrop(prev => ({ ...prev, bottom: parseInt(e.target.value) }))} />
-                            <span>{floatingCrop.bottom}px</span>
+                            <input type="range" min="0" max={maxCropY} value={cropB} onChange={(e) => setFloatingCrop(prev => ({ ...prev, bottom: parseInt(e.target.value) }))} />
+                            <span>{cropB}px</span>
                         </div>
                         <div className="crop-control">
                             <label>Gauche</label>
-                            <input type="range" min="0" max="350" value={floatingCrop.left} onChange={(e) => setFloatingCrop(prev => ({ ...prev, left: parseInt(e.target.value) }))} />
-                            <span>{floatingCrop.left}px</span>
+                            <input type="range" min="0" max={maxCropX} value={cropL} onChange={(e) => setFloatingCrop(prev => ({ ...prev, left: parseInt(e.target.value) }))} />
+                            <span>{cropL}px</span>
                         </div>
                         <div className="crop-control">
                             <label>Droite</label>
-                            <input type="range" min="0" max="350" value={floatingCrop.right} onChange={(e) => setFloatingCrop(prev => ({ ...prev, right: parseInt(e.target.value) }))} />
-                            <span>{floatingCrop.right}px</span>
+                            <input type="range" min="0" max={maxCropX} value={cropR} onChange={(e) => setFloatingCrop(prev => ({ ...prev, right: parseInt(e.target.value) }))} />
+                            <span>{cropR}px</span>
                         </div>
                         <button className="crop-reset-btn" onClick={() => setFloatingCrop({ top: 0, bottom: 0, left: 0, right: 0 })}>Réinitialiser</button>
                     </div>
                 )}
-                <div className="floating-image-content" style={{ flex: 1, overflow: 'auto' }}>
+                {/* data-fit-scroll : repère lu par usePopupWindow pour absorber
+                    un éventuel débordement résiduel dans la taille de la fenêtre. */}
+                <div className="floating-image-content" data-fit-scroll style={{ flex: 1, overflow: 'auto' }}>
                     <div
                         className="floating-image-wrapper"
                         style={{
-                            width: (750 - floatingCrop.left - floatingCrop.right) * floatingZoom,
-                            height: (530 - floatingCrop.top - floatingCrop.bottom) * floatingZoom
+                            width: Math.max(1, dispW - cropL - cropR) * floatingZoom,
+                            height: Math.max(1, dispH - cropT - cropB) * floatingZoom
                         }}
                     >
                         <div
                             className="floating-image-inner"
                             style={{
-                                marginTop: -floatingCrop.top,
-                                marginLeft: -floatingCrop.left,
-                                width: 750,
-                                height: 530,
+                                marginTop: -(padY + cropT),
+                                marginLeft: -(padX + cropL),
+                                width: BOX_W,
+                                height: BOX_H,
                                 transform: `scale(${floatingZoom})`,
                                 transformOrigin: 'top left'
                             }}
@@ -223,7 +240,7 @@ const useFloatingImageRenderer = ({
             </div>
         );
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
-        intersectionArrows, groups, hoveredArrowGroupId, hoveredDiagramTime,
+        intersectionArrows, groups, imageNaturalDims, hoveredArrowGroupId, hoveredDiagramTime,
         simulationEnabled, isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
 };

@@ -35,6 +35,21 @@ export function isMainModalActive() {
     return mainModalActive;
 }
 
+// Recouvrements ouverts DANS la fenêtre principale (menus, listes déroulantes).
+// Ce sont des éléments du DOM : une fenêtre détachée est une fenêtre de l'OS,
+// elle passe donc devant quoi qu'on fasse côté z-index. Tant qu'un menu est
+// déployé, on suspend la remontée automatique des popups — sinon le menu se
+// retrouvait masqué une seconde après son ouverture, sans que l'utilisateur
+// ait rien fait.
+const openMainOverlays = new Set();
+
+export function setMainOverlayOpen(key, open) {
+    if (open) openMainOverlays.add(key);
+    else openMainOverlays.delete(key);
+}
+
+const isMainOverlayOpen = () => openMainOverlays.size > 0;
+
 // --- Suspension du re-rendu des popups pendant l'édition d'un champ ---------
 // Re-rendre une fenêtre détachée (renderToPopup) pendant qu'on tape dedans vole
 // le focus/curseur. Approche directe : au moment de rendre, on regarde si un
@@ -86,6 +101,9 @@ const installEditingListeners = (doc) => {
 
 export function bringAllPopupsToFront(except) {
     if (isBringingToFront || openPopups.size === 0 || isFilePickerActive() || mainModalActive || isEditingAnyField()) return;
+    // Un clic DANS une popup reste prioritaire (multi-écrans) ; seule la
+    // remontée initiée par la fenêtre principale cède le pas à ses menus.
+    if (except === null && isMainOverlayOpen()) return;
     const now = Date.now();
     if (now - lastBringTime < 200) return;
     isBringingToFront = true;
@@ -140,12 +158,15 @@ function installMainListener() {
 
     const bringPopupsIfAllowed = () => {
         if (openPopups.size === 0 || isBringingToFront || isFilePickerActive() || mainModalActive || isEditingAnyField()) return;
+        if (isMainOverlayOpen()) return;
         if (bringPopupsTimer) clearTimeout(bringPopupsTimer);
         bringPopupsTimer = setTimeout(() => {
             bringPopupsTimer = null;
             if (isFilePickerActive()) return;
             bringAllPopupsToFront(null);
         }, 1000);
+        // Note : la temporisation est relue à l'échéance (bringAllPopupsToFront
+        // revérifie les gardes), un menu ouvert entre-temps annule donc l'effet.
     };
 
     // When main window regains focus from outside (alt-tab, taskbar)
@@ -169,11 +190,21 @@ function installMainListener() {
  * - Handles popup close detection
  * - Syncs light/dark mode
  * - Keeps all popups on top via shared registry
+ *
+ * @param {{width: number, height: number}} [contentSize] - Taille exacte
+ *        attendue pour la zone utile. Le gabarit width/height passé à
+ *        window.open est une estimation : la hauteur du chrome du navigateur
+ *        (barre de titre, barre d'adresse) varie et n'est pas connue d'avance.
+ *        Quand contentSize est fourni, la fenêtre est réajustée après ouverture
+ *        pour que innerWidth/innerHeight tombent juste — sans quoi une fenêtre
+ *        pourtant plus grande que son contenu se retrouve avec des ascenseurs.
  */
-const usePopupWindow = ({ isOpen, onClose, title, width, height }) => {
+const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = null }) => {
     const popupRef = useRef(null);
     const rootRef = useRef(null);
     const intervalRef = useRef(null);
+    const contentSizeRef = useRef(contentSize);
+    contentSizeRef.current = contentSize;
     // Dernier contenu à afficher, mis en attente pendant l'édition d'un champ.
     const pendingContentRef = useRef(null);
 
@@ -194,6 +225,46 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height }) => {
         popupFlushers.add(flushPending);
         return () => { popupFlushers.delete(flushPending); };
     }, [flushPending]);
+
+    // Réajuste la fenêtre pour que sa zone utile fasse exactement contentSize.
+    const fitToContent = useCallback(() => {
+        const popup = popupRef.current;
+        const target = contentSizeRef.current;
+        if (!target || !popup || popup.closed) return;
+        try {
+            const iw = popup.innerWidth;
+            const ih = popup.innerHeight;
+            if (!iw || !ih) return; // fenêtre pas encore dimensionnée
+            const maxW = (popup.screen?.availWidth || iw) - 40;
+            const maxH = (popup.screen?.availHeight || ih) - 60;
+            const dw = Math.round(Math.min(target.width, maxW)) - iw;
+            const dh = Math.round(Math.min(target.height, maxH)) - ih;
+            if (dw || dh) popup.resizeBy(dw, dh);
+        } catch { /* resize refusé par le navigateur : on garde le gabarit */ }
+    }, []);
+
+    // Rattrapage MESURÉ, après le calage sur contentSize. Ce dernier reste une
+    // estimation (hauteur réelle de la barre d'outils, mise à l'échelle qui
+    // tombe sur une fraction de pixel) ; ici on lit le débordement réel de la
+    // zone défilante et on l'ajoute à la fenêtre. N'agrandit jamais au-delà de
+    // l'écran, et ne fait rien s'il n'y a pas de débordement : pas de boucle.
+    const absorbOverflow = useCallback(() => {
+        const popup = popupRef.current;
+        if (!popup || popup.closed) return;
+        try {
+            const el = popup.document.querySelector('[data-fit-scroll]');
+            if (!el) return;
+            const dw = Math.ceil(el.scrollWidth - el.clientWidth);
+            const dh = Math.ceil(el.scrollHeight - el.clientHeight);
+            if (dw <= 0 && dh <= 0) return;
+            const roomW = Math.max(0, (popup.screen?.availWidth || 0) - 40 - popup.innerWidth);
+            const roomH = Math.max(0, (popup.screen?.availHeight || 0) - 60 - popup.innerHeight);
+            popup.resizeBy(
+                Math.min(Math.max(0, dw), roomW),
+                Math.min(Math.max(0, dh), roomH)
+            );
+        } catch { /* resize refusé par le navigateur */ }
+    }, []);
 
     // Open/close popup based on isOpen
     useEffect(() => {
@@ -222,6 +293,10 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height }) => {
             installMainListener();
             // Suivi de l'édition de champ dans cette popup (suspension des re-rendus).
             installEditingListeners(popup.document);
+
+            // Fenêtre nommée potentiellement réutilisée : on repart d'un head
+            // vide, sinon les feuilles de style s'y recopient à chaque passage.
+            popup.document.head.replaceChildren();
 
             // Set title
             popup.document.title = title;
@@ -275,13 +350,21 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height }) => {
             `;
             popup.document.head.appendChild(popupStyle);
 
-            // Create root container
+            // Create root container. La fenêtre nommée peut être RÉUTILISÉE par
+            // window.open (rejeu d'effet en StrictMode, réouverture) : on repart
+            // d'un body vide, sinon les racines s'empilent.
+            popup.document.body.replaceChildren();
             const container = popup.document.createElement('div');
             container.id = 'popup-root';
             popup.document.body.appendChild(container);
 
             // Create React root
             rootRef.current = createRoot(container);
+
+            // Corrige le gabarit une fois la fenêtre réellement dimensionnée,
+            // puis absorbe ce qui dépasse encore une fois le contenu rendu.
+            setTimeout(fitToContent, 0);
+            setTimeout(absorbOverflow, 150);
 
             // When this popup gains focus, bring all other popups to front too
             popup.addEventListener('focus', () => {
@@ -345,6 +428,16 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height }) => {
         pendingContentRef.current = null;
         rootRef.current.render(content);
     }, []);
+
+    // Recale la fenêtre quand la taille utile change alors qu'elle est ouverte :
+    // zoom, rognage, mais surtout arrivée tardive des dimensions natives de
+    // l'image (chargées en asynchrone, après l'ouverture au clic).
+    useEffect(() => {
+        if (!isOpen || !contentSize) return;
+        const t = setTimeout(fitToContent, 120);
+        const t2 = setTimeout(absorbOverflow, 260);
+        return () => { clearTimeout(t); clearTimeout(t2); };
+    }, [isOpen, contentSize?.width, contentSize?.height, fitToContent, absorbOverflow]);
 
     // Update document title when the title prop changes while the popup is open
     // (le titre est posé une fois à l'ouverture ; cet effet le rafraîchit pour

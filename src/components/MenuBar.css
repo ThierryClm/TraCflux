@@ -12,7 +12,16 @@
     height: 28px;
     align-items: stretch;
     position: relative;
-    z-index: 100;
+    /* position + z-index créent un CONTEXTE D'EMPILEMENT : les 1000/1001 des
+       dropdowns ne valent qu'entre eux, la barre entière ne pèse que cette
+       valeur face au reste de la page. À 100, elle était à égalité avec les
+       en-têtes collants du diagramme et des tableaux (z-index 100 à 160), qui
+       la suivent dans le DOM et l'emportaient donc : le menu déroulant restait
+       visible au-dessus du panneau latéral, mais les SOUS-menus, qui débordent
+       sur la zone du diagramme, passaient dessous. 500 dégage toute la zone de
+       contenu en restant sous les modales (1100+), les toasts et la légende
+       flottante, qui doivent continuer à recouvrir la barre. */
+    z-index: 500;
 }
 
 .menu-bar-logo-btn {

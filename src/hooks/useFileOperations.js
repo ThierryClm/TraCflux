@@ -5,6 +5,7 @@ import { validateProject } from '../utils/projectValidator';
 import { selectPfSubset } from '../utils/pfHelpers';
 import { stampReadOnly } from '../utils/dossierLock';
 import { bringAllPopupsToFront } from './usePopupWindow';
+import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
 
 /**
  * Gère les opérations d'ouverture et de sauvegarde de fichiers projet
@@ -15,7 +16,7 @@ const useFileOperations = ({
     setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
     projectModifiedSkip, hasUnsavedChanges, setHasUnsavedChanges,
     isDirty,
-    setDiagramHeight, setFloatingCrop, setFloatingZoom,
+    setDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
     setShowComments, setShowRemarks, setIntersectionName,
     // Options de mise en page sauvegardées dans le projet
     showComments, showRemarks, showActionDescription, sidebarVisible,
@@ -143,15 +144,13 @@ const useFileOperations = ({
                 setDiagramHeight(data.diagramHeight);
             }
 
-            // Restaurer le rognage de l'image flottante si présent
-            if (data.floatingCrop !== undefined) {
-                setFloatingCrop(data.floatingCrop);
-            }
-
-            // Restaurer le zoom de l'image flottante si présent
-            if (data.floatingZoom !== undefined) {
-                setFloatingZoom(data.floatingZoom);
-            }
+            // Rognage et zoom de l'image détachée : données du projet. Absents
+            // du fichier (projet antérieur, ou jamais rogné), on repart du
+            // cadrage neutre — hériter de celui du projet précédent n'a pas de
+            // sens et laissait les curseurs déjà engagés au premier détachement.
+            setFloatingCrop(data.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
+            setFloatingZoom(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
+            markLegacyCrop?.(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
 
             // Restaurer les options de mise en page sauvegardées dans le projet :
             // - Format moderne : data.layoutOptions = { showParameters, showComments, showRemarks, showActionDescription, showFloating* }
@@ -315,15 +314,13 @@ const useFileOperations = ({
                 setDiagramHeight(data.diagramHeight);
             }
 
-            // Restaurer le rognage de l'image flottante si présent
-            if (data.floatingCrop !== undefined) {
-                setFloatingCrop(data.floatingCrop);
-            }
-
-            // Restaurer le zoom de l'image flottante si présent
-            if (data.floatingZoom !== undefined) {
-                setFloatingZoom(data.floatingZoom);
-            }
+            // Rognage et zoom de l'image détachée : données du projet. Absents
+            // du fichier (projet antérieur, ou jamais rogné), on repart du
+            // cadrage neutre — hériter de celui du projet précédent n'a pas de
+            // sens et laissait les curseurs déjà engagés au premier détachement.
+            setFloatingCrop(data.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
+            setFloatingZoom(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
+            markLegacyCrop?.(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
 
             // Restaurer les options de mise en page sauvegardées dans le projet :
             // - Format moderne : data.layoutOptions = { showParameters, showComments, showRemarks, showActionDescription, showFloating* }
@@ -420,6 +417,7 @@ const useFileOperations = ({
                 ...fullState,
                 diagramHeight: diagramHeight,
                 floatingCrop: floatingCrop,
+                floatingCropBasis: CROP_BASIS,
                 floatingZoom: floatingZoom,
                 dossierSections: dossierSections,
                 // Options de mise en page sauvegardées avec le projet
@@ -543,6 +541,7 @@ const useFileOperations = ({
                 ...fullState,
                 diagramHeight: diagramHeight,
                 floatingCrop: floatingCrop,
+                floatingCropBasis: CROP_BASIS,
                 floatingZoom: floatingZoom,
                 dossierSections: dossierSections,
                 // Options de mise en page sauvegardées avec le projet
@@ -643,6 +642,7 @@ const useFileOperations = ({
             ...subset,
             diagramHeight,
             floatingCrop,
+            floatingCropBasis: CROP_BASIS,
             floatingZoom,
             dossierSections,
             layoutOptions: {

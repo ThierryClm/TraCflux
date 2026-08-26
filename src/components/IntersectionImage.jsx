@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { compressImageDataUrl, dataUrlBytes, formatBytes, ALERT_ABOVE_BYTES } from '../utils/imageCompressor';
 import { toast } from '../utils/toast';
+import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import './IntersectionImage.css';
 
 const IntersectionImage = ({
@@ -46,6 +47,13 @@ const IntersectionImage = ({
     const [selectedArrow, setSelectedArrow] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const [showImageMenu, setShowImageMenu] = useState(false);
+
+    // Même règle que la barre de menus : une liste déroulante ouverte suspend
+    // la remontée des fenêtres détachées, qui la masqueraient.
+    useEffect(() => {
+        setMainOverlayOpen('imageMenu', showImageMenu);
+        return () => setMainOverlayOpen('imageMenu', false);
+    }, [showImageMenu]);
     const imageMenuRef = useRef(null);
 
     // Load display options from localStorage
@@ -271,6 +279,22 @@ const IntersectionImage = ({
         const groupsWithoutArrows = groups.filter(g =>
             !arrows.some(a => a.groupId === g.id)
         );
+
+        // Une flèche n'a de sens que portée par un mouvement : c'est le courant
+        // (TD, TàD, Piéton…) qui décide du symbole tracé. Tant que la colonne
+        // « Courant » de la configuration est vide pour le groupe visé, le clic
+        // reste sans effet — sinon on posait une flèche « tout droit » par
+        // défaut, muette sur le mouvement qu'elle est censée représenter.
+        if (groups.length > 0 && groups.every(g => !(g.courant || '').trim())) {
+            toast.error("Aucun courant renseigné : complétez la colonne « Courant » de la configuration avant de placer des flèches.");
+            return;
+        }
+
+        const nextGroup = groupsWithoutArrows[0];
+        if (nextGroup && !(nextGroup.courant || '').trim()) {
+            toast.info(`GF${nextGroup.id}${nextGroup.name ? ` — ${nextGroup.name}` : ''} : courant non renseigné, flèche non ajoutée.`);
+            return;
+        }
 
         if (groupsWithoutArrows.length > 0) {
             const group = groupsWithoutArrows[0];

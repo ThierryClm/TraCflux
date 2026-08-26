@@ -50,6 +50,7 @@ import useRecentFiles from './hooks/useRecentFiles';
 import useSimulationUI from './hooks/useSimulationUI';
 import useDialogState from './hooks/useDialogState';
 import useFloatingImage from './hooks/useFloatingImage';
+import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from './utils/floatingImageBox';
 import useDirectoryHandles from './hooks/useDirectoryHandles';
 import useFloatingImageRenderer from './hooks/useFloatingImageRenderer';
 import useFloatingForm from './hooks/useFloatingForm';
@@ -551,12 +552,21 @@ function App() {
     // Floating image state (visibilité, recadrage, zoom, popup)
     const {
         showFloatingImage, setShowFloatingImage,
-        floatingCrop, setFloatingCrop,
+        floatingCrop, setFloatingCrop, markLegacyCrop,
         showCropControls, setShowCropControls,
         floatingZoom, setFloatingZoom,
         imageNaturalDims,
         floatingImagePopup
     } = useFloatingImage(intersectionImage, intersectionName, activePFName);
+
+    // Rognage et zoom de l'image détachée décrivent UN cadrage sur UNE image :
+    // ils suivent le projet, jamais le navigateur. Tout changement de projet
+    // qui ne porte pas son propre cadrage repart donc du cadrage neutre.
+    const resetFloatingImageFraming = useCallback(() => {
+        setFloatingCrop({ ...DEFAULT_CROP });
+        setFloatingZoom(DEFAULT_ZOOM);
+        markLegacyCrop(false);
+    }, [setFloatingCrop, setFloatingZoom, markLegacyCrop]);
 
     // Fenêtre détachée (non modale, déplaçable) du comparateur de capacité.
     const capacityComparisonPopup = usePopupWindow({
@@ -725,6 +735,7 @@ function App() {
                 return;
             }
             loadFullState(state);
+            resetFloatingImageFraming();
             setHasActiveProject(true);
             setCurrentProjectPath(file.name);
             setProjectModified(true);
@@ -825,7 +836,7 @@ function App() {
         setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
         projectModifiedSkip, hasUnsavedChanges, setHasUnsavedChanges,
         isDirty,
-        setDiagramHeight, setFloatingCrop, setFloatingZoom,
+        setDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
         setShowComments, setShowRemarks, setIntersectionName,
         // Layout options sauvegardées au niveau projet
         showComments, showRemarks, showActionDescription, sidebarVisible,
@@ -955,6 +966,9 @@ function App() {
                     projectName: data.projectName || data.intersectionName || 'Carrefour exemple',
                     ...data
                 });
+                setFloatingCrop(data.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
+                setFloatingZoom(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
+                markLegacyCrop(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
                 setHasActiveProject?.(true);
                 // Retire le paramètre de l'URL (rafraîchir ne recharge pas l'exemple).
                 window.history.replaceState({}, '', window.location.pathname);
@@ -1133,6 +1147,7 @@ function App() {
                     resetToNewProject();
                     setActiveTab(openPropertiesOnNewProject ? 'properties' : 'config');
                     setDiagramHeight(null);
+                    resetFloatingImageFraming();
                     setGroupCountInput('8');
                     setCycleLengthInput('60');
                     setCurrentProjectPath('');
@@ -1548,6 +1563,7 @@ function App() {
                             groups: file.data.groups || [],
                             cycleLength: file.data.cycleLength || cycleLength
                         });
+                        resetFloatingImageFraming();
                     }
                 } else if (action.startsWith('importFromDir:')) {
                     // Import from recent directory
@@ -1794,6 +1810,9 @@ function App() {
             const data = loadProject(selectedProject);
             setOpenModal(false);
             setSelectedProject(null);
+            setFloatingCrop(data?.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
+            setFloatingZoom(data?.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
+            markLegacyCrop(data?.floatingCrop !== undefined && data?.floatingCropBasis !== CROP_BASIS);
             if (data && typeof data === 'object') {
                 const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
                 setShowComments(!!hasComments);
@@ -1885,7 +1904,7 @@ function App() {
         floatingCrop, setFloatingCrop,
         floatingZoom, setFloatingZoom,
         showCropControls, setShowCropControls,
-        intersectionArrows, groups,
+        intersectionArrows, groups, imageNaturalDims,
         hoveredArrowGroupId, hoveredDiagramTime,
         simulationEnabled, isPlayingSimulation,
         simulationCurrentTime, simulationResult,

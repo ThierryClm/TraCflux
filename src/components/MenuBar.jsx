@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import './MenuBar.css';
 
 const MenuBar = ({
@@ -74,6 +75,14 @@ const MenuBar = ({
         setOpenSubmenu(null);
         setOpenNestedSubmenu(null);
     }, [initialOpenMenu]);
+
+    // Tant qu'un menu est déployé, les fenêtres détachées ne remontent pas au
+    // premier plan : ce sont des fenêtres de l'OS, elles masqueraient le menu
+    // une seconde après son ouverture.
+    useEffect(() => {
+        setMainOverlayOpen('menubar', !!openMenu);
+        return () => setMainOverlayOpen('menubar', false);
+    }, [openMenu]);
 
     // Close menu when clicking outside
     useEffect(() => {
