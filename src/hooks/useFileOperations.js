@@ -16,7 +16,7 @@ const useFileOperations = ({
     setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
     projectModifiedSkip, hasUnsavedChanges, setHasUnsavedChanges,
     isDirty,
-    setDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
+    setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
     setShowComments, setShowRemarks, setIntersectionName,
     // Options de mise en page sauvegardées dans le projet
     showComments, showRemarks, showActionDescription, sidebarVisible,
@@ -139,9 +139,15 @@ const useFileOperations = ({
             projectModifiedSkip.current = true; // absorbe le prochain changement de deps
             setHasUnsavedChanges(false); // pas de modifications non sauvegardées
 
-            // Restaurer la hauteur du diagramme si présente
-            if (data.diagramHeight !== undefined) {
+            // Hauteur du diagramme : donnée de projet. Absente du fichier, on
+            // repart de la hauteur automatique — sans quoi le projet héritait de
+            // celle du précédent. resetDiagramHeight et non setDiagramHeight(null) :
+            // il efface aussi la valeur mémorisée par le navigateur, qui sinon
+            // reviendrait au prochain rechargement.
+            if (data.diagramHeight !== undefined && data.diagramHeight !== null) {
                 setDiagramHeight(data.diagramHeight);
+            } else {
+                resetDiagramHeight?.();
             }
 
             // Rognage et zoom de l'image détachée : données du projet. Absents
@@ -158,7 +164,9 @@ const useFileOperations = ({
             //   commentaires/remarques selon la présence de contenu
             if (data.layoutOptions && typeof data.layoutOptions === 'object') {
                 const lo = data.layoutOptions;
-                if (typeof lo.showParameters === 'boolean') setSidebarVisible(lo.showParameters);
+                // Absent d'un projet enregistré avant que l'option n'existe :
+                // panneau affiché, comme pour un projet neuf.
+                setSidebarVisible(typeof lo.showParameters === 'boolean' ? lo.showParameters : true);
                 if (typeof lo.showComments === 'boolean') setShowComments(lo.showComments);
                 if (typeof lo.showRemarks === 'boolean') setShowRemarks(lo.showRemarks);
                 if (typeof lo.showActionDescription === 'boolean') setShowActionDescription(lo.showActionDescription);
@@ -184,6 +192,7 @@ const useFileOperations = ({
                 // Projet ancien sans layoutOptions : on décoche tous les
                 // détachements pour repartir d'un espace de travail propre.
                 // L'utilisateur détachera ce dont il a besoin pour ce projet.
+                setSidebarVisible(true);
                 setShowFloatingForm(false);
                 setShowFloatingMatrix(false);
                 setShowFloatingTraffic(false);
@@ -309,9 +318,15 @@ const useFileOperations = ({
             projectModifiedSkip.current = true; // absorbe le prochain changement de deps
             setHasUnsavedChanges(false); // pas de modifications non sauvegardées
 
-            // Restaurer la hauteur du diagramme si présente
-            if (data.diagramHeight !== undefined) {
+            // Hauteur du diagramme : donnée de projet. Absente du fichier, on
+            // repart de la hauteur automatique — sans quoi le projet héritait de
+            // celle du précédent. resetDiagramHeight et non setDiagramHeight(null) :
+            // il efface aussi la valeur mémorisée par le navigateur, qui sinon
+            // reviendrait au prochain rechargement.
+            if (data.diagramHeight !== undefined && data.diagramHeight !== null) {
                 setDiagramHeight(data.diagramHeight);
+            } else {
+                resetDiagramHeight?.();
             }
 
             // Rognage et zoom de l'image détachée : données du projet. Absents
@@ -328,7 +343,9 @@ const useFileOperations = ({
             //   commentaires/remarques selon la présence de contenu
             if (data.layoutOptions && typeof data.layoutOptions === 'object') {
                 const lo = data.layoutOptions;
-                if (typeof lo.showParameters === 'boolean') setSidebarVisible(lo.showParameters);
+                // Absent d'un projet enregistré avant que l'option n'existe :
+                // panneau affiché, comme pour un projet neuf.
+                setSidebarVisible(typeof lo.showParameters === 'boolean' ? lo.showParameters : true);
                 if (typeof lo.showComments === 'boolean') setShowComments(lo.showComments);
                 if (typeof lo.showRemarks === 'boolean') setShowRemarks(lo.showRemarks);
                 if (typeof lo.showActionDescription === 'boolean') setShowActionDescription(lo.showActionDescription);
@@ -354,6 +371,7 @@ const useFileOperations = ({
                 // Projet ancien sans layoutOptions : on décoche tous les
                 // détachements pour repartir d'un espace de travail propre.
                 // L'utilisateur détachera ce dont il a besoin pour ce projet.
+                setSidebarVisible(true);
                 setShowFloatingForm(false);
                 setShowFloatingMatrix(false);
                 setShowFloatingTraffic(false);

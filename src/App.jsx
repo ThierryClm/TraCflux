@@ -836,7 +836,7 @@ function App() {
         setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
         projectModifiedSkip, hasUnsavedChanges, setHasUnsavedChanges,
         isDirty,
-        setDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
+        setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
         setShowComments, setShowRemarks, setIntersectionName,
         // Layout options sauvegardées au niveau projet
         showComments, showRemarks, showActionDescription, sidebarVisible,
@@ -1146,7 +1146,8 @@ function App() {
                     leaveExampleMode(); // un nouveau projet n'est plus l'exemple
                     resetToNewProject();
                     setActiveTab(openPropertiesOnNewProject ? 'properties' : 'config');
-                    setDiagramHeight(null);
+                    resetDiagramHeight();
+                    setSidebarVisible(true);
                     resetFloatingImageFraming();
                     setGroupCountInput('8');
                     setCycleLengthInput('60');
@@ -1813,6 +1814,17 @@ function App() {
             setFloatingCrop(data?.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
             setFloatingZoom(data?.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
             markLegacyCrop(data?.floatingCrop !== undefined && data?.floatingCropBasis !== CROP_BASIS);
+            // Le cache navigateur ne porte ni la hauteur du diagramme ni l'état
+            // du panneau : sans remise à zéro, ils restaient hérités du projet
+            // précédemment ouvert.
+            if (data?.diagramHeight !== undefined && data.diagramHeight !== null) {
+                setDiagramHeight(data.diagramHeight);
+            } else {
+                resetDiagramHeight();
+            }
+            setSidebarVisible(typeof data?.layoutOptions?.showParameters === 'boolean'
+                ? data.layoutOptions.showParameters
+                : true);
             if (data && typeof data === 'object') {
                 const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
                 setShowComments(!!hasComments);
