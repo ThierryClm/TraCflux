@@ -69,8 +69,22 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1)
                     <polyline points="20,14 24,10 28,14" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             );
-        case 'Piéton':
         case 'Cycle': {
+            // Un courant cycliste a un SENS : flèche simple, et non la double
+            // flèche des traversées piétonnes. Trait fin pour la distinguer
+            // d'un courant de véhicules.
+            const cycleHeight = size + (arrowLength - 1) * 24;
+            const cycleViewBox = 32 + (arrowLength - 1) * 24;
+            const cycleTop = 6;
+            const cycleBottom = 26 + (arrowLength - 1) * 24;
+            return (
+                <svg width={size} height={cycleHeight} viewBox={`0 0 32 ${cycleViewBox}`}>
+                    <line x1="16" y1={cycleBottom} x2="16" y2={cycleTop} stroke={color} strokeWidth={thinStrokeWidth} strokeLinecap="round" />
+                    <polyline points={`11,${cycleTop + 5} 16,${cycleTop} 21,${cycleTop + 5}`} fill="none" stroke={color} strokeWidth={thinStrokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            );
+        }
+        case 'Piéton': {
             const extendedHeight = size + (arrowLength - 1) * 24;
             const viewBoxHeight = 32 + (arrowLength - 1) * 24;
             const topY = 6;

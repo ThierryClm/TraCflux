@@ -227,8 +227,24 @@ const PhasageBulle = ({
                         <polyline points="20,14 24,10 28,14" fill="none" stroke={color} strokeWidth={strokeWidth - 0.5} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
-            case 'Piéton':
             case 'Cycle': {
+                // Un courant cycliste a un SENS : flèche simple, et non la
+                // double flèche des traversées piétonnes. Trait fin pour la
+                // distinguer d'un courant de véhicules.
+                const cycleBase = 32;
+                const cycleHeight = cycleBase + (arrowLength - 1) * 24;
+                const cycleViewBox = 32 + (arrowLength - 1) * 24;
+                const cycleTop = 6;
+                const cycleBottom = 26 + (arrowLength - 1) * 24;
+                const cycleScaled = size * (cycleHeight / cycleBase);
+                return (
+                    <svg width={size} height={cycleScaled} viewBox={`0 0 32 ${cycleViewBox}`}>
+                        <line x1="16" y1={cycleBottom} x2="16" y2={cycleTop} stroke={color} strokeWidth={thinStrokeWidth} strokeLinecap="round" />
+                        <polyline points={`11,${cycleTop + 5} 16,${cycleTop} 21,${cycleTop + 5}`} fill="none" stroke={color} strokeWidth={thinStrokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                );
+            }
+            case 'Piéton': {
                 // Calculate extended height based on arrowLength (1 = normal, 2 = double, etc.)
                 const baseSize = 32;
                 const extendedHeight = baseSize + (arrowLength - 1) * 24; // Add 24px per unit above 1
