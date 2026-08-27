@@ -7,6 +7,37 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.2.5] — 2026-08-27
+
+### Modifié
+
+- **Une seule règle de lecture pour l'image du carrefour, intégrée comme détachée.** Les deux
+  affichages suivaient des logiques différentes : l'image intégrée montrait en permanence le
+  début de cycle et ignorait le survol du diagramme ; l'image détachée passait au noir hors
+  survol et n'employait les temps simulés que pendant la lecture. Placées côte à côte, elles
+  pouvaient montrer deux états différents du même carrefour au même instant. Une règle
+  unique s'applique désormais aux deux : pendant l'animation, le curseur de lecture commande
+  seul ; à l'arrêt, c'est le point survolé sur le diagramme, ou à défaut la position du
+  curseur. Dans tous les cas l'état affiché est celui du diagramme réel, actions de
+  micro-régulation cochées comprises.
+- **L'image détachée tient compte de tout ce que produit la simulation.** Elle en portait une
+  version réduite : verts découpés par un escamotage, groupes entièrement escamotés, zone de
+  coupure calculée sur les temps interverts et cycle simulé lui échappaient. Les deux
+  affichages partagent maintenant le même calcul de couleur, ce qui leur interdit de
+  diverger à nouveau.
+
+### Corrigé
+
+- **La fenêtre de l'image détachée s'ouvre à la taille de l'image.** À la réouverture d'un
+  projet, elle pouvait s'ouvrir très au-delà et déborder sur un second écran. Deux causes :
+  la fenêtre était dimensionnée avant que l'image ne soit mesurée, sur un gabarit au format
+  paysage qui convenait mal à un plan en portrait ; et l'ajustement final ne savait
+  qu'agrandir, si bien qu'une mesure prise avant stabilisation de la mise en page restait
+  acquise. Le dimensionnement vise désormais une taille absolue et n'a plus lieu tant que
+  l'image n'est pas mesurée.
+
+---
+
 ## [1.2.4] — 2026-08-27
 
 ### Ajouté
