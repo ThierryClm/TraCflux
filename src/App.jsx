@@ -1921,6 +1921,7 @@ function App() {
         floatingZoom, setFloatingZoom,
         showCropControls, setShowCropControls,
         intersectionArrows, groups, imageNaturalDims,
+        selectedActions: simulationSelectedActions, conflictMatrix,
         hoveredArrowGroupId, hoveredDiagramTime,
         simulationEnabled, isPlayingSimulation,
         simulationCurrentTime, simulationResult,
@@ -2936,6 +2937,7 @@ function App() {
                                 setCurrentTime={setSimulationCurrentTime}
                                 hoveredArrowGroupId={hoveredArrowGroupId}
                                 setHoveredArrowGroupId={setHoveredArrowGroupId}
+                                hoveredDiagramTime={hoveredDiagramTime}
                                 actionData={actionData}
                                 selectedActions={simulationSelectedActions}
                                 conflictMatrix={conflictMatrix}

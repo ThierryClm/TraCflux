@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
 import { BOX_W, BOX_H, fitImageBox } from '../utils/floatingImageBox';
+import { getGroupColorAtTime } from '../utils/groupColorAtTime';
 
 /**
  * Gère le rendu du contenu de la popup "Image du carrefour" :
@@ -15,9 +16,10 @@ const useFloatingImageRenderer = ({
     intersectionArrows,
     groups,
     imageNaturalDims,
+    selectedActions,
+    conflictMatrix,
     hoveredArrowGroupId,
     hoveredDiagramTime,
-    simulationEnabled,
     isPlayingSimulation,
     simulationCurrentTime,
     simulationResult,
@@ -69,10 +71,20 @@ const useFloatingImageRenderer = ({
         const cropT = Math.min(floatingCrop.top, maxCropY);
         const cropB = Math.min(floatingCrop.bottom, maxCropY);
 
-        // Use simulation time when playing, otherwise use hovered time
-        const activeTime = (simulationEnabled && isPlayingSimulation)
-            ? simulationCurrentTime
-            : hoveredDiagramTime;
+        // Instant affiché, règle commune aux deux fenêtres :
+        //   1. animation lancée  → le curseur de lecture, et lui seul. Le survol
+        //      ne doit pas détourner l'affichage pendant le déroulement.
+        //   2. animation à l'arrêt → le point survolé sur le diagramme,
+        //      à défaut la position du curseur.
+        // Les flèches montrent donc toujours un instant que l'utilisateur peut
+        // situer à l'écran.
+        const activeTime = isPlayingSimulation
+            ? (simulationCurrentTime ?? 0)
+            : (hoveredDiagramTime ?? simulationCurrentTime ?? 0);
+
+        const colorContext = {
+            groups, simulationResult, cycleLength, actionData, selectedActions, conflictMatrix
+        };
 
         floatingImagePopup.renderToPopup(
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -164,46 +176,12 @@ const useFloatingImageRenderer = ({
                                 const turnLength = arrow.turnLength || 1;
                                 const isHovered = hoveredArrowGroupId === arrow.groupId;
 
-                                let arrowColor = '#000000';
-                                if (activeTime !== null && group) {
-                                    const isSimPlaying = simulationEnabled && isPlayingSimulation;
-                                    const simGroup = isSimPlaying ? simulationResult?.simulatedGroups?.find(g => g.id === arrow.groupId) : null;
-                                    const offset = simGroup ? (simGroup.simulatedOffset ?? group.offset) : (group.offset || 0);
-                                    const greenDuration = simGroup ? (simGroup.simulatedGreen ?? group.durations?.green ?? 0) : (group.durations?.green || 0);
-                                    const orangeDuration = group.durations?.orange || 0;
-                                    const cycle = isSimPlaying ? (simulationResult?.simulatedCycleLength || cycleLength || 100) : (cycleLength || 100);
-
-                                    const secondeLucarneAction = actionData.find(action =>
-                                        action.action === 'Seconde lucarne' &&
-                                        action.gf === String(arrow.groupId) &&
-                                        action.deb !== '' && action.fin !== ''
-                                    );
-
-                                    let isInSecondeLucarne = false;
-                                    if (secondeLucarneAction) {
-                                        const slDeb = parseInt(secondeLucarneAction.deb) || 0;
-                                        const slFin = parseInt(secondeLucarneAction.fin) || 0;
-                                        const normalizedTime = activeTime % cycle;
-                                        if (slDeb <= slFin) {
-                                            isInSecondeLucarne = normalizedTime >= slDeb && normalizedTime < slFin;
-                                        } else {
-                                            isInSecondeLucarne = normalizedTime >= slDeb || normalizedTime < slFin;
-                                        }
-                                    }
-
-                                    if (isInSecondeLucarne) {
-                                        arrowColor = '#00aa00';
-                                    } else {
-                                        let relativeTime = (activeTime - offset + cycle) % cycle;
-                                        if (relativeTime < greenDuration) {
-                                            arrowColor = '#00cc00';
-                                        } else if (relativeTime < greenDuration + orangeDuration) {
-                                            arrowColor = '#ffff00';
-                                        } else {
-                                            arrowColor = '#cc0000';
-                                        }
-                                    }
-                                }
+                                // Même moteur de couleur que le panneau intégré.
+                                // La copie réduite qui vivait ici ignorait les
+                                // verts découpés, les groupes escamotés et la
+                                // zone de coupure d'un escamotage, et n'employait
+                                // les temps simulés que pendant la lecture.
+                                const arrowColor = getGroupColorAtTime(arrow.groupId, activeTime, colorContext);
 
                                 const isPedestrianOrCycle = courant === 'Piéton' || courant === 'Cycle';
 
@@ -241,7 +219,8 @@ const useFloatingImageRenderer = ({
         );
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
         intersectionArrows, groups, imageNaturalDims, hoveredArrowGroupId, hoveredDiagramTime,
-        simulationEnabled, isPlayingSimulation, simulationCurrentTime, simulationResult,
+        selectedActions, conflictMatrix,
+        isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 

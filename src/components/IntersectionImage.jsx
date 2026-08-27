@@ -22,6 +22,8 @@ const IntersectionImage = ({
     // Hover state for diagram highlighting
     hoveredArrowGroupId,
     setHoveredArrowGroupId,
+    // Instant survolé sur le diagramme (prime sur le curseur d'animation)
+    hoveredDiagramTime = null,
     // Action data for special actions simulation
     actionData = [],
     selectedActions = [],
@@ -590,6 +592,15 @@ const IntersectionImage = ({
         [groups, simulationResult, cycleLength, actionData, selectedActions, conflictMatrix]
     );
 
+    // Instant affiché, règle commune avec la fenêtre détachée :
+    //   1. animation lancée  → le curseur de lecture, et lui seul. Le survol ne
+    //      doit pas détourner l'affichage pendant le déroulement.
+    //   2. animation à l'arrêt → le point survolé sur le diagramme, à défaut la
+    //      position du curseur.
+    const displayedTime = isPlaying
+        ? (currentTime ?? 0)
+        : (hoveredDiagramTime ?? currentTime ?? 0);
+
     // Animation loop
     useEffect(() => {
         if (isPlaying) {
@@ -733,8 +744,7 @@ const IntersectionImage = ({
                             const scale = arrow.scale || 1;
                             const arrowLength = arrow.length || 1;
                             const turnLength = arrow.turnLength || 1;
-                            // Always show color based on current time in simulated diagram
-                            const arrowColor = getGroupColorAtTime(arrow.groupId, currentTime || 0);
+                            const arrowColor = getGroupColorAtTime(arrow.groupId, displayedTime);
                             const isHovered = hoveredArrowGroupId === arrow.groupId;
                             const isPedestrianOrCycle = groupInfo.courant === 'Piéton' || groupInfo.courant === 'Cycle';
                             return (
