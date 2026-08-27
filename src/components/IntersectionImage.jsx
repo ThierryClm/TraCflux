@@ -516,30 +516,43 @@ const IntersectionImage = ({
                         <polyline points={`${tagArrowX + 6},2 ${tagArrowX},8 ${tagArrowX + 6},14`} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
+            case 'TD_TàD':
             case 'TDTàD': // Legacy support
-            case 'TD-TàD': // Tout droit + Tourne à droite
+            case 'TD-TàD': { // Tout droit + Tourne à droite
+                // Longueur : rallonge la hampe vers le bas. Retour : porte la branche
+                // tournante plus loin. Aux valeurs par défaut (1 et 1), le tracé est
+                // rigoureusement celui d'avant.
+                const bottom = 28 + (arrowLength - 1) * 24;
+                const vb = 32 + (arrowLength - 1) * 24;
+                const turnX = 12 + 8 * turnLength;
                 return (
-                    <svg width={size} height={size} viewBox="0 0 32 32">
+                    <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
                         {/* Flèche tout droit */}
-                        <line x1="12" y1="28" x2="12" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+                        <line x1="12" y1={bottom} x2="12" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                         <polyline points="6,14 12,8 18,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
                         {/* Flèche tourne à droite */}
-                        <path d="M12,20 Q20,20 20,12 L20,8" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points="16,12 20,8 24,12" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={`M12,20 Q${turnX},20 ${turnX},12 L${turnX},8`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points={`${turnX - 4},12 ${turnX},8 ${turnX + 4},12`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
+            }
+            case 'TD_TàG':
             case 'TDTàG': // Legacy support
-            case 'TD-TàG': // Tout droit + Tourne à gauche
+            case 'TD-TàG': { // Tout droit + Tourne à gauche
+                const bottom = 28 + (arrowLength - 1) * 24;
+                const vb = 32 + (arrowLength - 1) * 24;
+                const turnX = 20 - 8 * turnLength;
                 return (
-                    <svg width={size} height={size} viewBox="0 0 32 32">
+                    <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
                         {/* Flèche tout droit */}
-                        <line x1="20" y1="28" x2="20" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+                        <line x1="20" y1={bottom} x2="20" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                         <polyline points="14,14 20,8 26,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
                         {/* Flèche tourne à gauche */}
-                        <path d="M20,20 Q12,20 12,12 L12,8" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points="8,12 12,8 16,12" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={`M20,20 Q${turnX},20 ${turnX},12 L${turnX},8`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points={`${turnX - 4},12 ${turnX},8 ${turnX + 4},12`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
+            }
             case 'TD_G_D': // Tout droit + Tourne à gauche et à droite
                 return (
                     <svg width={size} height={size} viewBox="0 0 32 32">
@@ -554,6 +567,18 @@ const IntersectionImage = ({
                         <polyline points="20,14 24,10 28,14" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
+            case 'PP': { // Triangle de priorité piéton
+                // Ce n'est pas un mouvement, donc pas une flèche. Contour rouge
+                // constant, fond noir ; il ne passe au jaune que pendant la
+                // phase jaune du groupe.
+                // Le fond ne signale qu'un état : la phase jaune du groupe.
+                const estJaune = /^(#ffff00|rgb\(\s*255\s*,\s*255\s*,\s*0\s*\))$/i.test(String(color).trim());
+                return (
+                    <svg width={size} height={size} viewBox="0 0 32 32">
+                        <polygon points="16,4 4,26 28,26" fill={estJaune ? '#ffff00' : '#000000'} stroke="#e00000" strokeWidth={strokeWidth} strokeLinejoin="round" />
+                    </svg>
+                );
+            }
             case 'Cycle': { // Flèche 1 sens (cyclistes)
                 // Un courant cycliste a un SENS : flèche simple, et non la
                 // double flèche des traversées piétonnes. Trait fin pour la
@@ -972,7 +997,9 @@ const IntersectionImage = ({
                             {(() => {
                                 const selectedArrowData = arrows.find(a => a.id === selectedArrow);
                                 const selectedGroupInfo = selectedArrowData ? getGroupInfo(selectedArrowData.groupId) : null;
-                                const isPedOrCycle = selectedGroupInfo && (selectedGroupInfo.courant === 'Piéton' || selectedGroupInfo.courant === 'Cycle');
+                                // La hampe des mouvements composés se règle aussi en longueur.
+                                const AVEC_LONGUEUR = ['Piéton', 'Cycle', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG'];
+                                const isPedOrCycle = selectedGroupInfo && AVEC_LONGUEUR.includes(selectedGroupInfo.courant);
                                 return isPedOrCycle ? (
                                     <div className="editor-row">
                                         <label>Longueur:</label>
@@ -1004,7 +1031,10 @@ const IntersectionImage = ({
                             {(() => {
                                 const selectedArrowData = arrows.find(a => a.id === selectedArrow);
                                 const selectedGroupInfo = selectedArrowData ? getGroupInfo(selectedArrowData.groupId) : null;
-                                const isTurnArrow = selectedGroupInfo && (selectedGroupInfo.courant === 'TàD' || selectedGroupInfo.courant === 'TàG');
+                                // « Retour » : portée de la branche tournante, pour les
+                                // mouvements tournants comme pour les composés.
+                                const AVEC_RETOUR = ['TàD', 'TàG', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG'];
+                                const isTurnArrow = selectedGroupInfo && AVEC_RETOUR.includes(selectedGroupInfo.courant);
                                 return isTurnArrow ? (
                                     <div className="editor-row">
                                         <label>Retour:</label>

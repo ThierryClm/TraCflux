@@ -124,7 +124,8 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                             g.courant === 'TD_TàG' ? 'Flèche tout droit - tourne à gauche' :
                                             g.courant === 'TD_G_D' ? 'Flèche tout droit - tourne à gauche et à droite' :
                                             g.courant === 'Piéton' ? 'Flèche 2 sens' :
-                                            g.courant === 'Cycle' ? 'Flèche 2 sens' : ''
+                                            g.courant === 'Cycle' ? 'Flèche 1 sens, trait fin' :
+                                            g.courant === 'PP' ? 'Triangle de priorité piéton' : ''
                                         )}
                                     >
                                         <option value=""></option>
@@ -136,6 +137,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                         <option value="TD_G_D">TD_G_D</option>
                                         <option value="Piéton">Piéton</option>
                                         <option value="Cycle">Cycle</option>
+                                        <option value="PP">PP</option>
                                     </select>
                                 </td>
                                 {/* Min Green */}

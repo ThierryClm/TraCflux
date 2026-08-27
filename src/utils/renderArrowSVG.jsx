@@ -38,26 +38,39 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1)
                 </svg>
             );
         }
+        case 'TD_TàD':
         case 'TDTàD':
-        case 'TD-TàD':
+        case 'TD-TàD': {
+            // Longueur : rallonge la hampe vers le bas. Retour : porte la
+            // branche tournante plus loin. Aux valeurs par défaut (1 et 1), le
+            // tracé est identique au précédent.
+            const bottom = 28 + (arrowLength - 1) * 24;
+            const vb = 32 + (arrowLength - 1) * 24;
+            const turnX = 12 + 8 * turnLength;
             return (
-                <svg width={size} height={size} viewBox="0 0 32 32">
-                    <line x1="12" y1="28" x2="12" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+                <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
+                    <line x1="12" y1={bottom} x2="12" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                     <polyline points="6,14 12,8 18,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M12,20 Q20,20 20,12 L20,8" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                    <polyline points="16,12 20,8 24,12" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={`M12,20 Q${turnX},20 ${turnX},12 L${turnX},8`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                    <polyline points={`${turnX - 4},12 ${turnX},8 ${turnX + 4},12`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             );
+        }
+        case 'TD_TàG':
         case 'TDTàG':
-        case 'TD-TàG':
+        case 'TD-TàG': {
+            const bottom = 28 + (arrowLength - 1) * 24;
+            const vb = 32 + (arrowLength - 1) * 24;
+            const turnX = 20 - 8 * turnLength;
             return (
-                <svg width={size} height={size} viewBox="0 0 32 32">
-                    <line x1="20" y1="28" x2="20" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+                <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
+                    <line x1="20" y1={bottom} x2="20" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                     <polyline points="14,14 20,8 26,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M20,20 Q12,20 12,12 L12,8" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                    <polyline points="8,12 12,8 16,12" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={`M20,20 Q${turnX},20 ${turnX},12 L${turnX},8`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                    <polyline points={`${turnX - 4},12 ${turnX},8 ${turnX + 4},12`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             );
+        }
         case 'TD_G_D':
             return (
                 <svg width={size} height={size} viewBox="0 0 32 32">
@@ -69,6 +82,19 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1)
                     <polyline points="20,14 24,10 28,14" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
             );
+        case 'PP': {
+            // Priorité piéton : ce n'est pas un mouvement, donc pas une flèche.
+            // Contour rouge constant, fond noir ; il ne passe au jaune que
+            // pendant la phase jaune du groupe. Orientable et redimensionnable
+            // par la rotation et l'échelle, comme les autres symboles.
+            // Le fond ne signale qu'un état : la phase jaune du groupe.
+            const estJaune = /^(#ffff00|rgb\(\s*255\s*,\s*255\s*,\s*0\s*\))$/i.test(String(color).trim());
+            return (
+                <svg width={size} height={size} viewBox="0 0 32 32">
+                    <polygon points="16,4 4,26 28,26" fill={estJaune ? '#ffff00' : '#000000'} stroke="#e00000" strokeWidth={strokeWidth} strokeLinejoin="round" />
+                </svg>
+            );
+        }
         case 'Cycle': {
             // Un courant cycliste a un SENS : flèche simple, et non la double
             // flèche des traversées piétonnes. Trait fin pour la distinguer
