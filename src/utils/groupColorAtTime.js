@@ -19,6 +19,45 @@
  * @param {number} effectiveCycleLength - Longueur de cycle en vigueur
  * @returns {boolean}
  */
+/**
+ * Le triangle de priorité piéton est-il allumé à cet instant ?
+ *
+ * Le diagramme représente la période d'un groupe PP par une bande jaune
+ * intermittente : une seconde allumée, une seconde éteinte, l'alternance étant
+ * calée sur le DÉBUT de la période et non sur l'origine du cycle. Le symbole
+ * doit suivre exactement la même cadence, sans quoi les deux battent en
+ * décalage sous les yeux de l'utilisateur.
+ *
+ * À noter : un groupe PP est VERT au regard du calcul de couleur pendant toute
+ * sa période — jamais jaune. Se fier à la couleur pour décider de l'allumage ne
+ * marche donc pas ; il faut retrouver la période depuis le décalage et le vert.
+ *
+ * @param {number} groupId - Identifiant du groupe de feux
+ * @param {number} time - Instant du cycle (secondes)
+ * @param {Object} context - { groups, simulationResult, cycleLength }
+ * @returns {boolean}
+ */
+export const isPPLit = (groupId, time, context = {}) => {
+    const { groups = [], simulationResult = null, cycleLength = 100 } = context;
+    const groupsData = simulationResult?.simulatedGroups || groups;
+    const group = groupsData.find(g => g.id === groupId);
+    if (!group) return false;
+
+    const cycle = simulationResult?.simulatedCycleLength || cycleLength;
+    if (!cycle) return false;
+
+    const offset = simulationResult ? (group.simulatedOffset ?? group.offset) : group.offset;
+    const green = simulationResult
+        ? (group.simulatedGreen ?? group.durations?.green ?? 0)
+        : (group.durations?.green || 0);
+    if (green <= 0) return false;
+
+    const deb = (((offset || 0) % cycle) + cycle) % cycle;
+    const ecoule = (((time - deb) % cycle) + cycle) % cycle;
+    if (ecoule >= green) return false; // hors de la période
+    return Math.floor(ecoule) % 2 === 0;
+};
+
 export const isTimeInRange = (time, start, end, effectiveCycleLength) => {
     const normalizedTime = time % effectiveCycleLength;
     const normalizedStart = parseInt(start);

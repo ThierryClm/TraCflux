@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
 import { BOX_W, BOX_H, fitImageBox } from '../utils/floatingImageBox';
-import { getGroupColorAtTime } from '../utils/groupColorAtTime';
+import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 
 /**
  * Gère le rendu du contenu de la popup "Image du carrefour" :
@@ -192,7 +192,7 @@ const useFloatingImageRenderer = ({
                                         style={{ left: `${arrow.x}%`, top: `${arrow.y}%` }}
                                     >
                                         <div className="arrow-symbol" style={{ transform: `rotate(${rotation}deg) scale(${scale})` }}>
-                                            {renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, activeTime)}
+                                            {renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, isPPLit(arrow.groupId, activeTime, colorContext))}
                                         </div>
                                         {showNames && group?.name && (
                                             // Contre-échelle : l'étiquette garde sa taille à l'écran quel que
