@@ -80,6 +80,12 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     // La fenêtre se cale sur le cadre utile (l'image inscrite dans la boîte de
     // référence), bandes vides exclues : sinon elle s'ouvrait au gabarit
     // 750×530 quel que soit le format de la photo, très au-delà de l'image.
+    // Dimensions natives pas encore connues : l'image se décode en asynchrone
+    // et n'est mesurée qu'après. Dimensionner la fenêtre sur le repli « boîte
+    // pleine » l'ouvrirait très au-delà de l'image dès que celle-ci n'est pas au
+    // format de référence — un plan en portrait s'y retrouvait deux fois et
+    // demie trop large. On ne dimensionne donc pas tant qu'on ne sait pas.
+    const dimsKnown = imageNaturalDims.width > 1 || imageNaturalDims.height > 1;
     const { dispW, dispH } = fitImageBox(imageNaturalDims);
     const contentWidth = Math.ceil(Math.max(1, dispW - floatingCrop.left - floatingCrop.right) * floatingZoom) + SAFETY_PX;
     const contentHeight = Math.ceil(Math.max(1, dispH - floatingCrop.top - floatingCrop.bottom) * floatingZoom) + HEADER_HEIGHT + SAFETY_PX;
@@ -101,7 +107,7 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
         // la fenêtre ; la voir se redimensionner sous le pointeur pendant qu'on
         // tire un curseur casserait le geste. Elle se recale à la fermeture du
         // panneau de rognage.
-        contentSize: showCropControls ? null : { width: contentWidth, height: contentHeight }
+        contentSize: (showCropControls || !dimsKnown) ? null : { width: contentWidth, height: contentHeight }
     });
 
     return {

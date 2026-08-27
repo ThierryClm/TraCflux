@@ -284,8 +284,15 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
         return () => { popupFlushers.delete(flushPending); };
     }, [flushPending]);
 
-    // Réajuste la fenêtre pour que sa zone utile fasse exactement contentSize.
-    const fitToContent = useCallback(() => {
+    // Dimensionne la fenêtre pour que sa zone utile fasse exactement contentSize.
+    //
+    // Taille ABSOLUE visée, jamais un cumul d'ajouts : la version précédente
+    // mesurait le débordement et l'ajoutait, si bien qu'une mesure prise avant
+    // stabilisation de la mise en page agrandissait la fenêtre sans que rien ne
+    // la ramène ensuite. Ici le résidu mesuré s'ajoute à la CIBLE, pas à la
+    // taille courante — appeler la fonction dix fois de suite donne dix fois le
+    // même résultat.
+    const applySize = useCallback(() => {
         const popup = popupRef.current;
         const target = contentSizeRef.current;
         if (!target || !popup || popup.closed) return;
@@ -293,35 +300,32 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             const iw = popup.innerWidth;
             const ih = popup.innerHeight;
             if (!iw || !ih) return; // fenêtre pas encore dimensionnée
-            const maxW = (popup.screen?.availWidth || iw) - 40;
-            const maxH = (popup.screen?.availHeight || ih) - 60;
-            const dw = Math.round(Math.min(target.width, maxW)) - iw;
-            const dh = Math.round(Math.min(target.height, maxH)) - ih;
-            if (dw || dh) popup.resizeBy(dw, dh);
-        } catch { /* resize refusé par le navigateur : on garde le gabarit */ }
-    }, []);
 
-    // Rattrapage MESURÉ, après le calage sur contentSize. Ce dernier reste une
-    // estimation (hauteur réelle de la barre d'outils, mise à l'échelle qui
-    // tombe sur une fraction de pixel) ; ici on lit le débordement réel de la
-    // zone défilante et on l'ajoute à la fenêtre. N'agrandit jamais au-delà de
-    // l'écran, et ne fait rien s'il n'y a pas de débordement : pas de boucle.
-    const absorbOverflow = useCallback(() => {
-        const popup = popupRef.current;
-        if (!popup || popup.closed) return;
-        try {
+            // Plafond : la zone utile de l'écran, chrome du navigateur déduit.
+            const b = screenBounds(popup);
+            const chromeW = Math.max(0, (popup.outerWidth || iw) - iw);
+            const chromeH = Math.max(0, (popup.outerHeight || ih) - ih);
+            const maxW = b ? Math.max(200, b.width - 40 - chromeW) : Infinity;
+            const maxH = b ? Math.max(200, b.height - 60 - chromeH) : Infinity;
+
+            const poser = (w, h) => {
+                const dw = Math.min(Math.round(w), maxW) - popup.innerWidth;
+                const dh = Math.min(Math.round(h), maxH) - popup.innerHeight;
+                if (dw || dh) popup.resizeBy(dw, dh);
+            };
+
+            // 1. La cible annoncée.
+            poser(target.width, target.height);
+
+            // 2. Le résidu réellement mesuré — hauteur exacte de la barre
+            //    d'outils, mise à l'échelle qui tombe sur une fraction de pixel.
+            //    Ajouté à la CIBLE, et borné par l'écran.
             const el = popup.document.querySelector('[data-fit-scroll]');
             if (!el) return;
-            const dw = Math.ceil(el.scrollWidth - el.clientWidth);
-            const dh = Math.ceil(el.scrollHeight - el.clientHeight);
-            if (dw <= 0 && dh <= 0) return;
-            const roomW = Math.max(0, (popup.screen?.availWidth || 0) - 40 - popup.innerWidth);
-            const roomH = Math.max(0, (popup.screen?.availHeight || 0) - 60 - popup.innerHeight);
-            popup.resizeBy(
-                Math.min(Math.max(0, dw), roomW),
-                Math.min(Math.max(0, dh), roomH)
-            );
-        } catch { /* resize refusé par le navigateur */ }
+            const extraW = Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth));
+            const extraH = Math.max(0, Math.ceil(el.scrollHeight - el.clientHeight));
+            if (extraW || extraH) poser(target.width + extraW, target.height + extraH);
+        } catch { /* redimensionnement refusé par le navigateur */ }
     }, []);
 
     // Recentre la fenêtre sur l'écran, une fois sa taille définitive connue.
@@ -467,10 +471,11 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             // Create React root
             rootRef.current = createRoot(container);
 
-            // Corrige le gabarit une fois la fenêtre réellement dimensionnée,
-            // puis absorbe ce qui dépasse encore une fois le contenu rendu.
-            setTimeout(fitToContent, 0);
-            setTimeout(absorbOverflow, 150);
+            // Dimensionnement une fois la fenêtre réellement créée, puis une
+            // seconde passe quand le contenu est rendu. La fonction visant une
+            // taille absolue, la répétition est sans effet de bord.
+            setTimeout(applySize, 0);
+            setTimeout(applySize, 150);
             // En dernier : la position se calcule sur la taille définitive.
             // Deux passages, et non un : juste après l'ouverture, outerWidth vaut
             // encore 0 sur certaines fenêtres — celles sans phase de
@@ -563,10 +568,10 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
     // l'image (chargées en asynchrone, après l'ouverture au clic).
     useEffect(() => {
         if (!isOpen || !contentSize) return;
-        const t = setTimeout(fitToContent, 120);
-        const t2 = setTimeout(absorbOverflow, 260);
+        const t = setTimeout(applySize, 120);
+        const t2 = setTimeout(applySize, 260);
         return () => { clearTimeout(t); clearTimeout(t2); };
-    }, [isOpen, contentSize?.width, contentSize?.height, fitToContent, absorbOverflow]);
+    }, [isOpen, contentSize?.width, contentSize?.height, applySize]);
 
     // Update document title when the title prop changes while the popup is open
     // (le titre est posé une fois à l'ouverture ; cet effet le rafraîchit pour
