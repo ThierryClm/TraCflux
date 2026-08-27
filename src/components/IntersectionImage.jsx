@@ -610,16 +610,21 @@ const IntersectionImage = ({
         // Normalize time within cycle
         const normalizedTime = time % effectiveCycleLength;
 
-        // Check for "Seconde lucarne" action for this group
-        // In normal mode (hovering): always show secondes lucarnes
-        // In simulation mode: only show if action is selected
-        const isSimulationMode = selectedActions && selectedActions.length > 0;
+        // Seconde lucarne : action DÉCLARATIVE. calculateSimulatedDiagram ne la
+        // traite pas — la cocher dans le panneau de simulation ne change rien au
+        // diagramme simulé. La conditionner à cette coche l'éteignait donc dès
+        // qu'une AUTRE action était cochée, alors que le diagramme continuait de
+        // la dessiner : son filtre masque les actions SÉLECTIONNÉES (une action
+        // appliquée par la simulation n'a plus à être annoncée), convention
+        // exactement inverse. Les deux ne pouvaient jamais s'accorder.
+        //
+        // Les flèches l'honorent donc toujours, comme au survol et comme le fait
+        // déjà la fenêtre détachée de l'image.
         const secondeLucarneAction = actionData.find(action =>
             action.action === 'Seconde lucarne' &&
             action.gf === String(groupId) &&
             action.deb !== '' &&
-            action.fin !== '' &&
-            (!isSimulationMode || selectedActions.includes(action.id))
+            action.fin !== ''
         );
 
         // Check for "Priorité piétons" action for this group
