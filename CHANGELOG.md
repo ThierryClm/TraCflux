@@ -7,6 +7,34 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.2.4] — 2026-08-27
+
+### Ajouté
+
+- **Les fenêtres détachées retrouvent leur place.** La position de chacune est mémorisée et
+  restituée à la réouverture. Elle est retenue par le navigateur et non par le projet : une
+  position dépend de l'écran, et un projet ouvert sur un poste d'une autre définition
+  rouvrirait ses fenêtres hors champ. Si la position enregistrée ne laisse plus la fenêtre
+  suffisamment visible — écran débranché, définition changée — elle est recentrée. Une
+  fenêtre posée sur un second écran y revient : la position est vérifiée après déplacement,
+  sur l'écran où la fenêtre a effectivement atterri.
+
+### Corrigé
+
+- **Les secondes lucarnes colorent de nouveau les flèches du carrefour.** Elles n'étaient
+  prises en compte que si l'action était cochée dans le panneau de simulation — or la
+  simulation ne traite pas cette action, la cocher ne change rien au diagramme simulé.
+  Résultat : dès qu'une *autre* action était cochée, les flèches perdaient toutes les
+  secondes lucarnes, pendant que le diagramme continuait de les dessiner. Les deux suivaient
+  des conventions opposées. Les flèches les honorent désormais toujours, comme au survol et
+  comme le faisait déjà la fenêtre détachée de l'image.
+- **Toutes les fenêtres détachées s'ouvrent au même endroit.** Certaines — la matrice des
+  temps interverts notamment — s'ouvraient encore dans l'angle supérieur gauche. Le
+  centrage intervenait trop tôt pour les fenêtres sans phase de redimensionnement, alors que
+  leurs dimensions n'étaient pas encore connues, et renonçait sans rien dire.
+
+---
+
 ## [1.2.3] — 2026-08-26
 
 ### Corrigé
