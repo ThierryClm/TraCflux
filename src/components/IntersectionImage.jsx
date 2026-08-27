@@ -519,20 +519,30 @@ const IntersectionImage = ({
             case 'TD_TàD':
             case 'TDTàD': // Legacy support
             case 'TD-TàD': { // Tout droit + Tourne à droite
-                // Longueur : rallonge la hampe vers le bas. Retour : porte la branche
-                // tournante plus loin. Aux valeurs par défaut (1 et 1), le tracé est
-                // rigoureusement celui d'avant.
+                // Longueur : rallonge la hampe vers le bas, inchangée à 1.
+                // Retour : portée de la branche tournante.
                 const bottom = 28 + (arrowLength - 1) * 24;
                 const vb = 32 + (arrowLength - 1) * 24;
-                const turnX = 12 + 8 * turnLength;
+                // Branche tournante orientée à 120° au sens trigonométrique, soit 30° de
+                // la verticale. Segment droit : la pointe et le fût partagent exactement
+                // la même direction, ce qu'une courbe ne garantissait pas. « Retour »
+                // (0 à 1) règle sa portée.
+                const ANGLE = Math.PI / 6;
+                const ct = Math.cos(ANGLE);
+                const st = Math.sin(ANGLE);
+                const portee = 14 * turnLength;
+                const tipX = 12 + portee * st;
+                const tipY = 20 - portee * ct;
+                // Barbes de la pointe, tournées du même angle que la branche.
+                const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
                 return (
                     <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
                         {/* Flèche tout droit */}
                         <line x1="12" y1={bottom} x2="12" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                         <polyline points="6,14 12,8 18,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
                         {/* Flèche tourne à droite */}
-                        <path d={`M12,20 Q${turnX},20 ${turnX},12 L${turnX},8`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points={`${turnX - 4},12 ${turnX},8 ${turnX + 4},12`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={`M12,20 L${tipX.toFixed(2)},${tipY.toFixed(2)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points={`${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
             }
@@ -541,15 +551,26 @@ const IntersectionImage = ({
             case 'TD-TàG': { // Tout droit + Tourne à gauche
                 const bottom = 28 + (arrowLength - 1) * 24;
                 const vb = 32 + (arrowLength - 1) * 24;
-                const turnX = 20 - 8 * turnLength;
+                // Branche tournante orientée à 120° au sens trigonométrique, soit 30° de
+                // la verticale. Segment droit : la pointe et le fût partagent exactement
+                // la même direction, ce qu'une courbe ne garantissait pas. « Retour »
+                // (0 à 1) règle sa portée.
+                const ANGLE = Math.PI / 6;
+                const ct = Math.cos(ANGLE);
+                const st = -Math.sin(ANGLE);
+                const portee = 14 * turnLength;
+                const tipX = 20 + portee * st;
+                const tipY = 20 - portee * ct;
+                // Barbes de la pointe, tournées du même angle que la branche.
+                const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
                 return (
                     <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
                         {/* Flèche tout droit */}
                         <line x1="20" y1={bottom} x2="20" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                         <polyline points="14,14 20,8 26,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
                         {/* Flèche tourne à gauche */}
-                        <path d={`M20,20 Q${turnX},20 ${turnX},12 L${turnX},8`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points={`${turnX - 4},12 ${turnX},8 ${turnX + 4},12`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={`M20,20 L${tipX.toFixed(2)},${tipY.toFixed(2)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points={`${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
             }
