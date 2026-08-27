@@ -7,6 +7,36 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.2.6] — 2026-08-27
+
+### Ajouté
+
+- **Le courant « PP » signale une priorité piéton dans le synoptique.** Il s'ajoute à la liste
+  des courants du formulaire, aux côtés des mouvements de circulation. Ce n'en est pas un :
+  il ne se dessine donc pas en flèche mais en triangle à contour rouge, fond noir. Pendant la
+  période du groupe, le triangle s'allume et s'éteint chaque seconde, exactement à la cadence
+  de la bande intermittente que le diagramme trace pour ces groupes — même origine, même
+  rythme, dans le panneau intégré comme dans la fenêtre détachée.
+- **Le courant cycliste se dessine à sens unique.** Il empruntait la double flèche des
+  traversées piétonnes, alors qu'un courant de vélos a un sens. Une seule pointe désormais, et
+  un trait fin qui le distingue d'un courant de véhicules.
+
+### Corrigé
+
+- **Les mouvements composés retrouvent leur symbole.** « Tout droit + tourne à droite » et
+  « tout droit + tourne à gauche » étaient tracés comme de simples flèches tout droit : la
+  liste déroulante produisait des valeurs que les dessins ne reconnaissaient pas, et l'écart
+  passait inaperçu faute d'erreur. Ils disposent en outre des réglages de longueur et de
+  retour, qui ne leur étaient pas proposés. La branche tournante part à angle droit du milieu
+  de la hampe et suit ses proportions quelle que soit la longueur.
+
+### Modifié
+
+- **La case « Ajout de flèches » devient « Ajouter un courant de circulation »**, ce qu'elle
+  fait réellement depuis qu'une flèche ne peut plus être posée sans courant renseigné.
+
+---
+
 ## [1.2.5] — 2026-08-27
 
 ### Modifié
