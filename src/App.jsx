@@ -570,6 +570,7 @@ function App() {
 
     // Fenêtre détachée (non modale, déplaçable) du comparateur de capacité.
     const capacityComparisonPopup = usePopupWindow({
+        geometryKey: 'capacityComparison',
         isOpen: capacityCompareModal,
         onClose: () => setCapacityCompareModal(false),
         title: 'Comparer la capacité des plans de feu',
@@ -579,6 +580,7 @@ function App() {
 
     // Miroir de présentation du diagramme (fenêtre détachée, lecture seule).
     const diagramPopup = usePopupWindow({
+        geometryKey: 'diagram',
         isOpen: showFloatingDiagram,
         onClose: () => setShowFloatingDiagram(false),
         title: `Diagramme${activePFName ? ` — ${activePFName}` : ''}`,
@@ -588,6 +590,7 @@ function App() {
 
     // Liste des conflits en fenêtre détachée.
     const conflictsPopup = usePopupWindow({
+        geometryKey: 'conflicts',
         isOpen: showFloatingConflicts,
         onClose: () => setShowFloatingConflicts(false),
         title: `Conflits${activePFName ? ` — ${activePFName}` : ''}`,
@@ -597,6 +600,7 @@ function App() {
 
     // Légende du diagramme en fenêtre détachée (déplaçable sur un autre écran).
     const legendPopup = usePopupWindow({
+        geometryKey: 'legend',
         isOpen: showFloatingLegend,
         onClose: () => setShowFloatingLegend(false),
         title: 'Légende du diagramme',

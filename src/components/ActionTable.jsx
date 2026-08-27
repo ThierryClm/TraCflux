@@ -221,6 +221,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
 
     // Popup windows
     const conditionsPopup = usePopupWindow({
+        geometryKey: 'conditions',
         isOpen: showFloatingConditions,
         onClose: () => setShowFloatingConditions(false),
         title: 'Conditions de micro-régulation',
@@ -231,6 +232,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     });
 
     const variablesPopup = usePopupWindow({
+        geometryKey: 'variables',
         isOpen: showFloatingVariables,
         onClose: () => setShowFloatingVariables(false),
         title: 'Variables micro',

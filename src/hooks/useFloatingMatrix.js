@@ -17,6 +17,7 @@ const useFloatingMatrix = (groupCount, activePFName = '') => {
     const popupTitle = pf ? `Matrice — ${pf}` : 'Matrice';
 
     const matrixPopup = usePopupWindow({
+        geometryKey: 'matrix',
         isOpen: showFloatingMatrix,
         onClose: () => setShowFloatingMatrix(false),
         title: popupTitle,

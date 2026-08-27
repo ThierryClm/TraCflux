@@ -19,6 +19,7 @@ const useFloatingRemarks = (activePFName = '') => {
     const popupTitle = pf ? `Remarques du diagramme — ${pf}` : 'Remarques du diagramme';
 
     const remarquesPopup = usePopupWindow({
+        geometryKey: 'remarques',
         isOpen: showFloatingRemarks,
         onClose: () => setShowFloatingRemarks(false),
         title: popupTitle,

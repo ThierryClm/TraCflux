@@ -17,6 +17,7 @@ const useFloatingForm = (groupCount, activePFName = '') => {
     const popupTitle = pf ? `Formulaire — ${pf}` : 'Formulaire';
 
     const formPopup = usePopupWindow({
+        geometryKey: 'form',
         isOpen: showFloatingForm,
         onClose: () => setShowFloatingForm(false),
         title: popupTitle,

@@ -86,6 +86,7 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
 
     // Popup window for floating image
     const floatingImagePopup = usePopupWindow({
+        geometryKey: 'image',
         isOpen: showFloatingImage && !!intersectionImage,
         onClose: () => setShowFloatingImage(false),
         title: popupTitle,

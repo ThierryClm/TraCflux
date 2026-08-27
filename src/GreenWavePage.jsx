@@ -121,6 +121,7 @@ const GreenWavePage = () => {
         localStorage.setItem('greenwave_floating_datatable', String(showFloatingDataTable));
     }, [showFloatingDataTable]);
     const dataTablePopup = usePopupWindow({
+        geometryKey: 'greenWaveDataTable',
         isOpen: showFloatingDataTable,
         onClose: () => setShowFloatingDataTable(false),
         title: 'Tableau des données saisies — Onde verte',

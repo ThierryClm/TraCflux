@@ -17,6 +17,7 @@ const useFloatingTraffic = (groupCount, activePFName = '') => {
     const popupTitle = pf ? `Données trafic — ${pf}` : 'Données trafic';
 
     const trafficPopup = usePopupWindow({
+        geometryKey: 'traffic',
         isOpen: showFloatingTraffic,
         onClose: () => setShowFloatingTraffic(false),
         title: popupTitle,

@@ -17,6 +17,7 @@ const useFloatingDiagnostic = (activePFName = '') => {
     const popupTitle = pf ? `Réserve de capacité — ${pf}` : 'Réserve de capacité';
 
     const diagnosticPopup = usePopupWindow({
+        geometryKey: 'diagnostic',
         isOpen: showFloatingDiagnostic,
         onClose: () => setShowFloatingDiagnostic(false),
         title: popupTitle,

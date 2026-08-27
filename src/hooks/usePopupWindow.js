@@ -7,6 +7,56 @@ import { toast } from '../utils/toast';
  * Shared registry of all open popup windows.
  * Allows coordinated focus management across multiple popups.
  */
+// --- Mémoire de position des fenêtres détachées ---------------------------
+// Une position dépend de l'ÉCRAN, pas du projet : elle vit donc dans le
+// navigateur. Rangée dans le projet, elle rouvrirait les fenêtres hors champ
+// sur un poste d'une autre résolution.
+const GEOMETRY_KEY = 'popup_geometry';
+
+const readPopupPosition = (key) => {
+    if (!key) return null;
+    try {
+        const all = JSON.parse(localStorage.getItem(GEOMETRY_KEY) || '{}');
+        const g = all[key];
+        return (g && Number.isFinite(g.left) && Number.isFinite(g.top)) ? g : null;
+    } catch { return null; }
+};
+
+const writePopupPosition = (key, left, top) => {
+    if (!key) return;
+    try {
+        const all = JSON.parse(localStorage.getItem(GEOMETRY_KEY) || '{}');
+        all[key] = { left, top };
+        localStorage.setItem(GEOMETRY_KEY, JSON.stringify(all));
+    } catch { /* quota, navigation privée */ }
+};
+
+// Part de la fenêtre devant rester dans la zone utile pour qu'une position
+// mémorisée soit jugée encore bonne.
+const VISIBLE_RATIO = 0.6;
+
+const screenBounds = (popup) => {
+    const scr = popup.screen;
+    if (!scr || !scr.availWidth || !scr.availHeight) return null;
+    return {
+        left: typeof scr.availLeft === 'number' ? scr.availLeft : 0,
+        top: typeof scr.availTop === 'number' ? scr.availTop : 0,
+        width: scr.availWidth,
+        height: scr.availHeight
+    };
+};
+
+const isSufficientlyVisible = (popup) => {
+    const b = screenBounds(popup);
+    if (!b) return true; // aucune information : ne pas déplacer à l'aveugle
+    const w = popup.outerWidth || popup.innerWidth || 0;
+    const h = popup.outerHeight || popup.innerHeight || 0;
+    if (!w || !h) return true;
+    const visW = Math.min(popup.screenX + w, b.left + b.width) - Math.max(popup.screenX, b.left);
+    const visH = Math.min(popup.screenY + h, b.top + b.height) - Math.max(popup.screenY, b.top);
+    return visW >= w * VISIBLE_RATIO && visH >= h * VISIBLE_RATIO;
+};
+
 const openPopups = new Set();
 let isBringingToFront = false;
 let lastBringTime = 0;
@@ -199,12 +249,20 @@ function installMainListener() {
  *        pour que innerWidth/innerHeight tombent juste — sans quoi une fenêtre
  *        pourtant plus grande que son contenu se retrouve avec des ascenseurs.
  */
-const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = null }) => {
+const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = null, geometryKey = null }) => {
     const popupRef = useRef(null);
     const rootRef = useRef(null);
     const intervalRef = useRef(null);
     const contentSizeRef = useRef(contentSize);
     contentSizeRef.current = contentSize;
+    // Identité stable pour la mémoire de position. Le titre ne peut pas servir
+    // de clé : il porte le nom du carrefour et celui du plan de feux actif.
+    const geometryKeyRef = useRef(geometryKey);
+    geometryKeyRef.current = geometryKey;
+    // Tant que le placement initial n'a pas eu lieu, la position courante est
+    // celle qu'a choisie le navigateur : la mémoriser écraserait la bonne.
+    const placedRef = useRef(false);
+    const lastPosRef = useRef({ x: null, y: null });
     // Dernier contenu à afficher, mis en attente pendant l'édition d'un champ.
     const pendingContentRef = useRef(null);
 
@@ -278,25 +336,39 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
     // Le centrage se fait sur la zone utile de l'ÉCRAN et non sur la fenêtre
     // principale : celle-ci peut être étroite ou déportée, et une fenêtre
     // détachée centrée sur elle finit hors champ.
-    const centerOnScreen = useCallback(() => {
+    const placeWindow = useCallback(() => {
         const popup = popupRef.current;
         if (!popup || popup.closed) return;
         try {
-            const scr = popup.screen;
-            if (!scr) return;
-            const availLeft = typeof scr.availLeft === 'number' ? scr.availLeft : 0;
-            const availTop = typeof scr.availTop === 'number' ? scr.availTop : 0;
-            const availW = scr.availWidth || 0;
-            const availH = scr.availHeight || 0;
-            if (!availW || !availH) return;
             const w = popup.outerWidth || popup.innerWidth || 0;
             const h = popup.outerHeight || popup.innerHeight || 0;
-            if (!w || !h) return;
-            // Jamais hors de la zone utile, même si la fenêtre est plus grande
-            // que l'écran : on privilégie alors l'angle visible.
-            const x = Math.max(availLeft, Math.round(availLeft + (availW - w) / 2));
-            const y = Math.max(availTop, Math.round(availTop + (availH - h) / 2));
-            popup.moveTo(x, y);
+            if (!w || !h) return; // pas encore dimensionnée : on repassera
+
+            // 1. Position mémorisée, si elle laisse la fenêtre suffisamment
+            //    visible. La vérification se fait APRÈS le déplacement : sur un
+            //    poste multi-écrans, popup.screen suit la fenêtre, ce qui valide
+            //    correctement une position sur l'écran secondaire.
+            const saved = readPopupPosition(geometryKeyRef.current);
+            if (saved) {
+                popup.moveTo(saved.left, saved.top);
+                if (isSufficientlyVisible(popup)) {
+                    placedRef.current = true;
+                    lastPosRef.current = { x: popup.screenX, y: popup.screenY };
+                    return;
+                }
+            }
+
+            // 2. Sinon, centrage sur la zone utile de l'écran — jamais l'angle,
+            //    sauf fenêtre plus grande que l'écran, où il n'existe pas
+            //    d'autre place.
+            const b = screenBounds(popup);
+            if (!b) return;
+            popup.moveTo(
+                Math.max(b.left, Math.round(b.left + (b.width - w) / 2)),
+                Math.max(b.top, Math.round(b.top + (b.height - h) / 2))
+            );
+            placedRef.current = true;
+            lastPosRef.current = { x: popup.screenX, y: popup.screenY };
         } catch { /* déplacement refusé par le navigateur : on garde la place */ }
     }, []);
 
@@ -400,7 +472,15 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             setTimeout(fitToContent, 0);
             setTimeout(absorbOverflow, 150);
             // En dernier : la position se calcule sur la taille définitive.
-            setTimeout(centerOnScreen, contentSizeRef.current ? 220 : 20);
+            // Deux passages, et non un : juste après l'ouverture, outerWidth vaut
+            // encore 0 sur certaines fenêtres — celles sans phase de
+            // redimensionnement, comme la matrice — et le centrage renonçait
+            // silencieusement, laissant la fenêtre dans l'angle. Le second
+            // passage rattrape, et opère sur la taille définitive.
+            placedRef.current = false;
+            lastPosRef.current = { x: null, y: null };
+            setTimeout(placeWindow, 60);
+            setTimeout(placeWindow, 300);
 
             // When this popup gains focus, bring all other popups to front too
             popup.addEventListener('focus', () => {
@@ -411,6 +491,19 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
 
             // Detect popup close
             intervalRef.current = setInterval(() => {
+                // La position se relève tant que la fenêtre vit : une fois
+                // popup.closed passé à true, screenX/screenY ne valent plus rien.
+                if (!popup.closed && placedRef.current && geometryKeyRef.current) {
+                    try {
+                        const x = popup.screenX;
+                        const y = popup.screenY;
+                        if (Number.isFinite(x) && Number.isFinite(y) &&
+                            (x !== lastPosRef.current.x || y !== lastPosRef.current.y)) {
+                            lastPosRef.current = { x, y };
+                            writePopupPosition(geometryKeyRef.current, x, y);
+                        }
+                    } catch { /* fenêtre en cours de fermeture */ }
+                }
                 if (popup.closed) {
                     clearInterval(intervalRef.current);
                     intervalRef.current = null;
