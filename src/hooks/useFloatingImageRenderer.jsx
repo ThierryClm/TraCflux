@@ -192,7 +192,7 @@ const useFloatingImageRenderer = ({
                                         style={{ left: `${arrow.x}%`, top: `${arrow.y}%` }}
                                     >
                                         <div className="arrow-symbol" style={{ transform: `rotate(${rotation}deg) scale(${scale})` }}>
-                                            {renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength)}
+                                            {renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, activeTime)}
                                         </div>
                                         {showNames && group?.name && (
                                             // Contre-échelle : l'étiquette garde sa taille à l'écran quel que

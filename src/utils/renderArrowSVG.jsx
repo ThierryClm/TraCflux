@@ -5,9 +5,10 @@
  * @param {string} color - SVG stroke color
  * @param {number} arrowLength - Length multiplier (default 1)
  * @param {number} turnLength - Turn length multiplier (default 1)
+ * @param {number} time - Instant affiché, pour le clignotement du triangle PP
  * @returns {JSX.Element} SVG element
  */
-const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1) => {
+const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1, time = 0) => {
     const strokeWidth = 3;
     const thinStrokeWidth = 2;
     const size = 32;
@@ -88,10 +89,18 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1)
             // pendant la phase jaune du groupe. Orientable et redimensionnable
             // par la rotation et l'échelle, comme les autres symboles.
             // Le fond ne signale qu'un état : la phase jaune du groupe.
+            // Priorité piéton : ce n'est pas un mouvement, donc pas une flèche.
+            // Contour rouge constant et fin, fond noir.
+            //
+            // Le diagramme représente la période de priorité piéton en alternance
+            // d'une seconde allumée et d'une seconde éteinte. Le triangle suit la
+            // même cadence : jaune les secondes paires de la phase jaune, noir les
+            // autres. Sans quoi le symbole serait fixe là où le diagramme clignote.
             const estJaune = /^(#ffff00|rgb\(\s*255\s*,\s*255\s*,\s*0\s*\))$/i.test(String(color).trim());
+            const allume = Math.floor(Math.max(0, time)) % 2 === 0;
             return (
                 <svg width={size} height={size} viewBox="0 0 32 32">
-                    <polygon points="16,4 4,26 28,26" fill={estJaune ? '#ffff00' : '#000000'} stroke="#e00000" strokeWidth={strokeWidth} strokeLinejoin="round" />
+                    <polygon points="16,12 12,20 20,20" fill={estJaune && allume ? '#ffff00' : '#000000'} stroke="#e00000" strokeWidth={strokeWidth / 3} strokeLinejoin="round" />
                 </svg>
             );
         }
