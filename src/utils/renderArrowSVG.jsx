@@ -55,7 +55,9 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1,
             const st = Math.sin(ANGLE);
             const portee = 14 * turnLength;
             const tipX = 12 + portee * st;
-            const racineY = bottom - 4;
+            // Attache à MI-HAMPE, donc proportionnelle : à un écart fixe du pied,
+            // elle se retrouvait tassée en queue dès que la longueur passait à 2.
+            const racineY = (8 + bottom) / 2;
             const tipY = racineY - portee * ct;
             // Barbes de la pointe, tournées du même angle que la branche.
             const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
@@ -82,7 +84,9 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1,
             const st = -Math.sin(ANGLE);
             const portee = 14 * turnLength;
             const tipX = 20 + portee * st;
-            const racineY = bottom - 4;
+            // Attache à MI-HAMPE, donc proportionnelle : à un écart fixe du pied,
+            // elle se retrouvait tassée en queue dès que la longueur passait à 2.
+            const racineY = (8 + bottom) / 2;
             const tipY = racineY - portee * ct;
             // Barbes de la pointe, tournées du même angle que la branche.
             const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
