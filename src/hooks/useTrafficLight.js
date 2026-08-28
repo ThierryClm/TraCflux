@@ -12,6 +12,7 @@ import {
 } from '../utils/pfHelpers';
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
+import { toast } from '../utils/toast';
 const MAX_HISTORY_SIZE = 50;
 
 // Safe localStorage helper to prevent QuotaExceededError crashes
@@ -31,6 +32,40 @@ const safeLocalStorage = {
     },
     getItem: (key) => localStorage.getItem(key),
     removeItem: (key) => localStorage.removeItem(key)
+};
+
+// Clés d'une ancienne mécanique de cache, remplacée par la sérialisation
+// unifiée dans traffic_project_<nom> : elles étaient encore ÉCRITES mais plus
+// jamais relues. Coût réel, bénéfice nul — et 'trafficIntersectionImage'
+// stockait une seconde copie de l'image du carrefour en data URL, souvent le
+// plus gros objet du cache. Cette occupation morte poussait le quota à
+// saturation : l'autosave échouait alors en silence, ou le garde-fou évinçait
+// des projets pour faire de la place. D'où des pertes de travail — les flèches
+// du carrefour en particulier, posées après le chargement de l'image, donc au
+// moment où le cache est déjà plein.
+// L'échec d'autosave n'est signalé qu'une fois : il se rejoue toutes les deux
+// secondes d'inactivité, et une alerte répétée serait vite ignorée.
+let echecCacheSignale = false;
+
+const CLES_CACHE_MORTES = [
+    'trafficGroups', 'trafficMatrix', 'trafficName', 'trafficCycle',
+    'trafficDependencyGap', 'trafficPfTabs', 'trafficActivePF',
+    'trafficIntersectionImage', 'trafficIntersectionArrows', 'trafficDatasets'
+];
+
+// Supprime ces clés du navigateur. Renvoie l'espace libéré en octets UTF-16.
+const purgerClesMortes = () => {
+    let libere = 0;
+    for (const cle of CLES_CACHE_MORTES) {
+        const valeur = localStorage.getItem(cle);
+        if (valeur === null) continue;
+        libere += (cle.length + valeur.length) * 2;
+        localStorage.removeItem(cle);
+    }
+    if (libere > 0) {
+        console.log(`Nettoyage : ${CLES_CACHE_MORTES.length} clés de cache obsolètes purgées (${(libere / 1024).toFixed(0)} KB)`);
+    }
+    return libere;
 };
 
 // Calculate total localStorage usage in bytes
@@ -125,6 +160,9 @@ const removeOrphanBackups = () => {
 // typique en UTF-16 (~10 Mo), au lieu des 4,5 Mo historiques qui étaient
 // déclenchés bien trop tôt par l'accumulation de backups.
 const ensureLocalStorageSpace = () => {
+    // (0) Gratuit et sans perte : les clés d'une mécanique abandonnée.
+    purgerClesMortes();
+
     let usage = getLocalStorageUsage();
     const threshold = 8 * 1024 * 1024; // 8 MB UTF-16
 
@@ -266,18 +304,6 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
     // We store as a URL-like generic object or always resize.
     // Let's keep it as 2D array, resizing when groups change.
     const [conflictMatrix, setConflictMatrix] = useState(() => Array.from({ length: 5 }, () => Array(5).fill('')));
-
-    // Auto-save Effect
-    useEffect(() => {
-        // Projet exemple : aucune persistance localStorage (ne doit pas
-        // écraser le document de travail réel ni polluer les projets stockés).
-        if (isExampleSession()) return;
-        safeLocalStorage.setItem('trafficGroups', JSON.stringify(groups));
-        safeLocalStorage.setItem('trafficMatrix', JSON.stringify(conflictMatrix));
-        safeLocalStorage.setItem('trafficName', intersectionName);
-        safeLocalStorage.setItem('trafficCycle', cycleLength.toString());
-        safeLocalStorage.setItem('trafficDependencyGap', dependencyGap.toString());
-    }, [groups, conflictMatrix, intersectionName, cycleLength, dependencyGap]);
 
     const setGroupCountInternal = (count) => {
         const newCount = Math.min(MAX_GROUPS, Math.max(1, parseInt(count) || 1));
@@ -1993,12 +2019,6 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
         }
     }, [intersectionName, groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, externalLinks, projectProperties, askConfirm]);
 
-    // Save pfTabs to localStorage
-    useEffect(() => {
-        safeLocalStorage.setItem('trafficPfTabs', JSON.stringify(pfTabs));
-        safeLocalStorage.setItem('trafficActivePF', activePFId.toString());
-    }, [pfTabs, activePFId]);
-
     // Flag to prevent sync during initial load
     const isInitialLoadRef = useRef(true);
     useEffect(() => {
@@ -2226,26 +2246,12 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
         }
     }, [activePFId, pfTabs]);
 
-    // Save intersection image to localStorage
-    useEffect(() => {
-        if (intersectionImage) {
-            safeLocalStorage.setItem('trafficIntersectionImage', JSON.stringify(intersectionImage));
-        } else {
-            safeLocalStorage.removeItem('trafficIntersectionImage');
-        }
-    }, [intersectionImage]);
-
-    useEffect(() => {
-        safeLocalStorage.setItem('trafficIntersectionArrows', JSON.stringify(intersectionArrows));
-    }, [intersectionArrows]);
-
     // Save traffic datasets to localStorage
     useEffect(() => {
-        safeLocalStorage.setItem('trafficDatasets', JSON.stringify(trafficDatasets));
         safeLocalStorage.setItem('trafficActiveDataset', activeTrafficDataset);
         safeLocalStorage.setItem('customTrafficDatasetNames', JSON.stringify(customTrafficDatasetNames));
         safeLocalStorage.setItem('pfTrafficDatasetMap', JSON.stringify(pfTrafficDatasetMap));
-    }, [trafficDatasets, activeTrafficDataset, customTrafficDatasetNames, pfTrafficDatasetMap]);
+    }, [activeTrafficDataset, customTrafficDatasetNames, pfTrafficDatasetMap]);
 
     // Save project properties to localStorage
     useEffect(() => {
@@ -2291,8 +2297,25 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
                 };
                 const jsonData = JSON.stringify(projectData);
 
+                // Faire de la place AVANT d'écrire : la sauvegarde explicite le
+                // faisait déjà, l'autosave écrivait à l'aveugle.
+                ensureLocalStorageSpace();
+
                 // Save project
-                safeLocalStorage.setItem(`traffic_project_${currentProjectNameRef.current}`, jsonData);
+                const ecrit = safeLocalStorage.setItem(`traffic_project_${currentProjectNameRef.current}`, jsonData);
+
+                // Un échec de cache passait jusqu'ici par un simple console.warn :
+                // l'utilisateur croyait son travail à l'abri alors que rien
+                // n'était écrit. C'est ainsi que des flèches de carrefour ont été
+                // perdues. On le dit, une fois, et on rappelle où est le recours.
+                if (!ecrit) {
+                    if (!echecCacheSignale) {
+                        echecCacheSignale = true;
+                        toast.error("Cache navigateur saturé : la sauvegarde automatique n'a pas pu s'effectuer. Enregistrez votre projet dans un fichier .json pour ne rien perdre.");
+                    }
+                    return;
+                }
+                echecCacheSignale = false;
 
                 // Update order and clean up old projects
                 updateProjectOrder(currentProjectNameRef.current);
