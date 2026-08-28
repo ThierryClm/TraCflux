@@ -11,6 +11,23 @@
  */
 
 /**
+ * Numéro de groupe porté par un champ GF d'action.
+ *
+ * Le champ est saisi ou importé sous des formes variées — « 5 », « G5 », « g5 »,
+ * avec ou sans espaces. Le reste de l'application le normalise ainsi partout, et
+ * l'escamotage le faisait déjà ici même. La seconde lucarne et la priorité
+ * piétons, elles, comparaient la chaîne BRUTE : notée « G5 », une seconde
+ * lucarne n'était jamais reconnue et la flèche restait rouge en la parcourant.
+ *
+ * @param {string|number} champ - Contenu du champ GF
+ * @returns {number} Numéro de groupe, ou NaN si le champ est vide
+ */
+export const numeroGroupe = (champ) => {
+    if (champ === null || champ === undefined || champ === '') return NaN;
+    return parseInt(String(champ).replace(/[Gg]/g, '').trim());
+};
+
+/**
  * Le temps tombe-t-il dans la plage d'une action ? Gère l'enroulement de cycle.
  *
  * @param {number} time - Instant à tester (secondes)
@@ -122,7 +139,7 @@ export const getGroupColorAtTime = (groupId, time, context = {}) => {
     // déjà la fenêtre détachée de l'image.
     const secondeLucarneAction = actionData.find(action =>
         action.action === 'Seconde lucarne' &&
-        action.gf === String(groupId) &&
+        numeroGroupe(action.gf) === groupId &&
         action.deb !== '' &&
         action.fin !== ''
     );
@@ -130,7 +147,7 @@ export const getGroupColorAtTime = (groupId, time, context = {}) => {
     // Check for "Priorité piétons" action for this group
     const prioritePietonsAction = actionData.find(action =>
         action.action === 'Priorité piétons' &&
-        action.gf === String(groupId) &&
+        numeroGroupe(action.gf) === groupId &&
         action.deb !== '' &&
         action.fin !== '' &&
         selectedActions.includes(action.id)

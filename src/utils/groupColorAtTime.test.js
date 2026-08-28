@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getGroupColorAtTime, isTimeInRange } from './groupColorAtTime';
+import { getGroupColorAtTime, isTimeInRange, numeroGroupe } from './groupColorAtTime';
 
 const VERT = 'rgb(0, 255, 0)';
 const JAUNE = 'rgb(255, 255, 0)';
@@ -201,5 +201,39 @@ describe('getGroupColorAtTime — robustesse', () => {
     it('accepte un groupe sans durées', () => {
         const ctx = contexte({ groups: [{ id: 1, offset: 0 }] });
         expect(getGroupColorAtTime(1, 0, ctx)).toBe(ROUGE);
+    });
+});
+
+describe('numeroGroupe — formes du champ GF', () => {
+    it('accepte les écritures rencontrées à la saisie et à l\'import', () => {
+        expect(numeroGroupe('5')).toBe(5);
+        expect(numeroGroupe('G5')).toBe(5);
+        expect(numeroGroupe('g5')).toBe(5);
+        expect(numeroGroupe(' 5 ')).toBe(5);
+        expect(numeroGroupe('G 5')).toBe(5);
+        expect(numeroGroupe(5)).toBe(5);
+    });
+
+    it('rend NaN pour un champ vide', () => {
+        expect(numeroGroupe('')).toBeNaN();
+        expect(numeroGroupe(null)).toBeNaN();
+        expect(numeroGroupe(undefined)).toBeNaN();
+    });
+});
+
+describe('seconde lucarne — champ GF sous toutes ses formes', () => {
+    // Le défaut constaté le 2026-08-28 : notée « G1 », la lucarne n'était pas
+    // reconnue et la flèche restait rouge en parcourant sa période.
+    const avecGf = (gf) => contexte({
+        actionData: [{ id: 'a1', action: 'Seconde lucarne', gf, deb: '40', fin: '45' }]
+    });
+
+    it.each(['1', 'G1', 'g1', ' 1 ', 1])('reconnaît la lucarne notée %p', (gf) => {
+        expect(getGroupColorAtTime(1, 42, avecGf(gf))).toBe(VERT_LUCARNE);
+    });
+
+    it('ne confond pas deux groupes dont le numéro commence pareil', () => {
+        // « G1 » ne doit pas activer la lucarne du groupe 11.
+        expect(getGroupColorAtTime(11, 42, avecGf('G1'))).not.toBe(VERT_LUCARNE);
     });
 });
