@@ -391,7 +391,8 @@ function App() {
     const {
         isPlayingSimulation, setIsPlayingSimulation,
         simulationCurrentTime, setSimulationCurrentTime,
-        hoveredDiagramTime, setHoveredDiagramTime
+        hoveredDiagramTime, setHoveredDiagramTime,
+        simulationSpeed, cycleSimulationSpeed
     } = useSimulationUI();
     const [hoveredArrowGroupId, setHoveredArrowGroupId] = useState(null);
     const [hoveredArrowGroupSaturated, setHoveredArrowGroupSaturated] = useState(false);
@@ -2795,6 +2796,8 @@ function App() {
                                 simulationCurrentTime={simulationEnabled ? simulationCurrentTime : null}
                                 isPlayingSimulation={simulationEnabled && isPlayingSimulation}
                                 setIsPlayingSimulation={setIsPlayingSimulation}
+                                simulationSpeed={simulationSpeed}
+                                cycleSimulationSpeed={cycleSimulationSpeed}
                                 setSimulationCurrentTime={setSimulationCurrentTime}
                                 hoveredArrowGroupId={hoveredArrowGroupId}
                                 hoveredArrowGroupSaturated={hoveredArrowGroupSaturated}
@@ -2932,6 +2935,7 @@ function App() {
                                 cycleLength={cycleLength}
                                 simulationResult={simulationResult}
                                 isPlaying={isPlayingSimulation}
+                                playbackSpeed={simulationSpeed}
                                 setIsPlaying={setIsPlayingSimulation}
                                 currentTime={simulationCurrentTime}
                                 setCurrentTime={setSimulationCurrentTime}

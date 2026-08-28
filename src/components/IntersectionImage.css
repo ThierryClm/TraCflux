@@ -685,6 +685,23 @@
     color: #f66;
 }
 
+/* Bouton de vitesse : deux caractères ne tiennent pas dans le carré de 32 px. */
+.sim-btn.sim-speed-btn {
+    width: auto;
+    min-width: 40px;
+    padding: 0 8px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* Au-delà de ×1 la lecture n'est plus en temps réel. On le signale : sans
+   repère, on peut juger une durée à l'œil en croyant compter des secondes. */
+.sim-btn.sim-speed-btn.accelere {
+    background: #5a4a2a;
+    border-color: #d9a441;
+    color: #ffcc66;
+}
+
 .sim-btn.reset-btn:hover {
     background: #5a3a3a;
     border-color: #f66;

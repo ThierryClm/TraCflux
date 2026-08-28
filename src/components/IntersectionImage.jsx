@@ -16,6 +16,7 @@ const IntersectionImage = ({
     simulationResult,
     // Animation state (lifted to parent)
     isPlaying,
+    playbackSpeed = 1,
     setIsPlaying,
     currentTime,
     setCurrentTime,
@@ -687,8 +688,13 @@ const IntersectionImage = ({
 
                 const elapsed = timestamp - lastTimeRef.current;
 
-                // Update every second (1000ms)
-                if (elapsed >= 1000) {
+                // Une seconde de cycle par intervalle, l'intervalle étant divisé
+                // par la vitesse choisie. On accélère donc le défilement SANS
+                // sauter de seconde : le triangle de priorité piéton clignote à
+                // la seconde et l'affichage compte en secondes entières —
+                // avancer par bonds rendrait les deux faux.
+                const intervalle = 1000 / (playbackSpeed || 1);
+                if (elapsed >= intervalle) {
                     lastTimeRef.current = timestamp;
                     setCurrentTime(prev => {
                         const effectiveCycleLength = simulationResult?.simulatedCycleLength || cycleLength;
@@ -713,7 +719,7 @@ const IntersectionImage = ({
                 cancelAnimationFrame(animationRef.current);
             }
         };
-    }, [isPlaying, cycleLength, simulationResult]);
+    }, [isPlaying, playbackSpeed, cycleLength, simulationResult]);
 
     // Toggle play/pause
     const togglePlay = () => {
