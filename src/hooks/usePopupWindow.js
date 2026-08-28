@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { isFilePickerActive } from '../utils/filePicker';
 import { toast } from '../utils/toast';
+import { placerSansEscamotage } from '../utils/popupPlacement';
 
 /**
  * Shared registry of all open popup windows.
@@ -55,6 +56,29 @@ const isSufficientlyVisible = (popup) => {
     const visW = Math.min(popup.screenX + w, b.left + b.width) - Math.max(popup.screenX, b.left);
     const visH = Math.min(popup.screenY + h, b.top + b.height) - Math.max(popup.screenY, b.top);
     return visW >= w * VISIBLE_RATIO && visH >= h * VISIBLE_RATIO;
+};
+
+// Rectangle attribué à chaque fenêtre lors de son placement. On ne peut pas se
+// fier au seul screenX des autres fenêtres : après un moveTo, le système met un
+// temps à répercuter la nouvelle position, et deux fenêtres placées coup sur
+// coup se croiraient toutes deux seules au centre.
+const placesAttribuees = new WeakMap();
+
+// Rectangles des fenêtres déjà placées, hors celle qu'on est en train de poser.
+const placesOccupees = (popup) => {
+    const rects = [];
+    for (const autre of openPopups) {
+        if (autre === popup) continue;
+        try {
+            if (autre.closed) continue;
+            const rect = placesAttribuees.get(autre) || {
+                x: autre.screenX, y: autre.screenY,
+                w: autre.outerWidth || 0, h: autre.outerHeight || 0
+            };
+            if (rect.w > 0 && rect.h > 0) rects.push(rect);
+        } catch { /* fenêtre en cours de fermeture */ }
+    }
+    return rects;
 };
 
 const openPopups = new Set();
@@ -356,6 +380,9 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             if (saved) {
                 popup.moveTo(saved.left, saved.top);
                 if (isSufficientlyVisible(popup)) {
+                    // Déclarée occupée : une fenêtre placée ensuite au centre
+                    // saura qu'il faut l'éviter.
+                    placesAttribuees.set(popup, { x: saved.left, y: saved.top, w, h });
                     placedRef.current = true;
                     lastPosRef.current = { x: popup.screenX, y: popup.screenY };
                     return;
@@ -364,13 +391,17 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
 
             // 2. Sinon, centrage sur la zone utile de l'écran — jamais l'angle,
             //    sauf fenêtre plus grande que l'écran, où il n'existe pas
-            //    d'autre place.
+            //    d'autre place. Puis cascade si une autre fenêtre détachée
+            //    occupe déjà cette place.
             const b = screenBounds(popup);
             if (!b) return;
-            popup.moveTo(
-                Math.max(b.left, Math.round(b.left + (b.width - w) / 2)),
-                Math.max(b.top, Math.round(b.top + (b.height - h) / 2))
-            );
+            const centre = {
+                x: Math.max(b.left, Math.round(b.left + (b.width - w) / 2)),
+                y: Math.max(b.top, Math.round(b.top + (b.height - h) / 2))
+            };
+            const place = placerSansEscamotage({ ...centre, w, h }, placesOccupees(popup), b);
+            popup.moveTo(place.x, place.y);
+            placesAttribuees.set(popup, { ...place, w, h });
             placedRef.current = true;
             lastPosRef.current = { x: popup.screenX, y: popup.screenY };
         } catch { /* déplacement refusé par le navigateur : on garde la place */ }
@@ -516,6 +547,7 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
                     popupRef.current = null;
                     pendingContentRef.current = null;
                     openPopups.delete(popup);
+                    placesAttribuees.delete(popup);
                     onClose();
                 }
             }, 300);
