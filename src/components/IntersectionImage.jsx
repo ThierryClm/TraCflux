@@ -294,27 +294,39 @@ const IntersectionImage = ({
             return;
         }
 
-        const nextGroup = groupsWithoutArrows[0];
-        if (nextGroup && !(nextGroup.courant || '').trim()) {
-            toast.info(`GF${nextGroup.id}${nextGroup.name ? ` — ${nextGroup.name}` : ''} : courant non renseigné, flèche non ajoutée.`);
+        // Le groupe visé est le premier sans flèche QUI A un courant. Se contenter
+        // du premier sans flèche bloquait tout le reste : un groupe au courant vide
+        // restait indéfiniment le candidat, et plus aucune flèche ne pouvait être
+        // posée pour les groupes suivants, même correctement renseignés.
+        const nextGroup = groupsWithoutArrows.find(g => (g.courant || '').trim());
+        const nomGroupe = (g) => `GF${g.id}${g.name ? ` — ${g.name}` : ''}`;
+
+        if (!nextGroup) {
+            if (groupsWithoutArrows.length > 0) {
+                toast.info(`${groupsWithoutArrows.map(nomGroupe).join(', ')} : courant non renseigné, flèche non ajoutée.`);
+            }
             return;
         }
 
-        if (groupsWithoutArrows.length > 0) {
-            const group = groupsWithoutArrows[0];
-            const courant = group.courant || '';
-            const newArrow = {
-                id: Date.now(),
-                groupId: group.id,
-                x,
-                y,
-                rotation: 0, // Rotation in degrees (0 = up)
-                ...(courant === 'TàD' || courant === 'TàG' ? { turnLength: 0.5 } : {}),
-                ...(courant === 'Piéton' || courant === 'Cycle' ? { length: 2 } : {})
-            };
-            onArrowsChange([...arrows, newArrow]);
-            setSelectedArrow(newArrow.id);
+        // Les groupes sautés au passage sont signalés : sans ça, la flèche
+        // atterrirait sur un autre groupe que celui attendu, sans explication.
+        const ignores = groupsWithoutArrows.slice(0, groupsWithoutArrows.indexOf(nextGroup));
+        if (ignores.length > 0) {
+            toast.info(`${ignores.map(nomGroupe).join(', ')} : courant non renseigné, flèche posée pour ${nomGroupe(nextGroup)}.`);
         }
+
+        const courant = nextGroup.courant || '';
+        const newArrow = {
+            id: Date.now(),
+            groupId: nextGroup.id,
+            x,
+            y,
+            rotation: 0, // Rotation in degrees (0 = up)
+            ...(courant === 'TàD' || courant === 'TàG' ? { turnLength: 0.5 } : {}),
+            ...(courant === 'Piéton' || courant === 'Cycle' ? { length: 2 } : {})
+        };
+        onArrowsChange([...arrows, newArrow]);
+        setSelectedArrow(newArrow.id);
     };
 
     // Handle arrow drag
