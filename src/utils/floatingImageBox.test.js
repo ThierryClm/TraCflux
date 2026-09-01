@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BOX_W, BOX_H, CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM, fitImageBox, cropFromBoxToImage } from './floatingImageBox';
+import { BOX_W, BOX_H, CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM, fitImageBox, fitContentBox, cropFromBoxToImage } from './floatingImageBox';
 
 describe('fitImageBox', () => {
     it('remplit la boîte quand l\'image est exactement au format de référence', () => {
@@ -112,5 +112,45 @@ describe('cropFromBoxToImage', () => {
 
     it('déclare le référentiel courant', () => {
         expect(CROP_BASIS).toBe('image');
+    });
+});
+
+describe('fitContentBox', () => {
+    // Image très large : le cadre s'arrête à l'image, avec plus de cent pixels
+    // de bande vide en haut et en bas de la boîte de référence.
+    const large = { width: 2400, height: 1000 };
+
+    it('sans flèche, se réduit au cadre de l\'image', () => {
+        const { dispW, dispH, padX, padY } = fitImageBox(large);
+        expect(fitContentBox(large, [])).toEqual({ x: padX, y: padY, w: dispW, h: dispH });
+    });
+
+    it('englobe une flèche qui déborde sous le bord bas de l\'image', () => {
+        const { dispH, padY } = fitImageBox(large);
+        // Flèche posée juste au-dessus du bord bas : son symbole le dépasse.
+        const yBas = ((padY + dispH - 5) / BOX_H) * 100;
+        const cadre = fitContentBox(large, [{ x: 50, y: yBas }]);
+        expect(cadre.y + cadre.h).toBeGreaterThan(padY + dispH);
+    });
+
+    it('ne dépasse jamais la boîte de référence', () => {
+        const cadre = fitContentBox(large, [{ x: 0, y: 0 }, { x: 100, y: 100, scale: 3 }]);
+        expect(cadre.x).toBeGreaterThanOrEqual(0);
+        expect(cadre.y).toBeGreaterThanOrEqual(0);
+        expect(cadre.x + cadre.w).toBeLessThanOrEqual(BOX_W);
+        expect(cadre.y + cadre.h).toBeLessThanOrEqual(BOX_H);
+    });
+
+    it('tient compte de l\'échelle et de l\'allongement du symbole', () => {
+        const { dispH, padY } = fitImageBox(large);
+        const y = ((padY + dispH - 5) / BOX_H) * 100;
+        const petit = fitContentBox(large, [{ x: 50, y }]);
+        const grand = fitContentBox(large, [{ x: 50, y, scale: 2, length: 2 }]);
+        expect(grand.h).toBeGreaterThan(petit.h);
+    });
+
+    it('ignore une flèche aux coordonnées absentes', () => {
+        expect(fitContentBox(large, [{ x: undefined, y: null }, null]))
+            .toEqual(fitContentBox(large, []));
     });
 });

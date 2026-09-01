@@ -558,7 +558,7 @@ function App() {
         floatingZoom, setFloatingZoom,
         imageNaturalDims,
         floatingImagePopup
-    } = useFloatingImage(intersectionImage, intersectionName, activePFName);
+    } = useFloatingImage(intersectionImage, intersectionName, activePFName, intersectionArrows);
 
     // Rognage et zoom de l'image détachée décrivent UN cadrage sur UNE image :
     // ils suivent le projet, jamais le navigateur. Tout changement de projet

@@ -67,3 +67,63 @@ export const fitImageBox = (naturalDims) => {
         padY: Math.round((BOX_H - dispH) / 2)
     };
 };
+
+/**
+ * Taille de base d'un symbole de flèche dans la boîte de référence, en pixels
+ * (cf. `.floating-arrow-marker .arrow-symbol svg` dans IntersectionImage.css).
+ * Le symbole est CENTRÉ sur le point de la flèche : il en déborde de moitié
+ * dans chaque direction.
+ */
+export const ARROW_SIZE = 96;
+
+/**
+ * Cadre utile de la fenêtre détachée : l'image ET ce qui est dessiné dessus.
+ *
+ * Le cadre s'arrêtait au bord de l'image. Or une flèche posée tout près de ce
+ * bord déborde sur la bande vide voisine — le panneau intégré l'y montre, la
+ * bande faisant partie de sa boîte. La fenêtre détachée, qui retire les bandes
+ * et découpe au cadre, la tronquait alors : sur une image très large, avec plus
+ * de cent pixels de bande en haut et en bas, un courant placé en lisière
+ * disparaissait purement et simplement, sans rognage ni zoom en cause.
+ *
+ * Le cadre englobe donc désormais les symboles. Il reste borné par la boîte de
+ * référence : au pire, on retrouve le comportement d'avant le retrait des
+ * bandes, jamais davantage.
+ *
+ * Le débordement est majoré sans tenir compte de la rotation — un symbole
+ * pivoté déborde dans une autre direction, pas plus loin.
+ *
+ * @param {{width: number, height: number}} naturalDims - Dimensions natives de l'image
+ * @param {Array} arrows - Flèches du carrefour (x, y en % de la boîte)
+ * @returns {{x: number, y: number, w: number, h: number}} Cadre dans la boîte de référence
+ */
+export const fitContentBox = (naturalDims, arrows = []) => {
+    const { dispW, dispH, padX, padY } = fitImageBox(naturalDims);
+    let gauche = padX;
+    let haut = padY;
+    let droite = padX + dispW;
+    let bas = padY + dispH;
+
+    (Array.isArray(arrows) ? arrows : []).forEach(a => {
+        if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.y)) return;
+        // Les flèches piétonnes et cyclistes s'allongent, les tourne-à-droite et
+        // à-gauche ajoutent leur retour : on retient l'allongement le plus grand.
+        const allongement = Math.max(1, a.length || 1, a.turnLength || 1);
+        const demi = (ARROW_SIZE * (a.scale || 1) * allongement) / 2;
+        const cx = (a.x / 100) * BOX_W;
+        const cy = (a.y / 100) * BOX_H;
+        gauche = Math.min(gauche, cx - demi);
+        droite = Math.max(droite, cx + demi);
+        haut = Math.min(haut, cy - demi);
+        bas = Math.max(bas, cy + demi);
+    });
+
+    const x = Math.max(0, Math.floor(gauche));
+    const y = Math.max(0, Math.floor(haut));
+    return {
+        x,
+        y,
+        w: Math.max(1, Math.min(BOX_W, Math.ceil(droite)) - x),
+        h: Math.max(1, Math.min(BOX_H, Math.ceil(bas)) - y)
+    };
+};

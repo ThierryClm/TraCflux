@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
-import { BOX_W, BOX_H, fitImageBox } from '../utils/floatingImageBox';
+import { BOX_W, BOX_H, fitContentBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 
 /**
@@ -58,14 +58,15 @@ const useFloatingImageRenderer = ({
             groupMap[arrow.groupId].push({ x: px, y: py });
         });
 
-        // Cadre utile de l'image dans la boîte 750×530. L'image est centrée en
-        // « contain » : hors survol, les bandes vides encadraient la photo et la
-        // fenêtre détachée s'ouvrait bien plus grande que l'image, ascenseurs
-        // compris. On les retire du cadrage sans toucher aux coordonnées des
-        // flèches, qui restent en % de la boîte de référence.
-        const { dispW, dispH, padX, padY } = fitImageBox(imageNaturalDims);
-        const maxCropX = Math.max(0, Math.floor(dispW / 2) - 10);
-        const maxCropY = Math.max(0, Math.floor(dispH / 2) - 10);
+        // Cadre utile dans la boîte 750×530. L'image y est centrée en « contain » :
+        // hors survol, les bandes vides encadraient la photo et la fenêtre détachée
+        // s'ouvrait bien plus grande que l'image, ascenseurs compris. On les retire
+        // du cadrage sans toucher aux coordonnées des flèches, qui restent en % de
+        // la boîte de référence — mais le cadre englobe les symboles, sans quoi une
+        // flèche posée en lisière, qui déborde sur la bande, serait tronquée.
+        const { x: cadreX, y: cadreY, w: cadreW, h: cadreH } = fitContentBox(imageNaturalDims, intersectionArrows);
+        const maxCropX = Math.max(0, Math.floor(cadreW / 2) - 10);
+        const maxCropY = Math.max(0, Math.floor(cadreH / 2) - 10);
         const cropL = Math.min(floatingCrop.left, maxCropX);
         const cropR = Math.min(floatingCrop.right, maxCropX);
         const cropT = Math.min(floatingCrop.top, maxCropY);
@@ -133,15 +134,15 @@ const useFloatingImageRenderer = ({
                     <div
                         className="floating-image-wrapper"
                         style={{
-                            width: Math.max(1, dispW - cropL - cropR) * floatingZoom,
-                            height: Math.max(1, dispH - cropT - cropB) * floatingZoom
+                            width: Math.max(1, cadreW - cropL - cropR) * floatingZoom,
+                            height: Math.max(1, cadreH - cropT - cropB) * floatingZoom
                         }}
                     >
                         <div
                             className="floating-image-inner"
                             style={{
-                                marginTop: -(padY + cropT),
-                                marginLeft: -(padX + cropL),
+                                marginTop: -(cadreY + cropT),
+                                marginLeft: -(cadreX + cropL),
                                 width: BOX_W,
                                 height: BOX_H,
                                 transform: `scale(${floatingZoom})`,
