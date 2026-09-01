@@ -21,6 +21,9 @@ const TrafficTable = ({
     addCustomTrafficDataset,
     actionData = [],
     simulationSelectedActions = [],
+    // Mode simulation : valeurs recalculées sur le diagramme simulé, saisie fermée.
+    simulationResult = null,
+    readOnly = false,
     onDetach,
     tooltipsEnabled = true
 }) => {
@@ -82,17 +85,48 @@ const TrafficTable = ({
     // Écouter la touche "+" globalement, déclencher l'ajout si le sélecteur est survolé
     React.useEffect(() => {
         const handleKeyDown = (e) => {
-            if (datasetHoveredRef.current && (e.key === '+' || e.key === '=')) {
+            if (!readOnly && datasetHoveredRef.current && (e.key === '+' || e.key === '=')) {
                 e.preventDefault();
                 handleAddDataset();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleAddDataset]);
+    }, [handleAddDataset, readOnly]);
 
-    // Traffic calculations are always shown regardless of simulation actions
-    const inhibitedGroups = new Set(); // No inhibition - always calculate
+    // L'onglet Trafic affiche les données du plan, indépendamment des actions
+    // cochées en simulation (décision de mars 2026) : c'est le plan qu'on y lit,
+    // pas un scénario. Le tableau servi DANS l'onglet Simulation, lui, doit
+    // suivre les actions cochées — il reçoit alors simulationResult, et les
+    // groupes qu'une action inhibe repassent en grisé.
+    const inhibitedGroups = useMemo(() => {
+        const inhibited = new Set();
+        if (!simulationResult) return inhibited;
+        const inhibitActions = ['Escamotage de phase', 'Fermeture anticipée', 'Adaptatif vertical'];
+        actionData.forEach(action => {
+            if (simulationSelectedActions.includes(action.id) &&
+                inhibitActions.includes(action.action) &&
+                action.gf) {
+                const gfId = parseInt(action.gf.toString().replace(/[Gg]/g, '').trim());
+                if (gfId > 0) inhibited.add(gfId);
+            }
+        });
+        return inhibited;
+    }, [simulationResult, actionData, simulationSelectedActions]);
+
+    // Bases de calcul : verts, décalages et cycle du diagramme SIMULÉ quand la
+    // simulation est active, ceux du plan sinon. Les formules, elles, ne changent
+    // pas — c'est le même tableau, nourri d'autres temps.
+    const cycleEffectif = simulationResult?.simulatedCycleLength || cycleLength;
+    const groupeSimule = (id) => simulationResult?.simulatedGroups?.find(sg => sg.id === id) || null;
+    const vertDe = (g) => {
+        const sim = groupeSimule(g.id);
+        return sim ? (sim.simulatedGreen ?? g.durations?.green) : g.durations?.green;
+    };
+    const decalageDe = (g) => {
+        const sim = groupeSimule(g.id);
+        return sim ? (sim.simulatedOffset ?? g.offset) : g.offset;
+    };
 
     // Update traffic volume (per dataset)
     const handleTrafficChange = (id, value) => {
@@ -154,13 +188,13 @@ const TrafficTable = ({
     // Vert total (vert principal + secondes lucarnes) — délègue à l'util
     // partagé pour rester cohérent avec le panneau Diagnostic.
     const getTotalGreenTime = (groupId, mainGreenTime) =>
-        computeTotalGreenTime(groupId, mainGreenTime, actionData, cycleLength);
+        computeTotalGreenTime(groupId, mainGreenTime, actionData, cycleEffectif);
 
     // Calculate V.Utile = trafic / (1800 * coef / cycle)
     const calculateVUtile = (trafficVol, laneCoef) => {
-        if (!trafficVol || !laneCoef || !cycleLength || laneCoef === 0) return null;
+        if (!trafficVol || !laneCoef || !cycleEffectif || laneCoef === 0) return null;
         // Valeur exacte : l'arrondi se fait à l'affichage (cf. capacityCalc).
-        return trafficVol / (1800 * laneCoef / cycleLength);
+        return trafficVol / (1800 * laneCoef / cycleEffectif);
     };
 
     // Calculate Cap.U = (V.Utile / green time) * 100 (percentage)
@@ -190,14 +224,14 @@ const TrafficTable = ({
         }
 
         // Formule standard
-        if (!greenTime || !trafficVol || !laneCoef || !cycleLength || laneCoef === 0) return null;
+        if (!greenTime || !trafficVol || !laneCoef || !cycleEffectif || laneCoef === 0) return null;
         const saturationFlow = 1800 * laneCoef;
         const ratio = trafficVol / saturationFlow;
         // Éviter division par zéro si ratio >= 1
         if (ratio >= 1) return null;
-        const denominator = 2 * cycleLength * (1 - ratio);
+        const denominator = 2 * cycleEffectif * (1 - ratio);
         if (denominator === 0) return null;
-        const redTime = cycleLength - greenTime;
+        const redTime = cycleEffectif - greenTime;
         const result = (redTime * redTime) / denominator;
         return Math.round(result); // Arrondi à l'unité
     };
@@ -222,8 +256,8 @@ const TrafficTable = ({
         }
 
         // Formule standard
-        if (!greenTime || !trafficVol || !laneCoef || !cycleLength || laneCoef === 0) return null;
-        const redTime = cycleLength - greenTime;
+        if (!greenTime || !trafficVol || !laneCoef || !cycleEffectif || laneCoef === 0) return null;
+        const redTime = cycleEffectif - greenTime;
         // Formule : (partie entière de (Trafic * (cycle - vert) / 3600 / Coef) + 1) * 6
         const innerValue = trafficVol * redTime / 3600 / laneCoef;
         const result = (Math.floor(innerValue) + 1) * 6;
@@ -238,25 +272,6 @@ const TrafficTable = ({
         if (value <= 100) return 'capacity-red';
         return 'capacity-black';
     };
-
-    // Synthèse « diagnostic carrefour » : courant dimensionnant (Cap.U max) et
-    // réserve globale. Basée sur le MÊME Cap.U que la colonne affichée, pour
-    // une cohérence stricte avec le tableau (aucun recalcul divergent).
-    const carrefourDiagnostic = useMemo(() => {
-        let dim = null; // { id, capU }
-        let saturatedCount = 0;
-        vlGroups.forEach(g => {
-            const totalGreen = getTotalGreenTime(g.id, g.durations?.green);
-            const numericVol = parseTrafficVol(getTrafficData(g.id).trafficVol);
-            const vUtile = calculateVUtile(numericVol, g.laneCoef);
-            const capU = calculateCapacity(totalGreen, vUtile).value;
-            if (capU === null) return;
-            if (capU > 100) saturatedCount++;
-            if (!dim || capU > dim.capU) dim = { id: g.id, capU };
-        });
-        return dim ? { dim, saturatedCount } : null;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [vlGroups, getTrafficData, cycleLength, actionData, activeTrafficDataset]);
 
     return (
         <div className="traffic-table-container">
@@ -283,15 +298,19 @@ const TrafficTable = ({
                 </label>
                 <div className="traffic-dataset-group" onMouseEnter={handleDatasetMouseEnter} onMouseLeave={handleDatasetMouseLeave}>
                     <span className="traffic-dataset-label">Associé à</span>
-                    <select
-                        className="traffic-dataset-selector"
-                        value={activeTrafficDataset}
-                        onChange={(e) => setActiveTrafficDataset(e.target.value)}
-                    >
-                        {trafficDatasetNames.map(ds => (
-                            <option key={ds} value={ds}>{ds}</option>
-                        ))}
-                    </select>
+                    {readOnly ? (
+                        <span className="traffic-dataset-nom">{activeTrafficDataset}</span>
+                    ) : (
+                        <select
+                            className="traffic-dataset-selector"
+                            value={activeTrafficDataset}
+                            onChange={(e) => setActiveTrafficDataset(e.target.value)}
+                        >
+                            {trafficDatasetNames.map(ds => (
+                                <option key={ds} value={ds}>{ds}</option>
+                            ))}
+                        </select>
+                    )}
                     {datasetTooltip && (
                         <div className="traffic-dataset-tooltip">
                             Appuyez sur + pour ajouter un jeu de données personnalisé
@@ -316,7 +335,7 @@ const TrafficTable = ({
                         <th className="col-nom">Nom</th>
                         <th title={tip("Coefficient de voie correspondant aux courants de circulation du groupe de feu")}>Coef</th>
                         <th className="col-trafic-header">
-                            {isDatasetEmpty && otherDatasetsWithData.length > 0 ? (
+                            {!readOnly && isDatasetEmpty && otherDatasetsWithData.length > 0 ? (
                                 <div className="paste-button-container">
                                     <button
                                         className="paste-button"
@@ -360,7 +379,7 @@ const TrafficTable = ({
                                 onMouseEnter={() => {
                                     setHoveredGroupId && setHoveredGroupId(g.id);
                                     if (setHoveredGroupSaturated) {
-                                        const totalGreen = getTotalGreenTime(g.id, g.durations?.green);
+                                        const totalGreen = getTotalGreenTime(g.id, vertDe(g));
                                         const numericVol = parseTrafficVol(trafficData.trafficVol);
                                         const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                         const cap = isInhibited ? null : calculateCapacity(totalGreen, vUtile).value;
@@ -374,7 +393,7 @@ const TrafficTable = ({
 
                                 {/* Coef Voie (shared across all datasets) */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, g.durations?.green);
+                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
@@ -383,20 +402,24 @@ const TrafficTable = ({
                                             onMouseEnter={() => setHoveredVUtile && vUtile && setHoveredVUtile({ groupId: g.id, vUtile, capacityValue: capacity.value })}
                                             onMouseLeave={() => setHoveredVUtile && setHoveredVUtile(null)}
                                         >
-                                            <input
-                                                type="number"
-                                                step="0.1"
-                                                className="input-trafic-num"
-                                                value={g.laneCoef || ''}
-                                                onFocus={(e) => e.target.select()}
-                                                onChange={(e) => handleSharedChange(g.id, 'laneCoef', parseFloat(e.target.value) || 0)}
-                                            />
+                                            {readOnly ? (
+                                                <span className="valeur-lecture-seule">{g.laneCoef || ''}</span>
+                                            ) : (
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    className="input-trafic-num"
+                                                    value={g.laneCoef || ''}
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => handleSharedChange(g.id, 'laneCoef', parseFloat(e.target.value) || 0)}
+                                                />
+                                            )}
                                         </td>
                                     );
                                 })()}
                                 {/* Trafic (per dataset) */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, g.durations?.green);
+                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
@@ -410,19 +433,23 @@ const TrafficTable = ({
                                                 onMouseEnter={() => handleTrafficMouseEnter(g.id)}
                                                 onMouseLeave={handleTrafficMouseLeave}
                                             >
-                                                <input
-                                                    type="text"
-                                                    className="input-trafic-num"
-                                                    value={numericVol || ''}
-                                                    onFocus={(e) => e.target.select()}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        const coordinated = isCoordinated(trafficData.trafficVol);
-                                                        const num = parseInt(val) || 0;
-                                                        handleTrafficChange(g.id, coordinated ? num + 'c' : num);
-                                                    }}
-                                                    onKeyDown={(e) => handleTrafficKeyDown(e, g.id, trafficData.trafficVol)}
-                                                />
+                                                {readOnly ? (
+                                                    <span className="valeur-lecture-seule">{numericVol || ''}</span>
+                                                ) : (
+                                                    <input
+                                                        type="text"
+                                                        className="input-trafic-num"
+                                                        value={numericVol || ''}
+                                                        onFocus={(e) => e.target.select()}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            const coordinated = isCoordinated(trafficData.trafficVol);
+                                                            const num = parseInt(val) || 0;
+                                                            handleTrafficChange(g.id, coordinated ? num + 'c' : num);
+                                                        }}
+                                                        onKeyDown={(e) => handleTrafficKeyDown(e, g.id, trafficData.trafficVol)}
+                                                    />
+                                                )}
                                                 {isCoordinated(trafficData.trafficVol) && (
                                                     <span className="trafic-coordinated-c">c</span>
                                                 )}
@@ -437,7 +464,7 @@ const TrafficTable = ({
                                 })()}
                                 {/* Vert Utile (calculé) */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, g.durations?.green);
+                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
@@ -453,7 +480,7 @@ const TrafficTable = ({
                                 })()}
                                 {/* Capacité Utilisée (calculée: V.Utile / temps vert * 100) */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, g.durations?.green);
+                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
@@ -471,12 +498,12 @@ const TrafficTable = ({
                                 {/* Ou si action "Début de bande passante" avec actGf1 = groupe : max(0, début_vert - fin_action) */}
                                 {/* Si trafic coordonné (suffixe 'c'), retard = 0 */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, g.durations?.green);
+                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const coordinated = isCoordinated(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
-                                    const delay = isInhibited ? null : (coordinated && numericVol ? 0 : calculateDelay(totalGreen, numericVol, g.laneCoef, g.id, g.offset));
+                                    const delay = isInhibited ? null : (coordinated && numericVol ? 0 : calculateDelay(totalGreen, numericVol, g.laneCoef, g.id, decalageDe(g)));
                                     return (
                                         <td
                                             className="col-calculated"
@@ -491,12 +518,12 @@ const TrafficTable = ({
                                 {/* Ou si action "Début de bande passante" avec actGf1 = groupe : max(0, début_vert - fin_action) */}
                                 {/* Si trafic coordonné (suffixe 'c'), file d'attente = 0 */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, g.durations?.green);
+                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const coordinated = isCoordinated(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
-                                    const queue = isInhibited ? null : (coordinated && numericVol ? 0 : calculateQueue(totalGreen, numericVol, g.laneCoef, g.id, g.offset));
+                                    const queue = isInhibited ? null : (coordinated && numericVol ? 0 : calculateQueue(totalGreen, numericVol, g.laneCoef, g.id, decalageDe(g)));
                                     return (
                                         <td
                                             className="col-calculated"
@@ -513,25 +540,6 @@ const TrafficTable = ({
                 </tbody>
             </table>
             </div>
-            {carrefourDiagnostic && (() => {
-                const capU = carrefourDiagnostic.dim.capU;
-                const reserve = 100 - capU;
-                const sat = carrefourDiagnostic.saturatedCount;
-                return (
-                    <div className="traffic-diagnostic-summary">
-                        <span className="tds-label">Synthèse trafic :</span>{' '}
-                        courant dimensionnant <strong>GF{carrefourDiagnostic.dim.id}</strong> —{' '}
-                        capacité utilisée{' '}
-                        <strong className={getCapacityColorClass(capU)}>{capU}%</strong>{' '}
-                        {reserve >= 0
-                            ? <>(réserve <strong>{reserve}%</strong>)</>
-                            : <>(<strong className="capacity-black">dépassement {-reserve}%</strong>)</>}
-                        {sat > 0 && (
-                            <span className="tds-saturated"> · {sat} courant{sat > 1 ? 's' : ''} saturé{sat > 1 ? 's' : ''}</span>
-                        )}
-                    </div>
-                );
-            })()}
         </div>
     );
 };

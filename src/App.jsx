@@ -2164,12 +2164,15 @@ function App() {
                     addCustomTrafficDataset={addCustomTrafficDataset}
                     actionData={actionData}
                     simulationSelectedActions={simulationSelectedActions}
+                    simulationResult={simulationResult}
+                    readOnly={simulationEnabled}
                 tooltipsEnabled={tooltipPrefs.traffic}
                 />
             </div>
         );
     }, [showFloatingTraffic, groups, cycleLength, activeTrafficDataset, actionData,
-        simulationSelectedActions, trafficPopup.renderToPopup, updateTrafficData,
+        simulationSelectedActions, simulationResult, simulationEnabled,
+        trafficPopup.renderToPopup, updateTrafficData,
         getTrafficData, updateGroupParams, trafficDatasetNames, copyTrafficDataset, addCustomTrafficDataset]);
 
     // Afficher l'écran de connexion si non authentifié
@@ -2446,21 +2449,49 @@ function App() {
                             </div>
                         </div>
                     ) : simulationEnabled ? (
-                        <SimulationPanel
-                            actionData={actionData}
-                            selectedActions={simulationSelectedActions}
-                            onToggle={toggleSimulationAction}
-                            onSelectAll={selectAllSimulationActions}
-                            onDeselectAll={deselectAllSimulationActions}
-                            groups={groups}
-                            cycleLength={cycleLength}
-                            conflictMatrix={conflictMatrix}
-                            hoveredActionId={hoveredActionId}
-                            setHoveredActionId={setHoveredActionId}
-                            activeTrafficDataset={activeTrafficDataset}
-                            getTrafficData={getTrafficData}
-                            setHoveredConflict={setHoveredConflict}
-                        />
+                        <>
+                            <SimulationPanel
+                                actionData={actionData}
+                                selectedActions={simulationSelectedActions}
+                                onToggle={toggleSimulationAction}
+                                onSelectAll={selectAllSimulationActions}
+                                onDeselectAll={deselectAllSimulationActions}
+                                groups={groups}
+                                cycleLength={cycleLength}
+                                conflictMatrix={conflictMatrix}
+                                hoveredActionId={hoveredActionId}
+                                setHoveredActionId={setHoveredActionId}
+                                setHoveredConflict={setHoveredConflict}
+                            />
+                            {/* Même tableau que l'onglet Trafic, aux mêmes formules :
+                                seuls les temps changent (diagramme simulé), et la
+                                saisie est fermée. Le panneau en portait une copie
+                                réduite, aux colonnes et aux calculs divergents. */}
+                            <div onMouseEnter={() => { helpZoneRef.current = 'trafic'; }}>
+                                <TrafficTable
+                                    groups={groups}
+                                    cycleLength={cycleLength}
+                                    activeTrafficDataset={activeTrafficDataset}
+                                    setActiveTrafficDataset={setActiveTrafficDataset}
+                                    updateTrafficData={updateTrafficData}
+                                    getTrafficData={getTrafficData}
+                                    updateGroupParams={updateGroupParams}
+                                    setHoveredGroupId={setHoveredArrowGroupId}
+                                    hoveredGroupId={hoveredArrowGroupId}
+                                    setHoveredGroupSaturated={setHoveredArrowGroupSaturated}
+                                    trafficDatasetNames={trafficDatasetNames}
+                                    setHoveredVUtile={setHoveredVUtile}
+                                    copyTrafficDataset={copyTrafficDataset}
+                                    addCustomTrafficDataset={addCustomTrafficDataset}
+                                    actionData={actionData}
+                                    simulationSelectedActions={simulationSelectedActions}
+                                    simulationResult={simulationResult}
+                                    readOnly
+                                    onDetach={() => setShowFloatingTraffic(v => !v)}
+                                    tooltipsEnabled={tooltipPrefs.traffic}
+                                />
+                            </div>
+                        </>
                     ) : (
                         <>
                             <div className="sidebar-tabs">
@@ -2725,8 +2756,9 @@ function App() {
                                 const newSimState = !simulationEnabled;
                                 setSimulationEnabled(newSimState);
                                 if (newSimState) {
-                                    // Largeur pour le tableau Données Trafic:
-                                    // Grp(28) + Nom(70) + Déb(35) + Fin(35) + V(35) + V.U(35) + Cap.U(40) + Ret(35) + File(35) + spacing(27) + padding(20)
+                                    // Largeur du tableau Données Trafic, désormais
+                                    // celui de l'onglet Trafic : GF + Nom + Coef +
+                                    // Trafic + V.Utile + Cap.U + Retard + File.
                                     setSidebarWidth(395);
                                 }
                             }}

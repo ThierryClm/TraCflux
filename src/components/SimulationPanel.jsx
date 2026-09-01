@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { calculateSimulatedDiagram } from '../utils/simulationCalculator';
-import { calculateVUtile as calcVUtile, calculateCapacity, getCapacityColorClass } from '../utils/capacityCalc';
 import './SimulationPanel.css';
 
 const SimulationPanel = ({
@@ -14,8 +13,6 @@ const SimulationPanel = ({
     conflictMatrix,
     hoveredActionId,
     setHoveredActionId,
-    activeTrafficDataset,
-    getTrafficData,
     setHoveredConflict
 }) => {
     // Filter to only show actions that have a type selected
@@ -45,7 +42,7 @@ const SimulationPanel = ({
         );
     }, [groups, actionData, selectedActions, cycleLength, conflictMatrix]);
 
-    const { simulatedGroups, simulatedCycleLength, conflicts: rawConflicts, removedPeriods, contractions } = simulationResult;
+    const { simulatedCycleLength, conflicts: rawConflicts, removedPeriods, contractions } = simulationResult;
 
     // Helper: adjust a time position based on AV contractions only
     // EP removedPeriods are in the post-AV timeline, so we only apply AV contractions
@@ -129,86 +126,6 @@ const SimulationPanel = ({
             return !isInhibitedByEscamotage;
         });
     }, [rawConflicts, actionData, selectedActions]);
-
-    // V.Utile / Cap.U / couleur : formules factorisées dans utils/capacityCalc
-    // (source de vérité commune avec le tableau comparatif des PF).
-    // Wrapper local pour injecter le cycle simulé courant.
-    const calculateVUtile = (trafficVol, laneCoef) => calcVUtile(trafficVol, laneCoef, simulatedCycleLength);
-
-    // Calculate Retard (avec condition "Début de bande passante")
-    const calculateDelay = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
-        // Vérifier s'il existe une action "Début de bande passante" pour ce groupe
-        const bandeAction = actionData.find(
-            action => action.action === 'Début de bande passante' &&
-                     parseInt(action.actGf1) === groupId &&
-                     action.fin !== '' && action.fin !== null && action.fin !== undefined
-        );
-
-        if (bandeAction) {
-            const finValue = parseFloat(bandeAction.fin);
-            if (!isNaN(finValue) && groupOffset !== undefined && groupOffset !== null) {
-                return Math.max(0, Math.round(groupOffset - finValue));
-            }
-        }
-
-        // Formule standard
-        if (!greenTime || !trafficVol || !laneCoef || !simulatedCycleLength || laneCoef === 0) return null;
-        const saturationFlow = 1800 * laneCoef;
-        const ratio = trafficVol / saturationFlow;
-        if (ratio >= 1) return null;
-        const denominator = 2 * simulatedCycleLength * (1 - ratio);
-        if (denominator === 0) return null;
-        const redTime = simulatedCycleLength - greenTime;
-        const result = (redTime * redTime) / denominator;
-        return Math.round(result);
-    };
-
-    // Calculate File d'attente (avec condition "Début de bande passante")
-    const calculateQueue = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
-        // Vérifier s'il existe une action "Début de bande passante" pour ce groupe
-        const bandeAction = actionData.find(
-            action => action.action === 'Début de bande passante' &&
-                     parseInt(action.actGf1) === groupId &&
-                     action.fin !== '' && action.fin !== null && action.fin !== undefined
-        );
-
-        if (bandeAction) {
-            const finValue = parseFloat(bandeAction.fin);
-            if (!isNaN(finValue) && groupOffset !== undefined && groupOffset !== null) {
-                return Math.max(0, Math.round(groupOffset - finValue));
-            }
-        }
-
-        // Formule standard
-        if (!greenTime || !trafficVol || !laneCoef || !simulatedCycleLength || laneCoef === 0) return null;
-        const redTime = simulatedCycleLength - greenTime;
-        const innerValue = trafficVol * redTime / 3600 / laneCoef;
-        const result = (Math.floor(innerValue) + 1) * 6;
-        return result;
-    };
-
-    // Filter only VL groups from simulated groups
-    const vlSimulatedGroups = simulatedGroups.filter(g => g.type === 'VL' || g.type === 'V');
-
-    // Determine which groups are inhibited by selected simulation actions
-    // (Escamotage de phase, Fermeture anticipée, Adaptatif vertical)
-    const inhibitedGroups = useMemo(() => {
-        const inhibited = new Set();
-        const inhibitActions = ['Escamotage de phase', 'Fermeture anticipée', 'Adaptatif vertical'];
-
-        actionData.forEach(action => {
-            if (selectedActions.includes(action.id) &&
-                inhibitActions.includes(action.action) &&
-                action.gf) {
-                const gfId = parseInt(action.gf.toString().replace(/[Gg]/g, '').trim());
-                if (gfId > 0) {
-                    inhibited.add(gfId);
-                }
-            }
-        });
-
-        return inhibited;
-    }, [actionData, selectedActions]);
 
     return (
         <div className="simulation-panel">
@@ -325,61 +242,6 @@ const SimulationPanel = ({
                 </div>
             )}
 
-            {/* Traffic Data Table - using simulated green durations */}
-            {vlSimulatedGroups.length > 0 && getTrafficData && (
-                <div className="simulation-traffic">
-                    <div className="simulation-traffic-header">
-                        <span className="traffic-title">Données Trafic</span>
-                        <span className="traffic-dataset">{activeTrafficDataset}</span>
-                    </div>
-                    <table className="simulation-traffic-table">
-                        <thead>
-                            <tr>
-                                <th>Grp</th>
-                                <th>Nom</th>
-                                <th>Déb</th>
-                                <th>Fin</th>
-                                <th>V</th>
-                                <th>V.U</th>
-                                <th>Cap.U</th>
-                                <th>Ret.</th>
-                                <th>File</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {vlSimulatedGroups.map(g => {
-                                const trafficData = getTrafficData(g.id);
-                                // Check if this group is inhibited by a selected simulation action
-                                const isInhibited = inhibitedGroups.has(g.id);
-                                // Use simulated values for calculations
-                                const greenStart = g.simulatedOffset !== undefined ? g.simulatedOffset : g.offset;
-                                const greenDuration = g.simulatedGreen !== undefined ? g.simulatedGreen : g.durations?.green;
-                                const greenEnd = (greenStart + greenDuration) % simulatedCycleLength;
-                                // Always calculate traffic values (show grayed if inhibited)
-                                const vUtile = calculateVUtile(trafficData?.trafficVol, g.laneCoef);
-                                const capacity = calculateCapacity(greenDuration, vUtile);
-                                const delay = calculateDelay(greenDuration, trafficData?.trafficVol, g.laneCoef, g.id, greenStart);
-                                const queue = calculateQueue(greenDuration, trafficData?.trafficVol, g.laneCoef, g.id, greenStart);
-                                return (
-                                    <tr key={g.id} className={isInhibited ? 'row-inhibited' : ''}>
-                                        <td className="col-id">{g.id}</td>
-                                        <td className="col-name">{g.name}</td>
-                                        <td className="col-start">{greenStart}''</td>
-                                        <td className="col-end">{greenEnd}''</td>
-                                        <td className="col-green">{greenDuration ? `${greenDuration}''` : '-'}</td>
-                                        <td className="col-vutile">{vUtile ? `${Math.round(vUtile)}''` : '-'}</td>
-                                        <td className={`col-capacity ${getCapacityColorClass(capacity.value)}`}>
-                                            {capacity.display || '-'}
-                                        </td>
-                                        <td className="col-delay">{delay !== null ? `${delay}''` : '-'}</td>
-                                        <td className="col-queue">{queue !== null ? `${queue}m` : '-'}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
         </div>
     );
 };

@@ -180,6 +180,26 @@
     text-align: center !important;
 }
 
+/* Lecture seule (tableau servi dans l'onglet Simulation) : les valeurs
+   saisissables deviennent du texte, à la même largeur et au même alignement que
+   les champs, pour que les colonnes ne bougent pas d'un mode à l'autre. */
+.traffic-table .valeur-lecture-seule {
+    display: inline-block;
+    width: 38px;
+    text-align: center;
+}
+
+.traffic-dataset-nom {
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 0 4px 4px 0;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    min-width: 110px;
+    display: inline-block;
+}
+
 .trafic-input-wrapper {
     position: relative;
     display: inline-flex;
@@ -304,36 +324,3 @@
     color: #666;
 }
 
-/* Ligne de synthèse « Diagnostic carrefour » sous le tableau trafic */
-.traffic-diagnostic-summary {
-    margin-top: 8px;
-    padding: 6px 8px;
-    font-size: 0.82em;
-    line-height: 1.5;
-    color: #ccc;
-    background: rgba(78, 205, 196, 0.08);
-    border-left: 3px solid #4ecdc4;
-    border-radius: 3px;
-}
-
-.traffic-diagnostic-summary .tds-label {
-    font-weight: bold;
-    color: #4ecdc4;
-}
-
-.traffic-diagnostic-summary .tds-saturated {
-    color: #f44336;
-    font-weight: bold;
-}
-
-/* Réutilise la sémantique couleur du tableau, hors table */
-.traffic-diagnostic-summary .capacity-green { color: #4caf50; }
-.traffic-diagnostic-summary .capacity-orange { color: #ff9800; }
-.traffic-diagnostic-summary .capacity-red { color: #f44336; }
-.traffic-diagnostic-summary .capacity-black {
-    color: #000 !important;
-    background-color: #ff6b6b !important;
-    font-weight: bold;
-    padding: 0 4px;
-    border-radius: 2px;
-}
