@@ -141,8 +141,16 @@ const useFloatingImageRenderer = ({
                         <div
                             className="floating-image-inner"
                             style={{
-                                marginTop: -(cadreY + cropT),
-                                marginLeft: -(cadreX + cropL),
+                                // Les marges décalent la boîte AVANT la mise à
+                                // l'échelle, qui opère ensuite depuis son coin haut
+                                // gauche : un décalage non mis à l'échelle laissait
+                                // le cadre à sa place au zoom 100 %, mais le
+                                // repoussait de cadreY × (zoom − 1) au-delà — d'où
+                                // une bande qui s'ouvrait en haut et un bas tronqué
+                                // d'autant, dès qu'on zoomait sur une image bordée
+                                // de bandes vides.
+                                marginTop: -(cadreY + cropT) * floatingZoom,
+                                marginLeft: -(cadreX + cropL) * floatingZoom,
                                 width: BOX_W,
                                 height: BOX_H,
                                 transform: `scale(${floatingZoom})`,
