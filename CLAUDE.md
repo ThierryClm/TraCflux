@@ -10,8 +10,34 @@ npm run dev      # Start dev server at http://localhost:3000
 npm run build    # Production build
 npm run preview  # Preview production build
 npm run check    # Dependency health report (audit + outdated, prod vs dev)
+npm run serve    # Rebuild dist/ and make sure the local server is up (see below)
 npx vitest run   # Run the test suite once (`npm test` starts watch mode)
 ```
+
+### Voir une modification dans TraCflux local
+
+The user tests in the installed PWA at `http://localhost:4173`, not in the dev
+server. That origin is served by `vite preview` from `dist/`, so a source change
+is invisible until `dist/` is rebuilt — the PWA would keep showing the cached
+build indefinitely.
+
+**After any change to `src/`, `index.html`, `public/` or `vite.config.js`, run
+`npm run serve` before reporting the work as testable**, then tell the user to
+press Ctrl+R in the TraCflux window and click « Recharger » on the banner.
+
+`npm run serve` rebuilds and starts `vite preview` only if port 4173 is free —
+an already running server picks up the new build on its own (sirv re-reads from
+disk on every request), and `preview.strictPort` would make a second one fail.
+The server is detached: it survives the session that started it, so in practice
+it only starts on the first run after a reboot.
+
+The « Recharger » banner appears when the service worker re-checks for a new
+version — on page load, or once an hour ([ReloadPrompt.jsx](src/components/ReloadPrompt.jsx)).
+Leaving the window open is therefore not enough: Ctrl+R is what triggers it.
+The diagnostic report's build date is the only reliable check for a stale bundle.
+
+Never suggest testing in `npm run dev` (port 3000) as an equivalent: no service
+worker there, and it is a distinct origin with its own localStorage.
 
 ### Dependency hygiene
 
