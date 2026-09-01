@@ -32,6 +32,23 @@ const writePopupPosition = (key, left, top) => {
     } catch { /* quota, navigation privée */ }
 };
 
+/**
+ * Texte des règles d'une feuille de style liée.
+ *
+ * Renvoie null si la feuille n'est pas lisible — pas encore chargée dans la
+ * fenêtre parente, ou servie par une autre origine, auquel cas cssRules lève
+ * une SecurityError. L'appelant s'en tient alors au <link> cloné.
+ */
+const cssTextOf = (link) => {
+    try {
+        const sheet = link.sheet;
+        if (!sheet) return null;
+        return Array.from(sheet.cssRules).map(r => r.cssText).join('\n');
+    } catch {
+        return null;
+    }
+};
+
 // Part de la fenêtre devant rester dans la zone utile pour qu'une position
 // mémorisée soit jugée encore bonne.
 const VISIBLE_RATIO = 0.6;
@@ -442,10 +459,38 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             // Set title
             popup.document.title = title;
 
-            // Copy all stylesheets from parent window
+            // Copie des feuilles de style de la fenêtre parente.
+            //
+            // Un <link> cloné se RECHARGE en asynchrone dans la fenêtre fille :
+            // le contenu React y est monté, mesuré et la fenêtre dimensionnée
+            // avant que la moindre règle s'applique. En développement le défaut
+            // ne se voit pas — Vite injecte le CSS en <style>, dont le clone
+            // porte déjà le texte. Dans le build de production, où le CSS est un
+            // fichier lié, la fenêtre s'ouvrait par moments sans style : image à
+            // sa taille native, flèches retombées dans le flux sous l'image (leur
+            // positionnement tient à la seule règle .floating-arrow-marker), et
+            // taille de fenêtre calculée sur cette mise en page fantôme.
+            //
+            // On insère donc le TEXTE des règles, qui s'applique dès l'insertion.
+            // Le <link> est conservé derrière : il ne change plus rien à la mise
+            // en page, mais garde une base d'URL correcte pour les ressources
+            // que le CSS référencerait.
             const parentStyles = document.querySelectorAll('style, link[rel="stylesheet"]');
             parentStyles.forEach(node => {
+                if (node.tagName === 'LINK') {
+                    const texte = cssTextOf(node);
+                    if (texte) {
+                        const inline = popup.document.createElement('style');
+                        inline.textContent = texte;
+                        popup.document.head.appendChild(inline);
+                    }
+                }
                 const clone = node.cloneNode(true);
+                // Filet pour la feuille restée illisible : elle n'arrive qu'après
+                // coup, et la fenêtre garde alors le gabarit mesuré sans style.
+                if (node.tagName === 'LINK') {
+                    clone.addEventListener('load', () => setTimeout(applySize, 0));
+                }
                 popup.document.head.appendChild(clone);
             });
 
