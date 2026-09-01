@@ -245,6 +245,20 @@
     width: 100%;
 }
 
+/* Avancement de l'animation : liseré au pied de la bande des temps. Reprend
+   l'orange du curseur de lecture — c'est le même instant qu'ils désignent —
+   mais reste cantonné à la bande, pour ne pas encombrer un plan de feu que
+   l'utilisateur est en train de lire. */
+.ruler-playback {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 4px;
+    background: #f90;
+    box-shadow: 0 0 4px rgba(255, 153, 0, 0.6);
+    pointer-events: none;
+}
+
 .timeline-row-track {
     height: 30px;
     position: relative;
@@ -1491,6 +1505,15 @@ body.sepia-mode .rest-point-label {
     position: sticky;
     left: 0;
     z-index: 160;
+    /* Un élément collant ne sort jamais de la boîte de son parent. Étirée par
+       le flex, la colonne des noms ne mesurait que la hauteur visible du
+       volet : passé ce défilement, l'en-tête des colonnes était expulsé alors
+       que la règle des temps, elle, tenait (son parent fait la hauteur du
+       contenu). On rend donc sa hauteur de contenu à la colonne, sans
+       descendre sous la hauteur du volet pour garder son fond et son filet
+       jusqu'en bas quand les groupes sont peu nombreux. */
+    align-self: flex-start;
+    min-height: 100%;
 }
 
 /* Une fois les en-têtes figés, le contenu défile dessous : il faut donc les

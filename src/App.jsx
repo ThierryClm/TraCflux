@@ -2092,6 +2092,7 @@ function App() {
                     simulationResult={simulationResult}
                     simulationCurrentTime={simulationEnabled ? simulationCurrentTime : null}
                     isPlayingSimulation={simulationEnabled && isPlayingSimulation}
+                    playbackTime={isPlayingSimulation ? simulationCurrentTime : null}
                     hoveredArrowGroupId={hoveredArrowGroupId}
                     hoveredArrowGroupSaturated={hoveredArrowGroupSaturated}
                     hoveredConflict={hoveredConflict}
@@ -2795,6 +2796,7 @@ function App() {
                                 simulationResult={simulationResult}
                                 simulationCurrentTime={simulationEnabled ? simulationCurrentTime : null}
                                 isPlayingSimulation={simulationEnabled && isPlayingSimulation}
+                                playbackTime={isPlayingSimulation ? simulationCurrentTime : null}
                                 setIsPlayingSimulation={setIsPlayingSimulation}
                                 simulationSpeed={simulationSpeed}
                                 cycleSimulationSpeed={cycleSimulationSpeed}

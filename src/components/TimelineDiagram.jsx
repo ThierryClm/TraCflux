@@ -8,7 +8,7 @@ import { useMicroVariables } from './MicroVariablesProvider';
 import { tokenizeMicroText } from '../utils/microVariables';
 import './TimelineDiagram.css';
 
-const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false }) => {
+const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false }) => {
     const tip = (text) => tooltipsEnabled ? text : undefined;
     const { names: microVariableNames } = useMicroVariables();
     const containerRef = useRef(null);
@@ -1311,6 +1311,19 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     {i * 5}
                                 </div>
                             ))}
+                            {/* Avancement de l'animation, dans la bande des temps UNIQUEMENT.
+                                L'animation continue de tourner quand on revient sur un plan de
+                                feu, mais le curseur de lecture, lui, appartient à l'onglet
+                                Simulation : sans ce repère, rien n'indiquait qu'elle était
+                                active ni où elle en était du cycle. Hors animation, la barre
+                                n'est pas rendue — pas de trace sur un diagramme à l'arrêt. */}
+                            {playbackTime !== null && (
+                                <div
+                                    className="ruler-playback"
+                                    style={{ width: `${(((playbackTime % TIME_WINDOW) + TIME_WINDOW) % TIME_WINDOW) * pixelsPerSecond}px` }}
+                                    title={tip(`Animation en cours — ${Math.floor(playbackTime)}s / ${TIME_WINDOW}s`)}
+                                />
+                            )}
                         </div>
 
                         {/* Rest points (Point de repos) — frozen-cycle bands */}
