@@ -237,3 +237,34 @@ describe('seconde lucarne — champ GF sous toutes ses formes', () => {
         expect(getGroupColorAtTime(11, 42, avecGf('G1'))).not.toBe(VERT_LUCARNE);
     });
 });
+
+describe('type FL — courant clignotant', () => {
+    // Le diagramme ne trace pas de barre verte pour un groupe FL mais une bande
+    // jaune intermittente : le courant associé doit battre à la même cadence,
+    // 1 s allumée / 1 s éteinte, calée sur le début de la période.
+    const ETEINT = 'rgb(120, 120, 120)';
+    const fl = (surcharge = {}) => contexte({
+        groups: [groupe({ type: 'FL', offset: 10, ...surcharge })]
+    });
+
+    it('alterne allumé et éteint pendant sa période', () => {
+        expect(getGroupColorAtTime(1, 10, fl())).toBe(JAUNE);        // 1re seconde
+        expect(getGroupColorAtTime(1, 11, fl())).toBe(ETEINT); // 2e
+        expect(getGroupColorAtTime(1, 12, fl())).toBe(JAUNE);        // 3e
+    });
+
+    it('cale l\'alternance sur le début de période, pas sur le zéro du cycle', () => {
+        // Décalage impair : sans calage sur le début, l'alternance serait inversée.
+        expect(getGroupColorAtTime(1, 11, fl({ offset: 11 }))).toBe(JAUNE);
+    });
+
+    it('reste éteint hors de sa période, jamais rouge', () => {
+        // Un feu clignotant n'a pas d'état rouge : hors plage il est simplement
+        // éteint, du même gris qu'entre deux allumages.
+        expect(getGroupColorAtTime(1, 50, fl())).toBe(ETEINT);
+    });
+
+    it('ne touche pas aux groupes des autres types', () => {
+        expect(getGroupColorAtTime(1, 10, contexte())).toBe(VERT);
+    });
+});

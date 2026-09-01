@@ -37,13 +37,16 @@ export const numeroGroupe = (champ) => {
  * @returns {boolean}
  */
 /**
- * Le triangle de priorité piéton est-il allumé à cet instant ?
+ * Le symbole intermittent est-il allumé à cet instant ?
  *
- * Le diagramme représente la période d'un groupe PP par une bande jaune
- * intermittente : une seconde allumée, une seconde éteinte, l'alternance étant
- * calée sur le DÉBUT de la période et non sur l'origine du cycle. Le symbole
- * doit suivre exactement la même cadence, sans quoi les deux battent en
+ * Le diagramme représente la période des groupes de type FL et PP par une bande
+ * jaune intermittente : une seconde allumée, une seconde éteinte, l'alternance
+ * étant calée sur le DÉBUT de la période et non sur l'origine du cycle. Le
+ * symbole doit suivre exactement la même cadence, sans quoi les deux battent en
  * décalage sous les yeux de l'utilisateur.
+ *
+ * Sert aux deux types — le nom vient de la priorité piéton, seul cas traité à
+ * l'origine — car le calcul ne dépend que du décalage et du vert du groupe.
  *
  * À noter : un groupe PP est VERT au regard du calcul de couleur pendant toute
  * sa période — jamais jaune. Se fier à la couleur pour décider de l'allumage ne
@@ -286,6 +289,21 @@ export const getGroupColorAtTime = (groupId, time, context = {}) => {
             // Wrap-around case
             isOrange = normalizedTime >= greenEnd || normalizedTime < orangeEnd;
         }
+    }
+
+    // Type FL (feu clignotant) : le diagramme ne trace aucune barre verte pour
+    // ces groupes, mais une bande jaune intermittente. Le courant associé bat au
+    // même rythme — même traitement que la priorité piéton, dont il reprend
+    // l'horloge (1 s allumé / 1 s éteint, calée sur le début de la période) pour
+    // rester en phase avec la bande.
+    //
+    // Hors de sa période, un feu clignotant n'est pas rouge : il est ÉTEINT. Le
+    // rouge des groupes ordinaires lui prêtait un état qu'il ne connaît pas — il
+    // passe au gris, la même teinte qu'entre deux allumages : rien ne distingue
+    // un éclat manquant d'une lampe hors service, et c'est bien le cas.
+    if (group.type === 'FL') {
+        const allume = isGreen && isPPLit(groupId, time, { groups, simulationResult, cycleLength });
+        return allume ? 'rgb(255, 255, 0)' : 'rgb(120, 120, 120)';
     }
 
     if (isGreen) {
