@@ -157,17 +157,13 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-/* Top-left label for bubbles in top half */
+/* Ancrage : posé en style inline par le composant, sur le conteneur et non sur
+   la bulle (cf. renderPhaseLabel). Ne reste ici que l'alignement du texte. */
 .phase-bubble-label.label-top-left {
-    top: 5px;
-    left: 5px;
     align-items: flex-start;
 }
 
-/* Bottom-right label for bubbles in bottom half */
 .phase-bubble-label.label-bottom-right {
-    bottom: 5px;
-    right: 5px;
     align-items: flex-end;
 }
 

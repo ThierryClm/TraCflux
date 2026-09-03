@@ -385,13 +385,53 @@ const PhasageBulle = ({
     // Arrow size proportional to bubble height (same ratio as IntersectionImage)
     const arrowSize = Math.round(bubbleHeight * ARROW_SIZE_RATIO);
 
+    /**
+     * Étiquette d'une phase, posée au coin du rectangle qui circonscrit l'ovale.
+     *
+     * Elle était imbriquée DANS la bulle et repérée par rapport à elle. À
+     * l'impression, elle s'en détachait — jusqu'à se retrouver au coin de la
+     * feuille — sans qu'aucune règle de style n'explique le saut. Elle est
+     * désormais un frère de la bulle, repéré sur le conteneur par les mêmes
+     * coordonnées que celle-ci : le coin haut-gauche ou bas-droit du rectangle
+     * circonscrit, donc toujours hors de l'ovale, jamais en conflit avec lui.
+     */
+    const renderPhaseLabel = (index) => {
+        const time = phaseTimes[index];
+        const position = getPhasePosition(index, phaseCount);
+        const isLabelTopLeft = index === 0 ? true : (index === 2 || index === 3) ? false : position.y < 50;
+        const demiL = clipWidth / 2;
+        const demiH = clipHeight / 2;
+
+        return (
+            <div
+                key={`label-${index}`}
+                className={`phase-bubble-label ${isLabelTopLeft ? 'label-top-left' : 'label-bottom-right'}`}
+                style={isLabelTopLeft
+                    ? {
+                        left: `calc(${position.x}% - ${demiL - 5}px)`,
+                        top: `calc(${position.y}% - ${demiH - 5}px)`,
+                        right: 'auto',
+                        bottom: 'auto'
+                    }
+                    : {
+                        left: `calc(${position.x}% + ${demiL - 5}px)`,
+                        top: `calc(${position.y}% + ${demiH - 5}px)`,
+                        right: 'auto',
+                        bottom: 'auto',
+                        transform: 'translate(-100%, -100%)'
+                    }}
+            >
+                <span className="phase-number">Phase {index + 1}</span>
+                <span className="phase-time-display">Seconde {time}</span>
+            </div>
+        );
+    };
+
     // Render a phase bubble with label positioned based on vertical position
     const renderPhaseBubble = (index) => {
         const time = phaseTimes[index];
         const position = getPhasePosition(index, phaseCount);
         const isSideLabel = (courant) => courant === 'Piéton' || courant === 'Cycle';
-        // Phase 1 always top-left, phases 3-4 (index 2-3) always bottom-right, others based on vertical position
-        const isLabelTopLeft = index === 0 ? true : (index === 2 || index === 3) ? false : position.y < 50;
 
         return (
             <div
@@ -404,20 +444,6 @@ const PhasageBulle = ({
                     height: `${clipHeight}px`
                 }}
             >
-                {/* Label positioned based on bubble vertical position (Phase 1 always top-left) */}
-                {/* Coin d'ancrage posé ici, et non laissé à la feuille de style :
-                    à l'impression, une étiquette a été vue décrochée de sa bulle.
-                    Des coordonnées explicites ne dépendent d'aucune règle qu'une
-                    feuille d'impression pourrait neutraliser. */}
-                <div
-                    className={`phase-bubble-label ${isLabelTopLeft ? 'label-top-left' : 'label-bottom-right'}`}
-                    style={isLabelTopLeft
-                        ? { top: '5px', left: '5px', bottom: 'auto', right: 'auto' }
-                        : { bottom: '5px', right: '5px', top: 'auto', left: 'auto' }}
-                >
-                    <span className="phase-number">Phase {index + 1}</span>
-                    <span className="phase-time-display">Seconde {time}</span>
-                </div>
                 {/* Image bubble - clip container changes shape with ratio, image stays fixed */}
                 <div className="phase-bubble-content" style={{
                     width: `${clipWidth}px`,
@@ -518,6 +544,9 @@ const PhasageBulle = ({
 
                 {/* Phase bubbles positioned around the ellipse */}
                 {Array.from({ length: phaseCount }, (_, i) => renderPhaseBubble(i))}
+
+                {/* Étiquettes : frères des bulles, au coin du rectangle circonscrit */}
+                {Array.from({ length: phaseCount }, (_, i) => renderPhaseLabel(i))}
 
                 {/* Curved arrows between phases (clockwise, on outer periphery) */}
                 {/* Repère élargi de 25 % de chaque côté, et élément débordant d'autant :
