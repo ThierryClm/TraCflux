@@ -3674,10 +3674,17 @@ body.amber-mode .help-back-to-top {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
     }
+    /* Une seule ligne, donc une seule boîte de ligne : le moteur de pagination
+       n'a plus rien à couper. Interdire la coupure ne suffisait pas — le
+       fragment orphelin réapparaissait, avec sa propre bordure. Le numéro et la
+       seconde se suivent sur la même ligne, séparés par un point médian. */
     body.print-dossier .dossier-phasage-content .phase-number,
     body.print-dossier .dossier-phasage-content .phase-time-display {
-        display: block !important;
+        display: inline !important;
         white-space: nowrap !important;
+    }
+    body.print-dossier .dossier-phasage-content .phase-time-display::before {
+        content: " · ";
     }
     /* Étiquette du bas alignée à droite, comme le veut son coin d'ancrage. */
     body.print-dossier .dossier-phasage-content .phase-bubble-label.label-bottom-right {
