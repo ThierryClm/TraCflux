@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useId } from 'react';
 import { isPPLit } from '../utils/groupColorAtTime';
+import { getEllipseConfig, computeBubbleBox, ARROW_OUTER_OFFSET } from '../utils/phasageLayout';
 import './PhasageBulle.css';
 
 const PhasageBulle = ({
@@ -21,6 +22,10 @@ const PhasageBulle = ({
     initialBubbleScale = 100,
     initialEllipseScale = 100,
     initialBubbleRatio = 100,
+    // Étalement horizontal et décalage des arcs imposés (impression) :
+    // aucun curseur, aucun état.
+    ellipseScaleX = null,
+    arrowOffset = ARROW_OUTER_OFFSET,
     onBubbleScaleChange,
     onEllipseScaleChange,
     onBubbleRatioChange
@@ -32,6 +37,14 @@ const PhasageBulle = ({
     const [phaseTimes, setPhaseTimes] = useState(initialTimes);
 
     // Scale factors for bubbles and ellipse (50% to 150%)
+    // Le marqueur de pointe de flèche portait un identifiant fixe. À l'écran,
+    // une seule instance existe et rien ne se voyait ; à l'impression du dossier,
+    // le document en contient une par plan de feu — plus celle, masquée, de
+    // l'application. Toutes les flèches résolvaient alors « url(#arrowhead) »
+    // vers le premier marqueur du document, celui d'un sous-arbre en display:none,
+    // que le navigateur ne dessine pas : les arcs sortaient sans pointe.
+    const marqueurFleche = 'phasage-arrowhead-' + useId().replace(/:/g, '');
+
     const [bubbleScaleUser, setBubbleScaleUser] = useState(initialBubbleScale);
     const [ellipseScaleUser, setEllipseScaleUser] = useState(initialEllipseScale);
     const [bubbleRatioUser, setBubbleRatioUser] = useState(initialBubbleRatio);
@@ -335,35 +348,12 @@ const PhasageBulle = ({
         }
     };
 
-    // Get ellipse radii and starting angle based on number of phases
-    // RadiusX reduced by 30% total for tighter horizontal distribution
-    // Phase 1 always starts from left (Math.PI)
-    const getEllipseConfig = (count) => {
-        switch (count) {
-            case 2:
-                // Two bubbles: left and right
-                return { radiusX: 22, radiusY: 25, startAngle: Math.PI };
-            case 3:
-                // Triangle: Phase 1 at left
-                return { radiusX: 23, radiusY: 30, startAngle: Math.PI };
-            case 5:
-                // Pentagon: Phase 1 at left
-                return { radiusX: 27, radiusY: 34, startAngle: Math.PI };
-            case 6:
-                // Hexagon: Phase 1 at left
-                return { radiusX: 29, radiusY: 36, startAngle: Math.PI };
-            default:
-                // 4 phases: diamond shape, Phase 1 at left
-                return { radiusX: 26, radiusY: 32, startAngle: Math.PI };
-        }
-    };
-
     // Calculate position on ellipse for each phase
     const ellipseFactor = ellipseScaleUser / 100;
-    const ratioFactor = bubbleRatioUser / 100;
+    const ellipseFactorX = (ellipseScaleX ?? ellipseScaleUser) / 100;
     const getPhasePosition = (index, total) => {
         const { radiusX, radiusY, startAngle } = getEllipseConfig(total);
-        const rx = radiusX * ellipseFactor;
+        const rx = radiusX * ellipseFactorX;
         const ry = radiusY * ellipseFactor;
 
         // Calculate angle step and position (clockwise)
@@ -379,33 +369,19 @@ const PhasageBulle = ({
     // Get ellipse radii for SVG outline (uses same config)
     const getEllipseRadii = (count) => {
         const config = getEllipseConfig(count);
-        return { radiusX: config.radiusX * ellipseFactor, radiusY: config.radiusY * ellipseFactor };
+        return { radiusX: config.radiusX * ellipseFactorX, radiusY: config.radiusY * ellipseFactor };
     };
-
-    // Get scale factor based on number of phases
-    const getScaleFactor = (count) => {
-        switch (count) {
-            case 2: return 1.2;  // +20%
-            case 5: return 0.9;  // -10%
-            case 6: return 0.8;  // -20%
-            default: return 1.0; // 3-4 phases: normal
-        }
-    };
-
-    // Base sizes (proportional to image, reduced by 5%)
-    const BASE_BUBBLE_WIDTH = 570;
-    const BASE_BUBBLE_HEIGHT = 456;
 
     // Arrow size ratio from IntersectionImage (96px arrow / 500px container = 19.2%)
     const ARROW_SIZE_RATIO = 0.192;
 
-    // Calculate scaled sizes
-    const scaleFactor = getScaleFactor(phaseCount) * (bubbleScaleUser / 100);
-    const bubbleWidth = Math.round(BASE_BUBBLE_WIDTH * scaleFactor);
-    const bubbleHeight = Math.round(BASE_BUBBLE_HEIGHT * scaleFactor);
-    // Elliptical clip dimensions controlled by H/L ratio (image stays fixed inside)
-    const clipWidth = Math.round(bubbleWidth / Math.sqrt(ratioFactor));
-    const clipHeight = Math.round(bubbleHeight * Math.sqrt(ratioFactor));
+    // Tailles : calculées par la géométrie partagée, dont l'impression se sert
+    // aussi pour mesurer la composition avant de la réduire à la page.
+    const { bubbleWidth, bubbleHeight, clipWidth, clipHeight } = computeBubbleBox({
+        count: phaseCount,
+        bubbleScale: bubbleScaleUser,
+        ratio: bubbleRatioUser
+    });
     // Arrow size proportional to bubble height (same ratio as IntersectionImage)
     const arrowSize = Math.round(bubbleHeight * ARROW_SIZE_RATIO);
 
@@ -423,11 +399,22 @@ const PhasageBulle = ({
                 className="phase-bubble"
                 style={{
                     left: `${position.x}%`,
-                    top: `${position.y}%`
+                    top: `${position.y}%`,
+                    width: `${clipWidth}px`,
+                    height: `${clipHeight}px`
                 }}
             >
                 {/* Label positioned based on bubble vertical position (Phase 1 always top-left) */}
-                <div className={`phase-bubble-label ${isLabelTopLeft ? 'label-top-left' : 'label-bottom-right'}`}>
+                {/* Coin d'ancrage posé ici, et non laissé à la feuille de style :
+                    à l'impression, une étiquette a été vue décrochée de sa bulle.
+                    Des coordonnées explicites ne dépendent d'aucune règle qu'une
+                    feuille d'impression pourrait neutraliser. */}
+                <div
+                    className={`phase-bubble-label ${isLabelTopLeft ? 'label-top-left' : 'label-bottom-right'}`}
+                    style={isLabelTopLeft
+                        ? { top: '5px', left: '5px', bottom: 'auto', right: 'auto' }
+                        : { bottom: '5px', right: '5px', top: 'auto', left: 'auto' }}
+                >
                     <span className="phase-number">Phase {index + 1}</span>
                     <span className="phase-time-display">Seconde {time}</span>
                 </div>
@@ -533,10 +520,18 @@ const PhasageBulle = ({
                 {Array.from({ length: phaseCount }, (_, i) => renderPhaseBubble(i))}
 
                 {/* Curved arrows between phases (clockwise, on outer periphery) */}
-                <svg className="connecting-arrows" viewBox="0 0 100 100" preserveAspectRatio="none">
+                {/* Repère élargi de 25 % de chaque côté, et élément débordant d'autant :
+                    une unité vaut toujours 1 % du conteneur, mais un arc peut passer
+                    au large des bulles sans être tronqué au bord du dessin. */}
+                <svg
+                    className="connecting-arrows"
+                    viewBox="-25 -25 150 150"
+                    preserveAspectRatio="none"
+                    style={{ left: '-25%', top: '-25%', width: '150%', height: '150%' }}
+                >
                     <defs>
                         <marker
-                            id="arrowhead"
+                            id={marqueurFleche}
                             markerWidth="4"
                             markerHeight="3"
                             refX="3"
@@ -552,7 +547,7 @@ const PhasageBulle = ({
                     </defs>
                     {Array.from({ length: phaseCount }, (_, i) => {
                         const { radiusX: baseRX, radiusY: baseRY, startAngle } = getEllipseConfig(phaseCount);
-                        const radiusX = baseRX * ellipseFactor;
+                        const radiusX = baseRX * ellipseFactorX;
                         const radiusY = baseRY * ellipseFactor;
                         const angleStep = (2 * Math.PI) / phaseCount;
 
@@ -560,8 +555,9 @@ const PhasageBulle = ({
                         const angle1 = startAngle + angleStep * i;
                         const angle2 = startAngle + angleStep * (i + 1);
 
-                        // Outer radius offset for the arrow path (further from center)
-                        const outerOffset = 14;
+                        // Écart des arcs vers l'extérieur de l'ellipse. À l'impression, il
+                        // se resserre pour ne pas prendre la place des bulles (cf. App).
+                        const outerOffset = arrowOffset;
                         const outerRadiusX = radiusX + outerOffset;
                         const outerRadiusY = radiusY + outerOffset;
 
@@ -586,7 +582,7 @@ const PhasageBulle = ({
                                 fill="none"
                                 stroke="rgba(180,140,255,0.7)"
                                 strokeWidth="0.8"
-                                markerEnd="url(#arrowhead)"
+                                markerEnd={`url(#${marqueurFleche})`}
                             />
                         );
                     })}
