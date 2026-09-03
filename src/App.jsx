@@ -29,7 +29,9 @@ import { getInterceptedEntries, clearInterceptedEntries } from './utils/errorInt
 import CreateGreenWaveDialog from './components/CreateGreenWaveDialog';
 import GreenWaveViewer from './components/GreenWaveViewer';
 import SimulationPanel from './components/SimulationPanel';
+import { flushSync } from 'react-dom';
 import PhasageBulle from './components/PhasageBulle';
+import { computeCompositionBox, fitEllipseScaleX, fitArrowOffset } from './utils/phasageLayout';
 import { safeShowOpenFilePicker } from './utils/filePicker';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
@@ -631,6 +633,81 @@ function App() {
     // Local input states for validation on Enter/blur
     const [groupCountInput, setGroupCountInput] = useState(groups.length.toString());
     const [cycleLengthInput, setCycleLengthInput] = useState(cycleLength.toString());
+
+    // Repli de la colonne « Action_Micro » à l'impression, en caractères.
+    //
+    // Il ne se DÉDUIT pas : une estimation de la chasse à partir de la taille de
+    // police donnait 41 caractères là où l'écran en met 57, et les équations se
+    // coupaient ailleurs. On MESURE donc le champ tel qu'il est rendu — largeur
+    // utile divisée par la largeur d'un caractère, exacte en chasse fixe — et
+    // l'unité ch reporte ce compte à l'impression, quelle que soit la taille du
+    // texte imprimé. Les lignes se coupent alors aux mêmes endroits.
+    // Largeur du conteneur d'impression du dossier, en px CSS.
+    //
+    // Trois valeurs successives ont été essayées en dur (1200, puis 1035, puis
+    // la largeur de la fenêtre) : aucune ne correspond. La mise en page
+    // d'impression a son propre gabarit, ni le papier en px CSS, ni la fenêtre.
+    // On la mesure donc là où elle vaut quelque chose : PENDANT le rendu
+    // d'impression, que matchMedia('print') signale. La valeur est conservée
+    // d'une session à l'autre, si bien qu'elle n'est fausse qu'à la toute
+    // première impression sur un poste donné.
+    const [dossierPrintWidth, setDossierPrintWidth] = useState(() => {
+        const memo = parseFloat(localStorage.getItem('dossier_print_width'));
+        return Number.isFinite(memo) && memo > 400 ? memo : 1035;
+    });
+    useEffect(() => {
+        const mql = window.matchMedia('print');
+        const releve = () => {
+            const largeur = document.documentElement.clientWidth;
+            if (largeur > 400) {
+                // flushSync : la nouvelle largeur doit être prise en compte pour
+                // CETTE impression, pas la suivante.
+                try { flushSync(() => setDossierPrintWidth(largeur)); }
+                catch { setDossierPrintWidth(largeur); }
+                try { localStorage.setItem('dossier_print_width', String(largeur)); } catch { /* quota */ }
+            }
+        };
+        const surChangement = (e) => { if (e.matches) releve(); };
+        mql.addEventListener('change', surChangement);
+        window.addEventListener('beforeprint', releve);
+        return () => {
+            mql.removeEventListener('change', surChangement);
+            window.removeEventListener('beforeprint', releve);
+        };
+    }, []);
+
+    const [microPrintStyle, setMicroPrintStyle] = useState(null);
+    useEffect(() => {
+        // On mesure le calque d'affichage, pas la zone de saisie : c'est lui que
+        // l'utilisateur lit (le texte de la zone de saisie est transparent), et
+        // sa largeur de repli est la bonne au pixel près. La zone de saisie, elle,
+        // réserve de quoi loger un caractère de plus — d'où le « et » qui montait
+        // d'une ligne à l'impression.
+        const champ = document.querySelector('.action-table .micro-highlight-backdrop')
+            || document.querySelector('.action-table .input-micro');
+        if (!champ) return; // tableau non monté (simulation, phasage) : on garde la dernière mesure
+        const style = window.getComputedStyle(champ);
+        const utile = champ.clientWidth
+            - (parseFloat(style.paddingLeft) || 0)
+            - (parseFloat(style.paddingRight) || 0);
+        if (utile > 0) {
+            // Même largeur ET même police : c'est le navigateur qui replie, avec
+            // les mêmes données qu'à l'écran, donc aux mêmes endroits. Compter
+            // les caractères était une approximation — 62 par ligne à
+            // l'impression contre 57 à l'écran — et l'équation se coupait
+            // ailleurs, ce qui est précisément ce qu'il faut éviter ici.
+            setMicroPrintStyle({
+                width: `${Math.round(utile)}px`,
+                fontFamily: style.fontFamily,
+                fontSize: style.fontSize,
+                lineHeight: style.lineHeight
+            });
+        }
+        // Pas de printType dans les dépendances : il est déclaré plus bas, et le
+        // citer ici plantait le module au chargement (accès avant initialisation).
+        // La mesure se refait au montage et à chaque redimensionnement de colonne,
+        // ce qui couvre les cas réels.
+    }, [actionColWidths?.micro, activeTab, simulationEnabled, phasageBulleEnabled]);
 
     // Synchronize traffic dataset with active PF tab (only when no saved mapping)
     useEffect(() => {
@@ -4091,6 +4168,12 @@ function App() {
                                     </div>
                                 )}
 
+                                {/* Colonne « Action_Micro » : à l'écran, un champ de largeur fixe en
+                                    police à chasse fixe, qui replie le texte. À l'impression la cellule
+                                    recevait la chaîne entière sur une ligne — la colonne mangeait la page
+                                    et les autres se tassaient. On y remet le même repli, exprimé en
+                                    caractères (unité ch, exacte en chasse fixe) : largeur de la colonne
+                                    écran divisée par la chasse (≈ 0,6 × 16,8 px, la taille du champ). */}
                                 {printType === 'diagram' && (() => {
                                     // A4 paysage avec marges 5mm: ~287mm x 200mm
                                     // A4 paysage marges 10mm: ~277mm = ~1047px à 96dpi
@@ -4196,7 +4279,7 @@ function App() {
                                                                     <td>{row.deb}</td>
                                                                     <td>{row.fin}</td>
                                                                     <td>{row.abrv}</td>
-                                                                    <td className="print-micro-cell">{row.micro}</td>
+                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={microPrintStyle || undefined}>{row.micro}</div></td>
                                                                     <td>{row.plage1}</td>
                                                                     <td>{row.plage2}</td>
                                                                     <td>{row.actGf1}</td>
@@ -4226,12 +4309,18 @@ function App() {
                                     // On utilise 1035px pour laisser une petite marge de securite (~12 px) :
                                     // 1040px coupait juste le trait droit du cadre du diagramme sur les cycles
                                     // longs (137s observe), 1035px le rend visible sans rogner la largeur utile.
-                                    // L'ancienne valeur 1200 partait d'une mesure navigateur obsolete et causait
-                                    // un debordement de ~20s sur les cycles > refCycle (corrige le 2026-05-26).
+                                    // dossierPrintWidth est mesuré (cf. état plus haut) : il vaut la
+                                    // largeur réelle du conteneur d'impression, et non un chiffre figé.
+                                    // On lui retire une marge : viser la largeur au pixel près faisait
+                                    // tomber la dernière graduation hors de la page sur un cycle long,
+                                    // le trait de fin de cycle et la bordure comptant eux aussi.
+                                    const MARGE_IMPRESSION = 26;
+                                    // Même marge pour la page de phasage, qui vise la largeur mesurée.
+                                    const MARGE_IMPRESSION_PHASAGE = 26;
+                                    const dossierUsableWidth = dossierPrintWidth - MARGE_IMPRESSION;
                                     // Sidebar TimelineDiagram reelle = 325px (sans commentaires/remarques masques)
-                                    const dossierPrintWidth = 1035;
                                     const dossierSidebarReal = 325;
-                                    const availableWidth = dossierPrintWidth - dossierSidebarReal; // 710px
+                                    const availableWidth = dossierUsableWidth - dossierSidebarReal;
                                     const refCycle = 120; // Cycle de référence pour l'échelle homogène
                                     // Cycle ≤ 120s: échelle fixe (homogénéité entre dossiers)
                                     // Cycle > 120s: ratio pour remplir la largeur de la page
@@ -4624,9 +4713,15 @@ function App() {
                                             const maxScale = diagramPageHeight / diagramRenderedHeight;
                                             const combinedScale = Math.min(rowZoom, maxScale);
                                             // Ajuster PPS pour maintenir la largeur visuelle prévue
+                                            // Largeur TOTALE proportionnelle au cycle jusqu'à 120 s — colonne des
+                                            // noms comprise, et non ajoutée par-dessus : à 120 s le diagramme
+                                            // occupe la page entière, à 65 s un peu plus de la moitié.
                                             const targetWidth = pfCycleLength <= refCycle
-                                                ? dossierSidebarReal + pfCycleLength * pfBasePPS // largeur prévue pour cycle court
-                                                : dossierPrintWidth; // pleine largeur pour cycle long
+                                                ? Math.max(
+                                                    dossierUsableWidth * (pfCycleLength / refCycle),
+                                                    dossierSidebarReal + pfCycleLength * 3 // plancher : timeline lisible
+                                                  )
+                                                : dossierUsableWidth; // pleine largeur pour cycle long
                                             const pfPPS = (targetWidth / combinedScale - dossierSidebarReal) / pfCycleLength;
                                             return (
                                         <Fragment key={pf.id}>
@@ -4712,7 +4807,7 @@ function App() {
                                                                     <td>{row.deb}</td>
                                                                     <td>{row.fin}</td>
                                                                     <td>{row.abrv}</td>
-                                                                    <td className="print-micro-cell">{row.micro}</td>
+                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={microPrintStyle || undefined}>{row.micro}</div></td>
                                                                     <td>{row.plage1}</td>
                                                                     <td>{row.plage2}</td>
                                                                     <td>{row.actGf1}</td>
@@ -4744,31 +4839,82 @@ function App() {
                                         {dossierSections[`phasageBulle_${pf.id}`] && intersectionArrows.length > 0 && intersectionImage && (() => {
                                             const bulleCount = pf.phasageBulleCount || 4;
                                             const bulleCycleLength = pf.id === activePFId ? cycleLength : (pf.cycleLength || cycleLength);
-                                            const userBubbleScale = pf.phasageBubbleScale ?? 100;
-                                            // Cap d'impression : respecter le réglage utilisateur sauf si la taille
-                                            // résultante ferait déborder les bulles hors de la page. Les marges
-                                            // (% du conteneur où sont placés les centres de bulles) viennent de
-                                            // PhasageBulle.getEllipseConfig : la marge la plus petite limite la taille.
-                                            const PRINT_H = 738; // ~A4 paysage - en-tête section - h3
-                                            const PRINT_W = 1123;
-                                            const SAFETY = 0.92; // marge pour labels + arrondi
-                                            const Y_MARGIN = { 2: 0.50, 3: 0.24, 4: 0.18, 5: 0.177, 6: 0.188 }[bulleCount] ?? 0.18;
-                                            const X_MARGIN = { 2: 0.28, 3: 0.27, 4: 0.24, 5: 0.23, 6: 0.21 }[bulleCount] ?? 0.22;
-                                            const baseFactor = bulleCount === 2 ? 1.2 : bulleCount === 5 ? 0.9 : bulleCount === 6 ? 0.8 : 1.0;
-                                            const maxTotalScaleH = (2 * Y_MARGIN * PRINT_H) / 456;
-                                            const maxTotalScaleW = (2 * X_MARGIN * PRINT_W) / 570;
-                                            const maxTotalScale = SAFETY * Math.min(maxTotalScaleH, maxTotalScaleW);
-                                            const naturalTotalScale = baseFactor * (userBubbleScale / 100);
-                                            const cappedTotalScale = Math.min(naturalTotalScale, maxTotalScale);
-                                            const printBubbleScale = (cappedTotalScale / baseFactor) * 100;
-                                            const bsf = cappedTotalScale;
-                                            const bulleW = 570 * bsf;
-                                            const bulleH = 456 * bsf;
+                                            // Composition imprimée = composition à l'écran, amenée à la page.
+                                            //
+                                            // Le phasage est composé dans un canevas aux proportions de la zone
+                                            // imprimable, puis réduit ou agrandi d'un bloc : les réglages de
+                                            // l'utilisateur (taille des bulles, ellipse, rapport H/L) valent donc
+                                            // à l'impression ce qu'ils valent à l'écran, chevauchements compris.
+                                            //
+                                            // L'échelle se calcule sur l'ENCOMBREMENT RÉEL des bulles, pas sur le
+                                            // canevas : une bulle déborde volontiers de l'ellipse qui la place, et
+                                            // selon les réglages la composition occupe une part très variable du
+                                            // canevas. La mesurer est le seul moyen de remplir la feuille au lieu
+                                            // d'y laisser une bande vide.
+                                            //
+                                            // Zone imprimable : la LARGEUR est mesurée (même source que le
+                                            // diagramme), la hauteur s'en déduit par le rapport de la page.
+                                            //
+                                            // Elle était calculée depuis la règle @page — 277 mm de large, soit
+                                            // 1047 px CSS. La sonde a montré une page de 1683 px : la mise en
+                                            // page d'impression a son propre gabarit, et la composition visait
+                                            // donc une feuille 1,6 fois trop étroite. Le rapport hauteur/largeur,
+                                            // lui, reste celui du papier.
+                                            const MM_TO_PX = 96 / 25.4;
+                                            const TITRE_PX = 35;
+                                            const RAPPORT_PAGE = (Math.round(186 * MM_TO_PX) - TITRE_PX) / Math.round(277 * MM_TO_PX);
+                                            // Marge tout autour : sans elle, l'arc extérieur venait toucher le
+                                            // bord de la feuille.
+                                            const MARGE_PHASAGE = 0.90;
+                                            const PAGE_W = dossierPrintWidth;
+                                            const PRINT_W = Math.round(PAGE_W * MARGE_PHASAGE);
+                                            const PRINT_H = Math.round(PAGE_W * RAPPORT_PAGE * MARGE_PHASAGE);
+                                            const CANVAS_W = 1600;
+                                            const CANVAS_H = Math.round(CANVAS_W * PRINT_H / PRINT_W);
+                                            // La composition est presque carrée, la feuille bien plus large
+                                            // que haute : mise à l'échelle telle quelle, elle laisse deux
+                                            // bandes blanches sur les côtés. On écarte donc les bulles
+                                            // horizontalement jusqu'aux proportions de la page — elles se
+                                            // déplacent, elles ne se déforment pas.
+                                            const reglages = {
+                                                count: bulleCount,
+                                                bubbleScale: pf.phasageBubbleScale ?? 100,
+                                                ellipseScale: pf.phasageEllipseScale ?? 100,
+                                                ratio: pf.phasageBubbleRatio ?? 100,
+                                                containerWidth: CANVAS_W,
+                                                containerHeight: CANVAS_H
+                                            };
+                                            // Pas d'étalement horizontal : la composition garde EXACTEMENT les
+                                            // proportions de l'écran — ovales presque jointifs — et n'est plus
+                                            // que réduite pour tenir dans la page. L'étirer vers les bords
+                                            // écartait les bulles et donnait un dessin plus lâche qu'à l'écran.
+                                            const etalementX = pf.phasageEllipseScale ?? 100;
+                                            const ecartArcs = fitArrowOffset({
+                                                ...reglages,
+                                                ellipseScaleX: etalementX,
+                                                pageWidth: CANVAS_W,
+                                                pageHeight: CANVAS_H,
+                                                center: { x: CANVAS_W / 2, y: CANVAS_H / 2 }
+                                            });
+                                            // La page se dimensionne sur les BULLES : elles portent le contenu.
+                                            // Les arcs, eux, se contentent de la place qui reste (cf. fitArrowOffset) —
+                                            // les faire entrer dans le calcul revenait à rapetisser les bulles pour
+                                            // réserver de la marge à un trait.
+                                            const compo = computeCompositionBox({ ...reglages, ellipseScaleX: etalementX, arrowOffset: ecartArcs });
+                                            const printFit = Math.min(PRINT_W / compo.width, PRINT_H / compo.height);
+                                            // Le canevas est accroché au centre du conteneur réel, puis décalé de
+                                            // façon que le centre de la COMPOSITION y tombe : le centrage ne dépend
+                                            // donc d'aucune constante, seulement l'échelle en dépend.
+                                            const printShiftX = -compo.centerX * printFit;
+                                            const printShiftY = -compo.centerY * printFit;
+                                            const decalageArcs = ecartArcs;
                                             // Image ratio: hide ellipse if very elongated
                                             const imgRatio = imageNaturalDims.width / imageNaturalDims.height;
                                             const hideOvals = imgRatio > 1.5 || imgRatio < (1 / 1.5);
-                                            // Visible image bounds within bubble (object-fit: contain)
-                                            const bubbleAspect = bulleW / bulleH;
+                                            // Visible image bounds within bubble (object-fit: contain).
+                                            // Le rapport de la bulle ne dépend pas de l'échelle : largeur et
+                                            // hauteur de base sont multipliées par le même facteur.
+                                            const bubbleAspect = 570 / 456;
                                             let arrowXMin = 0, arrowXMax = 100, arrowYMin = 0, arrowYMax = 100;
                                             if (imgRatio > bubbleAspect) {
                                                 const visH = (bubbleAspect / imgRatio) * 100;
@@ -4783,6 +4929,14 @@ function App() {
                                             <div className="print-dossier-section print-dossier-phasage dossier-phasage-centered">
                                                 <h3>Phasage bulle - {pf.name}{dossierSmallLogos}</h3>
                                                 <div className={`dossier-phasage-content ${hideOvals ? 'phasage-hide-ovals' : ''}`}>
+                                                  <div
+                                                    className="dossier-phasage-canvas"
+                                                    style={{
+                                                        width: `${CANVAS_W}px`,
+                                                        height: `${CANVAS_H}px`,
+                                                        transform: `translate(${printShiftX}px, ${printShiftY}px) scale(${printFit})`
+                                                    }}
+                                                  >
                                                     <PhasageBulle
                                                         groups={pfGroups}
                                                         cycleLength={bulleCycleLength}
@@ -4796,10 +4950,13 @@ function App() {
                                                         initialCount={bulleCount}
                                                         imageBrightness={imageBrightness}
                                                         imageContrast={imageContrast}
-                                                        initialBubbleScale={printBubbleScale}
+                                                        initialBubbleScale={pf.phasageBubbleScale ?? 100}
                                                         initialEllipseScale={pf.phasageEllipseScale ?? 100}
                                                         initialBubbleRatio={pf.phasageBubbleRatio ?? 100}
+                                                        ellipseScaleX={etalementX}
+                                                        arrowOffset={decalageArcs}
                                                     />
+                                                  </div>
                                                 </div>
                                             </div>
                                             );

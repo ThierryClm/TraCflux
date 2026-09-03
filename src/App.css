@@ -1989,11 +1989,26 @@ body.amber-mode .help-back-to-top {
 /* Action_Micro : préserver les sauts de ligne saisis dans la fenêtre principale
    (annule le nowrap/ellipsis ci-dessus, qui écrasait le texte sur une ligne). */
 .print-actions-table td.print-micro-cell {
-    white-space: pre-wrap;
     overflow: visible;
     text-overflow: clip;
-    max-width: 220px;
+    padding: 2px 4px;
+}
+
+/* Le repli tient à la largeur de ce bloc, pas à un max-width sur la cellule :
+   en table-layout auto, un max-width ne retient pas une colonne qu'un long
+   texte pousse. La chasse fixe rend l'unité ch exacte — même compte de
+   caractères par ligne qu'à l'écran. */
+.print-actions-table .print-micro-wrap {
+    /* Repli identique à l'écran : la largeur et la police du champ y sont
+       relevées puis recopiées en style inline, et c'est le navigateur qui
+       coupe les lignes — donc aux mêmes endroits. Les valeurs ci-dessous ne
+       servent que si le tableau d'actions n'était pas monté au moment de la
+       mesure (onglet Simulation ou Phasage). */
+    width: 420px;
+    font-family: monospace;
+    white-space: pre-wrap;
     word-break: break-word;
+    text-align: left;
 }
 
 /* Réserve de capacité à l'impression : même présentation que le tableau
@@ -3367,6 +3382,12 @@ body.amber-mode .help-back-to-top {
         display: flex !important;
         flex-direction: column !important;
         overflow: hidden !important;
+        /* Chaque page de phasage borne son propre dessin : un dossier en compte
+           une par plan de feu, et sans point d'ancrage ni isolation, des
+           éléments en position absolue d'une page peuvent se peindre sur une
+           autre — ce qui expliquerait les étiquettes échouées dans un coin. */
+        position: relative !important;
+        isolation: isolate;
     }
 
     body.print-dossier .print-dossier-section h3 {
@@ -3518,6 +3539,40 @@ body.amber-mode .help-back-to-top {
         background-color: #f0f0f0 !important;
     }
 
+    /* Les deux tableaux de la page trafic se lisent ensemble : même cadrage,
+       même corps de texte.
+
+       « Réserve de capacité » s'étirait sur toute la largeur (width: 100 %, utile
+       à l'écran dans un panneau étroit) : à l'impression, ses colonnes devenaient
+       de longues bandes vides et l'œil devait traverser la feuille entre un GF et
+       sa valeur. Il se cale désormais sur son contenu, comme le tableau trafic.
+
+       Le corps de texte est piloté par une seule variable : les tableaux
+       n'occupaient qu'un tiers de la page, tout le reste étant blanc. À ajuster
+       ici, d'un seul endroit, en gardant à l'esprit qu'un projet à 32 groupes
+       allonge le second tableau — les sections évitent les coupures de page. */
+    body.print-dossier .print-dossier-traffic,
+    body.print-dossier .print-dossier-reserve {
+        --dossier-table-font: 1rem;
+    }
+
+    body.print-dossier .print-dossier-reserve .diagnostic-table {
+        width: auto !important;
+    }
+
+    body.print-dossier .dossier-traffic-table,
+    body.print-dossier .print-dossier-reserve .diagnostic-table {
+        font-size: var(--dossier-table-font) !important;
+    }
+
+    body.print-dossier .dossier-traffic-table th,
+    body.print-dossier .dossier-traffic-table td,
+    body.print-dossier .print-dossier-reserve .diagnostic-table th,
+    body.print-dossier .print-dossier-reserve .diagnostic-table td {
+        padding: 3px 10px !important;
+        white-space: nowrap !important;
+    }
+
     /* Réserve de capacité : forcer le rendu des fonds (en-tête gris, cellule
        de dépassement rouge) à l'impression, comme le tableau trafic. */
     body.print-dossier .print-dossier-reserve .diagnostic-table th,
@@ -3555,7 +3610,21 @@ body.amber-mode .help-back-to-top {
     body.print-dossier .dossier-phasage-centered .dossier-phasage-content {
         width: 100%;
         flex: 1;
-        overflow: visible !important;
+        position: relative;
+        overflow: hidden !important;
+    }
+    /* Canevas de composition : mêmes proportions que la page, mais à la taille
+       d'un écran, puis réduit d'un bloc (cf. App.jsx). Positionné en absolu :
+       une transformation ne change pas la place réservée dans le flux, et la
+       hauteur du canevas déborderait la page. */
+    body.print-dossier .dossier-phasage-canvas {
+        position: absolute;
+        /* Accroché au centre du conteneur : le décalage calculé en JSX y amène
+           le centre de la composition, sans dépendre de la taille réelle de la
+           zone imprimable. */
+        top: 50%;
+        left: 50%;
+        transform-origin: top left;
     }
 
     /* Phasage bulle : fond blanc, conteneur remplit l'espace disponible */
@@ -3576,6 +3645,45 @@ body.amber-mode .help-back-to-top {
     /* Bulles : positionnement centré sans scale CSS — la taille est désormais
        pilotée en JSX via initialBubbleScale, qui applique un cap basé sur le
        nombre de phases pour ne pas déborder de la page. */
+    /* Ancrage des bulles et de leurs étiquettes, forcé.
+       Le composant écrit bien « top: 82 % » et une étiquette unique en position
+       absolue — vérifié par un rendu hors navigateur. Or à l'impression la bulle
+       du bas descend et l'étiquette d'une autre part au coin de la page : les
+       deux symptômes s'expliquent si ces deux propriétés-là sont perdues en
+       chemin. Elles sont donc réaffirmées ici, là où rien ne peut les défaire. */
+    body.print-dossier .dossier-phasage-content .phase-bubble {
+        position: absolute !important;
+        transform: translate(-50%, -50%) !important;
+    }
+    body.print-dossier .dossier-phasage-content .phase-bubble-label {
+        position: absolute !important;
+        /* Bloc, et non boîte flexible : à l'écran l'étiquette est une colonne
+           flex, et Chrome fragmente mal les boîtes flexibles en pagination —
+           il lui arrive d'écarter les enfants d'une demi-hauteur de bulle,
+           d'où « Phase 1 » au coin et « Seconde 0 » trois cents pixels plus
+           bas. Deux blocs empilés donnent le même dessin sans ce risque. */
+        display: block !important;
+        /* Interdit au moteur de pagination de couper la boîte : c'est lui qui
+           séparait « Phase 1 » de « Seconde 0 » de plusieurs centaines de
+           pixels, chaque fragment recevant sa propre bordure. */
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+    body.print-dossier .dossier-phasage-content .phase-bubble,
+    body.print-dossier .dossier-phasage-content .phase-bubble-content {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+    body.print-dossier .dossier-phasage-content .phase-number,
+    body.print-dossier .dossier-phasage-content .phase-time-display {
+        display: block !important;
+        white-space: nowrap !important;
+    }
+    /* Étiquette du bas alignée à droite, comme le veut son coin d'ancrage. */
+    body.print-dossier .dossier-phasage-content .phase-bubble-label.label-bottom-right {
+        text-align: right !important;
+    }
+
     body.print-dossier .dossier-phasage-content .phase-bubble-content {
         background: #fff !important;
         border: none !important;
@@ -3587,18 +3695,13 @@ body.amber-mode .help-back-to-top {
         box-shadow: none !important;
         padding: 2px 5px !important;
     }
-    /* Label bas-droite : remonter à l'intérieur de la bulle pour ne pas dépasser la page */
-    body.print-dossier .dossier-phasage-content .phase-bubble-label.label-bottom-right {
-        bottom: 20px !important;
-        right: 10px !important;
-    }
+    /* Couleurs d'encre seulement : la géométrie des étiquettes est celle de
+       l'écran, le canevas s'en charge. */
     body.print-dossier .dossier-phasage-content .phase-number {
         color: #333 !important;
-        font-size: 1.2em !important;
     }
     body.print-dossier .dossier-phasage-content .phase-time-display {
         color: #666 !important;
-        font-size: 1.1em !important;
     }
     body.print-dossier .dossier-phasage-content .phase-bubble-image {
         background: #fff !important;
