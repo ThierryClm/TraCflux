@@ -25,7 +25,10 @@ const PhasageBulle = ({
     // Étalement horizontal et décalage des arcs imposés (impression) :
     // aucun curseur, aucun état.
     ellipseScaleX = null,
-    arrowOffset = ARROW_OUTER_OFFSET,
+    // Écart des arcs vers l'extérieur, en % du conteneur, distinct par axe : un
+    // même pourcentage ne vaut pas la même distance en largeur et en hauteur.
+    arrowOffsetX = ARROW_OUTER_OFFSET,
+    arrowOffsetY = ARROW_OUTER_OFFSET,
     onBubbleScaleChange,
     onEllipseScaleChange,
     onBubbleRatioChange
@@ -48,6 +51,20 @@ const PhasageBulle = ({
     const [bubbleScaleUser, setBubbleScaleUser] = useState(initialBubbleScale);
     const [ellipseScaleUser, setEllipseScaleUser] = useState(initialEllipseScale);
     const [bubbleRatioUser, setBubbleRatioUser] = useState(initialBubbleRatio);
+
+    // Impression : les réglages viennent des propriétés et sont pris TELS QUELS.
+    //
+    // À l'écran ils vivent dans un état local, pour que les curseurs répondent
+    // sans attendre le parent ; cet état se resynchronise ensuite par un effet,
+    // donc APRÈS le rendu. À l'impression, où le parent calcule taille et rayons
+    // ensemble, ce décalage d'un temps suffisait : la page était composée avec le
+    // rayon vertical de l'étape précédente et la taille de bulle nouvelle, d'où
+    // des bulles qui se chevauchaient ou s'écartaient selon le sens du réglage.
+    // La présence de ellipseScaleX signale ce mode, réservé à l'impression.
+    const enImpression = ellipseScaleX != null;
+    const echelleBulle = enImpression ? initialBubbleScale : bubbleScaleUser;
+    const echelleEllipse = enImpression ? initialEllipseScale : ellipseScaleUser;
+    const rapportBulle = enImpression ? initialBubbleRatio : bubbleRatioUser;
 
     // Sync state when props change (from configuration modal)
     useEffect(() => {
@@ -349,8 +366,8 @@ const PhasageBulle = ({
     };
 
     // Calculate position on ellipse for each phase
-    const ellipseFactor = ellipseScaleUser / 100;
-    const ellipseFactorX = (ellipseScaleX ?? ellipseScaleUser) / 100;
+    const ellipseFactor = echelleEllipse / 100;
+    const ellipseFactorX = (ellipseScaleX ?? echelleEllipse) / 100;
     const getPhasePosition = (index, total) => {
         const { radiusX, radiusY, startAngle } = getEllipseConfig(total);
         const rx = radiusX * ellipseFactorX;
@@ -379,8 +396,8 @@ const PhasageBulle = ({
     // aussi pour mesurer la composition avant de la réduire à la page.
     const { bubbleWidth, bubbleHeight, clipWidth, clipHeight } = computeBubbleBox({
         count: phaseCount,
-        bubbleScale: bubbleScaleUser,
-        ratio: bubbleRatioUser
+        bubbleScale: echelleBulle,
+        ratio: rapportBulle
     });
     // Arrow size proportional to bubble height (same ratio as IntersectionImage)
     const arrowSize = Math.round(bubbleHeight * ARROW_SIZE_RATIO);
@@ -576,19 +593,17 @@ const PhasageBulle = ({
                     </defs>
                     {Array.from({ length: phaseCount }, (_, i) => {
                         const { radiusX: baseRX, radiusY: baseRY, startAngle } = getEllipseConfig(phaseCount);
-                        const radiusX = baseRX * ellipseFactorX;
-                        const radiusY = baseRY * ellipseFactor;
+                        const radiusX = baseRX * ellipseFactorX + arrowOffsetX;
+                        const radiusY = baseRY * ellipseFactor + arrowOffsetY;
                         const angleStep = (2 * Math.PI) / phaseCount;
 
                         // Current and next angles
                         const angle1 = startAngle + angleStep * i;
                         const angle2 = startAngle + angleStep * (i + 1);
 
-                        // Écart des arcs vers l'extérieur de l'ellipse. À l'impression, il
-                        // se resserre pour ne pas prendre la place des bulles (cf. App).
-                        const outerOffset = arrowOffset;
-                        const outerRadiusX = radiusX + outerOffset;
-                        const outerRadiusY = radiusY + outerOffset;
+                        // L'écart est déjà inclus dans les rayons ci-dessus.
+                        const outerRadiusX = radiusX;
+                        const outerRadiusY = radiusY;
 
                         // Start and end points on outer ellipse (with larger gap for shorter arrows)
                         const gapAngle = 0.55; // Larger gap = shorter arrows

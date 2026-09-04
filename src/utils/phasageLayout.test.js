@@ -8,6 +8,7 @@ import {
     fitEllipseScaleX,
     maxEllipseScaleX,
     fitArrowOffset,
+    fitTangentEllipse,
     getEllipseConfig as configEllipse,
     ARROW_OUTER_OFFSET,
     MIN_ARROW_OFFSET
@@ -125,10 +126,12 @@ describe('fitArrowOffset', () => {
         expect(off).toBeGreaterThanOrEqual(demiY);
     });
 
-    it('ne descend jamais sous le décalage nominal', () => {
-        // Bulles minuscules : le nominal reste le plancher, l'ovale ne colle pas aux bulles.
-        const off = fitArrowOffset({ ...base, ...page, bubbleScale: 50 });
-        expect(off).toBeGreaterThanOrEqual(ARROW_OUTER_OFFSET);
+    it('suit la taille des bulles, sans plancher fixe', () => {
+        // Un plancher en % du conteneur ne suit pas les bulles : en dessous d'une
+        // certaine taille, l'ovale cessait de rétrécir avec elles.
+        const petit = fitArrowOffset({ ...base, ...page, bubbleScale: 50 });
+        const grand = fitArrowOffset({ ...base, ...page, bubbleScale: 100 });
+        expect(grand / petit).toBeCloseTo(2, 1);
     });
 
     it('grandit avec la taille des bulles', () => {
@@ -140,5 +143,42 @@ describe('fitArrowOffset', () => {
     it('reste au-dessus du minimum absolu', () => {
         const off = fitArrowOffset({ ...base, pageWidth: 100, pageHeight: 100 });
         expect(off).toBeGreaterThanOrEqual(MIN_ARROW_OFFSET);
+    });
+});
+
+describe('fitTangentEllipse', () => {
+    const base = { count: 4, containerWidth: 1600, containerHeight: 1021 };
+
+    // Écart entre deux bulles voisines, dans le repère normalisé où chaque
+    // bulle devient un cercle unité : 1 = tangentes, > 1 = un jour entre elles.
+    const ecartNormalise = ({ count, containerWidth, containerHeight, ...opts }) => {
+        const { ellipseScale, ellipseScaleX } = fitTangentEllipse({ count, containerWidth, containerHeight, ...opts });
+        const { clipWidth, clipHeight } = computeBubbleBox({ count, ...opts });
+        const a = clipWidth / 2, b = clipHeight / 2;
+        const p0 = getPhaseCenter(0, count, ellipseScale, ellipseScaleX);
+        const p1 = getPhaseCenter(1, count, ellipseScale, ellipseScaleX);
+        const dx = (p1.x - p0.x) * containerWidth / a;
+        const dy = (p1.y - p0.y) * containerHeight / b;
+        return Math.hypot(dx, dy) / 2;
+    };
+
+    it('rend les bulles voisines tangentes, quel que soit leur nombre', () => {
+        for (const n of [2, 3, 4, 5, 6]) {
+            expect(ecartNormalise({ ...base, count: n })).toBeCloseTo(1, 6);
+        }
+    });
+
+    it('donne le même écart sur un conteneur large ou étroit', () => {
+        const large = ecartNormalise({ ...base, containerWidth: 2400 });
+        const etroit = ecartNormalise({ ...base, containerWidth: 1100 });
+        expect(large).toBeCloseTo(etroit, 6);
+    });
+
+    it('le jeu écarte les bulles sans changer leur régularité', () => {
+        expect(ecartNormalise({ ...base, jeu: 1.05 })).toBeCloseTo(1.05, 6);
+    });
+
+    it('le réglage utilisateur de l\'ellipse reste un multiplicateur', () => {
+        expect(ecartNormalise({ ...base, ellipseScale: 120 })).toBeCloseTo(1.2, 6);
     });
 });

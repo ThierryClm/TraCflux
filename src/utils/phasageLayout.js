@@ -193,11 +193,93 @@ export const fitArrowOffset = ({ count, bubbleScale = 100, ratio = 100, ellipseS
     const { clipWidth, clipHeight } = computeBubbleBox({ count, bubbleScale, ratio });
     const demiX = (clipWidth / 2) / containerWidth * 100;
     const demiY = (clipHeight / 2) / containerHeight * 100;
-    const voulu = Math.max(ARROW_OUTER_OFFSET, Math.max(demiX, demiY) + 3);
+    // Proportionnel à la bulle, SANS plancher fixe : un plancher exprimé en % du
+    // conteneur ne suit pas la taille des bulles. En dessous d'une certaine
+    // taille, l'ovale cessait de rétrécir avec elles et c'est lui qui dictait la
+    // mise à l'échelle de la page — les bulles se retrouvaient en petit tas au
+    // centre. Le dessin est désormais semblable à lui-même quel que soit le
+    // curseur : sa mise en page imprimée ne bouge plus.
+    const voulu = Math.max(demiX, demiY) * 1.15;
 
     // Le tracé lui-même n'est plus une limite : le repère des arcs déborde du
     // conteneur (cf. PhasageBulle), les arcs ne sont donc plus tronqués.
     const dispo = Math.min(...marges);
     if (!Number.isFinite(dispo)) return voulu;
     return Math.max(MIN_ARROW_OFFSET, Math.min(voulu, Math.max(voulu, dispo)));
+};
+
+/**
+ * Rayons d'ellipse donnant des écarts ÉGAUX entre bulles voisines.
+ *
+ * Les rayons de getEllipseConfig sont des pourcentages du conteneur : leur
+ * rapport dépend donc de la forme du conteneur, pas de celle des bulles. Sur un
+ * conteneur large, les bulles du haut et du bas s'éloignent de leurs voisines
+ * alors que celles de gauche et de droite s'en rapprochent — c'est l'écart que
+ * l'œil relève sur la bulle du bas.
+ *
+ * En donnant à l'ellipse de placement le MÊME rapport de forme que les bulles,
+ * la configuration se ramène, après normalisation, à des cercles unité répartis
+ * sur un cercle de rayon k : deux voisins distants de 2·k·sin(π/N) se touchent
+ * quand k = 1 / sin(π/N). Les écarts sont alors égaux par construction, pour
+ * n'importe quel nombre de phases.
+ *
+ * @param {number} jeu - 1 = tangent, 1,05 = un léger jour entre les bulles
+ * @returns {{ellipseScale: number, ellipseScaleX: number}} à passer au composant
+ */
+export const fitTangentEllipse = ({ count, bubbleScale = 100, ratio = 100, ellipseScale = 100, containerWidth, containerHeight, jeu = 1 }) => {
+    const { clipWidth, clipHeight } = computeBubbleBox({ count, bubbleScale, ratio });
+    const config = getEllipseConfig(count);
+    const k = (jeu / Math.sin(Math.PI / Math.max(2, count))) * (ellipseScale / 100);
+
+    // Rayons voulus, en % du conteneur, puis convertis dans l'échelle attendue
+    // par le composant (un pourcentage des rayons de référence).
+    const rxVoulu = (k * (clipWidth / 2)) / containerWidth * 100;
+    const ryVoulu = (k * (clipHeight / 2)) / containerHeight * 100;
+    return {
+        ellipseScaleX: (rxVoulu / config.radiusX) * 100,
+        ellipseScale: (ryVoulu / config.radiusY) * 100
+    };
+};
+
+/**
+ * Composition dessinée DIRECTEMENT à la taille de la page.
+ *
+ * Remplace l'empilement précédent — canevas virtuel, mise à l'échelle, décalage
+ * de recentrage, contre-échelle des étiquettes. Chaque couche rattrapait la
+ * précédente, et leur composition n'était plus prévisible.
+ *
+ * Ici, une seule inconnue : la demi-hauteur de bulle. Tout le reste en découle
+ * linéairement — rayons de l'ellipse (tangence, cf. fitTangentEllipse), écart des
+ * arcs, encombrement total. On résout donc directement pour que le dessin
+ * remplisse la page, sans plus rien mettre à l'échelle ensuite.
+ *
+ * @param {number} jeu - 1 = bulles tangentes, 1,02 = un cheveu de jour
+ * @param {number} degagement - marge des arcs autour des bulles, en demi-bulles
+ * @returns {{bubbleScale, ellipseScale, ellipseScaleX, arrowOffsetX, arrowOffsetY}}
+ *          les réglages à passer au composant, en % comme il les attend
+ */
+export const fitBubblesToPage = ({ count, ratio = 100, ellipseScale = 100, pageWidth, pageHeight, jeu = 1.02, degagement = 0.15 }) => {
+    const config = getEllipseConfig(count);
+    const base = computeBubbleBox({ count, bubbleScale: 100, ratio });
+    const forme = base.clipWidth / base.clipHeight; // largeur / hauteur d'une bulle
+    const k = (jeu / Math.sin(Math.PI / Math.max(2, count))) * (ellipseScale / 100);
+
+    // Tout est exprimé en demi-hauteurs de bulle : la composition est linéaire.
+    const angles = Array.from({ length: count }, (_, i) => config.startAngle + (2 * Math.PI / count) * i);
+    const cosMax = Math.max(...angles.map(a => Math.abs(Math.cos(a))));
+    const sinMax = Math.max(...angles.map(a => Math.abs(Math.sin(a))));
+    const uX = Math.max(k * forme * cosMax + forme, k * forme + (1 + degagement) * forme);
+    const uY = Math.max(k * sinMax + 1, k + (1 + degagement));
+
+    const demiHauteur = Math.min(pageWidth / (2 * uX), pageHeight / (2 * uY));
+    const demiLargeur = forme * demiHauteur;
+
+    const echelleBulle = ((2 * demiHauteur) / (BASE_BUBBLE_HEIGHT * getScaleFactor(count) * Math.sqrt(ratio / 100))) * 100;
+    return {
+        bubbleScale: echelleBulle,
+        ellipseScale: (((k * demiHauteur) / pageHeight) * 100 / config.radiusY) * 100,
+        ellipseScaleX: (((k * demiLargeur) / pageWidth) * 100 / config.radiusX) * 100,
+        arrowOffsetX: ((degagement * demiLargeur) / pageWidth) * 100,
+        arrowOffsetY: ((degagement * demiHauteur) / pageHeight) * 100
+    };
 };
