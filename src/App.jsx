@@ -672,6 +672,14 @@ function App() {
         return () => mql.removeEventListener('change', surChangement);
     }, []);
 
+    // Saisie du phasage bulle : brouillon, validé au clic sur OK.
+    //
+    // Les instants et le nombre de phases s'écrivaient à chaque frappe. « Annuler »
+    // ne restaurait donc rien et « OK » ne validait rien : les deux se contentaient
+    // de fermer le panneau. Le brouillon rend ces deux boutons conformes à leur nom.
+    // null = rien de modifié : le panneau affiche alors les valeurs du plan.
+    const [brouillonPhasage, setBrouillonPhasage] = useState(null);
+
     const [microPrintStyle, setMicroPrintStyle] = useState(null);
     useEffect(() => {
         // On mesure le calque d'affichage, pas la zone de saisie : c'est lui que
@@ -2845,6 +2853,7 @@ function App() {
                                 setSimulationEnabled(false);
                                 if (!phasageBulleEnabled) {
                                     // Ouvrir la configuration quand on active le phasage bulle
+                                    setBrouillonPhasage(null); // repart des valeurs du plan
                                     setPhasageBulleModal(true);
                                 }
                                 setPhasageBulleEnabled(!phasageBulleEnabled);
@@ -2982,8 +2991,8 @@ function App() {
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85em' }}>
                                             Phases :
                                             <select
-                                                value={phasageBulleCount}
-                                                onChange={(e) => setPhasageBulleCount(parseInt(e.target.value))}
+                                                value={brouillonPhasage?.count ?? phasageBulleCount}
+                                                onChange={(e) => setBrouillonPhasage(b => ({ ...b, count: parseInt(e.target.value) }))}
                                                 style={{ padding: '3px' }}
                                             >
                                                 {[2, 3, 4, 5, 6].map(n => (
@@ -2993,19 +3002,28 @@ function App() {
                                         </label>
                                         <span style={{ color: '#888', fontSize: '0.85em' }}>Cycle : {cycleLength}s</span>
                                     </div>
+                                    {/* Le plan concerné, nommé pendant la saisie : ces instants sont
+                                        propres à chaque plan de feu (cf. phasageBulleTimes, stocké sur
+                                        le PF actif), et rien ne le disait à l'écran. */}
+                                    <div style={{ color: '#dc4edc', fontSize: '0.8em', marginBottom: '6px' }}>
+                                        Phasage du plan {pfTabs.find(p => p.id === activePFId)?.name || ''}
+                                    </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, auto)', gap: '3px 6px', justifyContent: 'start' }}>
-                                        {Array.from({ length: phasageBulleCount }, (_, i) => (
+                                        {Array.from({ length: brouillonPhasage?.count ?? phasageBulleCount }, (_, i) => (
                                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                                                 <span style={{ color: '#dc4edc', fontWeight: 'bold', fontSize: '0.85em' }}>P{i + 1}:</span>
                                                 <input
                                                     type="number"
                                                     min="0"
                                                     max={cycleLength - 1}
-                                                    value={phasageBulleTimes[i] || 0}
+                                                    value={(brouillonPhasage?.times ?? phasageBulleTimes)[i] || 0}
                                                     onChange={(e) => {
-                                                        const newTimes = [...phasageBulleTimes];
-                                                        newTimes[i] = Math.max(0, Math.min(cycleLength - 1, parseInt(e.target.value) || 0));
-                                                        setPhasageBulleTimes(newTimes);
+                                                        const valeur = Math.max(0, Math.min(cycleLength - 1, parseInt(e.target.value) || 0));
+                                                        setBrouillonPhasage(b => {
+                                                            const times = [...(b?.times ?? phasageBulleTimes)];
+                                                            times[i] = valeur;
+                                                            return { count: b?.count ?? phasageBulleCount, times };
+                                                        });
                                                     }}
                                                     style={{ width: '30px', padding: '2px', textAlign: 'center' }}
                                                 />
@@ -3014,18 +3032,39 @@ function App() {
                                         ))}
                                     </div>
                                     <div style={{ display: 'flex', gap: '6px', marginTop: '8px', justifyContent: 'flex-end' }}>
-                                        <button className="modal-btn modal-btn-secondary" style={{ padding: '3px 10px', fontSize: '0.85em' }} onClick={() => {
-                                            setPhasageBulleModal(false);
-                                            setPhasageBulleEnabled(false);
-                                        }}>
+                                        <button
+                                            className="modal-btn modal-btn-secondary"
+                                            style={{ padding: '3px 10px', fontSize: '0.85em' }}
+                                            title={tip("Abandonner les modifications : le plan de feu retrouve ses instants précédents.")}
+                                            onClick={() => {
+                                                setBrouillonPhasage(null); // le projet n'a rien reçu : rien à restaurer
+                                                setPhasageBulleModal(false);
+                                                setPhasageBulleEnabled(false);
+                                            }}
+                                        >
                                             Annuler
                                         </button>
-                                        <button className="modal-btn modal-btn-primary" style={{ padding: '3px 10px', fontSize: '0.85em' }} onClick={() => {
-                                            setPhasageBulleModal(false);
-                                            setPhasageBulleEnabled(true);
-                                            setSimulationEnabled(false);
-                                            setPhasageBulleVersion(v => v + 1);
-                                        }}>
+                                        <button
+                                            className="modal-btn modal-btn-primary"
+                                            style={{ padding: '3px 10px', fontSize: '0.85em' }}
+                                            title={tip("Valider ces valeurs pour le plan de feu courant")}
+                                            onClick={() => {
+                                                // C'est ce clic, et lui seul, qui écrit dans le projet.
+                                                if (brouillonPhasage) {
+                                                    setPhasageBulleCount(brouillonPhasage.count);
+                                                    setPhasageBulleTimes(brouillonPhasage.times);
+                                                }
+                                                setBrouillonPhasage(null);
+                                                setPhasageBulleModal(false);
+                                                setPhasageBulleEnabled(true);
+                                                setSimulationEnabled(false);
+                                                setPhasageBulleVersion(v => v + 1);
+                                                const nomPlan = pfTabs.find(p => p.id === activePFId)?.name;
+                                                toast.success(nomPlan
+                                                    ? `Phasage enregistré pour le plan de feu ${nomPlan}`
+                                                    : 'Phasage enregistré pour le plan de feu courant');
+                                            }}
+                                        >
                                             OK
                                         </button>
                                     </div>
@@ -4899,7 +4938,7 @@ function App() {
                                                         selectedActions={[]}
                                                         intersectionName={intersectionName}
                                                         planName={pf.name}
-                                                        initialTimes={pf.phasageBulleTimes || [0, 15, 30, 45, 60, 75]}
+                                                        initialTimes={pf.phasageBulleTimes || [0, 0, 0, 0, 0, 0]}
                                                         initialCount={bulleCount}
                                                         imageBrightness={imageBrightness}
                                                         imageContrast={imageContrast}

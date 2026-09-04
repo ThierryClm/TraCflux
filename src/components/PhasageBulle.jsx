@@ -13,7 +13,7 @@ const PhasageBulle = ({
     selectedActions = [],
     intersectionName = '',
     planName = '',
-    initialTimes = [0, 15, 30, 45, 60, 75],
+    initialTimes = [0, 0, 0, 0, 0, 0],
     initialCount = 4,
     hoveredGroupId = null,
     setHoveredGroupId = () => {},

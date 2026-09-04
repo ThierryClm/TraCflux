@@ -1508,7 +1508,10 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
     // Get phasage bulle times for active PF
     const phasageBulleTimes = useMemo(() => {
         const activePF = pfTabs.find(pf => pf.id === activePFId);
-        return activePF?.phasageBulleTimes || [0, 15, 30, 45, 60, 75];
+        // Tout à zéro par défaut : un plan jamais configuré affiche alors des
+        // bulles identiques, signal qu'il n'est pas renseigné. Des instants
+        // pré-remplis ressemblaient à un réglage plausible sans en être un.
+        return activePF?.phasageBulleTimes || [0, 0, 0, 0, 0, 0];
     }, [pfTabs, activePFId]);
 
     // Update phasage bulle count for active PF
