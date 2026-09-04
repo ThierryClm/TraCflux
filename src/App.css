@@ -2544,6 +2544,136 @@ body.amber-mode .help-back-to-top {
     white-space: nowrap;
 }
 
+/* Page « Phasage bulle » du dossier : mise en page de la FEUILLE.
+   
+   Ces règles vivaient dans @media print, donc invisibles tant qu'on n'imprimait
+   pas : l'aperçu montrait le composant avec son habillage d'écran — fond sombre,
+   en-tête, curseurs — et ressemblait à une capture. Elles s'appliquent désormais
+   dès l'aperçu, qui donne ainsi à voir la page réelle. La classe
+   .dossier-phasage-content n'existe que dans ce contexte. */
+/* Phasage bulle : titre en haut à gauche, contenu remplit la page */
+.dossier-phasage-centered {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+}
+.dossier-phasage-centered h3 {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 0;
+}
+.dossier-phasage-centered .dossier-phasage-content {
+    width: 100%;
+    flex: 1;
+    position: relative;
+    overflow: hidden !important;
+}
+/* Ancrage des bulles et de leurs étiquettes, forcé.
+   Le composant écrit bien « top: 82 % » et une étiquette unique en position
+   absolue — vérifié par un rendu hors navigateur. Or à l'impression la bulle
+   du bas descend et l'étiquette d'une autre part au coin de la page : les
+   deux symptômes s'expliquent si ces deux propriétés-là sont perdues en
+   chemin. Elles sont donc réaffirmées ici, là où rien ne peut les défaire. */
+.dossier-phasage-content .phase-bubble {
+    position: absolute !important;
+    transform: translate(-50%, -50%) !important;
+}
+.dossier-phasage-content .phase-bubble-label {
+    position: absolute !important;
+    /* Bloc, et non boîte flexible : à l'écran l'étiquette est une colonne
+       flex, et Chrome fragmente mal les boîtes flexibles en pagination —
+       il lui arrive d'écarter les enfants d'une demi-hauteur de bulle,
+       d'où « Phase 1 » au coin et « Seconde 0 » trois cents pixels plus
+       bas. Deux blocs empilés donnent le même dessin sans ce risque. */
+    display: block !important;
+    /* Interdit au moteur de pagination de couper la boîte : c'est lui qui
+       séparait « Phase 1 » de « Seconde 0 » de plusieurs centaines de
+       pixels, chaque fragment recevant sa propre bordure. */
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+}
+.dossier-phasage-content .phase-bubble,
+.dossier-phasage-content .phase-bubble-content {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+}
+/* Une seule ligne, donc une seule boîte de ligne : le moteur de pagination
+   n'a plus rien à couper. Interdire la coupure ne suffisait pas — le
+   fragment orphelin réapparaissait, avec sa propre bordure. Le numéro et la
+   seconde se suivent sur la même ligne, séparés par un point médian. */
+.dossier-phasage-content .phase-number,
+.dossier-phasage-content .phase-time-display {
+    display: inline !important;
+    white-space: nowrap !important;
+}
+.dossier-phasage-content .phase-time-display::before {
+    content: " · ";
+}
+/* Étiquette du bas alignée à droite, comme le veut son coin d'ancrage. */
+.dossier-phasage-content .phase-bubble-label.label-bottom-right {
+    text-align: right !important;
+}
+
+.dossier-phasage-content .phase-bubble-content {
+    background: #fff !important;
+    border: none !important;
+    box-shadow: inset 0 0 0 2px #999, 0 2px 6px rgba(0,0,0,0.15) !important;
+}
+.dossier-phasage-content .phase-bubble-label {
+    background: rgba(255,255,255,0.95) !important;
+    border-color: #666 !important;
+    box-shadow: none !important;
+    padding: 2px 5px !important;
+}
+/* Couleurs d'encre seulement : la géométrie des étiquettes est celle de
+   l'écran, le canevas s'en charge. */
+.dossier-phasage-content .phase-number {
+    color: #333 !important;
+}
+.dossier-phasage-content .phase-time-display {
+    color: #666 !important;
+}
+.dossier-phasage-content .phase-bubble-image {
+    background: #fff !important;
+}
+.dossier-phasage-content .ellipse-outline {
+    display: none !important;
+}
+.dossier-phasage-content .connecting-arrows path {
+    stroke: rgba(100,60,160,0.5) !important;
+}
+.dossier-phasage-content .connecting-arrows marker polygon {
+    fill: rgba(100,60,160,0.5) !important;
+}
+
+
+/* En-tête du composant — titre, badge du plan de feu, curseurs : outils
+   d'écran, sans objet sur une feuille. */
+.dossier-phasage-content .phasage-bulle-header,
+.dossier-phasage-content .phasage-config-panel {
+    display: none !important;
+}
+
+/* Le composant est fait pour un écran sombre ; sur une feuille, il porte le
+   fond blanc et occupe toute la hauteur disponible. Sans hauteur explicite, le
+   conteneur retombe sur sa règle d'écran (calc(100vh - 200px), bornée à
+   600–900 px) : les positions en pourcentage se résoudraient alors contre une
+   hauteur sans rapport avec la page. */
+.dossier-phasage-content .phasage-bulle-container {
+    background: #fff !important;
+    padding: 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+.dossier-phasage-content .phasage-circular-container {
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
 /* Le pied de page dossier est géré par @page margin boxes */
 
 /* Print Media Queries */
@@ -3595,133 +3725,6 @@ body.amber-mode .help-back-to-top {
         color-adjust: exact !important;
     }
 
-    /* Phasage bulle : titre en haut à gauche, contenu remplit la page */
-    body.print-dossier .dossier-phasage-centered {
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: flex-start !important;
-        align-items: stretch !important;
-    }
-    body.print-dossier .dossier-phasage-centered h3 {
-        width: 100%;
-        text-align: left;
-        margin-bottom: 0;
-    }
-    body.print-dossier .dossier-phasage-centered .dossier-phasage-content {
-        width: 100%;
-        flex: 1;
-        position: relative;
-        overflow: hidden !important;
-    }
-    /* Canevas de composition : mêmes proportions que la page, mais à la taille
-       d'un écran, puis réduit d'un bloc (cf. App.jsx). Positionné en absolu :
-       une transformation ne change pas la place réservée dans le flux, et la
-       hauteur du canevas déborderait la page. */
-    body.print-dossier .dossier-phasage-canvas {
-        position: absolute;
-        /* Accroché au centre du conteneur : le décalage calculé en JSX y amène
-           le centre de la composition, sans dépendre de la taille réelle de la
-           zone imprimable. */
-        top: 50%;
-        left: 50%;
-        transform-origin: top left;
-    }
-
-    /* Phasage bulle : fond blanc, conteneur remplit l'espace disponible */
-    body.print-dossier .dossier-phasage-content .phasage-bulle-container {
-        background: #fff !important;
-        padding: 0 !important;
-        height: 100% !important;
-    }
-    body.print-dossier .dossier-phasage-content .phasage-bulle-header {
-        display: none !important;
-    }
-    body.print-dossier .dossier-phasage-content .phasage-circular-container {
-        height: 100% !important;
-        min-height: unset !important;
-        max-height: unset !important;
-        overflow: visible !important;
-    }
-    /* Bulles : positionnement centré sans scale CSS — la taille est désormais
-       pilotée en JSX via initialBubbleScale, qui applique un cap basé sur le
-       nombre de phases pour ne pas déborder de la page. */
-    /* Ancrage des bulles et de leurs étiquettes, forcé.
-       Le composant écrit bien « top: 82 % » et une étiquette unique en position
-       absolue — vérifié par un rendu hors navigateur. Or à l'impression la bulle
-       du bas descend et l'étiquette d'une autre part au coin de la page : les
-       deux symptômes s'expliquent si ces deux propriétés-là sont perdues en
-       chemin. Elles sont donc réaffirmées ici, là où rien ne peut les défaire. */
-    body.print-dossier .dossier-phasage-content .phase-bubble {
-        position: absolute !important;
-        transform: translate(-50%, -50%) !important;
-    }
-    body.print-dossier .dossier-phasage-content .phase-bubble-label {
-        position: absolute !important;
-        /* Bloc, et non boîte flexible : à l'écran l'étiquette est une colonne
-           flex, et Chrome fragmente mal les boîtes flexibles en pagination —
-           il lui arrive d'écarter les enfants d'une demi-hauteur de bulle,
-           d'où « Phase 1 » au coin et « Seconde 0 » trois cents pixels plus
-           bas. Deux blocs empilés donnent le même dessin sans ce risque. */
-        display: block !important;
-        /* Interdit au moteur de pagination de couper la boîte : c'est lui qui
-           séparait « Phase 1 » de « Seconde 0 » de plusieurs centaines de
-           pixels, chaque fragment recevant sa propre bordure. */
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-    }
-    body.print-dossier .dossier-phasage-content .phase-bubble,
-    body.print-dossier .dossier-phasage-content .phase-bubble-content {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-    }
-    /* Une seule ligne, donc une seule boîte de ligne : le moteur de pagination
-       n'a plus rien à couper. Interdire la coupure ne suffisait pas — le
-       fragment orphelin réapparaissait, avec sa propre bordure. Le numéro et la
-       seconde se suivent sur la même ligne, séparés par un point médian. */
-    body.print-dossier .dossier-phasage-content .phase-number,
-    body.print-dossier .dossier-phasage-content .phase-time-display {
-        display: inline !important;
-        white-space: nowrap !important;
-    }
-    body.print-dossier .dossier-phasage-content .phase-time-display::before {
-        content: " · ";
-    }
-    /* Étiquette du bas alignée à droite, comme le veut son coin d'ancrage. */
-    body.print-dossier .dossier-phasage-content .phase-bubble-label.label-bottom-right {
-        text-align: right !important;
-    }
-
-    body.print-dossier .dossier-phasage-content .phase-bubble-content {
-        background: #fff !important;
-        border: none !important;
-        box-shadow: inset 0 0 0 2px #999, 0 2px 6px rgba(0,0,0,0.15) !important;
-    }
-    body.print-dossier .dossier-phasage-content .phase-bubble-label {
-        background: rgba(255,255,255,0.95) !important;
-        border-color: #666 !important;
-        box-shadow: none !important;
-        padding: 2px 5px !important;
-    }
-    /* Couleurs d'encre seulement : la géométrie des étiquettes est celle de
-       l'écran, le canevas s'en charge. */
-    body.print-dossier .dossier-phasage-content .phase-number {
-        color: #333 !important;
-    }
-    body.print-dossier .dossier-phasage-content .phase-time-display {
-        color: #666 !important;
-    }
-    body.print-dossier .dossier-phasage-content .phase-bubble-image {
-        background: #fff !important;
-    }
-    body.print-dossier .dossier-phasage-content .ellipse-outline {
-        display: none !important;
-    }
-    body.print-dossier .dossier-phasage-content .connecting-arrows path {
-        stroke: rgba(100,60,160,0.5) !important;
-    }
-    body.print-dossier .dossier-phasage-content .connecting-arrows marker polygon {
-        fill: rgba(100,60,160,0.5) !important;
-    }
     /* Masquer uniquement l'ellipse (pas les flèches de connexion) si image très allongée */
     body.print-dossier .phasage-hide-ovals .ellipse-outline {
         display: none !important;

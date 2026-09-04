@@ -29,9 +29,8 @@ import { getInterceptedEntries, clearInterceptedEntries } from './utils/errorInt
 import CreateGreenWaveDialog from './components/CreateGreenWaveDialog';
 import GreenWaveViewer from './components/GreenWaveViewer';
 import SimulationPanel from './components/SimulationPanel';
-import { flushSync } from 'react-dom';
 import PhasageBulle from './components/PhasageBulle';
-import { computeCompositionBox, fitEllipseScaleX, fitArrowOffset } from './utils/phasageLayout';
+import { fitBubblesToPage } from './utils/phasageLayout';
 import { safeShowOpenFilePicker } from './utils/filePicker';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
@@ -644,36 +643,33 @@ function App() {
     // texte imprimé. Les lignes se coupent alors aux mêmes endroits.
     // Largeur du conteneur d'impression du dossier, en px CSS.
     //
-    // Trois valeurs successives ont été essayées en dur (1200, puis 1035, puis
-    // la largeur de la fenêtre) : aucune ne correspond. La mise en page
-    // d'impression a son propre gabarit, ni le papier en px CSS, ni la fenêtre.
-    // On la mesure donc là où elle vaut quelque chose : PENDANT le rendu
-    // d'impression, que matchMedia('print') signale. La valeur est conservée
-    // d'une session à l'autre, si bien qu'elle n'est fausse qu'à la toute
-    // première impression sur un poste donné.
+    // La mise en page d'impression a son propre gabarit : ni le papier converti
+    // en pixels CSS (1047), ni la largeur de la fenêtre. Sur ce poste, la mesure
+    // relevée pendant le rendu d'impression donne 1683 px — c'est la valeur de
+    // départ, corrigée automatiquement ailleurs par la mesure ci-dessous.
+    //
+    // Cette mesure ne se prend QUE lorsque le média d'impression est actif :
+    // « beforeprint » se déclenche encore sur la mise en page d'écran et
+    // renvoyait la largeur de la fenêtre, sans rapport avec la feuille.
+    const LARGEUR_PAGE_PAR_DEFAUT = 1683;
     const [dossierPrintWidth, setDossierPrintWidth] = useState(() => {
         const memo = parseFloat(localStorage.getItem('dossier_print_width'));
-        return Number.isFinite(memo) && memo > 400 ? memo : 1035;
+        return Number.isFinite(memo) && memo >= 800 && memo <= 2400 ? memo : LARGEUR_PAGE_PAR_DEFAUT;
     });
     useEffect(() => {
         const mql = window.matchMedia('print');
-        const releve = () => {
+        const surChangement = (e) => {
+            if (!e.matches) return;
             const largeur = document.documentElement.clientWidth;
-            if (largeur > 400) {
-                // flushSync : la nouvelle largeur doit être prise en compte pour
-                // CETTE impression, pas la suivante.
-                try { flushSync(() => setDossierPrintWidth(largeur)); }
-                catch { setDossierPrintWidth(largeur); }
-                try { localStorage.setItem('dossier_print_width', String(largeur)); } catch { /* quota */ }
-            }
+            if (largeur < 800 || largeur > 2400) return; // valeur aberrante : on garde la précédente
+            try { localStorage.setItem('dossier_print_width', String(largeur)); } catch { /* quota */ }
+            // Appliquée au rendu SUIVANT : modifier la géométrie pendant que le
+            // navigateur compose la page le laissait avec une mise en page à
+            // moitié refaite.
+            setDossierPrintWidth(prev => (Math.abs(prev - largeur) < 1 ? prev : largeur));
         };
-        const surChangement = (e) => { if (e.matches) releve(); };
         mql.addEventListener('change', surChangement);
-        window.addEventListener('beforeprint', releve);
-        return () => {
-            mql.removeEventListener('change', surChangement);
-            window.removeEventListener('beforeprint', releve);
-        };
+        return () => mql.removeEventListener('change', surChangement);
     }, []);
 
     const [microPrintStyle, setMicroPrintStyle] = useState(null);
@@ -4315,8 +4311,6 @@ function App() {
                                     // tomber la dernière graduation hors de la page sur un cycle long,
                                     // le trait de fin de cycle et la bordure comptant eux aussi.
                                     const MARGE_IMPRESSION = 26;
-                                    // Même marge pour la page de phasage, qui vise la largeur mesurée.
-                                    const MARGE_IMPRESSION_PHASAGE = 26;
                                     const dossierUsableWidth = dossierPrintWidth - MARGE_IMPRESSION;
                                     // Sidebar TimelineDiagram reelle = 325px (sans commentaires/remarques masques)
                                     const dossierSidebarReal = 325;
@@ -4712,17 +4706,26 @@ function App() {
                                             const rowZoom = 1.15;
                                             const maxScale = diagramPageHeight / diagramRenderedHeight;
                                             const combinedScale = Math.min(rowZoom, maxScale);
-                                            // Ajuster PPS pour maintenir la largeur visuelle prévue
-                                            // Largeur TOTALE proportionnelle au cycle jusqu'à 120 s — colonne des
-                                            // noms comprise, et non ajoutée par-dessus : à 120 s le diagramme
-                                            // occupe la page entière, à 65 s un peu plus de la moitié.
-                                            const targetWidth = pfCycleLength <= refCycle
-                                                ? Math.max(
-                                                    dossierUsableWidth * (pfCycleLength / refCycle),
-                                                    dossierSidebarReal + pfCycleLength * 3 // plancher : timeline lisible
-                                                  )
-                                                : dossierUsableWidth; // pleine largeur pour cycle long
-                                            const pfPPS = (targetWidth / combinedScale - dossierSidebarReal) / pfCycleLength;
+                                            // UNE SECONDE VAUT LA MÊME LARGEUR SUR TOUTES LES PAGES.
+                                            //
+                                            // C'est la raison d'être du cycle de référence : deux plans de feu se
+                                            // comparent à l'œil d'une page à l'autre. Rendre la largeur TOTALE
+                                            // proportionnelle au cycle — colonne des noms comprise — détruit cette
+                                            // propriété, la colonne étant de largeur fixe : la seconde y vaut
+                                            // 5,3 px à 46 s et 9,7 px à 120 s. C'est ce qui donnait cinq plans à
+                                            // cinq échelles différentes.
+                                            //
+                                            // La proportion porte donc sur la TIMELINE seule : à 120 s elle
+                                            // remplit la largeur restante, en deçà elle en occupe la fraction
+                                            // correspondante, et la colonne s'ajoute à côté.
+                                            const largeurColonneVisuelle = dossierSidebarReal * combinedScale;
+                                            const timelineDispo = dossierUsableWidth - largeurColonneVisuelle;
+                                            // px par seconde à l'écran de la feuille, avant mise à l'échelle
+                                            const ppsVisuel = pfCycleLength <= refCycle
+                                                ? timelineDispo / refCycle
+                                                : timelineDispo / pfCycleLength; // cycle long : réduit pour tenir
+                                            const pfPPS = ppsVisuel / combinedScale;
+                                            const targetWidth = largeurColonneVisuelle + pfCycleLength * ppsVisuel;
                                             return (
                                         <Fragment key={pf.id}>
                                         {/* Diagramme */}
@@ -4839,75 +4842,31 @@ function App() {
                                         {dossierSections[`phasageBulle_${pf.id}`] && intersectionArrows.length > 0 && intersectionImage && (() => {
                                             const bulleCount = pf.phasageBulleCount || 4;
                                             const bulleCycleLength = pf.id === activePFId ? cycleLength : (pf.cycleLength || cycleLength);
-                                            // Composition imprimée = composition à l'écran, amenée à la page.
+                                            // Le dessin est composé DIRECTEMENT à la taille de la page.
                                             //
-                                            // Le phasage est composé dans un canevas aux proportions de la zone
-                                            // imprimable, puis réduit ou agrandi d'un bloc : les réglages de
-                                            // l'utilisateur (taille des bulles, ellipse, rapport H/L) valent donc
-                                            // à l'impression ce qu'ils valent à l'écran, chevauchements compris.
+                                            // Il l'était auparavant dans un canevas de 1600 px, ramené ensuite
+                                            // à la feuille par une mise à l'échelle, un décalage de recentrage
+                                            // et une contre-échelle pour les étiquettes. Chaque couche
+                                            // rattrapait la précédente, et leur composition n'était plus
+                                            // prévisible : mesures justes à chaque étape, page fausse au bout.
                                             //
-                                            // L'échelle se calcule sur l'ENCOMBREMENT RÉEL des bulles, pas sur le
-                                            // canevas : une bulle déborde volontiers de l'ellipse qui la place, et
-                                            // selon les réglages la composition occupe une part très variable du
-                                            // canevas. La mesurer est le seul moyen de remplir la feuille au lieu
-                                            // d'y laisser une bande vide.
-                                            //
-                                            // Zone imprimable : la LARGEUR est mesurée (même source que le
-                                            // diagramme), la hauteur s'en déduit par le rapport de la page.
-                                            //
-                                            // Elle était calculée depuis la règle @page — 277 mm de large, soit
-                                            // 1047 px CSS. La sonde a montré une page de 1683 px : la mise en
-                                            // page d'impression a son propre gabarit, et la composition visait
-                                            // donc une feuille 1,6 fois trop étroite. Le rapport hauteur/largeur,
-                                            // lui, reste celui du papier.
+                                            // Il ne reste qu'une inconnue — la taille de bulle — résolue pour
+                                            // que le dessin remplisse la page, bulles tangentes entre elles et
+                                            // arcs les contournant. Plus rien n'est mis à l'échelle après coup.
                                             const MM_TO_PX = 96 / 25.4;
                                             const TITRE_PX = 35;
                                             const RAPPORT_PAGE = (Math.round(186 * MM_TO_PX) - TITRE_PX) / Math.round(277 * MM_TO_PX);
-                                            // Marge tout autour : sans elle, l'arc extérieur venait toucher le
-                                            // bord de la feuille.
-                                            const MARGE_PHASAGE = 0.90;
-                                            const PAGE_W = dossierPrintWidth;
-                                            const PRINT_W = Math.round(PAGE_W * MARGE_PHASAGE);
-                                            const PRINT_H = Math.round(PAGE_W * RAPPORT_PAGE * MARGE_PHASAGE);
-                                            const CANVAS_W = 1600;
-                                            const CANVAS_H = Math.round(CANVAS_W * PRINT_H / PRINT_W);
-                                            // La composition est presque carrée, la feuille bien plus large
-                                            // que haute : mise à l'échelle telle quelle, elle laisse deux
-                                            // bandes blanches sur les côtés. On écarte donc les bulles
-                                            // horizontalement jusqu'aux proportions de la page — elles se
-                                            // déplacent, elles ne se déforment pas.
-                                            const reglages = {
+                                            const MARGE_PHASAGE = 0.94; // filet blanc autour du dessin
+                                            const PAGE_W = dossierPrintWidth * MARGE_PHASAGE;
+                                            const PAGE_H = dossierPrintWidth * RAPPORT_PAGE * MARGE_PHASAGE;
+                                            const dessin = fitBubblesToPage({
                                                 count: bulleCount,
-                                                bubbleScale: pf.phasageBubbleScale ?? 100,
-                                                ellipseScale: pf.phasageEllipseScale ?? 100,
                                                 ratio: pf.phasageBubbleRatio ?? 100,
-                                                containerWidth: CANVAS_W,
-                                                containerHeight: CANVAS_H
-                                            };
-                                            // Pas d'étalement horizontal : la composition garde EXACTEMENT les
-                                            // proportions de l'écran — ovales presque jointifs — et n'est plus
-                                            // que réduite pour tenir dans la page. L'étirer vers les bords
-                                            // écartait les bulles et donnait un dessin plus lâche qu'à l'écran.
-                                            const etalementX = pf.phasageEllipseScale ?? 100;
-                                            const ecartArcs = fitArrowOffset({
-                                                ...reglages,
-                                                ellipseScaleX: etalementX,
-                                                pageWidth: CANVAS_W,
-                                                pageHeight: CANVAS_H,
-                                                center: { x: CANVAS_W / 2, y: CANVAS_H / 2 }
+                                                ellipseScale: pf.phasageEllipseScale ?? 100,
+                                                pageWidth: PAGE_W,
+                                                pageHeight: PAGE_H,
+                                                jeu: 1.02 // un cheveu de jour entre bulles voisines
                                             });
-                                            // La page se dimensionne sur les BULLES : elles portent le contenu.
-                                            // Les arcs, eux, se contentent de la place qui reste (cf. fitArrowOffset) —
-                                            // les faire entrer dans le calcul revenait à rapetisser les bulles pour
-                                            // réserver de la marge à un trait.
-                                            const compo = computeCompositionBox({ ...reglages, ellipseScaleX: etalementX, arrowOffset: ecartArcs });
-                                            const printFit = Math.min(PRINT_W / compo.width, PRINT_H / compo.height);
-                                            // Le canevas est accroché au centre du conteneur réel, puis décalé de
-                                            // façon que le centre de la COMPOSITION y tombe : le centrage ne dépend
-                                            // donc d'aucune constante, seulement l'échelle en dépend.
-                                            const printShiftX = -compo.centerX * printFit;
-                                            const printShiftY = -compo.centerY * printFit;
-                                            const decalageArcs = ecartArcs;
                                             // Image ratio: hide ellipse if very elongated
                                             const imgRatio = imageNaturalDims.width / imageNaturalDims.height;
                                             const hideOvals = imgRatio > 1.5 || imgRatio < (1 / 1.5);
@@ -4929,14 +4888,6 @@ function App() {
                                             <div className="print-dossier-section print-dossier-phasage dossier-phasage-centered">
                                                 <h3>Phasage bulle - {pf.name}{dossierSmallLogos}</h3>
                                                 <div className={`dossier-phasage-content ${hideOvals ? 'phasage-hide-ovals' : ''}`}>
-                                                  <div
-                                                    className="dossier-phasage-canvas"
-                                                    style={{
-                                                        width: `${CANVAS_W}px`,
-                                                        height: `${CANVAS_H}px`,
-                                                        transform: `translate(${printShiftX}px, ${printShiftY}px) scale(${printFit})`
-                                                    }}
-                                                  >
                                                     <PhasageBulle
                                                         groups={pfGroups}
                                                         cycleLength={bulleCycleLength}
@@ -4950,13 +4901,13 @@ function App() {
                                                         initialCount={bulleCount}
                                                         imageBrightness={imageBrightness}
                                                         imageContrast={imageContrast}
-                                                        initialBubbleScale={pf.phasageBubbleScale ?? 100}
-                                                        initialEllipseScale={pf.phasageEllipseScale ?? 100}
+                                                        initialBubbleScale={dessin.bubbleScale}
+                                                        initialEllipseScale={dessin.ellipseScale}
                                                         initialBubbleRatio={pf.phasageBubbleRatio ?? 100}
-                                                        ellipseScaleX={etalementX}
-                                                        arrowOffset={decalageArcs}
+                                                        ellipseScaleX={dessin.ellipseScaleX}
+                                                        arrowOffsetX={dessin.arrowOffsetX}
+                                                        arrowOffsetY={dessin.arrowOffsetY}
                                                     />
-                                                  </div>
                                                 </div>
                                             </div>
                                             );
