@@ -1069,7 +1069,7 @@ const IntersectionImage = ({
                                 const selectedArrowData = arrows.find(a => a.id === selectedArrow);
                                 const selectedGroupInfo = selectedArrowData ? getGroupInfo(selectedArrowData.groupId) : null;
                                 // La hampe des mouvements composés se règle aussi en longueur.
-                                const AVEC_LONGUEUR = ['Piéton', 'Cycle', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG'];
+                                const AVEC_LONGUEUR = ['Piéton', 'Cycle', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG', 'TD_G_D'];
                                 const isPedOrCycle = selectedGroupInfo && AVEC_LONGUEUR.includes(selectedGroupInfo.courant);
                                 return isPedOrCycle ? (
                                     <div className="editor-row">
@@ -1104,7 +1104,7 @@ const IntersectionImage = ({
                                 const selectedGroupInfo = selectedArrowData ? getGroupInfo(selectedArrowData.groupId) : null;
                                 // « Retour » : portée de la branche tournante, pour les
                                 // mouvements tournants comme pour les composés.
-                                const AVEC_RETOUR = ['TàD', 'TàG', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG'];
+                                const AVEC_RETOUR = ['TàD', 'TàG', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG', 'TD_G_D'];
                                 const isTurnArrow = selectedGroupInfo && AVEC_RETOUR.includes(selectedGroupInfo.courant);
                                 return isTurnArrow ? (
                                     <div className="editor-row">
