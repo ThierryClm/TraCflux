@@ -3054,8 +3054,11 @@ function App() {
                                                     setPhasageBulleCount(brouillonPhasage.count);
                                                     setPhasageBulleTimes(brouillonPhasage.times);
                                                 }
+                                                // Le brouillon revient à null : les champs repartent des
+                                                // valeurs du plan, qui sont désormais celles qu'on vient
+                                                // de valider. Le panneau reste ouvert — valider n'est pas
+                                                // fermer, et on enchaîne souvent plusieurs essais.
                                                 setBrouillonPhasage(null);
-                                                setPhasageBulleModal(false);
                                                 setPhasageBulleEnabled(true);
                                                 setSimulationEnabled(false);
                                                 setPhasageBulleVersion(v => v + 1);
