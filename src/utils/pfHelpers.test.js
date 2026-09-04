@@ -468,3 +468,35 @@ describe('deepCopyMatrix', () => {
         expect(deepCopyMatrix(undefined)).toBeUndefined();
     });
 });
+
+describe('ensurePFIntegrity — champs hors liste', () => {
+    it('conserve les réglages du phasage bulle à l\'ouverture', () => {
+        const [pf] = ensurePFIntegrity([{
+            id: 1, name: 'PF1', cycleLength: 70,
+            phasageBulleTimes: [5, 22, 40, 55],
+            phasageBulleCount: 4,
+            phasageBubbleScale: 130,
+            phasageEllipseScale: 90,
+            phasageBubbleRatio: 110
+        }], [], []);
+        expect(pf.phasageBulleTimes).toEqual([5, 22, 40, 55]);
+        expect(pf.phasageBulleCount).toBe(4);
+        expect(pf.phasageBubbleScale).toBe(130);
+        expect(pf.phasageEllipseScale).toBe(90);
+        expect(pf.phasageBubbleRatio).toBe(110);
+    });
+
+    it('conserve le verrou lecture seule et la couleur', () => {
+        const [pf] = ensurePFIntegrity([{ id: 2, name: 'PF2_ext', readOnly: true, color: '#4CAF50' }], [], []);
+        expect(pf.readOnly).toBe(true);
+        expect(pf.color).toBe('#4CAF50');
+    });
+
+    it('normalise malgré tout les champs connus', () => {
+        const [pf] = ensurePFIntegrity([{ id: 3, phasageBulleCount: 6 }], [], []);
+        expect(pf.name).toBe('PF3');
+        expect(pf.cycleLength).toBe(60);
+        expect(pf.data.length).toBe(30);
+        expect(pf.phasageBulleCount).toBe(6);
+    });
+});

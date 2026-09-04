@@ -96,6 +96,16 @@ export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix) => 
         const hasDiagram = Array.isArray(pf.diagram) && pf.diagram.length > 0;
         const hasMatrix = Array.isArray(pf.conflictMatrix) && pf.conflictMatrix.length > 0;
         return {
+            // Tout ce que porte le plan est conservé, puis les champs connus sont
+            // normalisés par-dessus.
+            //
+            // Cette fonction reconstruisait le plan à partir d'une liste blanche :
+            // tout champ absent de la liste disparaissait à l'ouverture du projet,
+            // sans avertissement. Le verrou « lecture seule » en a fait les frais,
+            // puis les réglages du phasage bulle — instants, nombre de phases,
+            // taille des bulles. Une liste blanche oblige à penser à chaque nouveau
+            // champ ; l'inverse ne perd rien.
+            ...pf,
             id: pf.id,
             name: pf.name || `PF${pf.id}`,
             data: Array.isArray(pf.data) && pf.data.length > 0 ? pf.data : createEmptyActionData(),
@@ -114,10 +124,7 @@ export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix) => 
                     ? fallbackMatrix.map(row => [...row])
                     : buildEmptyMatrix(groupCount)),
             remarques: pf.remarques ?? '',
-            ...(pf.color !== undefined ? { color: pf.color } : {}),
-            // Préserver le verrou lecture seule des PF importés (« _ext ») :
-            // sans ça il était perdu au rechargement du projet.
-            ...(pf.readOnly ? { readOnly: true } : {})
+            ...(pf.color !== undefined ? { color: pf.color } : {})
         };
     }).filter(Boolean);
 };
