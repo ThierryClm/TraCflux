@@ -99,17 +99,38 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1,
                 </svg>
             );
         }
-        case 'TD_G_D':
+        case 'TD_G_D': { // Tout droit + Tourne à gauche et à droite
+            // Somme exacte de TD_TàD et TD_TàG : même hampe, mêmes branches
+            // perpendiculaires attachées à mi-hampe, mêmes barbes.
+            //
+            // Le tracé courbe d'origine détonnait à côté des deux flèches dont
+            // celle-ci est la combinaison, et ignorait « Longueur » et « Retour ».
+            const bottom = 28 + (arrowLength - 1) * 24;
+            const vb = 32 + (arrowLength - 1) * 24;
+            const portee = 14 * turnLength;
+            const racineY = (8 + bottom) / 2;
+            // Une branche par côté : sens = +1 à droite, -1 à gauche. La branche
+            // étant horizontale, les barbes se déduisent sans rotation.
+            const branche = (sens) => {
+                const tipX = 16 + portee * sens;
+                const barbe = (dx, dy) => `${(tipX - dy * sens).toFixed(2)},${(racineY + dx * sens).toFixed(2)}`;
+                return { tipX: tipX.toFixed(2), pointe: `${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}` };
+            };
             return (
-                <svg width={size} height={size} viewBox="0 0 32 32">
-                    <line x1="16" y1="28" x2="16" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+                <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
+                    {/* Flèche tout droit, hampe centrée */}
+                    <line x1="16" y1={bottom} x2="16" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                     <polyline points="10,14 16,8 22,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M16,20 Q8,20 8,12 L8,10" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                    <polyline points="4,14 8,10 12,14" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M16,20 Q24,20 24,12 L24,10" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
-                    <polyline points="20,14 24,10 28,14" fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                    {/* Branches tournantes, à gauche et à droite */}
+                    {[branche(-1), branche(1)].map((b, i) => (
+                        <g key={i}>
+                            <path d={`M16,${racineY} L${b.tipX},${racineY}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                            <polyline points={b.pointe} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        </g>
+                    ))}
                 </svg>
             );
+        }
         case 'PP': {
             // Priorité piéton : ce n'est pas un mouvement, donc pas une flèche.
             // Contour rouge constant, fond noir ; il ne passe au jaune que
