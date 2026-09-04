@@ -2019,15 +2019,29 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
         }
     }, [intersectionName, groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, externalLinks, projectProperties, askConfirm]);
 
-    // Flag to prevent sync during initial load
+    // Verrou de synchronisation pendant l'installation des données.
+    //
+    // Tant qu'il est posé, les modifications ne sont PAS recopiées vers l'onglet
+    // actif : une durée de cycle changée dans cet intervalle, suivie d'un
+    // changement d'onglet, était perdue sans avertissement — et en premier lieu
+    // sur le plan de feu affiché à l'ouverture.
+    //
+    // Il se levait au bout de deux secondes fixes, indépendamment de ce que
+    // faisait l'application. Il se lève désormais dès que le rendu suivant a eu
+    // lieu — l'état est alors posé — le délai ne servant plus que de filet si un
+    // chargement de projet était encore en cours à ce moment-là.
     const isInitialLoadRef = useRef(true);
     useEffect(() => {
-        // Allow sync after a short delay to let initial data settle
-        const timer = setTimeout(() => {
+        const lever = () => {
+            if (!isInitialLoadRef.current) return;
             isInitialLoadRef.current = false;
             resetPfSyncRefs(activePFId);
-        }, 2000);
-        return () => clearTimeout(timer);
+        };
+        // Un tour de boucle suffit dans le cas courant ; le délai couvre le cas
+        // où un projet est encore en cours de chargement.
+        const rapide = setTimeout(() => { if (!isLoadingProjectRef.current) lever(); }, 0);
+        const filet = setTimeout(lever, 2000);
+        return () => { clearTimeout(rapide); clearTimeout(filet); };
     }, []);
 
     // Synchronize current conflict matrix with active PF tab
