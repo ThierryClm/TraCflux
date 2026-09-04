@@ -2674,6 +2674,18 @@ body.amber-mode .help-back-to-top {
     overflow: visible !important;
 }
 
+/* Tableau trafic du dossier : c'est le composant de l'écran, mais la section
+   porte déjà son titre et son jeu de données. Son en-tête — titre, case « Tous
+   les Grp », sélecteur — n'a pas d'objet sur une feuille. */
+.print-dossier-traffic .traffic-header {
+    display: none !important;
+}
+
+.print-dossier-traffic .traffic-table-container {
+    background: transparent !important;
+    padding: 0 !important;
+}
+
 /* Le pied de page dossier est géré par @page margin boxes */
 
 /* Print Media Queries */

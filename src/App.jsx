@@ -4692,6 +4692,8 @@ function App() {
                                                     } : g;
                                                 });
                                             const pfActionData = pf.id === activePFId ? actionData : (pf.data || []);
+                                            const pfDataset = pfTrafficDatasetMap[pf.id]
+                                                || (trafficDatasetNames.includes(pf.name) ? pf.name : activeTrafficDataset);
                                             const pfMicroFields = pf.id === activePFId ? microCustomFields : (pf.microCustomFields || []);
                                             // PPS de base pour ce PF (basé sur son propre cycleLength)
                                             const pfBasePPS = pfCycleLength <= refCycle
@@ -4916,57 +4918,30 @@ function App() {
                                         {/* Données de trafic et calcul de capacité pour ce PF */}
                                         {dossierSections[`traficCapacite_${pf.id}`] && (
                                             <div className="print-dossier-section print-dossier-traffic">
-                                                <h3>Données de trafic et calcul de capacité - {pf.name}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Données de trafic : {pfTrafficDatasetMap[pf.id] || (trafficDatasetNames.includes(pf.name) ? pf.name : activeTrafficDataset)}{dossierSmallLogos}</h3>
-                                                <table className="dossier-traffic-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Grp</th>
-                                                            <th>Nom</th>
-                                                            <th>Coef</th>
-                                                            <th>Trafic</th>
-                                                            <th>V.Utile (s)</th>
-                                                            <th>Cap.U</th>
-                                                            <th>Retard (s)</th>
-                                                            <th>File d'attente (m)</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {pfGroups.filter(g => {
-                                                            // Comme dans TrafficTable : si "tous les groupes" n'est pas coché,
-                                                            // n'afficher que les groupes VL/V ou ceux qui ont des données trafic
-                                                            if (g.type === 'VL' || g.type === 'V') return true;
-                                                            const td = getTrafficData(g.id);
-                                                            return !!td.trafficVol;
-                                                        }).map(g => {
-                                                            const td = getTrafficData(g.id);
-                                                            const trafficVol = parseTrafficVol(td.trafficVol);
-                                                            const coef = g.laneCoef || 1;
-                                                            const greenTime = getTotalGreenTime(g.id, g.durations?.green || 0);
-                                                            const vUtile = calcVUtile(trafficVol, coef);
-                                                            const capU = calcCapacity(greenTime, vUtile);
-                                                            const delay = calcDelay(greenTime, trafficVol, coef, g.id, g.offset);
-                                                            const queue = calcQueue(greenTime, trafficVol, coef, g.id, g.offset);
-                                                            const capColor = capU === null ? undefined
-                                                                : capU < 76 ? '#4caf50'
-                                                                : capU <= 85 ? '#ff9800'
-                                                                : capU <= 100 ? '#f44336'
-                                                                : '#000';
-                                                            const capBg = capU !== null && capU > 100 ? '#ff6b6b' : undefined;
-                                                            return (
-                                                                <tr key={g.id}>
-                                                                    <td>{g.id}</td>
-                                                                    <td>{g.name || ''}</td>
-                                                                    <td>{coef}</td>
-                                                                    <td>{td.trafficVol || ''}</td>
-                                                                    <td>{vUtile !== null ? vUtile : ''}</td>
-                                                                    <td style={capColor ? { color: capColor, fontWeight: 'bold', backgroundColor: capBg } : undefined}>{capU !== null ? capU + '%' : ''}</td>
-                                                                    <td>{delay !== null ? delay : ''}</td>
-                                                                    <td>{queue !== null ? queue : ''}</td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
+                                                <h3>Données de trafic et calcul de capacité - {pf.name}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Données de trafic : {pfDataset}{dossierSmallLogos}</h3>
+                                                {/* Le même composant qu'à l'écran, en lecture seule.
+                                                    Ce tableau était recopié à la main, et la copie avait
+                                                    divergé : elle ajoutait les groupes non-VL porteurs de
+                                                    données trafic — que l'écran n'affiche pas — et calculait
+                                                    avec le cycle et les actions du plan ACTIF, non de celui
+                                                    qu'elle imprimait, d'où des capacités différentes d'une
+                                                    page à l'autre pour les mêmes groupes. */}
+                                                <TrafficTable
+                                                    groups={pfGroups}
+                                                    cycleLength={pfCycleLength}
+                                                    activeTrafficDataset={pfDataset}
+                                                    setActiveTrafficDataset={() => {}}
+                                                    updateTrafficData={() => {}}
+                                                    getTrafficData={(id) => (trafficDatasets[pfDataset] || {})[id] || {}}
+                                                    updateGroupParams={() => {}}
+                                                    trafficDatasetNames={trafficDatasetNames}
+                                                    copyTrafficDataset={() => {}}
+                                                    addCustomTrafficDataset={() => {}}
+                                                    actionData={pfActionData}
+                                                    simulationSelectedActions={[]}
+                                                    readOnly
+                                                    tooltipsEnabled={false}
+                                                />
                                             </div>
                                         )}
 
