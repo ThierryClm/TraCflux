@@ -680,6 +680,22 @@ function App() {
     // null = rien de modifié : le panneau affiche alors les valeurs du plan.
     const [brouillonPhasage, setBrouillonPhasage] = useState(null);
 
+    // Y a-t-il quelque chose à abandonner ? Le brouillon naît au premier
+    // événement de saisie, y compris quand la valeur retapée est la même :
+    // sa seule existence ne suffit donc pas, il faut le comparer au plan.
+    const phasageModifie = (() => {
+        if (!brouillonPhasage) return false;
+        const count = brouillonPhasage.count ?? phasageBulleCount;
+        if (count !== phasageBulleCount) return true;
+        const times = brouillonPhasage.times ?? phasageBulleTimes;
+        // Seuls les instants des phases affichées comptent : ceux au-delà du
+        // nombre de phases ne sont ni visibles ni utilisés.
+        for (let i = 0; i < count; i++) {
+            if ((times[i] || 0) !== (phasageBulleTimes[i] || 0)) return true;
+        }
+        return false;
+    })();
+
     const [microPrintStyle, setMicroPrintStyle] = useState(null);
     useEffect(() => {
         // On mesure le calque d'affichage, pas la zone de saisie : c'est lui que
@@ -3035,11 +3051,13 @@ function App() {
                                         <button
                                             className="modal-btn modal-btn-secondary"
                                             style={{ padding: '3px 10px', fontSize: '0.85em' }}
-                                            title={tip("Abandonner les modifications : le plan de feu retrouve ses instants précédents.")}
+                                            disabled={!phasageModifie}
+                                            title={tip("Abandonner les modifications en cours : les champs retrouvent les valeurs du plan de feu.")}
                                             onClick={() => {
-                                                setBrouillonPhasage(null); // le projet n'a rien reçu : rien à restaurer
-                                                setPhasageBulleModal(false);
-                                                setPhasageBulleEnabled(false);
+                                                // Le projet n'a rien reçu : il suffit de jeter le brouillon
+                                                // pour que les champs repartent des valeurs du plan. Le
+                                                // panneau reste ouvert, comme après OK.
+                                                setBrouillonPhasage(null);
                                             }}
                                         >
                                             Annuler

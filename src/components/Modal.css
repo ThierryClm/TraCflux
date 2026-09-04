@@ -120,7 +120,7 @@
     color: #e0e0e0;
 }
 
-.modal-btn-secondary:hover {
+.modal-btn-secondary:hover:not(:disabled) {
     background: #606060;
 }
 
