@@ -5028,12 +5028,17 @@ function App() {
                                         {dossierSections[`reserveCapacite_${pf.id}`] && (
                                             <div className="print-dossier-section print-dossier-reserve">
                                                 <h3>Réserve de capacité - {pf.name}{dossierSmallLogos}</h3>
+                                                {/* Même jeu de données que le tableau ci-dessus.
+                                                    Il lisait le jeu ACTIF à l'écran, et sans la reprise du
+                                                    nom du plan : sur un projet dont le jeu porte le nom du
+                                                    plan, le tableau trouvait les volumes et la réserve
+                                                    réclamait de les saisir, juste en dessous. */}
                                                 <DiagnosticPanel
                                                     groups={pfGroups}
                                                     cycleLength={pfCycleLength}
-                                                    getTrafficData={getTrafficData}
+                                                    getTrafficData={(id) => (trafficDatasets[pfDataset] || {})[id] || {}}
                                                     actionData={pfActionData}
-                                                    activeTrafficDataset={pfTrafficDatasetMap[pf.id] || activeTrafficDataset}
+                                                    activeTrafficDataset={pfDataset}
                                                     hideTitle={true}
                                                 />
                                             </div>
