@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useId } from 'react';
 import { isPPLit } from '../utils/groupColorAtTime';
-import { getEllipseConfig, computeBubbleBox, ARROW_OUTER_OFFSET } from '../utils/phasageLayout';
+import { getEllipseConfig, computeBubbleBox, ARROW_OUTER_OFFSET, planFrameForBubble } from '../utils/phasageLayout';
 import './PhasageBulle.css';
 
 const PhasageBulle = ({
@@ -193,6 +193,17 @@ const PhasageBulle = ({
     }, [groups, simulationResult, cycleLength, actionData, selectedActions]);
 
     // Render arrow SVG based on courant type (with arrowLength and turnLength support)
+    /**
+     * Symbole d'une flèche, dans un carré de côté `size`.
+     *
+     * Le carré n'est pas un détail : l'image du carrefour impose à tous ses
+     * symboles un cadre de 96 × 96 px par le CSS, quelle que soit la longueur de
+     * la flèche. Le dessin s'y inscrit en conservant ses proportions. Ici la
+     * hauteur valait `size + (longueur - 1) × 24`, un mélange de pixels et
+     * d'unités du repère interne qui n'a de sens que si `size` vaut 32 : une
+     * flèche de longueur 2 s'y trouvait une fois et demie trop grande par
+     * rapport au plan, alors qu'une flèche de longueur 1 était juste.
+     */
     const renderArrowSVG = (courant, color, size = 24, arrowLength = 1, turnLength = 1, ppAllume = false) => {
         const strokeWidth = 2;
         const thinStrokeWidth = 1.5; // Thinner stroke for Piéton/Cycle
@@ -250,11 +261,11 @@ const PhasageBulle = ({
                 // Barbes de la pointe, tournées du même angle que la branche.
                 const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
                 return (
-                    <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
+                    <svg width={size} height={size} viewBox={`0 0 32 ${vb}`}>
                         <line x1="12" y1={bottom} x2="12" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                         <polyline points="6,14 12,8 18,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-                        <path d={`M12,${racineY} L${tipX.toFixed(2)},${tipY.toFixed(2)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 0.5} strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points={`${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 0.5} strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={`M12,${racineY} L${tipX.toFixed(2)},${tipY.toFixed(2)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points={`${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
             }
@@ -279,11 +290,11 @@ const PhasageBulle = ({
                 // Barbes de la pointe, tournées du même angle que la branche.
                 const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
                 return (
-                    <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
+                    <svg width={size} height={size} viewBox={`0 0 32 ${vb}`}>
                         <line x1="20" y1={bottom} x2="20" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                         <polyline points="14,14 20,8 26,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
-                        <path d={`M20,${racineY} L${tipX.toFixed(2)},${tipY.toFixed(2)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 0.5} strokeLinecap="round" strokeLinejoin="round" />
-                        <polyline points={`${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 0.5} strokeLinecap="round" strokeLinejoin="round" />
+                        <path d={`M20,${racineY} L${tipX.toFixed(2)},${tipY.toFixed(2)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points={`${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 );
             }
@@ -305,15 +316,15 @@ const PhasageBulle = ({
                     return { tipX: tipX.toFixed(2), pointe: `${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}` };
                 };
                 return (
-                    <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
+                    <svg width={size} height={size} viewBox={`0 0 32 ${vb}`}>
                         {/* Flèche tout droit, hampe centrée */}
                         <line x1="16" y1={bottom} x2="16" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
                         <polyline points="10,14 16,8 22,14" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
                         {/* Branches tournantes, à gauche et à droite */}
                         {[branche(-1), branche(1)].map((b, i) => (
                             <g key={i}>
-                                <path d={`M16,${racineY} L${b.tipX},${racineY}`} fill="none" stroke={color} strokeWidth={strokeWidth - 0.5} strokeLinecap="round" strokeLinejoin="round" />
-                                <polyline points={b.pointe} fill="none" stroke={color} strokeWidth={strokeWidth - 0.5} strokeLinecap="round" strokeLinejoin="round" />
+                                <path d={`M16,${racineY} L${b.tipX},${racineY}`} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
+                                <polyline points={b.pointe} fill="none" stroke={color} strokeWidth={strokeWidth - 1} strokeLinecap="round" strokeLinejoin="round" />
                             </g>
                         ))}
                     </svg>
@@ -363,10 +374,8 @@ const PhasageBulle = ({
                 const topY = 6;
                 const bottomY = 26 + (arrowLength - 1) * 24;
                 const centerY = (topY + bottomY) / 2;
-                // Scale the SVG size proportionally
-                const scaledHeight = size * (extendedHeight / baseSize);
                 return (
-                    <svg width={size} height={scaledHeight} viewBox={`0 0 32 ${viewBoxHeight}`}>
+                    <svg width={size} height={size} viewBox={`0 0 32 ${viewBoxHeight}`}>
                         {/* Flèche vers le haut */}
                         <line x1="16" y1={centerY} x2="16" y2={topY} stroke={color} strokeWidth={thinStrokeWidth} strokeLinecap="round" />
                         <polyline points={`11,${topY + 5} 16,${topY} 21,${topY + 5}`} fill="none" stroke={color} strokeWidth={thinStrokeWidth} strokeLinecap="round" strokeLinejoin="round" />
@@ -410,9 +419,6 @@ const PhasageBulle = ({
         return { radiusX: config.radiusX * ellipseFactorX, radiusY: config.radiusY * ellipseFactor };
     };
 
-    // Arrow size ratio from IntersectionImage (96px arrow / 500px container = 19.2%)
-    const ARROW_SIZE_RATIO = 0.192;
-
     // Tailles : calculées par la géométrie partagée, dont l'impression se sert
     // aussi pour mesurer la composition avant de la réduire à la page.
     const { bubbleWidth, bubbleHeight, clipWidth, clipHeight } = computeBubbleBox({
@@ -420,8 +426,9 @@ const PhasageBulle = ({
         bubbleScale: echelleBulle,
         ratio: rapportBulle
     });
-    // Arrow size proportional to bubble height (same ratio as IntersectionImage)
-    const arrowSize = Math.round(bubbleHeight * ARROW_SIZE_RATIO);
+    // Cadre du plan et taille de flèche, calés sur l'image du carrefour où se
+    // font les réglages.
+    const { frameWidth, frameHeight, arrowSize } = planFrameForBubble(bubbleWidth, bubbleHeight);
 
     /**
      * Étiquette d'une phase, posée au coin du rectangle qui circonscrit l'ovale.
@@ -490,8 +497,8 @@ const PhasageBulle = ({
                     <div
                         className="phase-bubble-image"
                         style={{
-                            width: `${bubbleWidth}px`,
-                            height: `${bubbleHeight}px`
+                            width: `${frameWidth}px`,
+                            height: `${frameHeight}px`
                         }}
                     >
                         {intersectionImage ? (

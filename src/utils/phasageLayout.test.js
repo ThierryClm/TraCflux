@@ -18,11 +18,11 @@ describe('computeBubbleBox', () => {
     it('applique le correctif de nombre de phases et le réglage utilisateur', () => {
         const ref = computeBubbleBox({ count: 4, bubbleScale: 100 });
         expect(ref.bubbleWidth).toBe(570);
-        expect(ref.bubbleHeight).toBe(456);
+        expect(ref.bubbleHeight).toBe(403); // rapport du cadre du plan (750 × 530)
         const grand = computeBubbleBox({ count: 4, bubbleScale: 150 });
-        expect(grand.bubbleHeight).toBe(Math.round(456 * 1.5));
+        expect(grand.bubbleHeight).toBe(Math.round(403 * 1.5));
         const six = computeBubbleBox({ count: 6, bubbleScale: 100 });
-        expect(six.bubbleHeight).toBe(Math.round(456 * getScaleFactor(6)));
+        expect(six.bubbleHeight).toBe(Math.round(403 * getScaleFactor(6)));
     });
 
     it('étire le masque selon le rapport H/L, à surface d\'image constante', () => {

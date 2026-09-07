@@ -21,8 +21,54 @@ export const ARROW_OUTER_OFFSET = 14;
 export const MIN_ARROW_OFFSET = 4;
 
 /** Taille de référence d'une bulle, avant échelle (px). */
+/**
+ * Cadre de référence des flèches : l'image du carrefour.
+ *
+ * C'est là que l'utilisateur règle rotation, zoom, longueur et retour de chaque
+ * flèche ; sa taille y fait donc foi. Le cadre mesure 750 × 530 px
+ * (`.intersection-image-area`, IntersectionImage.css) et la flèche 96 px
+ * (`ARROW_SIZE`, floatingImageBox.js) — deux valeurs à garder d'accord avec
+ * celles-ci si elles changent.
+ */
+export const REF_IMAGE_BOX_WIDTH = 750;
+export const REF_IMAGE_BOX_HEIGHT = 530;
+export const REF_ARROW_SIZE = 96;
+
+/**
+ * Cadre du plan dans une bulle : homothétique de celui du carrefour.
+ *
+ * Les flèches sont repérées en pourcentage de leur cadre, et l'image y est posée
+ * en « contain ». Deux cadres de rapports différents placent donc leurs bandes
+ * vides sur des axes différents — à gauche et à droite dans le carrefour, en
+ * haut et en bas dans la bulle pour un plan en 4/3 — et chaque flèche dérive
+ * d'un côté ici, de l'autre là. La bulle recevait `bubbleWidth × bubbleHeight`,
+ * de rapport 1,25 contre 1,415 : le placement ne pouvait pas coïncider.
+ *
+ * En donnant à la bulle le cadre du carrefour réduit d'un facteur unique, tout
+ * suit : même découpage, même position relative, même taille de flèche par
+ * rapport au plan, quel que soit le format de l'image. À l'impression, où la
+ * composition est agrandie pour occuper la page, le facteur grandit avec elle.
+ */
+export const planFrameForBubble = (bubbleWidth, bubbleHeight) => {
+    const facteur = Math.min(bubbleWidth / REF_IMAGE_BOX_WIDTH, bubbleHeight / REF_IMAGE_BOX_HEIGHT);
+    return {
+        facteur,
+        frameWidth: Math.round(REF_IMAGE_BOX_WIDTH * facteur),
+        frameHeight: Math.round(REF_IMAGE_BOX_HEIGHT * facteur),
+        arrowSize: Math.round(REF_ARROW_SIZE * facteur)
+    };
+};
+
 export const BASE_BUBBLE_WIDTH = 570;
-export const BASE_BUBBLE_HEIGHT = 456;
+// Hauteur de base : celle du cadre du plan, pas une valeur propre.
+//
+// La bulle valait 570 × 456, de rapport 1,25, alors que le plan y est posé dans
+// un cadre au rapport de l'image du carrefour, 750 × 530 soit 1,415. Le plan
+// n'occupait donc que 88 % de la hauteur de l'ovale, deux bandes vides au-dessus
+// et au-dessous — et c'est ce qui donnait aux bulles imprimées cet air de
+// contenu trop petit. En donnant à la bulle la forme exacte de son cadre, le
+// plan la remplit et gagne 13 % de taille sans consommer un millimètre de page.
+export const BASE_BUBBLE_HEIGHT = Math.round(BASE_BUBBLE_WIDTH * REF_IMAGE_BOX_HEIGHT / REF_IMAGE_BOX_WIDTH);
 
 /**
  * Rayons de l'ellipse de placement (en % du conteneur) et angle de départ.
@@ -262,7 +308,11 @@ export const fitBubblesToPage = ({ count, ratio = 100, ellipseScale = 100, pageW
     const config = getEllipseConfig(count);
     const base = computeBubbleBox({ count, bubbleScale: 100, ratio });
     const forme = base.clipWidth / base.clipHeight; // largeur / hauteur d'une bulle
-    const k = (jeu / Math.sin(Math.PI / Math.max(2, count))) * (ellipseScale / 100);
+    // L'écartement voulu par l'utilisateur peut ÉLOIGNER les bulles, jamais les
+    // rapprocher en deçà de la tangence : sous 100 %, il annulait la garantie
+    // portée par « jeu » et les bulles imprimées se chevauchaient — visible sur
+    // un plan et pas sur le suivant, chacun ayant son propre réglage.
+    const k = (jeu / Math.sin(Math.PI / Math.max(2, count))) * Math.max(1, ellipseScale / 100);
 
     // Tout est exprimé en demi-hauteurs de bulle : la composition est linéaire.
     const angles = Array.from({ length: count }, (_, i) => config.startAngle + (2 * Math.PI / count) * i);
@@ -273,6 +323,7 @@ export const fitBubblesToPage = ({ count, ratio = 100, ellipseScale = 100, pageW
 
     const demiHauteur = Math.min(pageWidth / (2 * uX), pageHeight / (2 * uY));
     const demiLargeur = forme * demiHauteur;
+
 
     const echelleBulle = ((2 * demiHauteur) / (BASE_BUBBLE_HEIGHT * getScaleFactor(count) * Math.sqrt(ratio / 100))) * 100;
     return {
