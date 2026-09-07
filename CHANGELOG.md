@@ -7,6 +7,142 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [Non publié]
+
+### Corrigé
+
+- **Les flèches du phasage respectent les proportions de l'image du carrefour.** C'est là que se
+  règlent leur rotation, leur zoom et leur longueur — souvent pour qu'une traversée piétonne
+  aille d'un trottoir à l'autre — et cette mesure doit se retrouver partout. Plusieurs valeurs
+  figées la contredisaient : une taille de 64 px dans les bulles, quatre paliers de largeur de
+  fenêtre, et une hauteur de symbole mêlant pixels et unités du repère du dessin qui rendait les
+  flèches allongées une fois et demie trop grandes. Sur un projet réel, les dix-sept flèches
+  occupent désormais la même fraction du plan dans les deux vues, à 0,6 % près.
+- **La page de phasage imprimée tient dans la feuille.** La dernière bulle était tranchée dès
+  qu'une page suivait — la section avait une hauteur imposée par la fenêtre du navigateur,
+  assortie d'un rognage : ce qui dépassait était coupé au lieu d'être reporté. La géométrie de
+  la page est maintenant décidée en millimètres de papier plutôt que relevée à l'impression :
+  277 × 193 mm imprimables, bandeau de 14 mm réservé au titre et aux logos, dessin dans les
+  148 mm restants. Les bulles ne se chevauchent plus non plus lorsqu'un plan resserre leur
+  écartement.
+- **Les bulles gagnent 11 % de taille.** Elles avaient leurs propres proportions alors que le
+  plan y est posé dans un cadre au rapport de l'image du carrefour : il n'occupait que 88 % de
+  leur hauteur, laissant deux bandes vides. La bulle prend la forme de son cadre, et le plan la
+  remplit.
+- **La réserve de capacité imprimée lit le jeu de données du plan**, comme le tableau placé
+  au-dessus d'elle. Elle prenait le jeu actif à l'écran : sur un projet dont le jeu porte le nom
+  du plan, le tableau affichait les volumes et la réserve réclamait de les saisir, juste en
+  dessous.
+- **La place des logos est réservée dans tous les en-têtes du dossier**, qu'il y en ait ou non.
+  Étant en position absolue, ils ne comptaient pas dans la hauteur du titre et débordaient sur
+  le contenu.
+
+---
+
+## [1.2.9] — 2026-09-04
+
+### Ajouté
+
+- **Les instants du phasage bulle se saisissent en brouillon.** Chaque frappe s'écrivait
+  aussitôt dans le projet : « Annuler » ne restaurait rien et « OK » ne validait rien, les deux
+  se contentaient de fermer le panneau. La validation est désormais un acte distinct, signalée
+  par une notification qui nomme le plan de feu concerné — ces instants lui appartiennent, et
+  rien ne le disait. « Annuler » ne s'active que s'il y a quelque chose à abandonner, et aucun
+  des deux boutons ne referme la fenêtre : on enchaîne souvent plusieurs essais. Les instants
+  par défaut passent à zéro, un plan jamais configuré affichant ainsi des bulles identiques
+  plutôt qu'un réglage plausible sans en être un.
+- **Les réglages de longueur et de retour s'appliquent au mouvement « tout droit + tourne à
+  gauche et à droite ».** Le dessin les honorait déjà ; les curseurs restaient masqués pour ce
+  seul type.
+
+### Corrigé
+
+- **Les réglages d'un plan de feu ne se perdent plus à la réouverture du projet.** À
+  l'ouverture, chaque plan était reconstruit à partir d'une liste blanche de champs : tout ce
+  qui n'y figurait pas disparaissait sans avertissement — les instants du phasage bulle, le
+  nombre de phases, la taille des bulles. La règle est inversée : le plan conserve ce qu'il
+  porte, et seuls les champs connus sont normalisés.
+- **Une modification faite juste après l'ouverture n'est plus perdue.** La recopie vers
+  l'onglet actif restait suspendue deux secondes après le démarrage, quoi qu'il arrive. Une
+  durée de cycle changée dans cet intervalle disparaissait au premier changement d'onglet, en
+  premier lieu sur le plan affiché à l'ouverture. La suspension se lève désormais dès que
+  l'état est en place, le délai ne servant plus que de filet.
+- **La flèche « tout droit + tourne à gauche et à droite » adopte le dessin des deux flèches
+  dont elle est la somme.** Elle avait gardé son tracé courbe d'origine quand les mouvements
+  composés sont passés à la hampe droite à branche perpendiculaire, et ignorait les réglages
+  de longueur et de retour.
+- **L'échelle du diagramme imprimé est la même d'un plan de feu à l'autre.** Une seconde y
+  occupe partout la même largeur, quel que soit le cycle du plan.
+- **Le tableau de trafic du dossier imprimé est celui de l'écran.** Le dossier redessinait son
+  propre tableau, avec ses formules recopiées ; il reprend le composant de l'écran en lecture
+  seule, avec le jeu de données du plan.
+
+### Modifié
+
+- **Le phasage bulle est composé directement à la taille de la page à l'impression**, au lieu
+  d'être dessiné puis réduit. Les bulles occupent la feuille, les écarts entre bulles voisines
+  sont égaux, et les étiquettes se posent au coin du rectangle circonscrit sans jamais chevaucher
+  l'ovale.
+
+---
+
+## [1.2.8] — 2026-09-03
+
+### Corrigé
+
+- **Les étiquettes de phase restent solidaires de leur bulle à l'impression.** Elles s'en
+  détachaient, allant jusqu'à se retrouver au coin d'une autre bulle, et pouvaient être coupées
+  en deux par une fin de page.
+- **L'impression du dossier se cale sur la largeur réelle de la page.** Elle partait d'une
+  largeur supposée, sans rapport avec celle que le navigateur applique réellement au papier.
+
+### Modifié
+
+- **La géométrie du phasage bulle est réunie dans un module partagé**, utilisé par l'écran
+  comme par l'impression, au lieu d'être recalculée de part et d'autre.
+- Mise à jour des dépendances (`npm audit fix`, `npm update`).
+
+---
+
+## [1.2.7] — 2026-09-01
+
+### Ajouté
+
+- **Le déroulement d'une simulation se règle en vitesse ×1, ×2 ou ×5.**
+- **Un repère de progression apparaît dans la bande des temps du diagramme** pendant
+  l'animation, sans empiéter sur les barres de phase.
+- **Les courants de type FL s'animent.** Ils clignotent à la cadence de la bande intermittente
+  du diagramme, et passent au gris entre deux éclats comme hors de leur période — ce type
+  n'était pas traité du tout.
+
+### Corrigé
+
+- **La fenêtre détachée s'ouvre avec ses styles.** Elle apparaissait quelquefois entièrement
+  brute, taille perdue et flèches décalées, selon l'instant où le navigateur avait fini de
+  charger la feuille de styles.
+- **Une flèche posée en lisière d'image n'est plus tronquée dans la fenêtre détachée**, et
+  l'image ne se décale plus vers le bas quand on zoome : la marge du haut n'était pas mise à
+  l'échelle.
+- **L'ajout de flèches n'est plus bloqué par un groupe sans courant renseigné.** Le premier
+  groupe incomplet arrêtait la série ; les suivants sont désormais proposés, et les groupes
+  ignorés signalés.
+- **L'en-tête du diagramme ne se décroche plus au défilement** quand le nombre de groupes
+  dépasse la hauteur visible.
+- **Le carrefour d'exemple s'ouvre sur son premier plan de feu**, et non sur le plan
+  d'aiguillage.
+- **La seconde lucarne est prise en compte sur les projets importés.**
+- **L'enregistrement automatique n'échoue plus en silence** quand le cache du navigateur est
+  saturé de clés obsolètes.
+- **La fenêtre « Variables micro » ne se glisse plus sous les « Conditions micro ».**
+
+### Modifié
+
+- **Le tableau « Données trafic » de l'onglet simulation est celui des plans de feu**, en
+  lecture seule et détachable, au lieu d'un tableau distinct aux formules recopiées. Sa ligne
+  de synthèse, qui ne correspondait pas au contexte, est retirée.
+
+---
+
 ## [1.2.6] — 2026-08-27
 
 ### Ajouté
