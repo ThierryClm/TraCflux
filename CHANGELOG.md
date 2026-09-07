@@ -7,7 +7,7 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
-## [Non publié]
+## [1.2.10] — 2026-09-07
 
 ### Corrigé
 
