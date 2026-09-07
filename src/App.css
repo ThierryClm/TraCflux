@@ -2202,6 +2202,14 @@ body.amber-mode .help-back-to-top {
     font-weight: bold;
     margin: 0 0 8px 0;
     padding: 4px 6px;
+    /* Place réservée aux logos, qu'il y en ait ou non.
+       Ils sont en position absolue : ils ne comptent donc pas dans la hauteur
+       de l'en-tête et débordaient sur le contenu. Réserver leur hauteur en
+       toutes circonstances donne en outre la même mise en page d'une page et
+       d'un projet à l'autre, avec ou sans logos. */
+    min-height: 36px;
+    box-sizing: border-box;
+    line-height: 28px;
     border-bottom: 1px solid #999;
     color: #000 !important;
     background: #fff !important;
@@ -2563,9 +2571,23 @@ body.amber-mode .help-back-to-top {
     text-align: left;
     margin-bottom: 0;
 }
+/* Bandeau du titre : hauteur FIXE, logos compris.
+   Elle était laissée libre, donc inconnue du calcul du dessin — qui la
+   supposait à 35 px. Fixée ici, elle n'a plus à être devinée. */
+.dossier-phasage-centered h3 {
+    height: 14mm;
+    box-sizing: border-box;
+}
+/* Boîte du dessin : taille EXACTE, en millimètres de papier.
+   Elle valait « flex: 1 », donc une hauteur que seul le navigateur connaissait,
+   pendant que le dessin était calculé pour une hauteur supposée. Les bulles
+   étant placées en pourcentage de cette boîte et dimensionnées en pixels, le
+   moindre écart entre les deux rognait la dernière. Les 277 × 172 mm sont
+   repris tels quels dans App.jsx (PAGE_MM_W / PAGE_MM_H) : une seule vérité. */
 .dossier-phasage-centered .dossier-phasage-content {
-    width: 100%;
-    flex: 1;
+    width: 277mm;
+    height: 148mm;
+    flex: none;
     position: relative;
     overflow: hidden !important;
 }
@@ -3520,10 +3542,23 @@ body.amber-mode .help-back-to-top {
 
     /* Phasage bulle : section pleine page */
     body.print-dossier .print-dossier-phasage {
-        height: calc(100vh - 7mm) !important;
+        /* Ni hauteur imposée, ni rognage.
+           La section valait d'abord calc(100vh - 7mm), puis une hauteur en
+           millimètres — dans les deux cas assortie de « overflow: hidden ».
+           Tant que la page de phasage terminait l'impression, rien ne dépassait
+           et tout paraissait juste ; dès qu'une page la suivait, la pagination
+           la contraignait et ce qui sortait était COUPÉ au lieu d'être reporté.
+           D'où des bulles du bas tranchées sur toutes les pages sauf la
+           dernière, sans que rien d'autre ne semble anormal.
+           Sa hauteur découle maintenant de son contenu — bandeau de 16 mm et
+           dessin de 160 mm, tous deux décidés — et « page-break-inside: avoid »
+           la déplace entière si elle ne tient pas. Elle ne peut donc plus être
+           rognée : au pire elle change de feuille. */
+        break-before: page;
+        page-break-before: always;
         display: flex !important;
         flex-direction: column !important;
-        overflow: hidden !important;
+        
         /* Chaque page de phasage borne son propre dessin : un dossier en compte
            une par plan de feu, et sans point d'ancrage ni isolation, des
            éléments en position absolue d'une page peuvent se peindre sur une

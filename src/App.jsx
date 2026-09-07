@@ -30,7 +30,7 @@ import CreateGreenWaveDialog from './components/CreateGreenWaveDialog';
 import GreenWaveViewer from './components/GreenWaveViewer';
 import SimulationPanel from './components/SimulationPanel';
 import PhasageBulle from './components/PhasageBulle';
-import { fitBubblesToPage } from './utils/phasageLayout';
+import { fitBubblesToPage, REF_IMAGE_BOX_WIDTH, REF_IMAGE_BOX_HEIGHT } from './utils/phasageLayout';
 import { safeShowOpenFilePicker } from './utils/filePicker';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
@@ -4915,12 +4915,30 @@ function App() {
                                             // Il ne reste qu'une inconnue — la taille de bulle — résolue pour
                                             // que le dessin remplisse la page, bulles tangentes entre elles et
                                             // arcs les contournant. Plus rien n'est mis à l'échelle après coup.
+                                            // Géométrie de la feuille : DÉCIDÉE, jamais mesurée.
+                                            //
+                                            // Une A4 paysage mesure 297 × 210 mm ; les marges de @page en
+                                            // retirent 10 mm de chaque côté et 7 mm en bas, soit 277 × 193 mm
+                                            // imprimables. On y réserve un bandeau haut pour le titre et les
+                                            // logos, une marge basse, et le dessin occupe le reste. Ces trois
+                                            // valeurs sont fixées ici ET dans App.css, qui donne au conteneur
+                                            // exactement cette taille : le dessin est donc calculé pour la
+                                            // boîte où il sera posé, sans écart possible.
+                                            //
+                                            // Auparavant la page était reconstituée : largeur relevée pendant
+                                            // une impression et mise en cache, rapport théorique, hauteur de
+                                            // titre forfaitaire, coefficients de marge et de prudence. Six
+                                            // sources qui ne s'accordaient jamais, et un relevé qui ne servait
+                                            // qu'à l'impression SUIVANTE — d'où un dessin toujours calé sur la
+                                            // page précédente, et la dernière bulle rognée par le conteneur.
+                                            // En millimètres il n'y a plus rien à relever : px et mm sont deux
+                                            // unités absolues du même système, le navigateur fait la
+                                            // conversion, et une impression à 80 % réduit tout ensemble.
                                             const MM_TO_PX = 96 / 25.4;
-                                            const TITRE_PX = 35;
-                                            const RAPPORT_PAGE = (Math.round(186 * MM_TO_PX) - TITRE_PX) / Math.round(277 * MM_TO_PX);
-                                            const MARGE_PHASAGE = 0.94; // filet blanc autour du dessin
-                                            const PAGE_W = dossierPrintWidth * MARGE_PHASAGE;
-                                            const PAGE_H = dossierPrintWidth * RAPPORT_PAGE * MARGE_PHASAGE;
+                                            const PAGE_MM_W = 277;   // 297 - 2 × 10 mm de marge
+                                            const PAGE_MM_H = 148;   // maximum vérifié par impression réelle : à 150, 4 phases débordent
+                                            const PAGE_W = PAGE_MM_W * MM_TO_PX;
+                                            const PAGE_H = PAGE_MM_H * MM_TO_PX;
                                             const dessin = fitBubblesToPage({
                                                 count: bulleCount,
                                                 ratio: pf.phasageBubbleRatio ?? 100,
@@ -4933,9 +4951,10 @@ function App() {
                                             const imgRatio = imageNaturalDims.width / imageNaturalDims.height;
                                             const hideOvals = imgRatio > 1.5 || imgRatio < (1 / 1.5);
                                             // Visible image bounds within bubble (object-fit: contain).
-                                            // Le rapport de la bulle ne dépend pas de l'échelle : largeur et
-                                            // hauteur de base sont multipliées par le même facteur.
-                                            const bubbleAspect = 570 / 456;
+                                            // Rapport du cadre où le plan est posé. C'est celui de l'image du
+                                            // carrefour, dont la bulle reprend la forme : l'écrire à part le
+                                            // laissait mentir dès que ce cadre changeait.
+                                            const bubbleAspect = REF_IMAGE_BOX_WIDTH / REF_IMAGE_BOX_HEIGHT;
                                             let arrowXMin = 0, arrowXMax = 100, arrowYMin = 0, arrowYMax = 100;
                                             if (imgRatio > bubbleAspect) {
                                                 const visH = (bubbleAspect / imgRatio) * 100;
