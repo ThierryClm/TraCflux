@@ -7,6 +7,97 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [Non publié]
+
+### Ajouté
+
+- **Le dossier s'imprime au choix en A4 paysage ou portrait.** Le sélecteur se trouve en tête de
+  la boîte « Imprimer le dossier », le paysage restant la valeur par défaut : c'est lui qui donne
+  au diagramme la largeur qu'exige un cycle long. Le portrait offre 190 mm utiles au lieu de 277,
+  mais 280 mm de hauteur au lieu de 193 — plus favorable aux pages de tableaux. Le format retenu
+  est mémorisé.
+- **Le dossier imprimé n'est plus réduit par le navigateur.** La section du diagramme portait une
+  largeur de 111 % et une réduction de 0,9, destinées à simuler une A4 paysage *dans l'aperçu à
+  l'écran*. Appliquées à la feuille, elles la faisaient déborder — 211 mm de contenu pour 190 mm
+  utiles en portrait — et le navigateur réduisait alors tout le document d'un cinquième. L'effet
+  passait inaperçu en paysage, où 277 mm absorbaient le dépassement ; seule la boîte du phasage
+  le trahissait, déclarée en millimètres donc seule à ne pas suivre la réduction, quand les
+  largeurs en pourcentage semblaient intactes.
+- **Le cycle de référence de l'échelle du diagramme s'adapte au format** : 120 secondes en
+  paysage, 80 en portrait. La règle est inchangée — en deçà du seuil une seconde vaut toujours la
+  même largeur, au-delà le diagramme est comprimé pour remplir la page — seul le seuil suit la
+  largeur disponible, 277 mm contre 190.
+
+### Corrigé
+
+- **Le diagramme imprimé occupe la largeur de la page, marges de 10 mm comprises.** Trois postes
+  la lui prenaient : la colonne des noms, dimensionnée pour des champs éditables alors qu'elle
+  n'affiche que du texte ; une marge de sécurité interne de 7 mm, héritée du temps où la largeur
+  de page était relevée et donc incertaine ; et surtout un agrandissement des lignes de 15 %,
+  compensé par une largeur d'élément divisée d'autant — sur la feuille, le diagramme sortait à la
+  largeur d'avant agrandissement, et il manquait un septième de la page.
+- **Le tableau des conditions de micro-régulation n'élargit plus la page en portrait.** Sa colonne
+  « Action_Micro » porte une largeur relevée sur l'écran, pour que les équations se replient
+  exactement aux mêmes endroits ; elle imposait donc sa longueur à toute la feuille, et le
+  navigateur réduisait l'ensemble du document — le diagramme n'en occupait plus que 148 mm sur 190.
+  En portrait, le tableau occupe désormais la largeur disponible et son texte se replie selon la
+  place réellement offerte ; en paysage, la colonne garde la largeur de l'écran et donc les mêmes
+  retours à la ligne.
+- **La colonne des noms du diagramme imprimé laisse lire vingt-cinq caractères**, de quoi afficher
+  « Alpes ouest Brunet piéton » en entier.
+
+- **Le diagramme imprimé occupe enfin toute la largeur utile.** La colonne des commentaires du
+  diagramme n'était pas écartée du dossier : invisible sur la feuille, elle en occupait tout de
+  même 270 pixels. La mise en page dépassait alors la page et le navigateur réduisait l'ensemble
+  du document d'un cinquième — ce que seul le diagramme laissait voir, les tableaux voisins étant
+  dimensionnés en pourcentage, donc solidaires de la réduction.
+
+- **Les logos n'apparaissent plus qu'une fois par feuille imprimée.** Ils étaient insérés dans le
+  titre de chaque section, donc répétés autant de fois qu'une page en portait — deux fois sur une
+  page réunissant la matrice et un diagramme. Ils forment désormais un bandeau unique en haut à
+  droite, réémis par le navigateur sur chaque page.
+- **La matrice des interverts garde sa largeur naturelle et tient sur une page.** Sa largeur suit
+  le nombre de groupes ; au-delà d'une trentaine, elle dépassait la feuille et faisait réduire tout
+  le document par le navigateur. Elle est désormais réduite pour elle-même, ce qui laisse les noms
+  sur une ligne et la matrice sur une seule page. Une matrice de petit carrefour n'est pas
+  touchée.
+
+- **Le pied des pages imprimées porte l'outil et sa version.** Il affichait le chemin du fichier
+  à gauche et la date au centre, alors que le navigateur imprime déjà en tête de chaque feuille la
+  date, l'heure et le titre du document. Reste ce que la feuille seule ne disait pas : avec quel
+  outil, et dans quelle version, elle a été produite.
+
+- **La durée de cycle d'un plan importé n'est plus perdue à la réouverture.** Le cycle vit à deux
+  endroits — au niveau du projet et dans chaque plan de feu. Un plan qui n'a pas la seconde copie,
+  ce qui est le cas de ceux créés avant qu'elle existe comme de ceux qui arrivent par import, se
+  voyait imposer la valeur par défaut de 60 secondes à l'ouverture. Elle écrasait la vraie durée,
+  qui oscillait alors d'un emplacement à l'autre au fil des enregistrements avant de disparaître.
+  Un plan sans durée propre hérite désormais de celle du projet.
+- **Les cases à cocher du dossier à imprimer suivent le projet.** Elles repartaient de zéro à
+  chaque ouverture, obligeant à tout recocher avant chaque tirage. Elles sont désormais
+  enregistrées avec le dossier — ce qu'on imprime dépend du carrefour, pas de l'application — et
+  un projet antérieur à cette évolution conserve simplement les cases en place.
+
+- **La matrice des interverts n'écrase plus le reste du dossier imprimé.** Sa largeur suit le
+  nombre de groupes de feu ; à trente-deux groupes, ses trente-trois colonnes débordaient de la
+  feuille. Rien ne l'en empêchait, et le navigateur réduisait alors tout le document pour le
+  faire tenir — d'un cinquième en portrait. Le diagramme et le phasage s'en trouvaient
+  rapetissés sans qu'aucun défaut ne soit visible chez eux. La matrice se répartit désormais sur
+  la largeur disponible : colonne des noms fixe, colonnes de valeurs à parts égales sur le reste.
+
+- **La proportion du diagramme est juste dès le premier tirage.** La largeur de la feuille était
+  relevée pendant l'impression et mise en cache, or un relevé ne sert qu'à l'impression
+  suivante : après une bascule de format, il fallait imprimer deux fois. Elle se déduit
+  désormais du format retenu. Un diagramme mis en page plus large que la feuille faisait par
+  ailleurs réduire tout le document par le navigateur — et rapetissait du même coup le phasage.
+- **Les flèches de courant cycliste suivent la même règle que les autres dans les bulles.** Leur
+  hauteur était calculée par une troisième formule, distincte de celle des mouvements composés
+  et des traversées piétonnes : une flèche réglée sur une longueur de 4 y était plus de trois
+  fois trop haute. Les trois familles de symboles sont désormais alignées sur l'image du
+  carrefour, qui les inscrit toutes dans un carré.
+
+---
+
 ## [1.2.10] — 2026-09-07
 
 ### Corrigé

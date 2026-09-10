@@ -2413,6 +2413,19 @@ body.amber-mode .help-back-to-top {
     color-adjust: exact !important;
 }
 
+/* La matrice ne doit jamais élargir la page — sa largeur suit le nombre de
+   groupes, et à trente-deux elle dépasse largement la feuille. Rien ne l'en
+   empêchait : le navigateur réduisait alors TOUT le document pour la faire
+   tenir, diagramme et phasage compris.
+   Elle est donc réduite POUR ELLE-MÊME, par un facteur calculé sur le nombre de
+   groupes (cf. App.jsx) : les noms restent sur une ligne et la matrice sur une
+   seule page, ce que le repli des noms avait cassé. Une petite matrice n'est pas
+   touchée. */
+.print-dossier-matrix {
+    max-width: 100%;
+    overflow: hidden;
+}
+
 /* Dossier: matrice texte noir sur fond blanc */
 .print-dossier-matrix .preview-matrix-table {
     color: #000;
@@ -2544,6 +2557,27 @@ body.amber-mode .help-back-to-top {
     white-space: nowrap;
 }
 
+/* Chaque module doit tenir dans l'emprise PAR SES PROPRES MOYENS — aucun ne
+   doit imposer sa largeur à la page, sous peine de faire réduire tous les
+   autres par le navigateur. Pour un tableau, le moyen n'est pas la réduction
+   mais la répartition : il occupe la largeur disponible et son texte se replie.
+   En paysage la colonne des conditions garde la largeur relevée sur l'écran,
+   donc les mêmes retours à la ligne ; en portrait, 190 mm ne le permettent pas
+   et le repli suit la place réellement offerte. */
+body.print-portrait .print-dossier-actions .print-actions-table {
+    width: 100% !important;
+    table-layout: auto !important;
+}
+
+body.print-portrait .print-dossier-actions .print-micro-wrap {
+    width: 100% !important;
+}
+
+body.print-portrait .print-dossier-actions .print-actions-table td:nth-child(7) {
+    white-space: normal !important;
+    max-width: none !important;
+}
+
 /* Action_Micro(7) : afficher en entier */
 .print-dossier-actions .print-actions-table td:nth-child(7) {
     text-align: left;
@@ -2584,6 +2618,10 @@ body.amber-mode .help-back-to-top {
    étant placées en pourcentage de cette boîte et dimensionnées en pixels, le
    moindre écart entre les deux rognait la dernière. Les 277 × 172 mm sont
    repris tels quels dans App.jsx (PAGE_MM_W / PAGE_MM_H) : une seule vérité. */
+body.print-portrait .dossier-phasage-centered .dossier-phasage-content {
+    width: 190mm;    /* 210 - 2 x 10 mm de marge */
+    height: 240mm;   /* 280 utiles - 14 de bandeau - 26 de garde */
+}
 .dossier-phasage-centered .dossier-phasage-content {
     width: 277mm;
     height: 148mm;
@@ -3438,6 +3476,19 @@ body.amber-mode .help-back-to-top {
         background-color: white !important;
     }
 
+    /* Portrait : même dossier, feuille tournée. La règle @page ne peut pas être
+       conditionnée par une classe, on nomme donc deux pages et le corps choisit
+       la sienne. */
+    body.print-dossier.print-portrait {
+        page: dossier-page-portrait;
+    }
+
+    @page dossier-page-portrait {
+        size: A4 portrait;
+        margin: 10mm;
+        margin-bottom: 7mm;
+    }
+
     @page dossier-page {
         size: A4 landscape;
         margin: 10mm;
@@ -3446,6 +3497,17 @@ body.amber-mode .help-back-to-top {
     }
 
     /* Masquer TOUS les éléments descendants (visibility: hidden ne dessine pas les fonds) */
+    /* L'interface doit sortir du FLUX, pas seulement devenir invisible.
+       « visibility: hidden » la laissait occuper sa largeur d'écran — environ
+       331 mm — si bien que le navigateur réduisait ensuite tout le document pour
+       le faire tenir sur la feuille : 0,90 en paysage, où cela passait inaperçu,
+       mais 0,635 en portrait. Diagramme et phasage étaient rapetissés d'autant.
+       On masque donc tout ce qui n'est pas l'aperçu ni l'un de ses ancêtres. */
+    body.print-dossier #root *:not(:has(.print-preview-overlay)):not(.print-preview-overlay):not(.print-preview-overlay *) {
+        display: none !important;
+    }
+
+
     body.print-dossier * {
         visibility: hidden !important;
     }
@@ -3950,4 +4012,116 @@ body.amber-mode .help-back-to-top {
     background: #3a2a3a;
     border-color: #6a4a6a;
     color: #e8e;
+}
+
+/* Choix du format de feuille, en tête de la boîte « Imprimer le dossier ». */
+.dossier-orientation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0 10px 0;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.dossier-orientation-titre {
+    font-size: 0.9em;
+    color: #bbb;
+}
+
+.dossier-orientation-choix {
+    display: inline-flex;
+    border: 1px solid #555;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.dossier-orientation-choix button {
+    background: #2a2a2a;
+    color: #ccc;
+    border: none;
+    padding: 4px 14px;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.dossier-orientation-choix button + button {
+    border-left: 1px solid #555;
+}
+
+.dossier-orientation-choix button:hover:not(.actif) {
+    background: #333;
+}
+
+.dossier-orientation-choix button.actif {
+    background: #4a9eff;
+    color: #fff;
+    font-weight: bold;
+}
+
+
+
+
+/* Bandeau de logos du dossier : répété sur chaque feuille imprimée.
+   La position fixe est le seul moyen d'obtenir un élément par page — Chrome
+   n'affiche pas d'image dans les marges de @page (vérifié). */
+.dossier-logos-page {
+    display: none;
+}
+
+@media print {
+    body.print-dossier .dossier-logos-page {
+        display: block !important;
+        visibility: visible !important;
+        position: fixed;
+        top: 0;
+        right: 0;
+        z-index: 50;
+    }
+
+    body.print-dossier .dossier-logos-page .dossier-header-logos {
+        position: static !important;
+        transform: none !important;
+        display: inline-flex;
+        gap: 6px;
+    }
+
+    body.print-dossier .dossier-logos-page img {
+        height: 10mm !important;
+        width: auto !important;
+    }
+
+    /* La page de titre porte ses propres logos, en grand : c'est une couverture.
+       Le bandeau y ferait double emploi. Un élément en position fixe est réémis
+       sur TOUTES les pages sans exception possible — on laisse donc la couverture
+       le recouvrir, en la posant au-dessus et sur fond plein. Elle n'existe que
+       sur la première feuille, le bandeau reste donc visible sur les suivantes. */
+    body.print-dossier .print-dossier-title {
+        position: relative;
+        z-index: 60;
+        background: #fff !important;
+    }
+}
+
+
+/* Bandeau des groupes, à l'impression du dossier : seule la colonne des NOMS
+   est resserrée.
+   Les autres colonnes s'alignent sur leurs champs par un décalage manuel de
+   -10 px : y toucher rompt l'accord entre l'en-tête et les lignes, et l'en-tête
+   se retrouve décalé. La colonne des noms, elle, partage la même largeur de part
+   et d'autre — c'est la seule qu'on peut réduire sans rien casser, et c'est aussi
+   la plus large. La valeur doit rester d'accord avec dossierSidebarReal dans
+   App.jsx, qui dimensionne la frise. */
+@media print {
+    body.print-dossier .dossier-diagram-content .timeline-sidebar {
+        width: 315px !important;
+    }
+
+    /* 150 px : de quoi lire « Alpes ouest Brunet piéton » en entier, soit
+       vingt-cinq caractères à la police d'impression. */
+    body.print-dossier .dossier-diagram-content .col-label.col-name,
+    body.print-dossier .dossier-diagram-content .label-name {
+        width: 150px !important;
+        min-width: 0 !important;
+    }
 }

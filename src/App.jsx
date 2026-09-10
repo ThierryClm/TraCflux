@@ -657,26 +657,29 @@ function App() {
     // Cette mesure ne se prend QUE lorsque le média d'impression est actif :
     // « beforeprint » se déclenche encore sur la mise en page d'écran et
     // renvoyait la largeur de la fenêtre, sans rapport avec la feuille.
-    const LARGEUR_PAGE_PAR_DEFAUT = 1683;
-    const [dossierPrintWidth, setDossierPrintWidth] = useState(() => {
-        const memo = parseFloat(localStorage.getItem('dossier_print_width'));
-        return Number.isFinite(memo) && memo >= 800 && memo <= 2400 ? memo : LARGEUR_PAGE_PAR_DEFAUT;
+    // Orientation du dossier imprimé. Le paysage reste la valeur par défaut :
+    // c'est lui qui donne au diagramme la largeur nécessaire pour un cycle long.
+    const [dossierPortrait, setDossierPortrait] = useState(() => {
+        try { return localStorage.getItem('dossier_orientation') === 'portrait'; } catch { return false; }
     });
     useEffect(() => {
-        const mql = window.matchMedia('print');
-        const surChangement = (e) => {
-            if (!e.matches) return;
-            const largeur = document.documentElement.clientWidth;
-            if (largeur < 800 || largeur > 2400) return; // valeur aberrante : on garde la précédente
-            try { localStorage.setItem('dossier_print_width', String(largeur)); } catch { /* quota */ }
-            // Appliquée au rendu SUIVANT : modifier la géométrie pendant que le
-            // navigateur compose la page le laissait avec une mise en page à
-            // moitié refaite.
-            setDossierPrintWidth(prev => (Math.abs(prev - largeur) < 1 ? prev : largeur));
-        };
-        mql.addEventListener('change', surChangement);
-        return () => mql.removeEventListener('change', surChangement);
-    }, []);
+        try { localStorage.setItem('dossier_orientation', dossierPortrait ? 'portrait' : 'paysage'); } catch { /* quota */ }
+    }, [dossierPortrait]);
+
+    // Largeur de la feuille, DÉCIDÉE et non relevée.
+    //
+    // Elle était mesurée pendant l'impression (`documentElement.clientWidth`) et
+    // mise en cache. Or une mesure ne sert qu'à l'impression SUIVANTE : en
+    // changeant d'orientation on repartait d'une valeur par défaut, d'où deux
+    // tirages nécessaires avant d'obtenir la bonne proportion du diagramme.
+    //
+    // Le relevé valait exactement la largeur de la feuille entière — 1122 px pour
+    // les 297 mm d'une A4 paysage, soit 96 px par pouce. On peut donc la calculer
+    // plutôt que l'attendre, ce qui supprime le décalage d'un tirage.
+    // Zone utile, marges de la feuille déduites : 297 - 2 × 10 en paysage,
+    // 210 - 2 × 10 en portrait. On y donnait auparavant la largeur de la feuille
+    // ENTIÈRE, si bien que le diagramme débordait de 13 mm dans la marge.
+    const dossierPrintWidth = (dossierPortrait ? 190 : 277) * (96 / 25.4);
 
     // Saisie du phasage bulle : brouillon, validé au clic sur OK.
     //
@@ -1123,14 +1126,23 @@ function App() {
         // Remove previous if exists
         const prev = document.getElementById('dossier-print-footer-style');
         if (prev) prev.remove();
-        const path = currentProjectPath ? currentProjectPath.replace(/\.json$/i, '').replace(/"/g, '\\"') : 'Projet non enregistré';
-        const dateStr = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        // Pied de page : l'outil et sa version, puis le numéro de page.
+        //
+        // Il portait le chemin du fichier à gauche et la date au centre. Or le
+        // navigateur imprime déjà, en tête de chaque feuille, la date, l'heure et
+        // le titre du document : c'était redit deux fois. Reste ce que la feuille
+        // seule ne dit pas — avec quel outil, et dans quelle version, elle a été
+        // produite.
+        const signature = `${APP_NAME} ${APP_VERSION}`;
         const style = document.createElement('style');
         style.id = 'dossier-print-footer-style';
         style.textContent = `
             @page dossier-page {
-                @bottom-left { content: "${path}"; font-size: 10px; color: #444; }
-                @bottom-center { content: "${dateStr}"; font-size: 10px; color: #444; }
+                @bottom-left { content: "${signature}"; font-size: 10px; color: #444; }
+                @bottom-right { content: "Page " counter(page); font-size: 10px; color: #444; }
+            }
+            @page dossier-page-portrait {
+                @bottom-left { content: "${signature}"; font-size: 10px; color: #444; }
                 @bottom-right { content: "Page " counter(page); font-size: 10px; color: #444; }
             }
         `;
@@ -1146,10 +1158,12 @@ function App() {
         setPrintPreviewModal(true);
         setTimeout(() => {
             document.body.classList.add('print-dossier');
+            if (dossierPortrait) document.body.classList.add('print-portrait');
             const footerStyle = injectDossierFooterStyle();
             window.print();
             footerStyle.remove();
             document.body.classList.remove('print-dossier');
+            document.body.classList.remove('print-portrait');
             setPrintPreviewModal(false);
             setPrintType(null);
         }, 500);
@@ -1165,10 +1179,12 @@ function App() {
         toast.info('Dans la boîte d\'impression, sélectionnez « Enregistrer au format PDF »');
         setTimeout(() => {
             document.body.classList.add('print-dossier');
+            if (dossierPortrait) document.body.classList.add('print-portrait');
             const footerStyle = injectDossierFooterStyle();
             window.print();
             footerStyle.remove();
             document.body.classList.remove('print-dossier');
+            document.body.classList.remove('print-portrait');
             setPrintPreviewModal(false);
             setPrintType(null);
         }, 500);
@@ -4040,6 +4056,25 @@ function App() {
                             <button className="modal-close" onClick={() => setDossierDialog(false)} aria-label="Fermer la fenêtre">&times;</button>
                         </div>
                         <div className="dossier-dialog-body">
+                            {/* Orientation de la feuille. Le paysage reste par défaut : c'est
+                                lui qui donne au diagramme la largeur d'un cycle long. */}
+                            <div className="dossier-orientation">
+                                <span className="dossier-orientation-titre">Format</span>
+                                <div className="dossier-orientation-choix">
+                                    <button
+                                        type="button"
+                                        className={!dossierPortrait ? 'actif' : ''}
+                                        onClick={() => setDossierPortrait(false)}
+                                        title={tip("A4 paysage : 277 mm utiles, la largeur qu'exige un diagramme de cycle long.")}
+                                    >Paysage</button>
+                                    <button
+                                        type="button"
+                                        className={dossierPortrait ? 'actif' : ''}
+                                        onClick={() => setDossierPortrait(true)}
+                                        title={tip("A4 portrait : 190 mm utiles seulement, mais 280 mm de hauteur pour les tableaux.")}
+                                    >Portrait</button>
+                                </div>
+                            </div>
                             <label>
                                 <input type="checkbox" checked={dossierSections.image || false}
                                     onChange={e => setDossierSections(s => ({...s, image: e.target.checked}))} />
@@ -4351,7 +4386,7 @@ function App() {
                                                                     <td>{row.deb}</td>
                                                                     <td>{row.fin}</td>
                                                                     <td>{row.abrv}</td>
-                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={microPrintStyle || undefined}>{row.micro}</div></td>
+                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={dossierPortrait ? undefined : (microPrintStyle || undefined)}>{row.micro}</div></td>
                                                                     <td>{row.plage1}</td>
                                                                     <td>{row.plage2}</td>
                                                                     <td>{row.actGf1}</td>
@@ -4368,9 +4403,8 @@ function App() {
                                         {/* Pied de page: chemin du fichier JSON à gauche, date à droite */}
                                         <div className="print-diagram-footer">
                                             <span className="print-footer-path">
-                                                {currentProjectPath || 'Projet non enregistré'}
+                                                {`${APP_NAME} ${APP_VERSION}`}
                                             </span>
-                                            <span className="print-footer-date">{new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
                                     </div>
                                     );
@@ -4386,14 +4420,41 @@ function App() {
                                     // On lui retire une marge : viser la largeur au pixel près faisait
                                     // tomber la dernière graduation hors de la page sur un cycle long,
                                     // le trait de fin de cycle et la bordure comptant eux aussi.
-                                    const MARGE_IMPRESSION = 26;
+                                    // Marge de sécurité interne, en pixels. Elle valait 26 — près de
+                                    // 7 mm — du temps où la largeur de page était RELEVÉE, donc
+                                    // incertaine. Elle est maintenant décidée : 8 px suffisent à
+                                    // garder la dernière graduation et la bordure dans la page.
+                                    const MARGE_IMPRESSION = 8;
                                     const dossierUsableWidth = dossierPrintWidth - MARGE_IMPRESSION;
                                     // Sidebar TimelineDiagram reelle = 325px (sans commentaires/remarques masques)
-                                    const dossierSidebarReal = 325;
+                                    // Largeur du bandeau des groupes SUR LA FEUILLE — resserré par
+                                    // rapport à l'écran (cf. App.css) : les champs y sont en lecture
+                                    // seule et n'ont pas besoin d'une zone de clic. Les deux valeurs
+                                    // doivent rester d'accord, sinon la frise est calculée pour une
+                                    // place qu'elle n'a pas.
+                                    const dossierSidebarReal = 315;
+                                    // Réduction propre à la MATRICE, pour qu'elle n'élargisse pas la page.
+                                    //
+                                    // Sa largeur suit le nombre de groupes : colonne des noms, puis une
+                                    // colonne par groupe. Au-delà d'une trentaine, elle dépasse la feuille
+                                    // et le navigateur réduit alors tout le document. On la réduit donc
+                                    // elle seule, ce qui garde les noms sur une ligne et la matrice sur une
+                                    // page — le repli des noms, essayé d'abord, doublait la hauteur des
+                                    // lignes et la faisait déborder sur plusieurs feuilles.
+                                    // La largeur naturelle est estimée : colonne des noms ≈ 130 px, puis
+                                    // 27 px par groupe. Une petite matrice n'est pas touchée.
+                                    const largeurMatriceEstimee = 130 + groups.length * 27;
+                                    const zoomMatrice = Math.min(1, dossierUsableWidth / largeurMatriceEstimee);
                                     const availableWidth = dossierUsableWidth - dossierSidebarReal;
-                                    const refCycle = 120; // Cycle de référence pour l'échelle homogène
-                                    // Cycle ≤ 120s: échelle fixe (homogénéité entre dossiers)
-                                    // Cycle > 120s: ratio pour remplir la largeur de la page
+                                    // Cycle de référence de l'échelle homogène, propre au format.
+                                    //
+                                    // La règle ne change pas : en deçà du cycle de référence, une
+                                    // seconde vaut toujours la même largeur — deux dossiers restent
+                                    // comparables ; au-delà, on comprime pour remplir la page.
+                                    // Seul le seuil s'adapte à la largeur disponible : 277 mm en
+                                    // paysage contre 190 en portrait, où l'on vise donc des cycles
+                                    // plus courts.
+                                    const refCycle = dossierPortrait ? 80 : 120;
                                     const basePPS = cycleLength <= refCycle
                                         ? availableWidth / refCycle
                                         : availableWidth / cycleLength;
@@ -4478,6 +4539,12 @@ function App() {
 
                                     return (
                                     <div className="print-preview-dossier">
+                                        {/* Logos : UNE fois par feuille, en haut à droite.
+                                            Ils étaient répétés dans le titre de chaque section, donc
+                                            plusieurs fois sur une page qui en porte plusieurs. Un élément
+                                            en position fixe est réémis par le navigateur sur chaque page
+                                            imprimée — la marge de page, elle, n'accepte pas d'image. */}
+                                        {dossierSmallLogos && <div className="dossier-logos-page">{dossierSmallLogos}</div>}
                                         {/* 1. Titre du projet avec logos et informations */}
                                         <div className="print-dossier-section print-dossier-title">
                                             <div className="dossier-title-logos">
@@ -4629,8 +4696,8 @@ function App() {
 
                                         {/* 4a. Matrice de sécurité */}
                                         {dossierSections.securiteMatrix && (
-                                        <div className="print-dossier-section print-dossier-matrix">
-                                            <h3>Matrice de sécurité{dossierSmallLogos}</h3>
+                                        <div className="print-dossier-section print-dossier-matrix" style={zoomMatrice < 1 ? { zoom: zoomMatrice.toFixed(3) } : undefined}>
+                                            <h3>Matrice de sécurité</h3>
                                             <table className="preview-matrix-table">
                                                 <thead>
                                                     <tr>
@@ -4694,8 +4761,8 @@ function App() {
 
                                         {/* 4b. Matrice des temps interverts */}
                                         {dossierSections.matrice && (
-                                        <div className="print-dossier-section print-dossier-matrix">
-                                            <h3>Matrice des temps interverts{dossierSmallLogos}</h3>
+                                        <div className="print-dossier-section print-dossier-matrix" style={zoomMatrice < 1 ? { zoom: zoomMatrice.toFixed(3) } : undefined}>
+                                            <h3>Matrice des temps interverts</h3>
                                             <table className="preview-matrix-table">
                                                 <thead>
                                                     <tr>
@@ -4745,7 +4812,7 @@ function App() {
                                         {/* 4c. Légende du diagramme */}
                                         {dossierSections.legende && (
                                         <div className="print-dossier-section print-dossier-legend">
-                                            <h3>Légende du diagramme{dossierSmallLogos}</h3>
+                                            <h3>Légende du diagramme</h3>
                                             <DiagramLegend />
                                         </div>
                                         )}
@@ -4781,7 +4848,16 @@ function App() {
                                             const diagramRenderedHeight = 50 + 1 + pfGroups.length * 31 + 90;
 
                                             // Zoom 15% pour agrandir les lignes, limité par la hauteur de page
-                                            const rowZoom = 1.15;
+                                            // Plus d'agrandissement des lignes.
+                                            //
+                                            // Le diagramme était calculé pour la largeur utile puis agrandi
+                                            // de 15 %, sa largeur d'élément étant divisée d'autant pour
+                                            // compenser. Sur la feuille il sortait à la largeur AVANT
+                                            // agrandissement : la mise à l'échelle ne s'y appliquait pas, et
+                                            // il manquait donc un septième de la page. Une compensation dont
+                                            // on ne maîtrise pas l'effet vaut moins que quelques pixels de
+                                            // hauteur de ligne.
+                                            const rowZoom = 1;
                                             const maxScale = diagramPageHeight / diagramRenderedHeight;
                                             const combinedScale = Math.min(rowZoom, maxScale);
                                             // UNE SECONDE VAUT LA MÊME LARGEUR SUR TOUTES LES PAGES.
@@ -4808,7 +4884,7 @@ function App() {
                                         <Fragment key={pf.id}>
                                         {/* Diagramme */}
                                         <div className="print-dossier-section print-dossier-diagram">
-                                            <h3>Diagramme du plan de feu : {pf.name} — Cycle : {pfCycleLength}s{dossierSmallLogos}</h3>
+                                            <h3>Diagramme du plan de feu : {pf.name} — Cycle : {pfCycleLength}s</h3>
                                             <div style={{
                                                 height: `${Math.ceil(diagramRenderedHeight * combinedScale)}px`,
                                                 overflow: 'hidden',
@@ -4838,6 +4914,15 @@ function App() {
                                                         setHoveredActionId={() => {}}
                                                         planName={pf.name}
                                                         isPrintMode={true}
+                                                        /* La colonne des commentaires et le bloc des remarques
+                                                           n'étaient pas désactivés : invisibles à l'impression,
+                                                           ils occupaient tout de même 270 px de large. La mise en
+                                                           page dépassait alors la feuille et le navigateur
+                                                           réduisait tout le document — ce que seul le diagramme,
+                                                           dimensionné en pixels, laissait voir. Le dossier imprime
+                                                           les remarques dans son propre bloc, juste en dessous. */
+                                                        showComments={false}
+                                                        showRemarks={false}
                                                     tooltipsEnabled={tooltipPrefs.diagram}
                                                     />
                                                 </div>
@@ -4858,7 +4943,7 @@ function App() {
                                         {/* Conditions micro pour ce PF */}
                                         {dossierSections[`conditionsMicro_${pf.id}`] && pfActionData.filter(row => row.gf || row.action || row.description || row.deb !== '' || row.fin !== '').length > 0 && (
                                             <div className="print-dossier-section print-dossier-actions">
-                                                <h3>Conditions de micro-régulation - {pf.name}{dossierSmallLogos}</h3>
+                                                <h3>Conditions de micro-régulation - {pf.name}</h3>
                                                 <table className="print-actions-table">
                                                     <thead>
                                                         <tr>
@@ -4888,7 +4973,7 @@ function App() {
                                                                     <td>{row.deb}</td>
                                                                     <td>{row.fin}</td>
                                                                     <td>{row.abrv}</td>
-                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={microPrintStyle || undefined}>{row.micro}</div></td>
+                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={dossierPortrait ? undefined : (microPrintStyle || undefined)}>{row.micro}</div></td>
                                                                     <td>{row.plage1}</td>
                                                                     <td>{row.plage2}</td>
                                                                     <td>{row.actGf1}</td>
@@ -4905,7 +4990,7 @@ function App() {
                                         {/* Variables micro pour ce PF */}
                                         {dossierSections[`variablesMicro_${pf.id}`] && pfMicroFields.some(f => f && f.trim()) && (
                                             <div className="print-dossier-section print-dossier-variables">
-                                                <h3>Variables micro - {pf.name}{dossierSmallLogos}</h3>
+                                                <h3>Variables micro - {pf.name}</h3>
                                                 <div className="dossier-variables-list">
                                                     {pfMicroFields.map((field, index) => (
                                                         field && field.trim() ? (
@@ -4950,11 +5035,18 @@ function App() {
                                             // En millimètres il n'y a plus rien à relever : px et mm sont deux
                                             // unités absolues du même système, le navigateur fait la
                                             // conversion, et une impression à 80 % réduit tout ensemble.
-                                            const MM_TO_PX = 96 / 25.4;
-                                            const PAGE_MM_W = 277;   // 297 - 2 × 10 mm de marge
-                                            const PAGE_MM_H = 148;   // maximum vérifié par impression réelle : à 150, 4 phases débordent
-                                            const PAGE_W = PAGE_MM_W * MM_TO_PX;
-                                            const PAGE_H = PAGE_MM_H * MM_TO_PX;
+                                            // Paysage : 297 - 2 × 10 mm de marge ; 148 mm est un maximum
+                                            // vérifié par impression réelle (à 150, 4 phases débordent).
+                                            // Portrait : 210 - 20 de marge, et la composition y est
+                                            // contrainte par la largeur, non par la hauteur.
+                                            const PAGE_MM_W = dossierPortrait ? 190 : 277;
+                                            const PAGE_MM_H = dossierPortrait ? 240 : 148;
+                                            // La composition se calcule DIRECTEMENT en millimètres et
+                                            // s'exprime en millimètres : plus aucune conversion vers les
+                                            // pixels, dont le rapport au millimètre n'est pas celui qu'on
+                                            // croit dans le rendu d'impression.
+                                            const PAGE_W = PAGE_MM_W;
+                                            const PAGE_H = PAGE_MM_H;
                                             const dessin = fitBubblesToPage({
                                                 count: bulleCount,
                                                 ratio: pf.phasageBubbleRatio ?? 100,
@@ -4983,7 +5075,7 @@ function App() {
                                             }
                                             return (
                                             <div className="print-dossier-section print-dossier-phasage dossier-phasage-centered">
-                                                <h3>Phasage bulle - {pf.name}{dossierSmallLogos}</h3>
+                                                <h3>Phasage bulle - {pf.name}</h3>
                                                 <div className={`dossier-phasage-content ${hideOvals ? 'phasage-hide-ovals' : ''}`}>
                                                     <PhasageBulle
                                                         groups={pfGroups}
@@ -5004,6 +5096,7 @@ function App() {
                                                         ellipseScaleX={dessin.ellipseScaleX}
                                                         arrowOffsetX={dessin.arrowOffsetX}
                                                         arrowOffsetY={dessin.arrowOffsetY}
+                                                        unite="mm"
                                                     />
                                                 </div>
                                             </div>
@@ -5013,7 +5106,7 @@ function App() {
                                         {/* Données de trafic et calcul de capacité pour ce PF */}
                                         {dossierSections[`traficCapacite_${pf.id}`] && (
                                             <div className="print-dossier-section print-dossier-traffic">
-                                                <h3>Données de trafic et calcul de capacité - {pf.name}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Données de trafic : {pfDataset}{dossierSmallLogos}</h3>
+                                                <h3>Données de trafic et calcul de capacité - {pf.name}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Données de trafic : {pfDataset}</h3>
                                                 {/* Le même composant qu'à l'écran, en lecture seule.
                                                     Ce tableau était recopié à la main, et la copie avait
                                                     divergé : elle ajoutait les groupes non-VL porteurs de
@@ -5043,7 +5136,7 @@ function App() {
                                         {/* Réserve de capacité (même calcul que le panneau à l'écran) */}
                                         {dossierSections[`reserveCapacite_${pf.id}`] && (
                                             <div className="print-dossier-section print-dossier-reserve">
-                                                <h3>Réserve de capacité - {pf.name}{dossierSmallLogos}</h3>
+                                                <h3>Réserve de capacité - {pf.name}</h3>
                                                 {/* Même jeu de données que le tableau ci-dessus.
                                                     Il lisait le jeu ACTIF à l'écran, et sans la reprise du
                                                     nom du plan : sur un projet dont le jeu porte le nom du
