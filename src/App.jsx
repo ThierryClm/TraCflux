@@ -72,6 +72,12 @@ import './App.css';
 function App() {
     const askConfirm = useConfirm();
     const showAlert = useAlert();
+    // Champs de projet portés par d'autres modules que le modèle : ils doivent
+    // voyager avec le dossier plutôt que rester des préférences d'application.
+    // Réf parce que ces modules sont créés plus bas ; elle n'est lue qu'à
+    // l'enregistrement et à l'ouverture.
+    const champsProjetRef = useRef({ lire: () => ({}), ecrire: () => {} });
+
     const {
         intersectionName,
         setIntersectionName,
@@ -176,7 +182,7 @@ function App() {
         appCommunes,
         appMoaLogos,
         appMoeLogos
-    } = useTrafficLight({ askConfirm, showAlert });
+    } = useTrafficLight({ askConfirm, showAlert, champsProjetRef });
 
     // Update yellow/orange duration for VL and B groups when horsAgglomeration changes
     useEffect(() => {
@@ -905,6 +911,16 @@ function App() {
         greenWaveViewer, setGreenWaveViewer,
         draggedTabIndex, setDraggedTabIndex
     } = useDialogState();
+
+    // Les cases à cocher du dossier appartiennent au projet : on branche leur
+    // lecture et leur écriture sur la sérialisation, plutôt que d'en faire une
+    // préférence d'application commune à tous les carrefours.
+    champsProjetRef.current = {
+        lire: () => ({ dossierSections }),
+        // Un projet enregistré avant cette évolution n'a pas le champ : on
+        // garde alors les cases en place au lieu de tout décocher.
+        ecrire: (etat) => { if (etat && etat.dossierSections) setDossierSections(etat.dossierSections); }
+    };
 
     // File System Access API - handles de répertoires via IndexedDB
     const {

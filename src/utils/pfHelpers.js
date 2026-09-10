@@ -88,7 +88,7 @@ export const createEmptyPF = (opts = {}) => {
  * Ensure every PF in the array has a complete structure.
  * Idempotent: preserves existing valid fields, fills only what's missing.
  */
-export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix) => {
+export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix, fallbackCycle = DEFAULT_CYCLE) => {
     if (!Array.isArray(pfTabsArr)) return [];
     const groupCount = fallbackGroups?.length || 0;
     return pfTabsArr.map(pf => {
@@ -116,7 +116,14 @@ export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix) => 
                     greenDuration: (d.greenDuration !== undefined && !isNaN(d.greenDuration)) ? d.greenDuration : 10
                 }))
                 : buildDiagramFromGroups(fallbackGroups),
-            cycleLength: pf.cycleLength ?? DEFAULT_CYCLE,
+            // Un plan sans durée de cycle hérite de CELLE DU PROJET, pas d'une
+            // valeur par défaut. Le cycle vit à deux endroits — au niveau du
+            // projet et dans chaque plan — et les plans créés avant que cette
+            // seconde copie existe n'ont pas le champ, comme ceux qui arrivent
+            // par import. Leur imposer 60 s ici écrasait la vraie durée : elle
+            // oscillait d'un emplacement à l'autre au fil des enregistrements
+            // avant d'être perdue.
+            cycleLength: pf.cycleLength ?? fallbackCycle ?? DEFAULT_CYCLE,
             microCustomFields: Array.isArray(pf.microCustomFields) ? pf.microCustomFields : [],
             conflictMatrix: hasMatrix
                 ? pf.conflictMatrix

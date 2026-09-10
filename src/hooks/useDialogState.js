@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * Gère tous les états de modales et dialogues de l'application,
@@ -63,6 +63,9 @@ const useDialogState = () => {
     const [printPreviewModal, setPrintPreviewModal] = useState(false);
     const [printType, setPrintType] = useState(null);
     const [dossierDialog, setDossierDialog] = useState(false);
+    // Cases à cocher du dossier. Elles appartiennent au PROJET — cf. le
+    // branchement dans App.jsx : ce qu'on imprime dépend du carrefour, pas de
+    // l'application. Elles étaient auparavant remises à zéro à chaque ouverture.
     const [dossierSections, setDossierSections] = useState({});
 
     // Onde verte (modales)

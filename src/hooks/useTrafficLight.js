@@ -196,7 +196,13 @@ const createEmptyTrafficData = () => ({
     trafficVol: 0
 });
 
-export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
+/**
+ * @param champsProjetRef  Réf vers { lire, ecrire } : des champs de projet
+ *   portés par d'autres modules et qui doivent voyager avec le dossier — les
+ *   cases à cocher de l'impression, par exemple. C'est une réf parce que ces
+ *   modules sont créés APRÈS celui-ci ; elle n'est lue qu'au moment d'enregistrer.
+ */
+export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {}) => {
     // Fallback : si showAlert n'est pas fourni, on retombe sur window.alert
     const alertFn = showAlert || (({ message }) => { window.alert(message); return Promise.resolve(); });
     const [intersectionName, setIntersectionName] = useState("Nouveau Carrefour");
@@ -1136,6 +1142,7 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
     // Load full state (for duplication)
     const loadFullState = (state) => {
         try {
+            champsProjetRef?.current?.ecrire?.(state);
             // Dossier « lecture seule » : détecté depuis le marqueur du fichier.
             setDossierReadOnly(isReadOnlyStamped(state));
             // Mettre à jour le nom du projet (clé de sauvegarde / nom du fichier)
@@ -1179,7 +1186,7 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
             // Handle new pfTabs format or old actionData format
             // All branches produce PFs with guaranteed complete structure
             if (state.pfTabs && Array.isArray(state.pfTabs) && state.pfTabs.length > 0) {
-                setPfTabs(ensurePFIntegrity(state.pfTabs, state.groups, state.conflictMatrix));
+                setPfTabs(ensurePFIntegrity(state.pfTabs, state.groups, state.conflictMatrix, state.cycleLength));
                 setActivePFIdRaw(state.activePFId || 1);
             } else if (state.actionData && Array.isArray(state.actionData)) {
                 setPfTabs([createEmptyPF({
@@ -1375,7 +1382,9 @@ export const useTrafficLight = ({ askConfirm, showAlert } = {}) => {
         externalLinks,
         capacityCompareSelection,
         capacityCompareDataset,
-        projectProperties
+        projectProperties,
+        // Champs de projet portés par d'autres modules (cf. champsProjetRef).
+        ...(champsProjetRef?.current?.lire?.() || {})
         // Note: simulation state is NOT included (per user request)
     });
 
