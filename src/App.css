@@ -2384,6 +2384,20 @@ body.amber-mode .help-back-to-top {
     padding: 0;
 }
 
+/* Priorité piéton : ni flux véhicule ni traversée piétonne. Le cercle la
+   dissocie des deux, et le numéro reprend la police des traversées (13 px)
+   plutôt que celle des véhicules (16 px). */
+.dossier-gf-label.pp {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .dossier-no-image {
     color: #999;
     font-style: italic;

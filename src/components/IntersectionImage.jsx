@@ -9,6 +9,7 @@ import './IntersectionImage.css';
 const IntersectionImage = ({
     groups,
     imageData,
+    imageFondClair = true,
     onImageChange,
     arrows,
     onArrowsChange,
@@ -834,7 +835,7 @@ const IntersectionImage = ({
             <div className="intersection-content">
                 <div
                     ref={containerRef}
-                    className="intersection-image-area"
+                    className={`intersection-image-area ${imageFondClair ? 'fond-clair' : 'fond-sombre'}`}
                     tabIndex="-1"
                     style={{ outline: 'none' }}
                     onClick={handleImageClick}
@@ -923,7 +924,9 @@ const IntersectionImage = ({
                             return Object.entries(groupMap).map(([gId, pts]) => {
                                 const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
                                 const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-                                const isPieton = getGroupInfo(Number(gId)).courant === 'Piéton';
+                                const courantGf = getGroupInfo(Number(gId)).courant;
+                                const isPieton = courantGf === 'Piéton';
+                                const isPP = courantGf === 'PP';
                                 return isPieton ? (
                                     <div
                                         key={`gnum-${gId}`}
@@ -938,7 +941,7 @@ const IntersectionImage = ({
                                 ) : (
                                     <div
                                         key={`gnum-${gId}`}
-                                        className="group-number-centroid"
+                                        className={`group-number-centroid${isPP ? ' pp' : ''}`}
                                         style={{ left: `${cx}%`, top: `${cy}%` }}
                                     >
                                         {gId}

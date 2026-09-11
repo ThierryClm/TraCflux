@@ -1,3 +1,36 @@
+/* Halo de survol d'une flèche.
+   La couleur ne peut pas être unique : le blanc disparaît sur un plan au trait
+   (fond blanc), une couleur vive est moins franche sur une vue aérienne. Le
+   conteneur porte donc 'fond-clair' ou 'fond-sombre' selon la luminance
+   mesurée de l'image (cf. utils/fondImage.js), et n'a qu'une variable à
+   redéfinir. Le magenta est absent du vocabulaire des feux : il ne peut pas
+   se confondre avec l'état vert, orange ou rouge de la flèche, dont le cœur
+   reste à sa propre couleur. */
+:root {
+    --halo-survol: #ff00c8;
+    --halo-survol-proche: 6px;
+    --halo-survol-loin: 16px;
+    --halo-survol-duree: 1.5s;
+}
+
+.fond-sombre {
+    --halo-survol: #ffffff;
+}
+
+/* La pulsation attire l'œil là où un halo fixe se perd, sur un plan qui peut
+   compter trente flèches. Elle respire au lieu de clignoter : l'aller-retour
+   reste continu, sans extinction. */
+@keyframes pulsation-halo-fleche {
+    0%, 100% {
+        filter: drop-shadow(0 0 var(--halo-survol-proche) var(--halo-survol))
+                drop-shadow(0 0 var(--halo-survol-loin) var(--halo-survol));
+    }
+    50% {
+        filter: drop-shadow(0 0 calc(var(--halo-survol-proche) * 1.9) var(--halo-survol))
+                drop-shadow(0 0 calc(var(--halo-survol-loin) * 1.7) var(--halo-survol));
+    }
+}
+
 .intersection-image-container {
     display: flex;
     flex-direction: column;
@@ -777,8 +810,19 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     z-index: 25;
 }
 
-.arrow-marker.hovered .arrow-symbol {
-    filter: drop-shadow(0 0 10px #fff) drop-shadow(0 0 20px #fff);
+.arrow-marker.hovered .arrow-symbol,
+.floating-arrow-marker.hovered .arrow-symbol {
+    filter: drop-shadow(0 0 var(--halo-survol-proche) var(--halo-survol))
+            drop-shadow(0 0 var(--halo-survol-loin) var(--halo-survol));
+    animation: pulsation-halo-fleche var(--halo-survol-duree) ease-in-out infinite;
+}
+
+/* Mouvement réduit demandé par le système : le halo reste, la pulsation part. */
+@media (prefers-reduced-motion: reduce) {
+    .arrow-marker.hovered .arrow-symbol,
+    .floating-arrow-marker.hovered .arrow-symbol {
+        animation: none;
+    }
 }
 
 .arrow-marker.hovered .arrow-label {
@@ -807,6 +851,18 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     border: none;
     border-radius: 0;
     padding: 0;
+}
+
+/* Priorité piéton : cercle et police des traversées, cf. .dossier-gf-label.pp */
+.group-number-centroid.pp {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Floating image popup styles */
@@ -966,6 +1022,3 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     z-index: 20;
 }
 
-.floating-arrow-marker.hovered .arrow-symbol {
-    filter: drop-shadow(0 0 8px #00ff00) drop-shadow(0 0 16px #00ff00);
-}

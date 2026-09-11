@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import usePopupWindow from './usePopupWindow';
 import { fitContentBox, cropFromBoxToImage, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
+import { mesurerFondClair } from '../utils/fondImage';
 
 // Barre d'outils zoom/rognage en tête de la fenêtre détachée : 6px de marge
 // haut et bas, le contenu (~22px), et 1px de filet inférieur.
@@ -44,6 +45,7 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     const [floatingZoom, setFloatingZoom] = useState(DEFAULT_ZOOM);
 
     const [imageNaturalDims, setImageNaturalDims] = useState({ width: 1, height: 1 });
+    const [imageFondClair, setImageFondClair] = useState(true);
 
     // Rognage hérité d'un projet antérieur au retrait automatique des bandes :
     // il est encore compté depuis le bord de la boîte. La conversion réclame
@@ -59,10 +61,15 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     }, [legacyCropPending, imageNaturalDims]);
 
     // Compute natural dimensions of intersection image (for print scaling)
+    // Le même décodage sert à juger la clarté du fond : elle décide de la
+    // couleur du halo de survol des flèches, qui doit contraster avec le plan.
     useEffect(() => {
         if (intersectionImage) {
             const img = new Image();
-            img.onload = () => setImageNaturalDims({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+            img.onload = () => {
+                setImageNaturalDims({ width: img.naturalWidth || 1, height: img.naturalHeight || 1 });
+                setImageFondClair(mesurerFondClair(img));
+            };
             img.src = intersectionImage;
         }
     }, [intersectionImage]);
@@ -119,6 +126,7 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
         showCropControls, setShowCropControls,
         floatingZoom, setFloatingZoom,
         imageNaturalDims,
+        imageFondClair,
         floatingImagePopup
     };
 };

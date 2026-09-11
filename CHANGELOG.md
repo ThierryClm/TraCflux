@@ -11,6 +11,27 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **Les flèches du plan du carrefour pulsent au survol, dans une couleur choisie selon le fond.**
+  Le halo était blanc sur le plan intégré et vert sur le plan détaché : le blanc était invisible
+  sur un plan de bureau d'études à trait noir sur fond blanc, et le vert entrait en concurrence
+  avec l'état vert de la flèche. TraCflux mesure désormais la luminance moyenne de l'image et
+  retient le magenta sur fond clair, le blanc sur une vue aérienne sombre. Le halo respire en une
+  seconde et demie pour se repérer sur un plan chargé, et s'immobilise si le système demande un
+  mouvement réduit.
+
+- **Le surlignage au survol d'une action de micro-régulation est plus franc.** Le liseré passe de
+  2 à 3 pixels, le halo gagne en densité, et les flèches dessinées en SVG — point de repos,
+  synchro BTS, instant CO, escamotage, bande passante — s'épaississent à leur tour. Ces valeurs
+  étaient jusqu'ici recopiées dans une trentaine de règles ; elles sont désormais réunies en tête
+  de la feuille de style du diagramme et se règlent en un seul endroit.
+
+- **Les priorités piéton se reconnaissent au premier coup d'œil sur le plan du carrefour.** Leur
+  numéro de groupe est désormais cerclé, là où les flux véhicule gardent le rectangle et les
+  traversées piétonnes le triangle, et il reprend la police des traversées plutôt que celle des
+  véhicules. Une priorité piéton n'étant ni un mouvement de véhicule ni une traversée, rien ne
+  la distinguait jusqu'ici des flux voitures. Le changement vaut pour le plan intégré, la
+  fenêtre détachée et le dossier imprimé.
+
 - **Le dossier s'imprime au choix en A4 paysage ou portrait.** Le sélecteur se trouve en tête de
   la boîte « Imprimer le dossier », le paysage restant la valeur par défaut : c'est lui qui donne
   au diagramme la largeur qu'exige un cycle long. Le portrait offre 190 mm utiles au lieu de 277,
@@ -29,6 +50,27 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   largeur disponible, 277 mm contre 190.
 
 ### Corrigé
+
+- **Le tableau Trafic détaché suit le survol.** Le surlignage turquoise de la ligne du groupe
+  fonctionnait dans le tableau intégré mais restait inerte dans la fenêtre détachée : la valeur
+  lui était transmise, mais elle manquait aux dépendances de son rendu, si bien que rien ne
+  déclenchait le rafraîchissement de la fenêtre.
+
+- **Survoler une flèche dans le plan détaché surligne le groupe dans le diagramme.** La fenêtre
+  détachée du carrefour affichait le surlignage qu'on lui envoyait, mais ne portait aucun
+  gestionnaire de souris sur ses flèches : elle lisait l'état partagé sans jamais l'écrire. Le
+  plan incrusté, lui, surlignait le diagramme depuis toujours. Les deux plans se comportent
+  désormais de la même façon, et le surlignage atteint aussi bien le diagramme en place que son
+  miroir détaché.
+
+- **Survoler le diagramme détaché allume les flèches du carrefour.** Le miroir en lecture seule
+  savait quel groupe était survolé mais ne le transmettait à personne : le plan du carrefour,
+  intégré comme détaché, restait inerte, alors qu'il suivait normalement le diagramme en place.
+
+- **Le diagramme détaché réagit au survol des actions de simulation.** Le miroir en lecture seule
+  recevait déjà le survol des flèches, des conflits et du volume utile, mais pas celui des actions
+  de micro-régulation : survoler une action à cocher n'allumait rien dans la fenêtre détachée,
+  alors que le diagramme en place se surlignait normalement.
 
 - **Le diagramme imprimé occupe la largeur de la page, marges de 10 mm comprises.** Trois postes
   la lui prenaient : la colonne des noms, dimensionnée pour des champs éditables alors qu'elle

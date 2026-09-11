@@ -1,3 +1,21 @@
+/* Surlignage au survol d'une action de micro-régulation.
+   Ces valeurs étaient recopiées à la main dans une trentaine de règles, avec la
+   couleur en dur treize fois : les régler demandait autant de retouches. Elles
+   vivent désormais ici, et nulle part ailleurs.
+   Les familles dessinées en SVG gardent leur propre couleur — bleu pour
+   l'escamotage, vert pour la bande passante — car le surlignage doit renforcer
+   l'élément, pas lui retirer son identité ; seule l'épaisseur est commune. */
+:root {
+    --surlignage-couleur: #ffcc00;
+    --surlignage-trait: 3px;
+    --surlignage-halo: 0 0 14px rgba(255, 204, 0, 0.75);
+    --surlignage-fond: rgba(255, 204, 0, 0.28);
+    /* Traits SVG, sans unité : stroke-width les veut nus */
+    --surlignage-trait-svg: 4;
+    --surlignage-trait-svg-mince: 3;
+    --surlignage-halo-svg: drop-shadow(0 0 4px rgba(255, 204, 0, 0.85));
+}
+
 .timeline-container {
     display: flex;
     flex-direction: column;
@@ -793,9 +811,9 @@
 .controle-flot-intermittent.highlighted,
 .controle-flot-orange.highlighted,
 .controle-flot-red.highlighted {
-    outline: 2px solid #ffcc00;
+    outline: var(--surlignage-trait) solid var(--surlignage-couleur);
     outline-offset: 1px;
-    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+    box-shadow: var(--surlignage-halo);
 }
 
 /* Highlighted state for action overlays */
@@ -805,9 +823,9 @@
 .adaptatif-overlay.highlighted,
 .escamotage-overlay.highlighted,
 .signa-wrapper.highlighted {
-    outline: 2px solid #ffcc00;
+    outline: var(--surlignage-trait) solid var(--surlignage-couleur);
     outline-offset: 1px;
-    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+    box-shadow: var(--surlignage-halo);
     z-index: 100;
 }
 
@@ -818,30 +836,30 @@
 
 .brace-marker.highlighted::before,
 .brace-marker.highlighted::after {
-    border-color: #ffcc00;
+    border-color: var(--surlignage-couleur);
 }
 
 .brace-marker.highlighted .brace-point {
-    border-top-color: #ffcc00;
+    border-top-color: var(--surlignage-couleur);
 }
 
 .ouverture-anticipee.highlighted {
-    border-color: rgba(255, 204, 0, 0.8);
+    border-color: var(--surlignage-couleur);
 }
 
 .escamotage-group-hover.highlighted {
-    background: rgba(255, 204, 0, 0.2);
+    background: var(--surlignage-fond);
     border-radius: 3px;
 }
 
 .escamotage-arrows.highlighted line {
     stroke: #0D47A1;
-    stroke-width: 2;
+    stroke-width: var(--surlignage-trait-svg-mince);
 }
 
 .escamotage-arrows.highlighted rect {
     stroke: #0D47A1;
-    stroke-width: 2;
+    stroke-width: var(--surlignage-trait-svg-mince);
 }
 
 .escamotage-arrows.highlighted polygon {
@@ -850,9 +868,9 @@
 
 .signa-orange-bar.highlighted,
 .signa-blue-bar.highlighted {
-    outline: 2px solid #ffcc00;
+    outline: var(--surlignage-trait) solid var(--surlignage-couleur);
     outline-offset: 1px;
-    box-shadow: 0 0 8px rgba(255, 204, 0, 0.5);
+    box-shadow: var(--surlignage-halo);
 }
 
 /* Point de repos arrows */
@@ -865,12 +883,14 @@
 }
 
 .point-repos-arrows.highlighted line {
-    stroke: #ffcc00;
-    stroke-width: 3;
+    stroke: var(--surlignage-couleur);
+    stroke-width: var(--surlignage-trait-svg);
+    filter: var(--surlignage-halo-svg);
 }
 
 .point-repos-arrows.highlighted polygon {
-    fill: #ffcc00;
+    fill: var(--surlignage-couleur);
+    filter: var(--surlignage-halo-svg);
 }
 
 /* Synchro BTS arrows */
@@ -883,12 +903,14 @@
 }
 
 .synchro-bts-arrows.highlighted line {
-    stroke: #ffcc00;
-    stroke-width: 3;
+    stroke: var(--surlignage-couleur);
+    stroke-width: var(--surlignage-trait-svg);
+    filter: var(--surlignage-halo-svg);
 }
 
 .synchro-bts-arrows.highlighted polygon {
-    fill: #ffcc00;
+    fill: var(--surlignage-couleur);
+    filter: var(--surlignage-halo-svg);
 }
 
 /* Instant CO arrows */
@@ -901,12 +923,14 @@
 }
 
 .instant-co-arrows.highlighted line {
-    stroke: #ffcc00;
-    stroke-width: 3;
+    stroke: var(--surlignage-couleur);
+    stroke-width: var(--surlignage-trait-svg);
+    filter: var(--surlignage-halo-svg);
 }
 
 .instant-co-arrows.highlighted polygon {
-    fill: #ffcc00;
+    fill: var(--surlignage-couleur);
+    filter: var(--surlignage-halo-svg);
 }
 
 /* Labels below the arrows: cursor indicates hover target */
@@ -927,9 +951,9 @@
 
 .priorite-pietons-bar.highlighted,
 .priorite-pietons-wrapper.highlighted {
-    outline: 2px solid #ffcc00;
+    outline: var(--surlignage-trait) solid var(--surlignage-couleur);
     outline-offset: 1px;
-    box-shadow: 0 0 8px rgba(255, 204, 0, 0.5);
+    box-shadow: var(--surlignage-halo);
 }
 
 /* Début de bande passante arrows */
@@ -946,7 +970,7 @@
 
 .debut-bande-arrows.highlighted line {
     stroke: #00ff00;
-    stroke-width: 2;
+    stroke-width: var(--surlignage-trait-svg-mince);
 }
 
 .debut-bande-arrows.highlighted polygon {
@@ -967,7 +991,7 @@
 
 .fin-bande-arrows.highlighted line {
     stroke: #00ff00;
-    stroke-width: 2;
+    stroke-width: var(--surlignage-trait-svg-mince);
 }
 
 .fin-bande-arrows.highlighted polygon {

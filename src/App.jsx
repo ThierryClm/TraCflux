@@ -564,6 +564,7 @@ function App() {
         showCropControls, setShowCropControls,
         floatingZoom, setFloatingZoom,
         imageNaturalDims,
+        imageFondClair,
         floatingImagePopup
     } = useFloatingImage(intersectionImage, intersectionName, activePFName, intersectionArrows);
 
@@ -2050,9 +2051,9 @@ function App() {
         floatingCrop, setFloatingCrop,
         floatingZoom, setFloatingZoom,
         showCropControls, setShowCropControls,
-        intersectionArrows, groups, imageNaturalDims,
+        intersectionArrows, groups, imageNaturalDims, imageFondClair,
         selectedActions: simulationSelectedActions, conflictMatrix,
-        hoveredArrowGroupId, hoveredDiagramTime,
+        hoveredArrowGroupId, setHoveredArrowGroupId, hoveredDiagramTime,
         simulationEnabled, isPlayingSimulation,
         simulationCurrentTime, simulationResult,
         actionData, cycleLength,
@@ -2222,6 +2223,7 @@ function App() {
                     simulationCurrentTime={simulationEnabled ? simulationCurrentTime : null}
                     isPlayingSimulation={simulationEnabled && isPlayingSimulation}
                     playbackTime={isPlayingSimulation ? simulationCurrentTime : null}
+                    hoveredActionId={hoveredActionId}
                     hoveredArrowGroupId={hoveredArrowGroupId}
                     hoveredArrowGroupSaturated={hoveredArrowGroupSaturated}
                     hoveredConflict={hoveredConflict}
@@ -2243,7 +2245,7 @@ function App() {
                     startDrag={noop}
                     endDrag={noop}
                     setHoveredActionId={noop}
-                    setHoveredGroupId={noop}
+                    setHoveredGroupId={setHoveredArrowGroupId}
                     setHoveredDiagramTime={noop}
                     setIsPlayingSimulation={noop}
                     setSimulationCurrentTime={noop}
@@ -2253,7 +2255,7 @@ function App() {
                 />
             </div>
         );
-    }, [showFloatingDiagram, groups, globalTime, getGroupState, pixelsPerSecond, displayConflicts, conflictMatrix, cycleLength, actionData, simulationEnabled, simulationSelectedActions, simulationResult, simulationCurrentTime, isPlayingSimulation, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict, hoveredVUtile, activePFName, biCarrefourSeparator, showGroupNamesDiagram, showMicroOnHover, tooltipPrefs, diagramPopup.renderToPopup]);
+    }, [showFloatingDiagram, groups, globalTime, getGroupState, pixelsPerSecond, displayConflicts, conflictMatrix, cycleLength, actionData, simulationEnabled, simulationSelectedActions, simulationResult, simulationCurrentTime, isPlayingSimulation, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict, hoveredVUtile, activePFName, biCarrefourSeparator, showGroupNamesDiagram, showMicroOnHover, tooltipPrefs, diagramPopup.renderToPopup]);
 
     // Render conflicts list into popup window
     useEffect(() => {
@@ -2300,7 +2302,7 @@ function App() {
             </div>
         );
     }, [showFloatingTraffic, groups, cycleLength, activeTrafficDataset, actionData,
-        simulationSelectedActions, simulationResult, simulationEnabled,
+        simulationSelectedActions, simulationResult, simulationEnabled, hoveredArrowGroupId,
         trafficPopup.renderToPopup, updateTrafficData,
         getTrafficData, updateGroupParams, trafficDatasetNames, copyTrafficDataset, addCustomTrafficDataset]);
 
@@ -3140,6 +3142,7 @@ function App() {
                                 setCurrentTime={setSimulationCurrentTime}
                                 hoveredArrowGroupId={hoveredArrowGroupId}
                                 setHoveredArrowGroupId={setHoveredArrowGroupId}
+                                imageFondClair={imageFondClair}
                                 hoveredDiagramTime={hoveredDiagramTime}
                                 actionData={actionData}
                                 selectedActions={simulationSelectedActions}
@@ -4613,6 +4616,9 @@ function App() {
                                                             const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
                                                             const grp = groups.find(g => String(g.id) === gId);
                                                             const isPieton = grp?.courant === 'Piéton';
+                                                            // La priorité piéton n'est ni un flux véhicule ni une
+                                                            // traversée : elle a sa propre forme, le cercle.
+                                                            const isPP = grp?.courant === 'PP';
                                                             return isPieton ? (
                                                                 <div
                                                                     key={`gf-${gId}`}
@@ -4627,7 +4633,7 @@ function App() {
                                                             ) : (
                                                                 <div
                                                                     key={`gf-${gId}`}
-                                                                    className="dossier-gf-label"
+                                                                    className={`dossier-gf-label${isPP ? ' pp' : ''}`}
                                                                     style={{ left: `${cx}%`, top: `${cy}%` }}
                                                                 >
                                                                     {gId}

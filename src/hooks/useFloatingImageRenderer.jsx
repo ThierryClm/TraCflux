@@ -16,9 +16,11 @@ const useFloatingImageRenderer = ({
     intersectionArrows,
     groups,
     imageNaturalDims,
+    imageFondClair = true,
     selectedActions,
     conflictMatrix,
     hoveredArrowGroupId,
+    setHoveredArrowGroupId,
     hoveredDiagramTime,
     isPlayingSimulation,
     simulationCurrentTime,
@@ -139,7 +141,7 @@ const useFloatingImageRenderer = ({
                         }}
                     >
                         <div
-                            className="floating-image-inner"
+                            className={`floating-image-inner ${imageFondClair ? 'fond-clair' : 'fond-sombre'}`}
                             style={{
                                 // Les marges décalent la boîte AVANT la mise à
                                 // l'échelle, qui opère ensuite depuis son coin haut
@@ -163,6 +165,7 @@ const useFloatingImageRenderer = ({
                                 const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
                                 const g = groups.find(gr => gr.id === Number(gId));
                                 const isPieton = (g?.courant || '') === 'Piéton';
+                                const isPP = (g?.courant || '') === 'PP';
                                 return isPieton ? (
                                     <div key={`fgnum-${gId}`} className="group-number-centroid pieton" style={{ left: `${cx}%`, top: `${cy}%` }}>
                                         <svg viewBox="0 0 20 18" width="20" height="18">
@@ -171,7 +174,7 @@ const useFloatingImageRenderer = ({
                                         </svg>
                                     </div>
                                 ) : (
-                                    <div key={`fgnum-${gId}`} className="group-number-centroid" style={{ left: `${cx}%`, top: `${cy}%` }}>
+                                    <div key={`fgnum-${gId}`} className={`group-number-centroid${isPP ? ' pp' : ''}`} style={{ left: `${cx}%`, top: `${cy}%` }}>
                                         {gId}
                                     </div>
                                 );
@@ -199,6 +202,8 @@ const useFloatingImageRenderer = ({
                                         key={arrow.id}
                                         className={`floating-arrow-marker ${isHovered ? 'hovered' : ''} ${isPedestrianOrCycle ? 'side-label' : ''}`}
                                         style={{ left: `${arrow.x}%`, top: `${arrow.y}%` }}
+                                        onMouseEnter={() => setHoveredArrowGroupId && setHoveredArrowGroupId(arrow.groupId)}
+                                        onMouseLeave={() => setHoveredArrowGroupId && setHoveredArrowGroupId(null)}
                                     >
                                         <div className="arrow-symbol" style={{ transform: `rotate(${rotation}deg) scale(${scale})` }}>
                                             {renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, isPPLit(arrow.groupId, activeTime, colorContext))}
@@ -227,7 +232,7 @@ const useFloatingImageRenderer = ({
             </div>
         );
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
-        intersectionArrows, groups, imageNaturalDims, hoveredArrowGroupId, hoveredDiagramTime,
+        intersectionArrows, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredDiagramTime,
         selectedActions, conflictMatrix,
         isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
