@@ -63,10 +63,11 @@ export default defineConfig({
   preview: {
     port: 4173,
     // strictPort : sans lui, Vite bascule silencieusement sur 4174 quand 4173
-    // est occupé — cas courant ici, les processus node.exe s'accumulant après
-    // plusieurs aperçus (voir la section Dépannage du README). La page d'attente
-    // des lanceurs sonderait alors le 4173 et se connecterait au serveur
-    // périmé. Mieux vaut un échec franc qu'un aperçu qui montre l'ancien build.
+    // est occupé. Les serveurs s'accumulaient alors sur les ports suivants,
+    // pendant que la page d'attente des lanceurs sondait le 4173 et se
+    // connectait au serveur périmé. Mieux vaut un échec franc qu'un aperçu qui
+    // montre l'ancien build. C'est ce réglage qui a fait disparaître
+    // l'accumulation de processus node.exe, et non l'inverse.
     strictPort: true
   },
   test: {

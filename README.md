@@ -132,6 +132,7 @@ L'application s'ouvre à `http://localhost:3000`.
 | `npm run dev` | Serveur de développement (rechargement à chaud) |
 | `npm run build` | Build de production dans `dist/` |
 | `npm run preview` | Aperçu local du build de production |
+| `npm run serve` | Reconstruit `dist/`, s'assure que le serveur d'aperçu tourne, et **vérifie qu'il sert bien ce build** — la commande à utiliser au quotidien (voir [Dépannage](#dépannage)) |
 | `npm run clean` | Nettoyage local : supprime `dist/` et arrête les processus `node.exe` (Windows — voir [Dépannage](#dépannage)) |
 | `npm test` | Lancer les tests (Vitest) |
 | `npm run test:ui` | Les mêmes tests dans l'interface graphique de Vitest |
@@ -144,18 +145,21 @@ Les quelques fichiers `.vbs` à la racine sont des lanceurs Windows personnels �
 
 ### Dépannage
 
-Après plusieurs `npm run preview` consécutifs dans une même session de développement, deux désagréments peuvent apparaître :
+Le symptôme à connaître en développement : **l'application semble ignorer vos modifications**. La PWA installée sur `localhost:4173` sert son cache tant qu'un serveur ne lui présente pas un nouveau build, et elle le fait sans rien signaler.
 
-- des processus `node.exe` s'accumulent en arrière-plan ;
-- le service worker sert encore un build précédent : le bandeau **« Nouvelle version disponible »** s'affiche à chaque rebuild, ou les fenêtres détachées gardent l'ancien cache (thème ou contenu figé).
+**Utilisez `npm run serve` plutôt que `npm run preview`.** Il reconstruit `dist/`, démarre le serveur s'il ne tourne pas, puis télécharge `/index.html` depuis ce serveur et le compare au fichier qui vient d'être produit. Il ne dit « c'est prêt » qu'après cette vérification, et sort en erreur sinon — serveur arrêté, ou processus résiduel occupant le port sans rien servir. Un `npm run preview` ne vérifie rien et vous laisse devant une page muette.
 
-**Solution** :
-1. `npm run clean` (supprime `dist/` et arrête tous les `node.exe`)
-2. Fermer toutes les fenêtres du navigateur ouvertes sur `localhost:4173`
-3. Optionnel : `edge://settings/cookies/detail?site=localhost%3A4173` → **Supprimer** (vide le service worker et le cache pour ce site uniquement)
-4. Relancer normalement (`npm run preview` ou via le lanceur VBS)
+Rechargez ensuite la fenêtre par **Ctrl+R**, puis cliquez sur **« Recharger »** quand le bandeau apparaît. Laisser la fenêtre ouverte ne suffit pas : c'est le rechargement qui déclenche la recherche de nouvelle version. En cas de doute, la date de build figure dans le rapport de diagnostic — c'est le seul contrôle fiable.
 
-Ces symptômes ne concernent **que le workflow développeur** (rebuilds successifs). Les utilisateurs finaux (PWA hébergée ou installation depuis une release) ne sont pas concernés : pour eux, le bandeau « Nouvelle version disponible » est le comportement **normal** de mise à jour (il n'apparaît qu'après un vrai déploiement).
+Si le cache reste malgré tout figé (thème ou contenu d'une fenêtre détachée qui ne bouge plus) :
+
+1. Fermer toutes les fenêtres du navigateur ouvertes sur `localhost:4173`
+2. `edge://settings/cookies/detail?site=localhost%3A4173` → **Supprimer** — vide le service worker et le cache pour ce seul site
+3. `npm run serve`
+
+`npm run clean` reste disponible, mais son `taskkill` arrête **tous** les processus `node.exe` de la machine, pas seulement ceux du projet : à éviter si un autre travail tourne en parallèle.
+
+Deux malentendus courants, que la configuration actuelle écarte. Les processus `node.exe` ne s'accumulent plus après plusieurs aperçus : `strictPort` fait échouer franchement un second serveur au lieu de le replier silencieusement sur le port suivant. Et le bandeau « Nouvelle version disponible » à chaque rebuild n'est pas un défaut, c'est le mécanisme lui-même — chaque build produit un nouveau service worker. Pour l'utilisateur final (PWA hébergée ou installée depuis une release), ce bandeau n'apparaît qu'après un vrai déploiement.
 
 ## Exemple
 
