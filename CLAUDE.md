@@ -28,8 +28,19 @@ press Ctrl+R in the TraCflux window and click « Recharger » on the banner.
 `npm run serve` rebuilds and starts `vite preview` only if port 4173 is free —
 an already running server picks up the new build on its own (sirv re-reads from
 disk on every request), and `preview.strictPort` would make a second one fail.
-The server is detached: it survives the session that started it, so in practice
-it only starts on the first run after a reboot.
+
+The server is launched **outside the current process tree**, through WMI
+(`Win32_Process.Create`), so its parent is `WmiPrvSE.exe` and it belongs to no
+terminal job object. `detached: true` alone was not enough on Windows: the
+process was orphaned from its launcher but stayed inside the job, and Windows
+kills a whole job at once when it closes — on 2026-09-11 the server vanished
+mid-session that way, with nothing having stopped it.
+
+**`npm run serve` now proves its own claim**: before printing anything
+reassuring it fetches `/index.html` from the server and compares it byte for
+byte with `dist/index.html`. If they differ — server down, or a stale process
+squatting the port — it exits 1 and says so. A green run is therefore
+trustworthy; do not pipe its output through `tail -1`, which hides the verdict.
 
 The « Recharger » banner appears when the service worker re-checks for a new
 version — on page load, or once an hour ([ReloadPrompt.jsx](src/components/ReloadPrompt.jsx)).
