@@ -853,18 +853,6 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     padding: 0;
 }
 
-/* Priorité piéton : cercle et police des traversées, cf. .dossier-gf-label.pp */
-.group-number-centroid.pp {
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    border-radius: 50%;
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 /* Floating image popup styles */
 .floating-header-buttons {
     display: flex;

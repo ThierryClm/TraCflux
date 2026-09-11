@@ -6,6 +6,22 @@
     margin: 0 0 1rem 0;
     color: #fff;
     font-size: 1rem;
+    position: relative;
+}
+
+/* Posé sur la ligne du titre sans y prendre de place : la hauteur du <h3> ne
+   dépend pas de lui, et le formulaire reste à sa place au pixel près.
+   Le logo est centré sur une ligne de 21 px et déborde donc de (h - 21) / 2
+   de chaque côté, pour 16 px de marge libre sous le titre : au-delà de 53 px
+   il mordrait sur le champ « Nom du carrefour ». Mesuré, pas estimé. */
+.properties-title-logo {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 50px;
+    width: auto;
+    pointer-events: none;
 }
 
 .properties-form {

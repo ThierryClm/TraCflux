@@ -58,6 +58,7 @@ import useFloatingForm from './hooks/useFloatingForm';
 import useFloatingProperties from './hooks/useFloatingProperties';
 import useFloatingDiagnostic from './hooks/useFloatingDiagnostic';
 import useFloatingTraffic from './hooks/useFloatingTraffic';
+import { LOGO_APP } from './utils/logoApp';
 import useFloatingRemarks from './hooks/useFloatingRemarks';
 import RemarquesEditor from './components/RemarquesEditor';
 import HelpContent from './components/HelpContent';
@@ -4552,6 +4553,9 @@ function App() {
                                         <div className="print-dossier-section print-dossier-title">
                                             <div className="dossier-title-logos">
                                                 <div className="dossier-title-logo-left">
+                                                    {/* Le logo de l'outil ouvre la rangée ; celui du maître
+                                                        d'ouvrage, quand il existe, se place à sa droite. */}
+                                                    <img src={LOGO_APP} alt="TraCflux" className="dossier-logo-app" />
                                                     {projectProperties.logoMoa && <img src={projectProperties.logoMoa} alt="" className="dossier-logo-large" />}
                                                 </div>
                                                 <div className="dossier-title-center">

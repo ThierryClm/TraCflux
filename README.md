@@ -70,6 +70,8 @@ En réunion comme en visio, détachez la fenêtre **Image du carrefour** : c'est
 
 L'auditoire ne voit que l'essentiel — le carrefour qui « vit » au rythme du cycle — pendant que vous gardez le contrôle complet sur votre écran de travail (diagramme, matrice, panneau de simulation, micro-régulation) et commentez en direct les actions que vous activez et leur effet sur la dynamique du carrefour.
 
+Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèche de la fenêtre partagée : la ligne du groupe s'allume dans votre diagramme, ainsi que sa ligne dans le formulaire et dans les données trafic. Survolez une ligne de votre diagramme : c'est la flèche correspondante qui s'allume sous les yeux de l'auditoire, entourée d'un halo. « Ce groupe-là, c'est cette flèche-là » se montre au lieu de se décrire.
+
 ## Fonctionnalités principales
 
 ### Module Diagramme de Feux
@@ -92,7 +94,7 @@ L'auditoire ne voit que l'essentiel — le carrefour qui « vit » au rythme du 
 
 - **Import de projets DiagFeux (`.dfe`)** *(en cours de développement)* — reprise des études réalisées avec le logiciel du CERTU/Cerema (voir [Reprendre les études DiagFeux](#reprendre-les-études-diagfeux))
 - Import Excel / CSV, export JSON
-- Export PDF et PNG du diagramme, dossier d'impression complet
+- Export PDF et PNG du diagramme, dossier d'impression complet, en A4 paysage ou portrait au choix
 
 ### Module Onde verte
 

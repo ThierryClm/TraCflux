@@ -2238,9 +2238,22 @@ body.amber-mode .help-back-to-top {
 
 .dossier-title-logo-left,
 .dossier-title-logo-right {
-    flex: 0 0 100px;
+    /* Le flanc gauche porte deux logos depuis que celui de l'outil s'y ajoute :
+       80 px, l'écart de 8, puis jusqu'à 100 px pour le maître d'ouvrage. Le
+       flanc droit suit la même largeur, sans quoi le titre cesserait d'être
+       centré sur la feuille. */
+    flex: 0 0 190px;
     display: flex;
     align-items: center;
+    gap: 8px;
+}
+
+/* Plus discret que les logos des partenaires : c'est l'outil, pas un acteur
+   du projet. */
+.dossier-logo-app {
+    max-height: 80px;
+    max-width: 80px;
+    object-fit: contain;
 }
 
 .dossier-title-logo-left {

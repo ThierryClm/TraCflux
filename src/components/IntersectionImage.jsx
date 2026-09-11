@@ -924,9 +924,7 @@ const IntersectionImage = ({
                             return Object.entries(groupMap).map(([gId, pts]) => {
                                 const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
                                 const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
-                                const courantGf = getGroupInfo(Number(gId)).courant;
-                                const isPieton = courantGf === 'Piéton';
-                                const isPP = courantGf === 'PP';
+                                const isPieton = getGroupInfo(Number(gId)).courant === 'Piéton';
                                 return isPieton ? (
                                     <div
                                         key={`gnum-${gId}`}
@@ -941,7 +939,7 @@ const IntersectionImage = ({
                                 ) : (
                                     <div
                                         key={`gnum-${gId}`}
-                                        className={`group-number-centroid${isPP ? ' pp' : ''}`}
+                                        className="group-number-centroid"
                                         style={{ left: `${cx}%`, top: `${cy}%` }}
                                     >
                                         {gId}

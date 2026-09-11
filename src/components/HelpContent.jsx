@@ -413,8 +413,22 @@ const HelpContent = ({ initialAnchor = null }) => {
                     <li><strong>Actions glissables :</strong> Les overlays d'actions peuvent aussi être redimensionnés par glisser-déposer</li>
                     <li><strong>Zoom :</strong> Utilisez le curseur dans l'en-tête</li>
                     <li><strong>Dépendances :</strong> Affichez les flèches de dégagement avec le bouton "Dépendance"</li>
-                    <li><strong>Surbrillance :</strong> Survolez une action dans le tableau ou le diagramme pour la mettre en évidence</li>
+                    <li><strong>Surbrillance :</strong> Survolez une action dans le tableau ou le diagramme pour la mettre en évidence (voir <em>Survol et mise en relation</em> ci-dessous)</li>
                 </ul>
+            </section>
+
+            <section className="help-section">
+                <h4>Survol et mise en relation</h4>
+                <p>Un même groupe de feux est représenté à plusieurs endroits à la fois : une ligne dans le diagramme, une ligne dans le formulaire, une ligne dans les données Trafic, une ou plusieurs flèches sur le plan du carrefour. Le survol les relie : <strong>poser la souris sur l'une de ces représentations met toutes les autres en évidence.</strong></p>
+                <ul>
+                    <li><strong>Survoler une flèche du plan</strong> teinte la ligne du groupe dans le diagramme, fait ressortir toutes ses barres de phase, et surligne sa ligne dans le formulaire et dans les données Trafic.</li>
+                    <li><strong>Survoler une ligne du diagramme</strong> allume les flèches correspondantes sur le plan du carrefour.</li>
+                    <li><strong>Survoler une ligne des données Trafic</strong> produit le même effet, et signale par une teinte rouge un groupe dont la capacité est dépassée.</li>
+                    <li><strong>Survoler une action de micro-régulation</strong>, dans son tableau ou dans le panneau de simulation, cerne son incrustation dans le diagramme d'un liseré jaune.</li>
+                </ul>
+                <p>Sur le plan du carrefour, la flèche survolée est entourée d'un halo qui pulse doucement. Sa couleur s'adapte au fond de l'image : <strong>magenta sur un plan clair</strong>, <strong>blanc sur une vue aérienne sombre</strong>. Ce n'est pas un défaut d'affichage si elle change en passant d'un carrefour à l'autre — un halo blanc serait invisible sur un plan au trait, une couleur vive moins franche sur une photo.</p>
+                <p><strong>Ces liens franchissent les fenêtres détachées, dans les deux sens.</strong> Le plan du carrefour posé sur un second écran réagit au survol du diagramme resté sur le premier, et réciproquement. Il en va de même du miroir du diagramme, du formulaire et des données Trafic : une fenêtre détachée n'est pas une copie figée, elle reste solidaire du reste.</p>
+                <p><em>Si votre système est réglé sur « mouvement réduit », le halo reste affiché mais ne pulse pas.</em></p>
             </section>
 
             <section className="help-section">
@@ -457,6 +471,7 @@ const HelpContent = ({ initialAnchor = null }) => {
                     <li><strong>Déplacement au clavier :</strong> Sélectionnez une flèche en cliquant dessus, puis utilisez les touches fléchées du clavier (gauche, droite, haut, bas) pour la déplacer point par point. Le focus doit être sur l'image du carrefour (ne fonctionne pas quand l'image est détachée).</li>
                     <li><strong>Glisser-déposer :</strong> Cliquez et maintenez sur une flèche pour la déplacer. La flèche suit le mouvement de la souris sans se recentrer sur le point de clic.</li>
                 </ul>
+                <p>Le survol d'une flèche l'entoure d'un halo et met en évidence le groupe partout ailleurs — diagramme, formulaire, données Trafic. Voir <em>Survol et mise en relation</em>.</p>
             </section>
 
             <section className="help-section">
@@ -643,14 +658,18 @@ const HelpContent = ({ initialAnchor = null }) => {
 
             <section className="help-section">
                 <h4>Impression du dossier</h4>
-                <p>Le menu Fichier → <strong>Imprimer le dossier...</strong> ouvre un dialog de sélection des sections à inclure dans le dossier imprimé (format A4 paysage).</p>
+                <p>Le menu Fichier → <strong>Imprimer le dossier...</strong> ouvre un dialog de sélection des sections à inclure dans le dossier imprimé, et du format de page.</p>
+                <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Format de page : paysage ou portrait</h5>
+                <p>Le sélecteur se trouve en tête du dialog. Le <strong>paysage</strong> est la valeur par défaut : c'est lui qui donne au diagramme la largeur qu'exige un cycle long. Le <strong>portrait</strong> offre 190 mm utiles au lieu de 277, mais 240 mm de hauteur au lieu de 148 — plus favorable aux pages de tableaux. Le format retenu est mémorisé avec le projet.</p>
+                <p>Le choix se fait sur la durée du cycle, par une règle simple. Chaque format a un <strong>cycle de référence</strong> : 120 secondes en paysage, 80 en portrait. En deçà de ce seuil, une seconde vaut toujours la même largeur, quel que soit le plan de feu — deux plans de durées différentes restent donc comparables à la règle. Au-delà, le diagramme est comprimé pour tenir dans la page.</p>
+                <p>Autrement dit : un carrefour à cycle long veut le paysage, sous peine d'un diagramme tassé ; un carrefour à cycle court gagne au portrait, qui laisse plus de hauteur aux tableaux et à la matrice.</p>
                 <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Sélection des sections</h5>
                 <p>Le dialog présente des cases à cocher organisées en deux niveaux :</p>
                 <ul>
                     <li><strong>Sections globales</strong> (niveau principal) :
                         <ul>
                             <li><em>Image du carrefour :</em> Photo ou schéma du carrefour avec les flèches des groupes de feux</li>
-                            <li><em>Numéros de GF :</em> Affiche les numéros des groupes de feux sur l'image (option disponible si l'image contient des flèches)</li>
+                            <li><em>Numéros de GF :</em> Affiche les numéros des groupes de feux sur l'image (option disponible si l'image contient des flèches). Sur la page imprimée, la forme qui entoure le numéro dit la nature du courant : <strong>rectangle</strong> pour un flux véhicule, <strong>triangle</strong> pour une traversée piétonne, <strong>cercle</strong> pour une priorité piéton (courant PP), qui n'est ni l'un ni l'autre</li>
                             <li><em>Formulaire :</em> Tableau des groupes avec leurs paramètres (type, courant, durées)</li>
                             <li><em>Matrice de sécurité :</em> Matrice globale des temps de dégagement entre groupes de feux, tous plans de feux confondus</li>
                             <li><em>Matrice des temps interverts :</em> Matrice de dégagement entre groupes conflictuels pour le plan de feu actif</li>
@@ -678,7 +697,7 @@ const HelpContent = ({ initialAnchor = null }) => {
                     <li><strong>Page de titre :</strong> Nom du carrefour</li>
                     <li><strong>Sections globales :</strong> Image du carrefour, formulaire, matrice de sécurité et matrice des temps interverts (si cochées)</li>
                     <li><strong>Pour chaque PF coché :</strong> Diagramme du plan de feu, suivi de ses conditions de micro-régulation, variables micro, phasage bulle et données de trafic/capacité (selon les sous-options cochées)</li>
-                    <li><strong>Pied de page :</strong> Nom du fichier projet et date d'impression sur chaque page</li>
+                    <li><strong>Pied de page :</strong> « TraCflux » et le numéro de version, en bas à gauche de chaque page</li>
                 </ul>
                 <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Paramètres d'impression recommandés</h5>
                 <ul>

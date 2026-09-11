@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import './PropertiesPanel.css';
+import { LOGO_APP } from '../utils/logoApp';
 
 const PHASE_OPTIONS = [
     { value: '', label: '--' },
@@ -96,6 +97,10 @@ const PropertiesPanel = ({ intersectionName, setIntersectionName, projectPropert
                         Détacher
                     </button>
                 )}
+                {/* Hors du flux : le titre garde exactement sa hauteur, donc les
+                    champs dessous ne bougent pas, quelle que soit la taille du
+                    logo. Le débord vertical tient dans la marge basse du titre. */}
+                <img src={LOGO_APP} alt="TraCflux" className="properties-title-logo" />
             </h3>
             <div className="properties-form">
                 <div className="property-field">

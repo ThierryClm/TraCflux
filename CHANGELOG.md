@@ -7,9 +7,15 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
-## [Non publié]
+## [1.2.11] — 2026-09-11
 
 ### Ajouté
+
+- **Le logo TraCflux signe le panneau des propriétés et la page de titre du dossier.** Dans le
+  panneau, il se pose à droite du titre et du bouton Détacher, hors du flux : la hauteur du titre
+  ne change pas et les champs restent à leur place. Sur la première page du dossier imprimé, il
+  ouvre la rangée du haut et décale vers la droite le logo du maître d'ouvrage lorsqu'il existe,
+  le titre du carrefour restant centré sur la feuille.
 
 - **Les flèches du plan du carrefour pulsent au survol, dans une couleur choisie selon le fond.**
   Le halo était blanc sur le plan intégré et vert sur le plan détaché : le blanc était invisible
@@ -25,12 +31,12 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   étaient jusqu'ici recopiées dans une trentaine de règles ; elles sont désormais réunies en tête
   de la feuille de style du diagramme et se règlent en un seul endroit.
 
-- **Les priorités piéton se reconnaissent au premier coup d'œil sur le plan du carrefour.** Leur
-  numéro de groupe est désormais cerclé, là où les flux véhicule gardent le rectangle et les
+- **Les priorités piéton se reconnaissent au premier coup d'œil sur le plan du carrefour imprimé.**
+  Leur numéro de groupe y est désormais cerclé, là où les flux véhicule gardent le rectangle et les
   traversées piétonnes le triangle, et il reprend la police des traversées plutôt que celle des
-  véhicules. Une priorité piéton n'étant ni un mouvement de véhicule ni une traversée, rien ne
-  la distinguait jusqu'ici des flux voitures. Le changement vaut pour le plan intégré, la
-  fenêtre détachée et le dossier imprimé.
+  véhicules. Une priorité piéton n'étant ni un mouvement de véhicule ni une traversée, rien ne la
+  distinguait jusqu'ici des flux voitures. Les plans affichés à l'écran, intégré et détaché, sont
+  inchangés.
 
 - **Le dossier s'imprime au choix en A4 paysage ou portrait.** Le sélecteur se trouve en tête de
   la boîte « Imprimer le dossier », le paysage restant la valeur par défaut : c'est lui qui donne

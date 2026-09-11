@@ -165,7 +165,6 @@ const useFloatingImageRenderer = ({
                                 const cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
                                 const g = groups.find(gr => gr.id === Number(gId));
                                 const isPieton = (g?.courant || '') === 'Piéton';
-                                const isPP = (g?.courant || '') === 'PP';
                                 return isPieton ? (
                                     <div key={`fgnum-${gId}`} className="group-number-centroid pieton" style={{ left: `${cx}%`, top: `${cy}%` }}>
                                         <svg viewBox="0 0 20 18" width="20" height="18">
@@ -174,7 +173,7 @@ const useFloatingImageRenderer = ({
                                         </svg>
                                     </div>
                                 ) : (
-                                    <div key={`fgnum-${gId}`} className={`group-number-centroid${isPP ? ' pp' : ''}`} style={{ left: `${cx}%`, top: `${cy}%` }}>
+                                    <div key={`fgnum-${gId}`} className="group-number-centroid" style={{ left: `${cx}%`, top: `${cy}%` }}>
                                         {gId}
                                     </div>
                                 );
