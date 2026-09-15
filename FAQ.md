@@ -52,13 +52,17 @@ L'application étant **libre et open source**, l'ajout d'un parseur pour un form
 
 ### Puis-je récupérer mes anciennes études DiagFeux ?
 
-**Oui** — via **Fichier → Importer → Projet DiagFeux (.dfe)**.
+**Probablement — mais la fonction n'est pas encore finalisée, et nous ne pouvons rien vous garantir aujourd'hui.**
 
-> ⚠️ **Fonctionnalité en cours de finalisation.** L'importateur a été construit à partir du schéma XML officiel du format et de la documentation de DiagFeux, mais sa **validation sur des fichiers `.dfe` réels est encore en cours**. Considérez le résultat comme une **base de reprise à vérifier**, pas comme une conversion garantie au dixième de seconde près.
->
-> Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) : cela accélérera directement la mise au point de l'import.
+L'entrée existe : **Fichier → Importer → Projet DiagFeux (.dfe)**. Elle porte la mention *(ébauche)* dans le menu, et l'application vous prévient avant de convertir. Ce n'est pas une précaution de style.
 
-**Ce qui est repris :**
+**Ce qui est acquis.** L'importateur est écrit, et il lit le format : il a été construit à partir du **schéma XML officiel** publié avec le code source de DiagFeux, et de la documentation du logiciel. La logique de conversion — phasage vers groupes indépendants, reconstitution de la matrice des interverts — est en place et couverte par des tests.
+
+**Ce qui manque, et c'est l'essentiel.** Cet importateur **n'a jamais rencontré un fichier `.dfe` réel**. Il a été développé contre une spécification, pas contre des données. Or une spécification décrit ce qui est permis, pas ce que les fichiers contiennent vraiment : versions successives du logiciel, champs laissés vides, conventions propres à chaque bureau d'études. Tant que cette confrontation n'a pas eu lieu, le résultat doit être tenu pour une **base de reprise à vérifier**, et non pour une conversion fidèle.
+
+**Vous pouvez débloquer cette étape.** Si vous disposez d'un projet DiagFeux, même anonymisé, que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) : un seul fichier réel fait passer cette fonction de l'ébauche à l'outil. C'est aujourd'hui le seul point de blocage.
+
+**Ce que l'importateur sait lire**, d'après le schéma :
 
 - les **groupes de feux** (lignes de feux), avec la distinction véhicules / piétons ;
 - leurs **décalages** et **durées de vert**, déduits de la séquence de phases (et des décalages d'ouverture / fermeture) ;
@@ -72,6 +76,12 @@ Le **phasage** de DiagFeux est converti vers le modèle de TraCflux, où **chaqu
 
 À l'import, TraCflux affiche la liste de ce qui a été converti ou approximé.
 
+**Les trois objectifs de finalisation**, par ordre d'importance :
+
+1. **La validation sur fichiers réels** — la seule qui conditionne les autres, et qui ne dépend que de la mise à disposition d'un `.dfe`.
+2. **Les matrices de trafic origine-destination**, lues mais pas encore agrégées vers les données de trafic de TraCflux.
+3. **L'export vers DiagFeux**, dans l'autre sens, qui n'est pas commencé. L'import vise à prolonger l'usage d'un patrimoine existant, pas à maintenir un aller-retour entre deux outils dont l'un n'est plus maintenu.
+
 ### Qu'est-ce que DiagFeux, et pourquoi TraCflux l'importe-t-il ?
 
 **DiagFeux** est le logiciel de conception du diagramme des feux d'un carrefour développé par le **CERTU** (Centre d'études sur les réseaux, les transports et l'urbanisme), aujourd'hui intégré au **Cerema**. Actif dans les années 2000, il s'appuyait sur la méthode du *Guide des carrefours à feux* du CERTU — la référence méthodologique française.
@@ -84,7 +94,7 @@ L'importateur a été écrit **à partir du format public** (schéma XML du dép
 
 ### Puis-je importer mes carrefours depuis un fichier Excel ?
 
-Oui, mais avec une réserve importante : l'import Excel intégré à TraCflux est conçu pour **une structure de fichier précise** — celle utilisée historiquement par l'auteur pour ses propres projets. Il n'est pas exploitable tel quel sur des fichiers Excel issus d'autres pratiques, chaque organisation ayant ses propres conventions de feuilles, de colonnes et de nommage.
+**Pas directement, dans la plupart des cas.** L'import Excel intégré à TraCflux est conçu pour **une structure de fichier précise** — celle utilisée historiquement par l'auteur pour ses propres projets. Il n'est pas exploitable tel quel sur des fichiers Excel issus d'autres pratiques, chaque organisation ayant ses propres conventions de feuilles, de colonnes et de nommage.
 
 Un **import sur mesure reste possible**, à condition de réaliser un **développement spécifique** fondé sur la connaissance exacte de la structure du fichier source. Cette piste devient pertinente lors d'un **basculement de parc** vers TraCflux, lorsque le volume de projets à reprendre rend la ressaisie manuelle peu réaliste.
 
@@ -247,6 +257,22 @@ Tout passe par le menu **Mise en page**, selon votre contexte :
 Une fenêtre détachée n'est pas une copie figée posée de côté : **elle reste solidaire du reste de l'application, dans les deux sens**. Survolez une flèche sur le plan du carrefour envoyé au second écran, et la ligne du groupe s'allume dans le diagramme resté sur l'écran principal, en même temps que sa ligne dans le formulaire et dans les données trafic. Survolez une ligne du diagramme, et ce sont les flèches du second écran qui s'allument. C'est ce qui fait du second écran un prolongement de votre plan de travail plutôt qu'un rangement.
 
 Le détail de chaque option est documenté dans l'aide en ligne (menu **Aide**, section *Mise en page de l'interface et optimisation de l'écran*), et le jeu des mises en évidence dans la section *Survol et mise en relation*.
+
+### À la réouverture d'un projet, mes fenêtres détachées ne reviennent pas toutes. Pourquoi ?
+
+Parce que votre navigateur n'autorise **qu'une seule fenêtre par action de votre part**. C'est une protection universelle contre les sites qui ouvrent des fenêtres en rafale, et elle ne distingue pas les bonnes des mauvaises : à l'ouverture d'un projet qui en mémorise cinq, la première s'ouvre et les quatre autres sont refusées.
+
+TraCflux vous le signale par un message, mais une seule fois par session — il est facile de le manquer.
+
+**L'autorisation se donne une fois pour toutes**, et pour un seul site :
+
+1. Cliquez sur l'icône à gauche de l'adresse, dans la barre du navigateur — un cadenas, ou un curseur, selon la version
+2. Repérez la ligne **« Pop-ups et redirections »** et mettez-la sur *Autoriser*
+3. Rechargez la page
+
+Les fenêtres mémorisées se rouvriront alors toutes ensemble. Sur Chrome et Edge, une icône de fenêtre barrée apparaît aussi à droite de la barre d'adresse au moment du blocage : elle propose directement « Toujours autoriser les fenêtres contextuelles de ce site ».
+
+Un point à connaître en attendant de l'avoir fait : lorsqu'une fenêtre est refusée, l'application considère qu'elle n'est pas détachée. Si vous enregistrez dans la foulée, c'est cette disposition amputée qui est retenue. Donnez l'autorisation avant de composer votre espace de travail.
 
 ### Quels formats d'import/export sont supportés ?
 

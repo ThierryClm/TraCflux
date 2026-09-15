@@ -106,7 +106,7 @@ Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèc
 ### Transverse
 
 - Thèmes (sombre, clair, haut contraste, ambre, daltonien, sépia, bleu nuit)
-- **Détachement de fenêtres** — à partager en visio ou à poser sur un second écran : matrice, formulaire, propriétés, données trafic, conflits, réserve de capacité, conditions et variables de micro-régulation, remarques, image du carrefour, et **miroir du diagramme en lecture seule**
+- **Détachement de fenêtres** — à partager en visio ou à poser sur un second écran : matrice, formulaire, propriétés, données trafic, conflits, réserve de capacité, conditions et variables de micro-régulation, remarques, image du carrefour, et **miroir du diagramme en lecture seule**. Les fenêtres détachées suivent le projet : elles se rouvrent à sa réouverture, ce qui suppose d'avoir autorisé les fenêtres contextuelles pour le site — les navigateurs n'en ouvrent qu'une par action de l'utilisateur ([voir la FAQ](FAQ.md#à-la-réouverture-dun-projet-mes-fenêtres-détachées-ne-reviennent-pas-toutes-pourquoi))
 - Application installable (PWA), fonctionne hors ligne, avec bandeau « nouvelle version disponible »
 - Rapport de diagnostic pour signalement de bug (local, sans envoi réseau)
 
