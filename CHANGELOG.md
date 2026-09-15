@@ -11,6 +11,12 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **Les réglages de mise en page voyagent désormais avec le cache du navigateur.** Hauteur du
+  diagramme, cadrage et zoom de l'image détachée, options d'affichage et fenêtres détachées : le
+  fichier `.json` les portait, le cache non. Rouvrir un projet depuis la liste les perdait donc
+  silencieusement. Ils transitent maintenant par la même sérialisation que le reste, si bien que
+  les deux chemins d'enregistrement les écrivent d'office. Le format du fichier est inchangé.
+
 - **Les fenêtres détachées portent un bandeau d'identification.** Deux fenêtres sombres qui se
   chevauchent sur un bureau sombre n'avaient pas de frontière lisible, et la barre de titre du
   navigateur est du chrome système qu'une page ne peut pas styler. Un bandeau gris, posé en tête
@@ -28,6 +34,9 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   d'allumer la condition micro correspondante.
 
 ### Corrigé
+
+- **Le cadre des fenêtres détachées se distingue du fond.** Il était d'un pixel et d'un gris
+  sombre, indiscernable de l'écran principal ; il passe à trois pixels, dans le gris du bandeau.
 
 - **Les cases d'impression reviennent quand on rouvre un projet depuis la liste.** Elles étaient
   bien écrites dans le cache du navigateur, mais le lecteur de ce cache ne les rendait pas à leur

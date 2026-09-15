@@ -69,6 +69,7 @@ import renderFloatingArrowSVG from './utils/renderArrowSVG';
 import './components/GroupTable.css';
 import './components/IntergreenMatrix.css';
 import './App.css';
+import { lireMiseEnPage, appliquerMiseEnPage } from './utils/miseEnPageProjet';
 
 function App() {
     const askConfirm = useConfirm();
@@ -925,13 +926,6 @@ function App() {
     // Les cases à cocher du dossier appartiennent au projet : on branche leur
     // lecture et leur écriture sur la sérialisation, plutôt que d'en faire une
     // préférence d'application commune à tous les carrefours.
-    champsProjetRef.current = {
-        lire: () => ({ dossierSections }),
-        // Un projet enregistré avant cette évolution n'a pas le champ : on
-        // garde alors les cases en place au lieu de tout décocher.
-        ecrire: (etat) => { if (etat && etat.dossierSections) setDossierSections(etat.dossierSections); }
-    };
-
     // File System Access API - handles de répertoires via IndexedDB
     const {
         lastOpenDirectoryRef,
@@ -952,6 +946,41 @@ function App() {
         recentGreenWaveDirs,
         addRecentDirectory
     } = useRecentDirectories();
+
+    // Les réglages de mise en page appartiennent au projet : cases du dossier
+    // d'impression, hauteur du diagramme, cadrage et zoom de l'image détachée,
+    // options d'affichage, répertoires de travail. Ils ne vivent pas dans
+    // useTrafficLight, d'où cette réf : getFullState la lit au moment
+    // d'enregistrer, si bien que le fichier ET le cache les portent — c'est ce
+    // second qui les perdait. Posé ici, après les hooks de répertoires, parce
+    // qu'il lui faut leurs références.
+    champsProjetRef.current = {
+        lire: () => ({
+            dossierSections,
+            ...lireMiseEnPage({
+                diagramHeight, floatingCrop, floatingZoom,
+                sidebarVisible, showComments, showRemarks, showActionDescription,
+                showFloatingForm, showFloatingMatrix, showFloatingTraffic,
+                showFloatingImage, showFloatingConditions, showFloatingVariables,
+                showFloatingRemarks,
+                directoryNames: {
+                    open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
+                    save: lastSaveDirectoryRef.current?.name || recentSaveDirs[0]?.name || null,
+                    import: lastImportDirectoryRef.current?.name || recentImportDirs[0]?.name || null,
+                    image: lastImageDirectoryRef.current?.name || recentImageDirs[0]?.name || null,
+                    greenWave: lastGreenWaveDirectoryRef.current?.name || recentGreenWaveDirs[0]?.name || null
+                }
+            })
+        }),
+        ecrire: (etat) => appliquerMiseEnPage(etat, {
+            setDiagramHeight, resetDiagramHeight,
+            setFloatingCrop, setFloatingZoom, markLegacyCrop,
+            setSidebarVisible, setShowComments, setShowRemarks, setShowActionDescription,
+            setShowFloatingForm, setShowFloatingMatrix, setShowFloatingTraffic,
+            setShowFloatingImage, setShowFloatingConditions, setShowFloatingVariables,
+            setShowFloatingRemarks, setDossierSections
+        })
+    };
 
     const {
         handleOpenFileWithPicker,

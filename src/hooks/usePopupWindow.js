@@ -599,13 +599,16 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
                     background: linear-gradient(#9a9a9a, #868686);
                     border-bottom-color: #6f6f6f;
                 }
-                /* Le filet de pourtour fait, sur les trois autres côtés, ce que
-                   le bandeau fait en haut : dire où la fenêtre s'arrête. */
+                /* Le cadre de pourtour fait, sur les trois autres côtés, ce que
+                   le bandeau fait en haut : dire où la fenêtre s'arrête. Trois
+                   pixels et non un, dans le gris du bandeau : à un pixel et en
+                   gris sombre, il se confondait avec le fond de l'écran
+                   principal, qui est sombre lui aussi. */
                 body {
-                    box-shadow: inset 0 0 0 1px #4a4a4a;
+                    box-shadow: inset 0 0 0 3px #6b6b6b;
                 }
                 body.light-mode, body.sepia-mode {
-                    box-shadow: inset 0 0 0 1px #b0b0b0;
+                    box-shadow: inset 0 0 0 3px #8a8a8a;
                 }
                 #popup-root {
                     height: calc(100vh - ${BANDEAU_HAUTEUR}px);
