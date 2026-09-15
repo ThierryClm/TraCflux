@@ -54,7 +54,7 @@ La prise en compte des transports en commun est pensée comme une **orientation 
 
 ### Reprendre les études DiagFeux
 
-> ⚠️ **Fonctionnalité en cours de développement.** L'importateur est construit à partir du schéma XML officiel et de la documentation de DiagFeux, et testé sur des jeux d'essai construits pour cela. Il **n'a pas encore été confronté à un fichier `.dfe` réel**. Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) — cela accélérera directement la mise au point.
+> ⚠️ **Fonctionnalité en objectif de développement.** L'importateur est construit à partir du schéma XML officiel et de la documentation de DiagFeux, et testé sur des jeux d'essai construits pour cela. Il **n'a pas encore été confronté à un fichier `.dfe` réel**. Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) — cela accélérera directement la mise au point.
 
 **DiagFeux**, le logiciel de conception de diagrammes de feux du CERTU (aujourd'hui Cerema), **n'est plus maintenu**. TraCflux permet d'importer ses projets (`.dfe`) — groupes, décalages, verts, matrice d'interverts, propriétés.
 
