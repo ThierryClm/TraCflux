@@ -459,7 +459,7 @@ function App() {
         showFloatingMatrix,
         setShowFloatingMatrix,
         matrixPopup
-    } = useFloatingMatrix(groups.length, activePFName);
+    } = useFloatingMatrix(groups.length, activePFName, matricesLocked);
 
     // Floating form state
     const {
@@ -589,15 +589,6 @@ function App() {
     });
 
     // Miroir de présentation du diagramme (fenêtre détachée, lecture seule).
-    const diagramPopup = usePopupWindow({
-        geometryKey: 'diagram',
-        isOpen: showFloatingDiagram,
-        onClose: () => setShowFloatingDiagram(false),
-        title: `Diagramme${activePFName ? ` — ${activePFName}` : ''}`,
-        width: 1180,
-        height: 620
-    });
-
     // Liste des conflits en fenêtre détachée.
     const conflictsPopup = usePopupWindow({
         geometryKey: 'conflicts',
@@ -636,6 +627,20 @@ function App() {
             conflictMatrix
         );
     }, [simulationEnabled, groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix]);
+
+    // Déclaré APRÈS simulationResult : son titre affiche le cycle simulé,
+    // et un `const` n'est pas accessible avant son initialisation.
+    const diagramPopup = usePopupWindow({
+        geometryKey: 'diagram',
+        isOpen: showFloatingDiagram,
+        onClose: () => setShowFloatingDiagram(false),
+        // Le miroir n'affiche plus sa ligne de titre : elle est ici, donc
+        // lisible aussi dans la barre du navigateur et sur une fenêtre reléguée
+        // en arrière-plan. Le cycle suit la simulation quand elle tourne.
+        title: `Diagramme${activePFName ? ` — ${activePFName}` : ''} · Cycle ${(simulationEnabled && simulationResult?.simulatedCycleLength) || cycleLength} s`,
+        width: 1180,
+        height: 620
+    });
 
     // Local input states for validation on Enter/blur
     const [groupCountInput, setGroupCountInput] = useState(groups.length.toString());
@@ -2066,8 +2071,9 @@ function App() {
     useEffect(() => {
         if (!showFloatingMatrix) return;
         matrixPopup.renderToPopup(
-            <div style={{ padding: '12px', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+            <div style={{ padding: '0 12px 12px', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
                 <IntergreenMatrix
+                    titreEnBandeau
                     conflictMatrix={conflictMatrix}
                     setMatrixValue={setMatrixValue}
                     groups={groups}
@@ -2091,12 +2097,13 @@ function App() {
     useEffect(() => {
         if (!showFloatingForm) return;
         formPopup.renderToPopup(
-            <div style={{ padding: '12px', height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
+            <div style={{ padding: '0 12px 12px', height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
                 <GroupTable
                     groups={groups}
                     updateGroupParams={updateGroupParams}
                     cycleLength={cycleLength}
                     showGroupNames={showGroupNamesForm}
+                    titreEnBandeau
                     hoveredGroupId={hoveredArrowGroupId}
                     startDrag={startDrag}
                     endDrag={endDrag}
@@ -2209,6 +2216,7 @@ function App() {
         diagramPopup.renderToPopup(
             <div style={{ padding: '8px', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
                 <TimelineDiagram
+                    titreEnBandeau
                     scrollable
                     readOnly
                     groups={groups}
@@ -2245,7 +2253,7 @@ function App() {
                     updateActionRow={noop}
                     startDrag={noop}
                     endDrag={noop}
-                    setHoveredActionId={noop}
+                    setHoveredActionId={setHoveredActionId}
                     setHoveredGroupId={setHoveredArrowGroupId}
                     setHoveredDiagramTime={noop}
                     setIsPlayingSimulation={noop}

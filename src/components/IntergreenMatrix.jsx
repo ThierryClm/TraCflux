@@ -75,7 +75,7 @@ const MatrixInput = ({ value, onChange, className }) => {
     );
 };
 
-const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength, actionData, activePFId, pfTabs, biCarrefourSeparator, onCellHover, showGroupNames = true, locked = false, onDetach, hoveredGroupId, tooltipsEnabled = true }) => {
+const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength, actionData, activePFId, pfTabs, biCarrefourSeparator, onCellHover, showGroupNames = true, locked = false, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }) => {
     const tip = (text) => tooltipsEnabled ? text : undefined;
 
     // Bi-carrefour separator index
@@ -321,27 +321,30 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
     const indices = Array.from({ length: size }, (_, i) => i + 1);
 
     return (
-        <div className="matrix-container-inline">
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                Matrice des temps interverts
-                {locked && (
-                    <span
-                        style={{ color: '#aaa', fontWeight: 'normal', fontSize: '0.85em' }}
-                        title={tip("La matrice est en lecture seule. Décochez « Verrouiller les matrices » dans le menu Diagramme pour la modifier.")}
-                    >
-                        (Verrouillé)
-                    </span>
-                )}
-                {onDetach && (
-                    <button
-                        className="detach-btn"
-                        onClick={onDetach}
-                        title={tip("Détacher dans une fenêtre séparée")}
-                    >
-                        Détacher
-                    </button>
-                )}
-            </h3>
+        <div className={`matrix-container-inline${titreEnBandeau ? ' sans-entete' : ''}`}>
+            {/* En fenêtre détachée, le bandeau porte déjà le nom, le plan de feu et le verrou : cet en-tête ne dirait rien de plus. */}
+            {!titreEnBandeau && (
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    Matrice des temps interverts
+                    {locked && (
+                        <span
+                            style={{ color: '#aaa', fontWeight: 'normal', fontSize: '0.85em' }}
+                            title={tip("La matrice est en lecture seule. Décochez « Verrouiller les matrices » dans le menu Diagramme pour la modifier.")}
+                        >
+                            (Verrouillé)
+                        </span>
+                    )}
+                    {onDetach && (
+                        <button
+                            className="detach-btn"
+                            onClick={onDetach}
+                            title={tip("Détacher dans une fenêtre séparée")}
+                        >
+                            Détacher
+                        </button>
+                    )}
+                </h3>
+            )}
 
             <div className="matrix-scroll" style={{ position: 'relative' }}>
                 {Array.isArray(conflictMatrix) && conflictMatrix.length > 0 && conflictMatrix.every(row => row.every(v => v === '' || v === null || v === undefined)) && (

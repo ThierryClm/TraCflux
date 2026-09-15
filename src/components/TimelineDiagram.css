@@ -587,7 +587,12 @@
     background: rgba(128, 128, 128, 0.2);
     border: 2px solid rgba(200, 200, 200, 0.7);
     z-index: 21;
-    pointer-events: none;
+    /* Sensible sur toute sa surface, et non par ses seules poignées : c'est le
+       rectangle qui désigne l'escamotage, et c'est lui qu'on survole pour en
+       lire les conditions. Contrepartie assumée dans le diagramme éditable —
+       il recouvre les barres de phase des groupes escamotés, qui ne sont plus
+       saisissables à travers lui. */
+    pointer-events: auto;
     box-sizing: border-box; /* Inclure la bordure dans la largeur */
 }
 
@@ -682,7 +687,9 @@
         transparent 2px
     );
     z-index: 100;
-    pointer-events: none;
+    /* Sensible sur toute sa surface : c'est une bande fine, en bas de ligne,
+       qui ne recouvre presque rien. */
+    pointer-events: auto;
 }
 
 .ouverture-anticipee-label {
@@ -961,14 +968,21 @@
     overflow: visible;
 }
 
-.debut-bande-arrows line {
+.debut-bande-arrows line,
+.debut-bande-arrows path {
     stroke: #00cc00;
     stroke-width: 0.7;
     stroke-dasharray: 4,4;
     transition: stroke-width 0.15s ease;
 }
 
-.debut-bande-arrows.highlighted line {
+/* `path` autant que `line` : le tracé a été dessiné en <line> puis converti en
+   <path> (dashedPath), sans que ces règles suivent. Elles ne visaient donc plus
+   rien, et la bande passante ne s'épaississait plus au survol d'une condition
+   micro — seule la tête de flèche changeait de couleur, parce que sa règle, elle,
+   vise bien un <polygon>. */
+.debut-bande-arrows.highlighted line,
+.debut-bande-arrows.highlighted path {
     stroke: #00ff00;
     stroke-width: var(--surlignage-trait-svg-mince);
 }
@@ -977,19 +991,42 @@
     fill: #00ff00;
 }
 
+/* La prise de survol n'est pas un tracé : c'est une doublure invisible et
+   large, posée sur la trajectoire pour qu'on puisse viser une ligne de 0,7 px.
+   Elle doit donc échapper aux règles ci-dessus — le CSS l'emporte sur les
+   attributs SVG, et `stroke-width: 0.7` la ramenait à l'épaisseur du trait
+   visible, pointillée et repeinte en vert par-dessus le marché. Sélecteur
+   volontairement plus spécifique que celui du surlignage. */
+.debut-bande-arrows path.bande-prise,
+.debut-bande-arrows.highlighted path.bande-prise,
+.fin-bande-arrows path.bande-prise,
+.fin-bande-arrows.highlighted path.bande-prise {
+    stroke: transparent;
+    stroke-width: 16;
+    stroke-dasharray: none;
+    transition: none;
+}
+
 /* Fin de bande passante arrows */
 .fin-bande-arrows {
     overflow: visible;
 }
 
-.fin-bande-arrows line {
+.fin-bande-arrows line,
+.fin-bande-arrows path {
     stroke: #00cc00;
     stroke-width: 0.7;
     stroke-dasharray: 4,4;
     transition: stroke-width 0.15s ease;
 }
 
-.fin-bande-arrows.highlighted line {
+/* `path` autant que `line` : le tracé a été dessiné en <line> puis converti en
+   <path> (dashedPath), sans que ces règles suivent. Elles ne visaient donc plus
+   rien, et la bande passante ne s'épaississait plus au survol d'une condition
+   micro — seule la tête de flèche changeait de couleur, parce que sa règle, elle,
+   vise bien un <polygon>. */
+.fin-bande-arrows.highlighted line,
+.fin-bande-arrows.highlighted path {
     stroke: #00ff00;
     stroke-width: var(--surlignage-trait-svg-mince);
 }
@@ -1473,21 +1510,46 @@ body.sepia-mode .rest-point-label {
    pour un affichage strictement non éditable. */
 .timeline-container.read-only .drag-handle,
 .timeline-container.read-only .action-drag-handle {
-    display: none !important;
+    /* Présentes mais invisibles, et non plus retirées.
+       Ces incrustations portent `pointer-events: none` — voulu dans le
+       diagramme éditable, pour que le clic atteigne les barres de phase
+       qu'elles recouvrent. Leur seule zone sensible est donc la poignée, et
+       c'est par elle, en remontant, que le survol déclenche le surlignage.
+       Les retirer ne laissait plus rien à survoler dans le miroir : ni liseré
+       ni infobulle sur l'adaptatif vertical, l'escamotage et les accolades
+       d'ouverture et de fermeture anticipée.
+       Rendre sensible le rectangle entier serait pire : un adaptatif qui
+       couvre tout le diagramme capterait chaque survol. Le pourtour — deux
+       bandes de 10 px aux extrémités — est la zone juste, et c'est déjà celle
+       de la fenêtre principale.
+       Le glissement, lui, est refusé en amont : `handleDragStart` et
+       `handleActionDragStart` sortent tous deux sur `readOnly`. */
+    opacity: 0 !important;
+    cursor: default !important;
 }
 .timeline-container.read-only [style*="ew-resize"] {
     pointer-events: none !important;
     cursor: default !important;
 }
-/* Labels d'actions cliquables (abréviations sous les flèches) : plus de main
-   ni d'interaction en lecture seule. */
+/* Abréviations sous les flèches : plus de main en lecture seule, mais elles
+   restent survolables.
+   Elles portaient `pointer-events: none`, au motif qu'elles étaient
+   « cliquables ». Elles ne le sont pas : point de repos, synchro BTS et
+   instant CO ne déclarent qu'un onMouseEnter et un onMouseLeave. La règle
+   supprimait donc la seule chose qu'elles savent faire — signaler l'action
+   survolée — sans rien protéger. Dans le miroir détaché, ces actions ne se
+   surlignaient pas et n'affichaient aucune infobulle, là où l'adaptatif et
+   l'escamotage fonctionnaient : leurs étiquettes sont de simples <span> dans
+   une incrustation qui, elle, porte les gestionnaires.
+   Les poignées de redimensionnement restent masquées, et les zones de
+   glissement neutralisées, par les règles ci-dessus : la lecture seule est
+   préservée. */
 .timeline-container.read-only .point-repos-label,
 .timeline-container.read-only .synchro-bts-label,
 .timeline-container.read-only .instant-co-label,
 .timeline-container.read-only .adaptatif-label,
 .timeline-container.read-only .escamotage-label {
     cursor: default !important;
-    pointer-events: none !important;
 }
 
 /* Bouton « Détacher » dans l'en-tête du diagramme (fenêtre principale). */

@@ -4,7 +4,7 @@ import NumericInput from './NumericInput';
 import EmptyState from './EmptyState';
 import './GroupTable.css';
 
-const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true }) => {
+const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }) => {
     const tip = (text) => tooltipsEnabled ? text : undefined;
 
     const handleStartChange = (id, value) => {
@@ -41,18 +41,21 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
 
     return (
         <div className="group-table-container">
-            <h3 className="group-table-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                Formulaire
-                {onDetach && (
-                    <button
-                        className="detach-btn"
-                        onClick={onDetach}
-                        title={tip("Détacher dans une fenêtre séparée")}
-                    >
-                        Détacher
-                    </button>
-                )}
-            </h3>
+            {/* En fenêtre détachée, le bandeau porte déjà ce titre. */}
+            {!titreEnBandeau && (
+                <h3 className="group-table-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    Formulaire
+                    {onDetach && (
+                        <button
+                            className="detach-btn"
+                            onClick={onDetach}
+                            title={tip("Détacher dans une fenêtre séparée")}
+                        >
+                            Détacher
+                        </button>
+                    )}
+                </h3>
+            )}
             <div style={{ position: 'relative' }}>
             {groups.length > 0 && groups.every(g => !g.type || g.type === '') && (
                 <div className="empty-state-overlay">

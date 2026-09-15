@@ -364,3 +364,90 @@ describe('useTrafficLight — synchronisation cache localStorage ↔ fichier', (
             .toEqual(sensitive(viaFile.result.current.getFullState()));
     });
 });
+
+// ------- Filet : symétrie des deux écrivains et des deux lecteurs -------
+//
+// Les tests ci-dessus verrouillent une liste de champs écrite à la main : ils
+// protègent des incidents déjà survenus, pas de ceux à venir. Un champ ajouté
+// demain passerait au vert tout en étant perdu.
+//
+// Ceux qui suivent ne nomment aucun champ. Ils comparent des ENSEMBLES, donc
+// ils couvrent aussi ce qui n'existe pas encore.
+
+describe('useTrafficLight — le cache et le fichier doivent porter la même chose', () => {
+    // Un projet où chaque champ porte une valeur reconnaissable, pour qu'une
+    // perte se voie au lieu de se confondre avec une valeur par défaut.
+    const projetRiche = (groups) => ({
+        projectName: 'Symetrie',
+        groups,
+        cycleLength: 96,
+        dependencyGap: 33,
+        intersectionName: 'Carrefour témoin',
+        customTrafficDatasetNames: ['Jour de marché'],
+        pfTrafficDatasetMap: { 1: 'HPS' },
+        externalLinks: [{ label: 'Étude', url: 'https://exemple.test/etude' }],
+        matricesLocked: true,
+        actionColWidths: { description: 175, micro: 455, abrv: 48 },
+        imageBrightness: 115,
+        imageContrast: 95,
+        capacityCompareSelection: [1, 3],
+        capacityCompareDataset: 'HPM',
+        dossierSections: { image: true, formulaire: false, matrice: true }
+    });
+
+    it('le point fixe : ce que getFullState écrit, loadFullState le relit intégralement', () => {
+        const { result } = renderHook(() => useTrafficLight());
+        act(() => { result.current.loadFullState(projetRiche(result.current.groups)); });
+
+        const premier = JSON.parse(JSON.stringify(result.current.getFullState()));
+        act(() => { result.current.loadFullState(premier); });
+        const second = JSON.parse(JSON.stringify(result.current.getFullState()));
+
+        // Aucune liste de champs : tout écart, sur n'importe quelle clé
+        // présente ou future, fait tomber le test.
+        expect(second).toEqual(premier);
+    });
+
+    it('les deux lecteurs restaurent un état intégralement identique, pas seulement quelques champs', () => {
+        const seed = renderHook(() => useTrafficLight());
+        act(() => { seed.result.current.loadFullState(projetRiche(seed.result.current.groups)); });
+        const payload = JSON.parse(JSON.stringify(seed.result.current.getFullState()));
+
+        const viaFichier = renderHook(() => useTrafficLight());
+        act(() => { viaFichier.result.current.loadFullState(payload); });
+
+        localStorage.setItem('traffic_project_Symetrie', JSON.stringify(payload));
+        const viaCache = renderHook(() => useTrafficLight());
+        act(() => { viaCache.result.current.loadProject('Symetrie'); });
+
+        expect(JSON.parse(JSON.stringify(viaCache.result.current.getFullState())))
+            .toEqual(JSON.parse(JSON.stringify(viaFichier.result.current.getFullState())));
+    });
+
+    it('les champs portés par un autre module reviennent aussi depuis le cache', () => {
+        // dossierSections — les cases d'impression du dossier — ne vit pas dans
+        // ce hook : il transite par champsProjetRef. getFullState l'écrit donc
+        // dans le cache comme dans le fichier, mais encore faut-il que les DEUX
+        // lecteurs le rendent à son module.
+        const porte = { valeur: null };
+        const ref = {
+            current: {
+                lire: () => ({ dossierSections: { image: true, matrice: false } }),
+                ecrire: (etat) => { porte.valeur = etat?.dossierSections ?? null; }
+            }
+        };
+
+        const seed = renderHook(() => useTrafficLight({ champsProjetRef: ref }));
+        act(() => { seed.result.current.loadFullState(projetRiche(seed.result.current.groups)); });
+        const payload = JSON.parse(JSON.stringify(seed.result.current.getFullState()));
+        expect(payload.dossierSections).toEqual({ image: true, matrice: false });
+
+        // Lecteur « cache » : il doit rendre le champ, exactement comme le fichier.
+        porte.valeur = null;
+        localStorage.setItem('traffic_project_Porte', JSON.stringify(payload));
+        const viaCache = renderHook(() => useTrafficLight({ champsProjetRef: ref }));
+        act(() => { viaCache.result.current.loadProject('Porte'); });
+
+        expect(porte.valeur).toEqual({ image: true, matrice: false });
+    });
+});

@@ -7,6 +7,43 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [Non publié]
+
+### Ajouté
+
+- **Les fenêtres détachées portent un bandeau d'identification.** Deux fenêtres sombres qui se
+  chevauchent sur un bureau sombre n'avaient pas de frontière lisible, et la barre de titre du
+  navigateur est du chrome système qu'une page ne peut pas styler. Un bandeau gris, posé en tête
+  du contenu, nomme la fenêtre et le plan de feu actif ; un filet clair marque les trois autres
+  côtés. La barre du navigateur elle-même passe au gris clair, l'application étant installée en
+  PWA — les deux forment un en-tête continu.
+- **Matrice, formulaire et miroir du diagramme n'affichent plus leur titre en double.** Le bandeau
+  le portant désormais, l'en-tête en page a disparu de ces trois fenêtres, avec les marges qu'il
+  dégageait. Le bandeau de la matrice indique en outre si les matrices sont verrouillées, et celui
+  du diagramme la durée du cycle — simulée quand la simulation tourne.
+- **Le diagramme détaché affiche les conditions de micro-régulation au survol**, comme le
+  diagramme intégré : nom de l'action après une demi-seconde, texte des conditions après trois.
+- **Le tracé des bandes passantes se survole.** Il ne portait ni étiquette ni poignée : une prise
+  transparente de 16 px suit sa trajectoire, ce qui permet de viser un trait de 0,7 px et
+  d'allumer la condition micro correspondante.
+
+### Corrigé
+
+- **Les cases d'impression reviennent quand on rouvre un projet depuis la liste.** Elles étaient
+  bien écrites dans le cache du navigateur, mais le lecteur de ce cache ne les rendait pas à leur
+  module — seul le lecteur de fichier le faisait. Trois tests gardent désormais la symétrie entre
+  les deux chemins, sans nommer aucun champ : ils couvrent aussi ceux qui n'existent pas encore.
+- **La bande passante s'épaissit de nouveau au survol de sa condition micro.** Son tracé a été
+  converti de `<line>` en `<path>` sans que les règles de surlignage suivent : elles ne visaient
+  plus rien, et seule la tête de flèche changeait de couleur.
+- **Les incrustations du diagramme détaché redeviennent survolables.** La lecture seule retirait
+  les poignées de glissement, or c'est par elles que l'adaptatif vertical, l'escamotage et les
+  accolades captaient le survol : plus rien ne les déclenchait. Les poignées sont désormais
+  invisibles plutôt que supprimées, et la zone sensible reste le pourtour. L'escamotage et
+  l'ouverture anticipée, eux, se survolent sur toute leur surface.
+- **Les champs Plage et Action GF de la fenêtre détachée affichent deux chiffres.** Ils étaient
+  larges de 17 px, où il en faut 22 au minimum.
+
 ## [1.2.11] — 2026-09-11
 
 ### Ajouté

@@ -20,6 +20,22 @@
     padding: 1rem 0 1rem 0.25rem;
 }
 
+/* Sans en-tête en page — fenêtre détachée, le bandeau porte le titre — les
+   marges hautes n'ont plus rien à dégager. Elles laissaient au contraire une
+   bande où les lignes défilaient au-dessus de l'en-tête collant, qui se cale
+   sur le haut du conteneur et non sur le haut du tableau. */
+.matrix-container-inline.sans-entete {
+    padding-top: 0;
+}
+
+.matrix-container-inline.sans-entete .matrix-scroll {
+    padding-top: 0;
+}
+
+.matrix-container-inline.sans-entete .matrix-grid {
+    margin-top: 0;
+}
+
 .matrix-grid {
     border-collapse: collapse;
     margin-top: 10px;

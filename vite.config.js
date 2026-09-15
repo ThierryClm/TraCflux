@@ -17,7 +17,15 @@ export default defineConfig({
         name: 'TraCflux',
         short_name: 'TraCflux',
         description: 'Outil de conception et d\'optimisation de diagrammes de feux tricolores',
-        theme_color: '#1e1e1e',
+        // theme_color teinte la barre mince du mode 'minimal-ui' — celle qui
+        // porte le titre et la croix, y compris sur les fenêtres détachées.
+        // Un gris clair : Chrome en déduit lui-même la couleur du texte, et
+        // n'écrit en noir que si le fond est assez clair. Il prolonge vers le
+        // haut le bandeau gris posé par usePopupWindow, pour former un en-tête
+        // continu avant que le contenu sombre ne commence.
+        // background_color reste sombre : c'est l'écran de démarrage, et
+        // l'application est sombre.
+        theme_color: '#b0b0b0',
         background_color: '#1e1e1e',
         // 'minimal-ui' (au lieu de 'standalone') : conserve une barre URL
         // minimale en mode PWA installé. Indispensable pour que window.open()

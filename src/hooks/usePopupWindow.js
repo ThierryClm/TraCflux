@@ -290,6 +290,33 @@ function installMainListener() {
  *        pour que innerWidth/innerHeight tombent juste — sans quoi une fenêtre
  *        pourtant plus grande que son contenu se retrouve avec des ascenseurs.
  */
+// Hauteur du bandeau d'identification posé en tête de chaque fenêtre détachée.
+// Déclarée ici et nulle part ailleurs : le style la consomme, et `applySize`
+// l'ajoute à la taille demandée par l'appelant. Sans cette seconde prise en
+// compte, le bandeau rognerait le contenu des fenêtres dimensionnées au pixel
+// — celle de l'image du carrefour — et y ferait apparaître un ascenseur.
+const BANDEAU_HAUTEUR = 28;
+
+// Coupe « Données trafic — VRM_Prio » en deux. Le tiret cadratin sépare le nom
+// de la fenêtre du contexte (plan de feu, carrefour) ; sans lui, tout le titre
+// reste à gauche.
+const couperTitre = (t) => {
+    const [gauche, ...reste] = String(t || '').split('—');
+    return { gauche: gauche.trim(), droite: reste.join('—').trim() };
+};
+
+// Reporte le titre dans le bandeau. Tolérant : une fenêtre en cours de
+// fermeture, ou rouverte sans bandeau, ne doit pas faire échouer l'appelant.
+const ecrireBandeau = (popup, titre) => {
+    try {
+        const bandeau = popup?.document?.getElementById('popup-bandeau');
+        if (!bandeau) return;
+        const { gauche, droite } = couperTitre(titre);
+        bandeau.querySelector('.bandeau-nom').textContent = gauche;
+        bandeau.querySelector('.bandeau-contexte').textContent = droite;
+    } catch { /* fenêtre fermée entre-temps */ }
+};
+
 const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = null, geometryKey = null }) => {
     const popupRef = useRef(null);
     const rootRef = useRef(null);
@@ -355,8 +382,9 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
                 if (dw || dh) popup.resizeBy(dw, dh);
             };
 
-            // 1. La cible annoncée.
-            poser(target.width, target.height);
+            // 1. La cible annoncée. L'appelant décrit son contenu ; le bandeau
+            //    est du chrome ajouté ici, il ne doit pas manger ce contenu.
+            poser(target.width, target.height + BANDEAU_HAUTEUR);
 
             // 2. Le résidu réellement mesuré — hauteur exacte de la barre
             //    d'outils, mise à l'échelle qui tombe sur une fraction de pixel.
@@ -365,7 +393,7 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             if (!el) return;
             const extraW = Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth));
             const extraH = Math.max(0, Math.ceil(el.scrollHeight - el.clientHeight));
-            if (extraW || extraH) poser(target.width + extraW, target.height + extraH);
+            if (extraW || extraH) poser(target.width + extraW, target.height + BANDEAU_HAUTEUR + extraH);
         } catch { /* redimensionnement refusé par le navigateur */ }
     }, []);
 
@@ -528,8 +556,59 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
                 body.blue-night-mode {
                     background: #002b36;
                 }
+                /* Bandeau d'identification. Deux fenêtres détachées sombres
+                   qui se chevauchent sur un bureau sombre n'ont pas de
+                   frontière lisible : la barre de titre du navigateur est du
+                   chrome système, qu'une page ne peut pas styler. Ce bandeau
+                   est la première ligne que nous maîtrisons. Son gris est
+                   celui des barres de défilement du navigateur : l'œil le lit
+                   comme un cadre de fenêtre, pas comme du contenu. */
+                #popup-bandeau {
+                    height: ${BANDEAU_HAUTEUR}px;
+                    box-sizing: border-box;
+                    flex: 0 0 auto;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    padding: 0 10px;
+                    background: linear-gradient(#6b6b6b, #5a5a5a);
+                    border-bottom: 1px solid #3a3a3a;
+                    color: #fff;
+                    font: bold 12px system-ui, sans-serif;
+                    letter-spacing: .2px;
+                    user-select: none;
+                    overflow: hidden;
+                    white-space: nowrap;
+                }
+                #popup-bandeau .bandeau-contexte {
+                    font-weight: 500;
+                    color: #efefef;
+                    opacity: .85;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                #popup-bandeau .bandeau-nom {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                /* Les thèmes clairs reçoivent un gris qui reste un cadre sans
+                   trouer la page. */
+                body.light-mode #popup-bandeau,
+                body.sepia-mode #popup-bandeau {
+                    background: linear-gradient(#9a9a9a, #868686);
+                    border-bottom-color: #6f6f6f;
+                }
+                /* Le filet de pourtour fait, sur les trois autres côtés, ce que
+                   le bandeau fait en haut : dire où la fenêtre s'arrête. */
+                body {
+                    box-shadow: inset 0 0 0 1px #4a4a4a;
+                }
+                body.light-mode, body.sepia-mode {
+                    box-shadow: inset 0 0 0 1px #b0b0b0;
+                }
                 #popup-root {
-                    height: 100vh;
+                    height: calc(100vh - ${BANDEAU_HAUTEUR}px);
                     display: flex;
                     flex-direction: column;
                 }
@@ -540,6 +619,11 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             // window.open (rejeu d'effet en StrictMode, réouverture) : on repart
             // d'un body vide, sinon les racines s'empilent.
             popup.document.body.replaceChildren();
+            const bandeau = popup.document.createElement('div');
+            bandeau.id = 'popup-bandeau';
+            bandeau.innerHTML = '<span class="bandeau-nom"></span><span class="bandeau-contexte"></span>';
+            popup.document.body.appendChild(bandeau);
+            ecrireBandeau(popup, title);
             const container = popup.document.createElement('div');
             container.id = 'popup-root';
             popup.document.body.appendChild(container);
@@ -657,6 +741,7 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
         if (!isOpen) return;
         if (!popupRef.current || popupRef.current.closed) return;
         popupRef.current.document.title = title;
+        ecrireBandeau(popupRef.current, title);
     }, [title, isOpen]);
 
     // Sync theme changes to popup via MutationObserver (instead of every render)

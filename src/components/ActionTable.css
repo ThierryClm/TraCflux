@@ -344,6 +344,14 @@
     width: 17px !important;
 }
 
+/* En fenêtre détachée, la largeur ne manque pas — et 17 px coupent un nombre
+   à deux chiffres, ce qui rend Plage et Action GF illisibles dès qu'un groupe
+   dépasse le neuvième. Le minimum lisible est de 22 px, mesuré ; on en donne
+   24 pour l'aisance. */
+.popup-content-wrapper .input-small {
+    width: 24px !important;
+}
+
 /* Dragging state */
 .action-table-container.dragging {
     cursor: ew-resize;

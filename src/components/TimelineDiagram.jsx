@@ -8,7 +8,7 @@ import { useMicroVariables } from './MicroVariablesProvider';
 import { tokenizeMicroText } from '../utils/microVariables';
 import './TimelineDiagram.css';
 
-const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false }) => {
+const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }) => {
     const tip = (text) => tooltipsEnabled ? text : undefined;
     const { names: microVariableNames } = useMicroVariables();
     const containerRef = useRef(null);
@@ -67,11 +67,21 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         };
     }, [hoveredActionId, showMicroOnHover, actionData, isMouseInDiagram]);
 
-    // Track mouse position for tooltip placement
-    useEffect(() => {
-        const handler = (e) => { actionTooltipMouseRef.current = { x: e.clientX, y: e.clientY }; };
-        document.addEventListener('mousemove', handler);
-        return () => document.removeEventListener('mousemove', handler);
+    // Position du curseur, pour poser l'infobulle.
+    //
+    // Relevée par React sur le conteneur lui-même, et non par un écouteur sur
+    // `document` : ce composant est aussi rendu dans une fenêtre détachée, où
+    // `document` désigne encore la fenêtre principale. L'écouteur s'y posait
+    // donc sur le mauvais document — position jamais mise à jour, et surtout
+    // aucune trace du survol dans la fenêtre où se trouvait réellement le
+    // curseur. Passer par l'événement React supprime la question : il est
+    // délivré dans la fenêtre qui porte le diagramme, quelle qu'elle soit.
+    const suivreCurseur = useCallback((e) => {
+        actionTooltipMouseRef.current = { x: e.clientX, y: e.clientY };
+        // Filet : si un re-rendu a avalé le mouseenter, le premier mouvement
+        // rétablit l'état. Sans lui, l'infobulle restait muette dans la
+        // fenêtre détachée alors que le surlignage, lui, fonctionnait.
+        setIsMouseInDiagram(true);
     }, []);
 
     // Phase flag tooltip (aiguillage/escamotage)
@@ -1030,93 +1040,99 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
             className={`timeline-container ${dragState ? 'dragging' : ''}${readOnly ? ' read-only' : ''}${scrollable ? ' scrollable' : ''}`}
             ref={containerRef}
             onMouseEnter={() => setIsMouseInDiagram(true)}
+            onMouseMove={suivreCurseur}
             onMouseLeave={() => setIsMouseInDiagram(false)}
         >
-            <h3 className="diagram-title">
-                <span>Diagramme{planName ? ` : simulation du plan de feu ${planName}` : (activePFName ? ` - ${activePFName}` : '')}</span>
-                {setCycleLengthInput && (
-                    (planName || readOnly) ? (
-                        <span style={{ marginLeft: '50px', fontSize: '14px', fontWeight: 'normal' }}>
-                            Cycle {simulationResult?.simulatedCycleLength || cycleLength} secondes
-                        </span>
-                    ) : (
-                        <label className="cycle-input-label" style={{ marginLeft: '50px', fontSize: '14px', fontWeight: 'normal' }}>
-                            Cycle:
-                            <NumericInput
-                                className="input-count"
-                                value={cycleLengthInput}
-                                min={10}
-                                allowEmpty={false}
-                                selectOnFocus
-                                onCommit={(val) => {
-                                    const newCycle = parseInt(val);
-                                    if (!isNaN(newCycle) && newCycle >= 10 && newCycle !== cycleLength) {
-                                        setCycleLength(newCycle);
-                                    } else {
-                                        setCycleLengthInput(cycleLength.toString());
-                                    }
-                                }}
-                                title={tip("Durée du cycle (min 10s)")}
-                            />
-                            <span>s</span>
-                        </label>
-                    )
-                )}
-                {onDetach && !readOnly && (
-                    <button
-                        className="detach-btn diagram-detach-btn"
-                        onClick={onDetach}
-                        title={tip("Ouvrir le diagramme dans une fenêtre séparée (miroir lecture seule, ex. 2e écran)")}
-                    >Détacher</button>
-                )}
-                {planName && setIsPlayingSimulation && !readOnly && (
-                    <div className="diagram-playback" style={{ marginLeft: '20px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 'normal' }}>
-                        <CustomTooltip text={isPlayingSimulation ? 'Pause' : 'Lecture'}>
-                            <button
-                                className={`sim-btn ${isPlayingSimulation ? 'playing' : ''}`}
-                                onClick={() => setIsPlayingSimulation(!isPlayingSimulation)}
-                                aria-label={isPlayingSimulation ? 'Mettre la simulation en pause' : 'Lancer la simulation'}
-                            >
-                                {isPlayingSimulation ? '⏸' : '▶'}
-                            </button>
-                        </CustomTooltip>
-                        <CustomTooltip text="Réinitialiser">
-                            <button
-                                className="sim-btn reset-btn"
-                                onClick={() => { setIsPlayingSimulation(false); setSimulationCurrentTime(0); }}
-                                aria-label="Réinitialiser la simulation"
-                            >
-                                ⏹
-                            </button>
-                        </CustomTooltip>
-                        {cycleSimulationSpeed && (
-                            <CustomTooltip text="Vitesse de déroulement — cliquer pour changer">
+            {/* En fenêtre détachée, le bandeau porte le titre ET le cycle. Le
+                bouton Détacher et les commandes de lecture sont de toute façon
+                exclus par readOnly : rien d'autre ne vit dans cet en-tête. */}
+            {!titreEnBandeau && (
+                <h3 className="diagram-title">
+                    <span>Diagramme{planName ? ` : simulation du plan de feu ${planName}` : (activePFName ? ` - ${activePFName}` : '')}</span>
+                    {setCycleLengthInput && (
+                        (planName || readOnly) ? (
+                            <span style={{ marginLeft: '50px', fontSize: '14px', fontWeight: 'normal' }}>
+                                Cycle {simulationResult?.simulatedCycleLength || cycleLength} secondes
+                            </span>
+                        ) : (
+                            <label className="cycle-input-label" style={{ marginLeft: '50px', fontSize: '14px', fontWeight: 'normal' }}>
+                                Cycle:
+                                <NumericInput
+                                    className="input-count"
+                                    value={cycleLengthInput}
+                                    min={10}
+                                    allowEmpty={false}
+                                    selectOnFocus
+                                    onCommit={(val) => {
+                                        const newCycle = parseInt(val);
+                                        if (!isNaN(newCycle) && newCycle >= 10 && newCycle !== cycleLength) {
+                                            setCycleLength(newCycle);
+                                        } else {
+                                            setCycleLengthInput(cycleLength.toString());
+                                        }
+                                    }}
+                                    title={tip("Durée du cycle (min 10s)")}
+                                />
+                                <span>s</span>
+                            </label>
+                        )
+                    )}
+                    {onDetach && !readOnly && (
+                        <button
+                            className="detach-btn diagram-detach-btn"
+                            onClick={onDetach}
+                            title={tip("Ouvrir le diagramme dans une fenêtre séparée (miroir lecture seule, ex. 2e écran)")}
+                        >Détacher</button>
+                    )}
+                    {planName && setIsPlayingSimulation && !readOnly && (
+                        <div className="diagram-playback" style={{ marginLeft: '20px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 'normal' }}>
+                            <CustomTooltip text={isPlayingSimulation ? 'Pause' : 'Lecture'}>
                                 <button
-                                    className={`sim-btn sim-speed-btn ${simulationSpeed > 1 ? 'accelere' : ''}`}
-                                    onClick={cycleSimulationSpeed}
-                                    aria-label={`Vitesse de déroulement : ×${simulationSpeed}. Cliquer pour changer.`}
+                                    className={`sim-btn ${isPlayingSimulation ? 'playing' : ''}`}
+                                    onClick={() => setIsPlayingSimulation(!isPlayingSimulation)}
+                                    aria-label={isPlayingSimulation ? 'Mettre la simulation en pause' : 'Lancer la simulation'}
                                 >
-                                    ×{simulationSpeed}
+                                    {isPlayingSimulation ? '⏸' : '▶'}
                                 </button>
                             </CustomTooltip>
-                        )}
-                        <CustomTooltip text="Position dans le cycle">
-                            <input
-                                type="range"
-                                min="0"
-                                max={(simulationResult?.simulatedCycleLength || cycleLength) - 1}
-                                value={simulationCurrentTime || 0}
-                                onChange={(e) => setSimulationCurrentTime(parseInt(e.target.value) || 0)}
-                                className="time-slider"
-                                aria-label="Position courante dans le cycle de simulation"
-                            />
-                        </CustomTooltip>
-                        <span className="sim-time" style={{ color: '#fff', whiteSpace: 'nowrap', fontSize: '14px' }}>
-                            {simulationCurrentTime || 0}s / {simulationResult?.simulatedCycleLength || cycleLength}s
-                        </span>
-                    </div>
-                )}
-            </h3>
+                            <CustomTooltip text="Réinitialiser">
+                                <button
+                                    className="sim-btn reset-btn"
+                                    onClick={() => { setIsPlayingSimulation(false); setSimulationCurrentTime(0); }}
+                                    aria-label="Réinitialiser la simulation"
+                                >
+                                    ⏹
+                                </button>
+                            </CustomTooltip>
+                            {cycleSimulationSpeed && (
+                                <CustomTooltip text="Vitesse de déroulement — cliquer pour changer">
+                                    <button
+                                        className={`sim-btn sim-speed-btn ${simulationSpeed > 1 ? 'accelere' : ''}`}
+                                        onClick={cycleSimulationSpeed}
+                                        aria-label={`Vitesse de déroulement : ×${simulationSpeed}. Cliquer pour changer.`}
+                                    >
+                                        ×{simulationSpeed}
+                                    </button>
+                                </CustomTooltip>
+                            )}
+                            <CustomTooltip text="Position dans le cycle">
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max={(simulationResult?.simulatedCycleLength || cycleLength) - 1}
+                                    value={simulationCurrentTime || 0}
+                                    onChange={(e) => setSimulationCurrentTime(parseInt(e.target.value) || 0)}
+                                    className="time-slider"
+                                    aria-label="Position courante dans le cycle de simulation"
+                                />
+                            </CustomTooltip>
+                            <span className="sim-time" style={{ color: '#fff', whiteSpace: 'nowrap', fontSize: '14px' }}>
+                                {simulationCurrentTime || 0}s / {simulationResult?.simulatedCycleLength || cycleLength}s
+                            </span>
+                        </div>
+                    )}
+                </h3>
+            )}
             <div className="timeline-layout">
                 <div className="timeline-sidebar" style={!showGroupNames ? { width: '165px' } : undefined}>
                     {/* Header Label for Sidebar */}
@@ -3790,6 +3806,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     <React.Fragment key={`debut-bande-${idx}`}>
                                         <svg
                                             className={`debut-bande-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
                                             width={totalWidth}
                                             height={svgHeight}
                                             style={{
@@ -3802,8 +3820,18 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             }}
                                         >
                                             {/* First segment: from start to end of cycle */}
+                                            {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                                0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                                se survole, et l'événement remonte au <svg>. */}
+                                            <path d={`M${startX},${startY}L${cycleEndX},${intermediateY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
                                             <path d={dashedPath(startX, startY, cycleEndX, intermediateY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
                                             {/* Second segment: from start of cycle to end */}
+                                            {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                                0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                                se survole, et l'événement remonte au <svg>. */}
+                                            <path d={`M${0},${intermediateY}L${endX},${endY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
                                             <path d={dashedPath(0, intermediateY, endX, endY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
                                             {/* Arrow head at end */}
                                             <polygon
@@ -3826,6 +3854,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                 <React.Fragment key={`debut-bande-${idx}`}>
                                     <svg
                                         className={`debut-bande-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
                                         width={totalWidth}
                                         height={svgHeight}
                                         style={{
@@ -3838,6 +3868,11 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         }}
                                     >
                                         {/* Dashed diagonal line */}
+                                        {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                            0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                            se survole, et l'événement remonte au <svg>. */}
+                                        <path d={`M${startX},${startY}L${endX},${endY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
                                         <path d={dashedPath(startX, startY, endX, endY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
                                         {/* Arrow head at end */}
                                         <polygon
@@ -3900,6 +3935,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     <React.Fragment key={`fin-bande-${idx}`}>
                                         <svg
                                             className={`fin-bande-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
                                             width={totalWidth}
                                             height={svgHeight}
                                             style={{
@@ -3912,8 +3949,18 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             }}
                                         >
                                             {/* First segment: from start to end of cycle */}
+                                            {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                                0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                                se survole, et l'événement remonte au <svg>. */}
+                                            <path d={`M${startX},${startY}L${cycleEndX},${intermediateY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
                                             <path d={dashedPath(startX, startY, cycleEndX, intermediateY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
                                             {/* Second segment: from start of cycle to end */}
+                                            {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                                0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                                se survole, et l'événement remonte au <svg>. */}
+                                            <path d={`M${0},${intermediateY}L${endX},${endY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
                                             <path d={dashedPath(0, intermediateY, endX, endY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
                                             {/* Arrow head at end */}
                                             <polygon
@@ -3936,6 +3983,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                 <React.Fragment key={`fin-bande-${idx}`}>
                                     <svg
                                         className={`fin-bande-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
                                         width={totalWidth}
                                         height={svgHeight}
                                         style={{
@@ -3948,6 +3997,11 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         }}
                                     >
                                         {/* Dashed diagonal line */}
+                                        {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                            0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                            se survole, et l'événement remonte au <svg>. */}
+                                        <path d={`M${startX},${startY}L${endX},${endY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
                                         <path d={dashedPath(startX, startY, endX, endY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
                                         {/* Arrow head at end */}
                                         <polygon

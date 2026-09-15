@@ -1018,6 +1018,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             }
             setExternalLinks(data.externalLinks && Array.isArray(data.externalLinks) ? data.externalLinks : []);
 
+            // Rendre à leurs modules les champs qui ne vivent pas ici — les
+            // cases d'impression du dossier, par exemple. getFullState les
+            // écrit dans le cache comme dans le fichier, mais seul le lecteur
+            // « fichier » (loadFullState) les restituait : relus depuis la
+            // liste des projets, ils revenaient vides.
+            champsProjetRef?.current?.ecrire?.(data);
+
             // Reset simulation state when loading a project
             setSimulationEnabled(false);
             setSimulationSelectedActions([]);
