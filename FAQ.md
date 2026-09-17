@@ -223,6 +223,18 @@ Vous pouvez à tout moment ouvrir le **projet exemple** depuis l'écran d'accuei
 
 **Chrome, Firefox, Edge, Safari** dans une version récente (2 ans max). L'application étant une page web, elle fonctionne sur **Windows, macOS et Linux** indifféremment, ainsi qu'en environnement Citrix ou bureau distant.
 
+### Puis-je l'utiliser sur un smartphone ou une tablette ?
+
+**Oui, et sans rien installer** : il suffit d'ouvrir [tracflux.com](https://tracflux.com) dans le navigateur de l'appareil. L'application s'y adapte — en dessous d'un écran de 900 pixels, le panneau des paramètres cesse d'être posé à côté du diagramme et vient **au-dessus** de lui. Tout s'atteint alors par le défilement vertical, et le diagramme, plus large que l'écran, se fait glisser latéralement du doigt.
+
+**À quoi cela sert.** Consulter un plan de feux sur le terrain, au pied du carrefour, en vérifiant un décalage ou une durée de vert. Montrer un phasage à un interlocuteur sans sortir d'ordinateur. Rouvrir un projet reçu par courriel pour en prendre connaissance avant une réunion.
+
+**Ce qu'il faut savoir.** L'écran reste petit, et l'application a été pensée pour un poste de travail : la saisie y est **plus laborieuse** qu'au clavier et à la souris, et le confort décroît avec le nombre de groupes de feux. Concevoir un carrefour de trente-deux groupes sur un téléphone reste possible, mais peu raisonnable. Les fenêtres détachées, enfin, n'ont pas d'objet sur un appareil qui n'affiche qu'une fenêtre à la fois.
+
+**Le meilleur compromis est la tablette**, en orientation paysage : la largeur y suffit souvent à conserver la disposition en deux colonnes du poste de travail.
+
+Comme sur ordinateur, l'application peut être **installée** depuis le navigateur (menu du navigateur → *Ajouter à l'écran d'accueil*) : elle s'ouvre alors comme une application, et fonctionne hors connexion.
+
 ### Comment l'application se met-elle à jour ?
 
 Aucune action n'est requise de votre part. L'application est conçue comme une **PWA** (Progressive Web App) : elle se met à jour automatiquement à la prochaine ouverture après chaque nouvelle publication.

@@ -2560,7 +2560,7 @@ function App() {
             </header>
 
             <main className="split-view" ref={splitViewRef}>
-                <aside className="sidebar" style={{
+                <aside className={`sidebar${sidebarVisible ? '' : ' repliee'}`} style={{
                     width: sidebarVisible ? `${phasageBulleEnabled ? Math.min(sidebarWidth, 350) : sidebarWidth}px` : '0px',
                     minWidth: sidebarVisible ? (phasageBulleEnabled ? '200px' : '300px') : '0px',
                     padding: sidebarVisible ? '1rem' : '0',

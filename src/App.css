@@ -237,6 +237,104 @@ body.light-mode .welcome-screen .welcome-hint strong { color: #555; }
     overflow-x: hidden;
 }
 
+/* ============================================================
+ * Écrans bas : rendre de la hauteur aux bandeaux du haut
+ *
+ * En paysage sur un téléphone, il reste environ 350 px de hauteur utile une
+ * fois la barre d'adresse du navigateur déduite. Nos deux bandeaux en
+ * prenaient 88 — un quart — avant même d'afficher une seule ligne du
+ * diagramme.
+ *
+ * Le critère est la HAUTEUR et non la largeur : c'est elle qui manque en
+ * paysage, et une tablette large mais basse a le même besoin. Un écran
+ * d'ordinateur ne descend jamais sous ce seuil.
+ * ============================================================ */
+@media (max-height: 520px) {
+    .app-header {
+        height: 38px;
+        padding: 0 0.5rem;
+    }
+
+    .header-inputs {
+        gap: 0.5rem;
+    }
+
+    /* Le nom du carrefour réclamait 40 caractères : il prenait toute la
+       largeur et repoussait les boutons. Il se contente de la place qui
+       reste, et le texte défile dedans. */
+    .input-name {
+        font-size: 0.85rem;
+        width: auto;
+        min-width: 8ch;
+        flex: 1 1 auto;
+    }
+
+    .app-header button {
+        padding: 2px 8px;
+        font-size: 0.8rem;
+    }
+
+    .input-count,
+    .input-dependency-gap {
+        padding: 2px;
+    }
+
+    .menu-bar {
+        height: 24px;
+        border-bottom-width: 1px;
+    }
+
+    .menu-bar-logo {
+        height: 18px;
+    }
+}
+
+/* ============================================================
+ * Petits écrans : empiler au lieu de juxtaposer
+ *
+ * `.split-view` est une rangée : le panneau réclame 300 px minimum, et
+ * `overflow-x: hidden` coupe sans recours ce qui dépasse. Sur un téléphone il
+ * ne restait qu'une soixantaine de pixels au diagramme, inaccessibles au-delà.
+ *
+ * En dessous de 900 px — un téléphone en paysage ou une petite tablette
+ * dépassent 768 px tout en restant trop étroits — les deux colonnes s'empilent.
+ * Tout redevient atteignable par le défilement vertical, et chaque bloc trop
+ * large défile dans sa propre boîte plutôt que d'être rogné.
+ *
+ * Rien de tout cela n'existe sur un écran d'ordinateur : ces règles ne sont
+ * lues qu'en dessous du seuil.
+ * ============================================================ */
+@media (max-width: 900px) {
+    .split-view {
+        flex-direction: column;
+    }
+
+    /* Le panneau prend toute la largeur — sauf s'il est replié, auquel cas
+       il garde la largeur nulle que lui donne son style en ligne. */
+    .sidebar:not(.repliee) {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        border-right: none;
+        /* Son `overflow: hidden` en ligne rognerait la matrice et le
+           formulaire, plus larges que l'écran : ils défilent à la place. */
+        overflow: auto !important;
+    }
+
+    .diagram-area {
+        width: 100%;
+        min-width: 0;
+        padding: 0.5rem;
+    }
+
+    /* Un cycle de 60 s fait environ 700 px, plus 325 px de colonne de noms :
+       le diagramme ne tiendra jamais sur un téléphone. Le comprimer le rendrait
+       illisible — il défile latéralement, d'un glissement du doigt. */
+    .timeline-layout {
+        overflow-x: auto;
+    }
+}
+
 .sidebar {
     min-width: 300px;
     max-width: 1200px;

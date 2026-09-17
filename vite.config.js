@@ -70,6 +70,10 @@ export default defineConfig({
   // pointeraient dans le vide sans rien signaler.
   preview: {
     port: 4173,
+    // Écoute sur toutes les interfaces, et non sur la seule boucle locale :
+    // c'est ce qui rend l'aperçu joignable depuis un téléphone du même réseau
+    // Wi-Fi, pour juger la mise en page mobile avant de déployer.
+    host: true,
     // strictPort : sans lui, Vite bascule silencieusement sur 4174 quand 4173
     // est occupé. Les serveurs s'accumulaient alors sur les ports suivants,
     // pendant que la page d'attente des lanceurs sondait le 4173 et se

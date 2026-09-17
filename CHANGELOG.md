@@ -11,6 +11,13 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **TraCflux s'utilise sur un smartphone ou une tablette.** En dessous de 900 pixels de large, le
+  panneau des paramètres cesse d'être posé à côté du diagramme et vient au-dessus : tout redevient
+  atteignable par le défilement vertical, là où l'affichage était auparavant tronqué sans recours.
+  Le diagramme, plus large qu'un écran de téléphone, se fait glisser latéralement. Et sur un écran
+  bas — un téléphone en paysage — les deux bandeaux du haut se compactent, rendant 27 pixels de
+  hauteur sur les 350 disponibles. Rien ne change sur un écran d'ordinateur.
+
 - **Les réglages de mise en page voyagent désormais avec le cache du navigateur.** Hauteur du
   diagramme, cadrage et zoom de l'image détachée, options d'affichage et fenêtres détachées : le
   fichier `.json` les portait, le cache non. Rouvrir un projet depuis la liste les perdait donc
