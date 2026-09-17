@@ -587,12 +587,13 @@
     background: rgba(128, 128, 128, 0.2);
     border: 2px solid rgba(200, 200, 200, 0.7);
     z-index: 21;
-    /* Sensible sur toute sa surface, et non par ses seules poignées : c'est le
-       rectangle qui désigne l'escamotage, et c'est lui qu'on survole pour en
-       lire les conditions. Contrepartie assumée dans le diagramme éditable —
-       il recouvre les barres de phase des groupes escamotés, qui ne sont plus
-       saisissables à travers lui. */
-    pointer-events: auto;
+    /* Sourd à la souris, comme l'adaptatif vertical : le survol se déclenche
+       par les poignées, donc par le contour. Un temps rendu sensible sur toute
+       sa surface, ce rectangle captait alors tous les survols de la plage qu'il
+       recouvre, et interdisait de saisir les barres de phase dessous. Le
+       contour est la bonne prise pour une incrustation étendue ; seule
+       l'ouverture anticipée, une bande fine, garde toute sa surface. */
+    pointer-events: none;
     box-sizing: border-box; /* Inclure la bordure dans la largeur */
 }
 

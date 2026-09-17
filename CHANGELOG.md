@@ -52,6 +52,10 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 - **La bande passante s'épaissit de nouveau au survol de sa condition micro.** Son tracé a été
   converti de `<line>` en `<path>` sans que les règles de surlignage suivent : elles ne visaient
   plus rien, et seule la tête de flèche changeait de couleur.
+- **L'escamotage de phase se survole par son contour**, comme l'adaptatif vertical. Rendu un temps
+  sensible sur toute sa surface, ce rectangle captait alors tous les survols de la plage qu'il
+  recouvre et interdisait de saisir les barres de phase dessous. Seule l'ouverture anticipée, une
+  bande fine, garde toute sa surface.
 - **Les incrustations du diagramme détaché redeviennent survolables.** La lecture seule retirait
   les poignées de glissement, or c'est par elles que l'adaptatif vertical, l'escamotage et les
   accolades captaient le survol : plus rien ne les déclenchait. Les poignées sont désormais
