@@ -969,7 +969,6 @@
     overflow: visible;
 }
 
-.debut-bande-arrows line,
 .debut-bande-arrows path {
     stroke: #00cc00;
     stroke-width: 0.7;
@@ -982,7 +981,6 @@
    rien, et la bande passante ne s'épaississait plus au survol d'une condition
    micro — seule la tête de flèche changeait de couleur, parce que sa règle, elle,
    vise bien un <polygon>. */
-.debut-bande-arrows.highlighted line,
 .debut-bande-arrows.highlighted path {
     stroke: #00ff00;
     stroke-width: var(--surlignage-trait-svg-mince);
@@ -1013,7 +1011,6 @@
     overflow: visible;
 }
 
-.fin-bande-arrows line,
 .fin-bande-arrows path {
     stroke: #00cc00;
     stroke-width: 0.7;
@@ -1026,7 +1023,6 @@
    rien, et la bande passante ne s'épaississait plus au survol d'une condition
    micro — seule la tête de flèche changeait de couleur, parce que sa règle, elle,
    vise bien un <polygon>. */
-.fin-bande-arrows.highlighted line,
 .fin-bande-arrows.highlighted path {
     stroke: #00ff00;
     stroke-width: var(--surlignage-trait-svg-mince);

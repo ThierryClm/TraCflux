@@ -11,6 +11,12 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **Quarante-sept tests protègent désormais le diagramme**, qui n'en avait aucun. Ils fixent le
+  contrat de surlignage des quinze familles d'incrustations, celui de la lecture seule — rien de
+  modifiable, mais des poignées présentes puisqu'elles captent le survol — et l'accord entre les
+  règles de style et les éléments réellement dessinés, par où un défaut était passé inaperçu
+  pendant des semaines.
+
 - **TraCflux s'utilise sur un smartphone ou une tablette.** En dessous de 900 pixels de large, le
   panneau des paramètres cesse d'être posé à côté du diagramme et vient au-dessus : tout redevient
   atteignable par le défilement vertical, là où l'affichage était auparavant tronqué sans recours.
