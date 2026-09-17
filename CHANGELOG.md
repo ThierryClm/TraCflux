@@ -11,6 +11,10 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **L'enregistrement des fichiers projet est sous surveillance.** Ce chemin, le plus lourd de
+  conséquence puisqu'une défaillance y perd le travail de l'utilisateur, n'avait aucun test. Quatre
+  tests vérifient maintenant que le fichier écrit ne porte rien que le cache du navigateur ignore —
+  la garantie que rouvrir un projet depuis la liste ne perd rien.
 - **Quarante-sept tests protègent désormais le diagramme**, qui n'en avait aucun. Ils fixent le
   contrat de surlignage des quinze familles d'incrustations, celui de la lecture seule — rien de
   modifiable, mais des poignées présentes puisqu'elles captent le survol — et l'accord entre les
