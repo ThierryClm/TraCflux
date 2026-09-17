@@ -11,6 +11,14 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **Le cadre de référence des flèches ne peut plus dériver.** La taille d'une flèche vaut 12,8 % de
+  la largeur de son cadre, dans le plan du carrefour comme dans les bulles de phasage et le dossier
+  imprimé. Trois constantes le portaient, recopiées à la main depuis la feuille de style et un autre
+  module ; treize tests les comparent désormais à leur source, et vérifient la règle de la vignette
+  à la pleine page.
+- **L'import de fichiers ne peut plus emporter le projet ouvert.** Sept tests fixent le
+  comportement en cas d'échec — message affiché, fenêtre laissée ouverte, projet en place — et le
+  routage selon le format du fichier.
 - **L'enregistrement des fichiers projet est sous surveillance.** Ce chemin, le plus lourd de
   conséquence puisqu'une défaillance y perd le travail de l'utilisateur, n'avait aucun test. Quatre
   tests vérifient maintenant que le fichier écrit ne porte rien que le cache du navigateur ignore —
