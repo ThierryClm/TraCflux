@@ -156,6 +156,36 @@ describe('Fichier projet — ce qui est écrit', () => {
         expect(paquet.dossierSections).toEqual({ image: true });
     });
 
+    // Le second chemin d'enregistrement, celui d'un répertoire récent — en
+    // pratique le plus emprunté. Il construit son paquet dans un bloc distinct,
+    // jumeau du premier : deux blocs à garder d'accord, donc deux à tester.
+    it("l'enregistrement dans un répertoire récent écrit la même chose", async () => {
+        const ecrit = interceptantLEcriture();
+        const { result } = renderHook(() => useFileOperations(proprietes()));
+        await act(async () => { await result.current.handleSaveFileToRecentDir(0); });
+
+        expect(ecrit.contenu, "rien n'a été écrit").not.toBeNull();
+        const paquet = JSON.parse(ecrit.contenu);
+        const enTrop = Object.keys(paquet).filter(k => !Object.keys(etatComplet()).includes(k));
+        expect(enTrop, `le fichier porte ${enTrop.join(', ')} que le cache ignore`).toEqual([]);
+        expect(paquet.diagramHeight).toBe(640);
+        expect(paquet.layoutOptions.showFloatingRemarks).toBe(true);
+        expect(paquet.dossierSections).toEqual({ image: true });
+    });
+
+    it('les deux chemins écrivent un contenu identique', async () => {
+        const a = interceptantLEcriture();
+        const { result: r1 } = renderHook(() => useFileOperations(proprietes()));
+        await act(async () => { await r1.current.handleSaveFileWithPicker(); });
+        const parSelecteur = a.contenu;
+
+        const b = interceptantLEcriture();
+        const { result: r2 } = renderHook(() => useFileOperations(proprietes()));
+        await act(async () => { await r2.current.handleSaveFileToRecentDir(0); });
+
+        expect(JSON.parse(b.contenu)).toEqual(JSON.parse(parSelecteur));
+    });
+
     it("sans l'API du navigateur, on retombe sur l'enregistrement en cache", async () => {
         delete window.showSaveFilePicker;
         const saveProject = vi.fn();

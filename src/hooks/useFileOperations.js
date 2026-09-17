@@ -431,38 +431,13 @@ const useFileOperations = ({
 
             // Préparer les données du projet
             const fullState = getFullState();
-            const projectData = {
-                ...fullState,
-                diagramHeight: diagramHeight,
-                floatingCrop: floatingCrop,
-                floatingCropBasis: CROP_BASIS,
-                floatingZoom: floatingZoom,
-                dossierSections: dossierSections,
-                // Options de mise en page sauvegardées avec le projet
-                layoutOptions: {
-                    showParameters: sidebarVisible,
-                    showComments,
-                    showRemarks,
-                    showActionDescription,
-                    // Flags de détachement (les dimensions des popups
-                    // dépendent du nombre de groupes du projet)
-                    showFloatingForm,
-                    showFloatingMatrix,
-                    showFloatingTraffic,
-                    showFloatingImage,
-                    showFloatingConditions,
-                    showFloatingVariables,
-                    showFloatingRemarks
-                },
-                // Noms des répertoires utilisés (avec fallback sur les récents)
-                directoryNames: {
-                    open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
-                    save: lastSaveDirectoryRef.current?.name || recentSaveDirs[0]?.name || null,
-                    import: lastImportDirectoryRef.current?.name || recentImportDirs[0]?.name || null,
-                    image: lastImageDirectoryRef.current?.name || recentImageDirs[0]?.name || null,
-                    greenWave: lastGreenWaveDirectoryRef.current?.name || recentGreenWaveDirs[0]?.name || null
-                }
-            };
+            // Le paquet EST l'état canonique, sans ajout : hauteur du diagramme,
+            // cadrage et zoom de l'image, options de mise en page, cases du dossier
+            // et répertoires y entrent par getFullState, donc aussi dans le cache.
+            // Ces sept clés étaient recopiées ici, dans les deux chemins
+            // d'enregistrement : c'est cette duplication qui faisait diverger le
+            // fichier et le cache dès qu'un réglage n'était ajouté qu'à un endroit.
+            const projectData = { ...fullState };
 
             // Écrire le fichier
             const jsonContent = JSON.stringify(projectData, null, 2);
@@ -555,38 +530,13 @@ const useFileOperations = ({
 
             // Préparer les données du projet
             const fullState = getFullState();
-            const projectData = {
-                ...fullState,
-                diagramHeight: diagramHeight,
-                floatingCrop: floatingCrop,
-                floatingCropBasis: CROP_BASIS,
-                floatingZoom: floatingZoom,
-                dossierSections: dossierSections,
-                // Options de mise en page sauvegardées avec le projet
-                layoutOptions: {
-                    showParameters: sidebarVisible,
-                    showComments,
-                    showRemarks,
-                    showActionDescription,
-                    // Flags de détachement (les dimensions des popups
-                    // dépendent du nombre de groupes du projet)
-                    showFloatingForm,
-                    showFloatingMatrix,
-                    showFloatingTraffic,
-                    showFloatingImage,
-                    showFloatingConditions,
-                    showFloatingVariables,
-                    showFloatingRemarks
-                },
-                // Noms des répertoires utilisés (avec fallback sur les récents)
-                directoryNames: {
-                    open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
-                    save: lastSaveDirectoryRef.current?.name || recentSaveDirs[0]?.name || null,
-                    import: lastImportDirectoryRef.current?.name || recentImportDirs[0]?.name || null,
-                    image: lastImageDirectoryRef.current?.name || recentImageDirs[0]?.name || null,
-                    greenWave: lastGreenWaveDirectoryRef.current?.name || recentGreenWaveDirs[0]?.name || null
-                }
-            };
+            // Le paquet EST l'état canonique, sans ajout : hauteur du diagramme,
+            // cadrage et zoom de l'image, options de mise en page, cases du dossier
+            // et répertoires y entrent par getFullState, donc aussi dans le cache.
+            // Ces sept clés étaient recopiées ici, dans les deux chemins
+            // d'enregistrement : c'est cette duplication qui faisait diverger le
+            // fichier et le cache dès qu'un réglage n'était ajouté qu'à un endroit.
+            const projectData = { ...fullState };
 
             // Écrire le fichier
             const jsonContent = JSON.stringify(projectData, null, 2);
