@@ -33,7 +33,7 @@ const useFileOperations = ({
     loadFullState, getFullState, saveProject,
     dossierSections, setDossierSections,
     lastOpenDirectoryRef, lastSaveDirectoryRef, lastImportDirectoryRef,
-    lastImageDirectoryRef, lastGreenWaveDirectoryRef,
+    lastImageDirectoryRef,
     saveDirectoryHandle, loadDirectoryHandle,
     recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
     addRecentDirectory,

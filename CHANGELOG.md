@@ -7,103 +7,53 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
-## [Non publié]
+## [1.3.0] — 2026-09-18
 
 ### Ajouté
 
-- **Le champ Description des conditions de micro-régulation accepte les sauts de ligne**, comme
-  Action_Micro : la hauteur suit le contenu, et la limite passe de 30 à 60 caractères. À
-  l'impression, les retours à la ligne saisis sont conservés et la colonne garde la largeur réglée
-  à l'écran.
-- **Le tableau des conditions imprimé occupe la largeur de la page.** Il se dimensionnait sur son
-  contenu et laissait une bande vide ; il est désormais posé à la largeur du tableau de l'écran
-  puis mis à l'échelle de la feuille, dans les deux sens. Les proportions et les retours à la
-  ligne sont donc ceux du projet.
-
-- **Le cadre de référence des flèches ne peut plus dériver.** La taille d'une flèche vaut 12,8 % de
-  la largeur de son cadre, dans le plan du carrefour comme dans les bulles de phasage et le dossier
-  imprimé. Trois constantes le portaient, recopiées à la main depuis la feuille de style et un autre
-  module ; treize tests les comparent désormais à leur source, et vérifient la règle de la vignette
-  à la pleine page.
-- **L'import de fichiers ne peut plus emporter le projet ouvert.** Sept tests fixent le
-  comportement en cas d'échec — message affiché, fenêtre laissée ouverte, projet en place — et le
-  routage selon le format du fichier.
-- **L'enregistrement des fichiers projet est sous surveillance.** Ce chemin, le plus lourd de
-  conséquence puisqu'une défaillance y perd le travail de l'utilisateur, n'avait aucun test. Quatre
-  tests vérifient maintenant que le fichier écrit ne porte rien que le cache du navigateur ignore —
-  la garantie que rouvrir un projet depuis la liste ne perd rien.
-- **Quarante-sept tests protègent désormais le diagramme**, qui n'en avait aucun. Ils fixent le
-  contrat de surlignage des quinze familles d'incrustations, celui de la lecture seule — rien de
-  modifiable, mais des poignées présentes puisqu'elles captent le survol — et l'accord entre les
-  règles de style et les éléments réellement dessinés, par où un défaut était passé inaperçu
-  pendant des semaines.
+- **Le dossier s'imprime au choix en A4 paysage ou portrait.** Le sélecteur se trouve en tête de la
+  boîte « Imprimer le dossier », le paysage restant la valeur par défaut : c'est lui qui donne au
+  diagramme la largeur qu'exige un cycle long. Le portrait offre 190 mm utiles au lieu de 277, mais
+  bien plus de hauteur — plus favorable aux pages de tableaux. L'échelle suit le format : une
+  seconde garde la même largeur en deçà du cycle de référence, 120 secondes en paysage et 80 en
+  portrait, au-delà duquel le diagramme est comprimé pour remplir la page. Le format retenu est
+  mémorisé avec le projet.
 
 - **TraCflux s'utilise sur un smartphone ou une tablette.** En dessous de 900 pixels de large, le
-  panneau des paramètres cesse d'être posé à côté du diagramme et vient au-dessus : tout redevient
+  panneau des paramètres vient au-dessus du diagramme au lieu d'être posé à côté : tout redevient
   atteignable par le défilement vertical, là où l'affichage était auparavant tronqué sans recours.
-  Le diagramme, plus large qu'un écran de téléphone, se fait glisser latéralement. Et sur un écran
-  bas — un téléphone en paysage — les deux bandeaux du haut se compactent, rendant 27 pixels de
-  hauteur sur les 350 disponibles. Rien ne change sur un écran d'ordinateur.
+  Le diagramme, plus large qu'un écran de téléphone, se fait glisser latéralement, et sur un écran
+  bas — un téléphone en paysage — les bandeaux du haut se compactent pour rendre de la hauteur.
 
-- **Les réglages de mise en page voyagent désormais avec le cache du navigateur.** Hauteur du
-  diagramme, cadrage et zoom de l'image détachée, options d'affichage et fenêtres détachées : le
-  fichier `.json` les portait, le cache non. Rouvrir un projet depuis la liste les perdait donc
-  silencieusement. Ils transitent maintenant par la même sérialisation que le reste, si bien que
-  les deux chemins d'enregistrement les écrivent d'office. Le format du fichier est inchangé.
+- **Les fenêtres détachées restent solidaires du reste de l'application.** Survoler une flèche du
+  plan du carrefour, une ligne du diagramme, une ligne des données trafic ou une action de
+  micro-régulation met le groupe en évidence partout ailleurs — et ces liens franchissent les
+  fenêtres, dans les deux sens. Un second écran cesse d'être un rangement pour devenir un
+  prolongement du plan de travail. Le miroir du diagramme affiche en outre les conditions de
+  micro-régulation au survol, comme le diagramme intégré.
 
-- **Les fenêtres détachées portent un bandeau d'identification.** Deux fenêtres sombres qui se
-  chevauchent sur un bureau sombre n'avaient pas de frontière lisible, et la barre de titre du
-  navigateur est du chrome système qu'une page ne peut pas styler. Un bandeau gris, posé en tête
-  du contenu, nomme la fenêtre et le plan de feu actif ; un filet clair marque les trois autres
-  côtés. La barre du navigateur elle-même passe au gris clair, l'application étant installée en
-  PWA — les deux forment un en-tête continu.
-- **Matrice, formulaire et miroir du diagramme n'affichent plus leur titre en double.** Le bandeau
-  le portant désormais, l'en-tête en page a disparu de ces trois fenêtres, avec les marges qu'il
-  dégageait. Le bandeau de la matrice indique en outre si les matrices sont verrouillées, et celui
-  du diagramme la durée du cycle — simulée quand la simulation tourne.
-- **Le diagramme détaché affiche les conditions de micro-régulation au survol**, comme le
-  diagramme intégré : nom de l'action après une demi-seconde, texte des conditions après trois.
-- **Le tracé des bandes passantes se survole.** Il ne portait ni étiquette ni poignée : une prise
-  transparente de 16 px suit sa trajectoire, ce qui permet de viser un trait de 0,7 px et
-  d'allumer la condition micro correspondante.
+- **Les fenêtres détachées s'identifient au premier coup d'œil.** Un bandeau gris en tête de chaque
+  fenêtre nomme son contenu et le plan de feu actif, un cadre en dessine le pourtour, et la barre du
+  navigateur adopte la même teinte : deux fenêtres sombres qui se chevauchent sur un bureau sombre
+  n'avaient jusqu'ici aucune frontière lisible. Matrice, formulaire et miroir du diagramme ne
+  répètent plus leur titre en page, puisque le bandeau le porte.
 
-### Corrigé
+- **Le champ Description des conditions de micro-régulation accepte les sauts de ligne**, comme
+  Action_Micro, avec une limite portée de 30 à 60 caractères. À l'impression, les retours à la ligne
+  saisis sont conservés et le tableau occupe la largeur de la page en gardant les proportions de
+  l'écran.
 
-- **Les abréviations n'apparaissent plus en double dans le diagramme.** Un libellé générique est
-  posé au début de chaque action, et une liste tenue à la main en dispensait les familles qui
-  placent le leur. Quatre y manquaient — priorité piétons, flèche d'anticipation, signal d'aide à
-  la conduite et contrôle de flot — et affichaient donc leur abréviation deux fois sur la même
-  barre. Seul le libellé placé au début de l'action subsiste.
-- **Le diagramme imprimé n'emporte plus sa barre de défilement**, qui s'imprimait en gris sans
-  rien servir.
-- **Les pages de tableaux démarrent toutes à la même hauteur.** Le bandeau de titre prenait sa
-  hauteur naturelle, puis se trouvait réduit avec le tableau : le décalage sous l'en-tête variait
-  d'un plan de feu à l'autre. Il est fixé à 14 mm, comme celui du phasage bulle, et la mise à
-  l'échelle n'englobe plus que le tableau.
-- **La Description imprimée n'est plus tronquée en plein mot.** Elle partageait une règle de
-  troncature héritée du temps où elle tenait sur une seule ligne.
+- **Les priorités piéton se reconnaissent sur le plan du carrefour imprimé.** Leur numéro de groupe
+  y est cerclé, là où les flux véhicule gardent le rectangle et les traversées piétonnes le
+  triangle — une priorité piéton n'étant ni un mouvement de véhicule ni une traversée.
 
-- **Le cadre des fenêtres détachées se distingue du fond.** Il était d'un pixel et d'un gris
-  sombre, indiscernable de l'écran principal ; il passe à trois pixels, dans le gris du bandeau.
+- **Les réglages de mise en page voyagent avec le projet.** Hauteur du diagramme, cadrage et zoom de
+  l'image détachée, options d'affichage et fenêtres détachées suivent désormais le projet par les
+  deux chemins d'enregistrement, fichier et cache du navigateur, qui portent exactement la même
+  chose.
 
-- **Les cases d'impression reviennent quand on rouvre un projet depuis la liste.** Elles étaient
-  bien écrites dans le cache du navigateur, mais le lecteur de ce cache ne les rendait pas à leur
-  module — seul le lecteur de fichier le faisait. Trois tests gardent désormais la symétrie entre
-  les deux chemins, sans nommer aucun champ : ils couvrent aussi ceux qui n'existent pas encore.
-- **La bande passante s'épaissit de nouveau au survol de sa condition micro.** Son tracé a été
-  converti de `<line>` en `<path>` sans que les règles de surlignage suivent : elles ne visaient
-  plus rien, et seule la tête de flèche changeait de couleur.
-- **L'escamotage de phase se survole par son contour**, comme l'adaptatif vertical. Rendu un temps
-  sensible sur toute sa surface, ce rectangle captait alors tous les survols de la plage qu'il
-  recouvre et interdisait de saisir les barres de phase dessous. Seule l'ouverture anticipée, une
-  bande fine, garde toute sa surface.
-- **Les incrustations du diagramme détaché redeviennent survolables.** La lecture seule retirait
-  les poignées de glissement, or c'est par elles que l'adaptatif vertical, l'escamotage et les
-  accolades captaient le survol : plus rien ne les déclenchait. Les poignées sont désormais
-  invisibles plutôt que supprimées, et la zone sensible reste le pourtour. L'escamotage et
-  l'ouverture anticipée, eux, se survolent sur toute leur surface.
-- **Les champs Plage et Action GF de la fenêtre détachée affichent deux chiffres.** Ils étaient
-  larges de 17 px, où il en faut 22 au minimum.
+*Sous le capot, le diagramme, l'enregistrement des projets et les imports sont désormais couverts
+par 647 tests automatisés, contre 562 à la version précédente.*
 
 ## [1.2.11] — 2026-09-11
 

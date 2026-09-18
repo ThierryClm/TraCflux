@@ -468,9 +468,15 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             if (!popup) {
                 if (!popupBlockedNotified) {
                     popupBlockedNotified = true;
-                    toast.error("Fenêtre détachée bloquée par le navigateur. Cliquez sur l'icône popup bloqué dans la barre d'adresse et choisissez « Toujours autoriser » pour ce site (voir le menu Aide).");
+                    toast.error("Fenêtre détachée bloquée par le navigateur. Cliquez sur l'icône popup bloqué dans la barre d'adresse et choisissez « Toujours autoriser » pour ce site, puis rouvrez la fenêtre (voir le menu Aide).");
                 }
-                onClose();
+                // On NE referme PAS le détachement. Le faire remettait son
+                // drapeau à faux, et le projet enregistré dans la foulée
+                // retenait une mise en page amputée — silencieusement, alors
+                // que l'utilisateur n'avait rien décoché. Le refus vient du
+                // navigateur, pas de lui : son intention est conservée.
+                // Pas de risque de boucle, cet effet ne dépend que de `isOpen`,
+                // qui ne change pas ici.
                 return;
             }
 
