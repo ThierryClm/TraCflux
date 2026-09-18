@@ -2084,11 +2084,19 @@ body.amber-mode .help-back-to-top {
     white-space: nowrap;
 }
 
-/* Action_Micro : préserver les sauts de ligne saisis dans la fenêtre principale
-   (annule le nowrap/ellipsis ci-dessus, qui écrasait le texte sur une ligne). */
-.print-actions-table td.print-micro-cell {
+/* Action_Micro et Description : préserver les sauts de ligne saisis dans la
+   fenêtre principale (annule le nowrap/ellipsis ci-dessus, qui écrasait le
+   texte sur une ligne).
+   La Description a longtemps été un champ d'une seule ligne : la règle
+   ci-dessus la tronquait d'une ellipse, ce qui passait pour un choix. Devenue
+   multiligne, elle réclame la même exception qu'Action_Micro — sans quoi elle
+   s'imprimait coupée en plein mot. */
+.print-actions-table td.print-micro-cell,
+.print-actions-table td.print-desc-cell {
+    max-width: none;
     overflow: visible;
     text-overflow: clip;
+    white-space: normal;
     padding: 2px 4px;
 }
 
@@ -2104,6 +2112,26 @@ body.amber-mode .help-back-to-top {
        mesure (onglet Simulation ou Phasage). */
     width: 420px;
     font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    text-align: left;
+}
+
+.print-actions-table .print-desc-wrap {
+    /* Jumeau de .print-micro-wrap : la Description est multiligne elle aussi.
+       Sans `pre-wrap`, le HTML réduirait les sauts de ligne saisis à des
+       espaces et la description s'imprimerait d'un seul tenant. La largeur est
+       relevée à l'écran puis recopiée en style inline, pour que le navigateur
+       coupe aux mêmes endroits ; celle ci-dessous ne sert que si le tableau
+       n'était pas monté au moment de la mesure. */
+    width: 160px;
+    /* Plafond, et non largeur ferme : la largeur relevée à l'écran peut
+       excéder la colonne que le tableau imprimé lui accorde — en portrait
+       surtout, où l'ensemble est réduit. Elle était alors rognée net, en plein
+       mot. Bornée à la cellule, elle se replie au lieu de déborder : on perd
+       la parité exacte des retours à la ligne quand la place manque, on ne
+       perd plus de texte. */
+    max-width: 100%;
     white-space: pre-wrap;
     word-break: break-word;
     text-align: left;
@@ -2684,24 +2712,14 @@ body.amber-mode .help-back-to-top {
 
 /* Chaque module doit tenir dans l'emprise PAR SES PROPRES MOYENS — aucun ne
    doit imposer sa largeur à la page, sous peine de faire réduire tous les
-   autres par le navigateur. Pour un tableau, le moyen n'est pas la réduction
-   mais la répartition : il occupe la largeur disponible et son texte se replie.
-   En paysage la colonne des conditions garde la largeur relevée sur l'écran,
-   donc les mêmes retours à la ligne ; en portrait, 190 mm ne le permettent pas
-   et le repli suit la place réellement offerte. */
-body.print-portrait .print-dossier-actions .print-actions-table {
-    width: 100% !important;
-    table-layout: auto !important;
-}
-
-body.print-portrait .print-dossier-actions .print-micro-wrap {
-    width: 100% !important;
-}
-
-body.print-portrait .print-dossier-actions .print-actions-table td:nth-child(7) {
-    white-space: normal !important;
-    max-width: none !important;
-}
+   autres par le navigateur.
+   Le moyen retenu ici a changé. La répartition — laisser le tableau occuper
+   100 % et ses colonnes se redistribuer — le faisait tenir, mais donnait une
+   autre présentation que celle du projet : la colonne Description se resserrait
+   et le texte se repliait ailleurs qu'à l'écran. Le tableau conserve désormais
+   les largeurs de colonnes de l'écran et c'est la COMPOSITION ENTIÈRE qui est
+   réduite d'un facteur unique, mesuré (cf. `zoomConditions`, App.jsx) — comme
+   pour la matrice. Les proportions sont gardées, les retours à la ligne aussi. */
 
 /* Action_Micro(7) : afficher en entier */
 .print-dossier-actions .print-actions-table td:nth-child(7) {
@@ -3762,6 +3780,26 @@ body.print-portrait .dossier-phasage-centered .dossier-phasage-content {
         display: block !important;
     }
 
+    /* Bandeau de titre à hauteur FIXE pour les sections en tableau.
+       Sans lui, le titre occupe sa hauteur naturelle et le contenu démarre
+       plus ou moins haut selon la section et selon qu'elle ouvre ou non une
+       page : le décalage sous l'en-tête de feuille était variable, parfois
+       trop court. Quatorze millimètres, comme le bandeau du phasage bulle —
+       posé pour la même raison et qui donne le bon résultat.
+       Le diagramme, le phasage et la page de titre en sont exclus : leur
+       géométrie est calculée au millimètre et suppose leur propre en-tête. */
+    body.print-dossier .print-dossier-actions h3,
+    body.print-dossier .print-dossier-variables h3,
+    body.print-dossier .print-dossier-traffic h3,
+    body.print-dossier .print-dossier-matrix h3,
+    body.print-dossier .print-dossier-reserve h3,
+    body.print-dossier .print-dossier-form h3,
+    body.print-dossier .print-dossier-legend h3 {
+        height: 14mm;
+        box-sizing: border-box;
+        margin: 0 !important;
+    }
+
     body.print-dossier .print-dossier-remarques {
         background: white !important;
         color: #000 !important;
@@ -3773,6 +3811,17 @@ body.print-portrait .dossier-phasage-centered .dossier-phasage-content {
     body.print-dossier .print-dossier-remarques * {
         color: #000 !important;
         background: transparent !important;
+    }
+
+    /* Aucun ascenseur sur une feuille : il s'y imprime en gris et ne sert à
+       rien. Le diagramme défile à l'écran quand le cycle est long ; sur le
+       papier il doit se donner en entier. */
+    body.print-dossier .timeline-container.scrollable .timeline-layout,
+    body.print-diagram .timeline-container.scrollable .timeline-layout,
+    body.print-dossier .print-diagram-content .timeline-layout,
+    body.print-diagram .print-diagram-content .timeline-layout {
+        overflow: visible !important;
+        max-height: none !important;
     }
 
     body.print-dossier .dossier-diagram-content {

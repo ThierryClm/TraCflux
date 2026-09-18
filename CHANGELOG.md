@@ -11,6 +11,15 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **Le champ Description des conditions de micro-régulation accepte les sauts de ligne**, comme
+  Action_Micro : la hauteur suit le contenu, et la limite passe de 30 à 60 caractères. À
+  l'impression, les retours à la ligne saisis sont conservés et la colonne garde la largeur réglée
+  à l'écran.
+- **Le tableau des conditions imprimé occupe la largeur de la page.** Il se dimensionnait sur son
+  contenu et laissait une bande vide ; il est désormais posé à la largeur du tableau de l'écran
+  puis mis à l'échelle de la feuille, dans les deux sens. Les proportions et les retours à la
+  ligne sont donc ceux du projet.
+
 - **Le cadre de référence des flèches ne peut plus dériver.** La taille d'une flèche vaut 12,8 % de
   la largeur de son cadre, dans le plan du carrefour comme dans les bulles de phasage et le dossier
   imprimé. Trois constantes le portaient, recopiées à la main depuis la feuille de style et un autre
@@ -59,6 +68,20 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   d'allumer la condition micro correspondante.
 
 ### Corrigé
+
+- **Les abréviations n'apparaissent plus en double dans le diagramme.** Un libellé générique est
+  posé au début de chaque action, et une liste tenue à la main en dispensait les familles qui
+  placent le leur. Quatre y manquaient — priorité piétons, flèche d'anticipation, signal d'aide à
+  la conduite et contrôle de flot — et affichaient donc leur abréviation deux fois sur la même
+  barre. Seul le libellé placé au début de l'action subsiste.
+- **Le diagramme imprimé n'emporte plus sa barre de défilement**, qui s'imprimait en gris sans
+  rien servir.
+- **Les pages de tableaux démarrent toutes à la même hauteur.** Le bandeau de titre prenait sa
+  hauteur naturelle, puis se trouvait réduit avec le tableau : le décalage sous l'en-tête variait
+  d'un plan de feu à l'autre. Il est fixé à 14 mm, comme celui du phasage bulle, et la mise à
+  l'échelle n'englobe plus que le tableau.
+- **La Description imprimée n'est plus tronquée en plein mot.** Elle partageait une règle de
+  troncature héritée du temps où elle tenait sur une seule ligne.
 
 - **Le cadre des fenêtres détachées se distingue du fond.** Il était d'un pixel et d'un gris
   sombre, indiscernable de l'écran principal ; il passe à trois pixels, dans le gris du bandeau.

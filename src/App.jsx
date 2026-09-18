@@ -746,6 +746,42 @@ function App() {
         // ce qui couvre les cas réels.
     }, [actionColWidths?.micro, activeTab, simulationEnabled, phasageBulleEnabled]);
 
+    // Même recette pour la Description, devenue multiligne : sans report de la
+    // largeur d'écran, l'impression replie où elle veut, et sans `pre-wrap`
+    // (cf. App.css) les sauts de ligne saisis disparaissent purement.
+    //
+    // Nuance par rapport à Action_Micro : cette colonne n'a pas de calque
+    // d'affichage à mesurer, on mesure donc la zone de saisie elle-même. Elle
+    // réserve de quoi loger un caractère de plus, si bien qu'un mot en bout de
+    // ligne peut se placer autrement qu'à l'écran.
+    const [descriptionPrintStyle, setDescriptionPrintStyle] = useState(null);
+    const [largeurTableauConditions, setLargeurTableauConditions] = useState(0);
+    useEffect(() => {
+        const champ = document.querySelector('.action-table .input-desc');
+        if (!champ) return; // tableau non monté : on garde la dernière mesure
+        // La largeur totale du tableau sert à le RÉDUIRE en portrait plutôt
+        // qu'à redistribuer ses colonnes : c'est la seule façon de garder la
+        // présentation de l'écran quand 190 mm ne suffisent pas.
+        const tableau = document.querySelector('.action-table');
+        if (tableau?.offsetWidth) setLargeurTableauConditions(tableau.offsetWidth);
+        const style = window.getComputedStyle(champ);
+        const utile = champ.clientWidth
+            - (parseFloat(style.paddingLeft) || 0)
+            - (parseFloat(style.paddingRight) || 0);
+        if (utile > 0) {
+            // Pas de fontFamily : à l'écran ce champ est en monospace, comme
+            // tout `select` et `textarea` du tableau, mais à l'impression il
+            // doit s'aligner sur la colonne Action, en proportionnelle. Le
+            // repli peut donc différer d'un mot de celui de l'écran ; la
+            // largeur, elle, est respectée.
+            setDescriptionPrintStyle({
+                width: `${Math.round(utile)}px`,
+                fontSize: style.fontSize,
+                lineHeight: style.lineHeight
+            });
+        }
+    }, [actionColWidths?.description, activeTab, simulationEnabled, phasageBulleEnabled]);
+
     // Synchronize traffic dataset with active PF tab (only when no saved mapping)
     useEffect(() => {
         if (pfTabs && pfTabs.length > 0 && activePFId) {
@@ -4387,7 +4423,7 @@ function App() {
                                         {actionData.filter(row => row.gf || row.action || row.description || row.deb !== '' || row.fin !== '').length > 0 && (
                                             <div className="print-actions-section">
                                                 <h4>Conditions de micro-régulation</h4>
-                                                <table className="print-actions-table">
+                                                <table className="print-actions-table" style={largeurTableauConditions > 0 ? { width: `${largeurTableauConditions}px` } : undefined}>
                                                     <thead>
                                                         <tr>
                                                             <th>GF</th>
@@ -4423,11 +4459,11 @@ function App() {
                                                                 <tr key={row.id}>
                                                                     <td>{row.gf}</td>
                                                                     <td>{row.action}</td>
-                                                                    <td>{row.description}</td>
+                                                                    <td className="print-desc-cell"><div className="print-desc-wrap" style={descriptionPrintStyle || undefined}>{row.description}</div></td>
                                                                     <td>{row.deb}</td>
                                                                     <td>{row.fin}</td>
                                                                     <td>{row.abrv}</td>
-                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={dossierPortrait ? undefined : (microPrintStyle || undefined)}>{row.micro}</div></td>
+                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={microPrintStyle || undefined}>{row.micro}</div></td>
                                                                     <td>{row.plage1}</td>
                                                                     <td>{row.plage2}</td>
                                                                     <td>{row.actGf1}</td>
@@ -4486,6 +4522,23 @@ function App() {
                                     // 27 px par groupe. Une petite matrice n'est pas touchée.
                                     const largeurMatriceEstimee = 130 + groups.length * 27;
                                     const zoomMatrice = Math.min(1, dossierUsableWidth / largeurMatriceEstimee);
+                                    // Même remède pour le tableau des conditions, mais sur une
+                                    // largeur MESURÉE et non estimée : ses colonnes sont réglables
+                                    // par l'utilisateur. On le réduit au lieu de redistribuer ses
+                                    // colonnes — la répartition changeait les retours à la ligne et
+                                    // ne donnait plus la présentation du projet.
+                                    // Le facteur joue dans les DEUX SENS. Borné à 1, le tableau
+                                    // se dimensionnait sur son contenu et laissait une bande vide à
+                                    // droite ; sa largeur différant de celle de l'écran, ses retours
+                                    // à la ligne tombaient ailleurs. Posé à la largeur de l'écran
+                                    // puis mis à l'échelle de la page, il garde exactement la
+                                    // composition du projet — `zoom` agrandissant aussi le texte,
+                                    // les coupures retombent aux mêmes mots.
+                                    // Plafond à 1,5 : au-delà, un tableau étroit à l'écran
+                                    // deviendrait démesuré sur la feuille.
+                                    const zoomConditions = largeurTableauConditions > 0
+                                        ? Math.min(1.5, dossierUsableWidth / largeurTableauConditions)
+                                        : 1;
                                     const availableWidth = dossierUsableWidth - dossierSidebarReal;
                                     // Cycle de référence de l'échelle homogène, propre au format.
                                     //
@@ -4991,7 +5044,13 @@ function App() {
                                         {dossierSections[`conditionsMicro_${pf.id}`] && pfActionData.filter(row => row.gf || row.action || row.description || row.deb !== '' || row.fin !== '').length > 0 && (
                                             <div className="print-dossier-section print-dossier-actions">
                                                 <h3>Conditions de micro-régulation - {pf.name}</h3>
-                                                <table className="print-actions-table">
+                                                {/* La mise à l'échelle n'englobe QUE le tableau. Posée sur
+                                                    la section, elle réduisait aussi le bandeau de titre —
+                                                    14 mm ramenés à 7 ou 8 selon la largeur des colonnes —
+                                                    et le contenu démarrait plus ou moins haut d'un plan de
+                                                    feu à l'autre. */}
+                                                <div style={zoomConditions !== 1 ? { zoom: zoomConditions.toFixed(3) } : undefined}>
+                                                <table className="print-actions-table" style={largeurTableauConditions > 0 ? { width: `${largeurTableauConditions}px` } : undefined}>
                                                     <thead>
                                                         <tr>
                                                             <th>GF</th>
@@ -5016,11 +5075,11 @@ function App() {
                                                                 <tr key={row.id}>
                                                                     <td>{row.gf}</td>
                                                                     <td>{row.action}</td>
-                                                                    <td>{row.description}</td>
+                                                                    <td className="print-desc-cell"><div className="print-desc-wrap" style={descriptionPrintStyle || undefined}>{row.description}</div></td>
                                                                     <td>{row.deb}</td>
                                                                     <td>{row.fin}</td>
                                                                     <td>{row.abrv}</td>
-                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={dossierPortrait ? undefined : (microPrintStyle || undefined)}>{row.micro}</div></td>
+                                                                    <td className="print-micro-cell"><div className="print-micro-wrap" style={microPrintStyle || undefined}>{row.micro}</div></td>
                                                                     <td>{row.plage1}</td>
                                                                     <td>{row.plage2}</td>
                                                                     <td>{row.actGf1}</td>
@@ -5031,6 +5090,7 @@ function App() {
                                                             ))}
                                                     </tbody>
                                                 </table>
+                                                </div>
                                             </div>
                                         )}
 

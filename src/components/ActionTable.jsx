@@ -152,6 +152,9 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     }, [onResizeMove, onResizeEnd]);
     // Refs for textarea auto-resize
     const textareaRefs = useRef({});
+    // La description est multiligne elle aussi : elle doit se redimensionner
+    // comme Action_Micro, y compris à l'ouverture d'un projet.
+    const descriptionRefs = useRef({});
     // Premier champ de la ligne vide en fin de tableau (celle qui sert à ajouter
     // une condition). Cible du bouton « Ajouter une condition » : la ligne peut
     // être hors de vue quand l'ascenseur est actif, ou tout simplement difficile
@@ -446,6 +449,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     // Auto-resize all textareas when data changes
     useEffect(() => {
         Object.values(textareaRefs.current).forEach(autoResizeTextarea);
+        Object.values(descriptionRefs.current).forEach(autoResizeTextarea);
     }, [actionData]);
 
     // Shared table JSX builder (used in main view and portal)
@@ -473,7 +477,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
                     <tr key={row.id} className={hoveredActionId === row.id ? 'row-highlighted' : ''} onMouseEnter={() => isRowFilled(row) && setHoveredActionId(row.id)} onMouseLeave={() => setHoveredActionId(null)}>
                         <td><input ref={isRowFilled(row) ? undefined : addRowInputRef} type="number" min="0" max={maxGroup} className="input-gf" value={row.gf} onChange={(e) => handleGroupFieldChange(row.id, 'gf', e.target.value)} /></td>
                         <td><select className="input-action" value={row.action} onChange={(e) => handleActionChange(row.id, e.target.value, row)}>{ACTION_OPTIONS.map((opt) => (<option key={opt} value={opt}>{opt || '—'}</option>))}</select></td>
-                        {showDescription && <td><input type="text" maxLength="30" className="input-desc" value={row.description} onChange={(e) => updateActionRow(row.id, 'description', e.target.value)} /></td>}
+                        {showDescription && <td><textarea ref={(el) => { descriptionRefs.current[row.id] = el; autoResizeTextarea(el); }} maxLength="60" className="input-desc" value={row.description || ''} onChange={(e) => { updateActionRow(row.id, 'description', e.target.value); autoResizeTextarea(e.target); }} rows={1} /></td>}
                         <td><NumericInput className="input-time-xs" value={row.deb} onCommit={(val) => updateActionRow(row.id, 'deb', val)} wrapAt={cycleLength} showWrapFlash={showWrapFlash} selectOnFocus /></td>
                         <td><NumericInput className={`input-time-xs ${FIN_DISABLED_ACTIONS.includes(row.action) ? 'input-disabled' : ''}`} value={row.fin} onCommit={(val) => updateActionRow(row.id, 'fin', val)} disabled={FIN_DISABLED_ACTIONS.includes(row.action)} wrapAt={cycleLength} showWrapFlash={showWrapFlash} selectOnFocus /></td>
                         <td><input type="text" maxLength="10" className="input-abrv" value={row.abrv || ''} onChange={(e) => updateActionRow(row.id, 'abrv', e.target.value)} /></td>

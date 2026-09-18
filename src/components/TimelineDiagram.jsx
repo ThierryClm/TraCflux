@@ -2781,9 +2781,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             height: `${height}px`
                                         }}
                                     >
-                                        {abrv && (
-                                            <span className="signa-label">{abrv}</span>
-                                        )}
                                     </div>
                                 </React.Fragment>
                             );
@@ -2898,9 +2895,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                                 height: `${height}px`
                                             }}
                                         >
-                                            {abrv && (
-                                                <span className="controle-flot-label">{abrv}</span>
-                                            )}
                                         </div>
                                     )}
                                 </React.Fragment>
@@ -3407,23 +3401,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             className={`priorite-pietons-bar ${isHighlighted ? 'highlighted' : ''}`}
                                             style={barStyle(secondPartLeft, secondPartWidth)}
                                         >
-                                            {abrv && (
-                                                <span className="priorite-pietons-label" style={{
-                                                    position: 'absolute',
-                                                    top: '50%',
-                                                    left: '50%',
-                                                    transform: 'translate(-50%, -50%)',
-                                                    fontSize: '0.65em',
-                                                    color: '#000',
-                                                    fontWeight: 'bold',
-                                                    textShadow: '0 0 2px rgba(255, 255, 255, 0.8)',
-                                                    whiteSpace: 'nowrap',
-                                                    zIndex: 50,
-                                                    pointerEvents: 'none'
-                                                }}>
-                                                    {abrv}
-                                                </span>
-                                            )}
                                         </div>
                                     </React.Fragment>
                                 );
@@ -3469,23 +3446,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         className={`priorite-pietons-bar ${isHighlighted ? 'highlighted' : ''}`}
                                         style={barStyle(leftPos, barWidth)}
                                     >
-                                        {abrv && (
-                                            <span className="priorite-pietons-label" style={{
-                                                position: 'absolute',
-                                                top: '50%',
-                                                left: '50%',
-                                                transform: 'translate(-50%, -50%)',
-                                                fontSize: '0.65em',
-                                                color: '#000',
-                                                fontWeight: 'bold',
-                                                textShadow: '0 0 2px rgba(255, 255, 255, 0.8)',
-                                                whiteSpace: 'nowrap',
-                                                zIndex: 50,
-                                                pointerEvents: 'none'
-                                            }}>
-                                                {abrv}
-                                            </span>
-                                        )}
                                     </div>
                                 </React.Fragment>
                             );
@@ -3600,23 +3560,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             className={`fleche-anticipation-bar ${isHighlighted ? 'highlighted' : ''}`}
                                             style={barStyle(secondPartLeft, secondPartWidth)}
                                         >
-                                            {abrv && (
-                                                <span className="fleche-anticipation-label" style={{
-                                                    position: 'absolute',
-                                                    top: '50%',
-                                                    left: '50%',
-                                                    transform: 'translate(-50%, -50%)',
-                                                    fontSize: '0.65em',
-                                                    color: '#000',
-                                                    fontWeight: 'bold',
-                                                    textShadow: '0 0 2px rgba(255, 255, 255, 0.8)',
-                                                    whiteSpace: 'nowrap',
-                                                    zIndex: 50,
-                                                    pointerEvents: 'none'
-                                                }}>
-                                                    {abrv}
-                                                </span>
-                                            )}
                                         </div>
                                     </React.Fragment>
                                 );
@@ -3657,23 +3600,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             className={`fleche-anticipation-bar ${isHighlighted ? 'highlighted' : ''}`}
                                             style={barStyle(leftPos, barWidth)}
                                         >
-                                            {abrv && (
-                                                <span className="fleche-anticipation-label" style={{
-                                                    position: 'absolute',
-                                                    top: '50%',
-                                                    left: '50%',
-                                                    transform: 'translate(-50%, -50%)',
-                                                    fontSize: '0.65em',
-                                                    color: '#000',
-                                                    fontWeight: 'bold',
-                                                    textShadow: '0 0 2px rgba(255, 255, 255, 0.8)',
-                                                    whiteSpace: 'nowrap',
-                                                    zIndex: 50,
-                                                    pointerEvents: 'none'
-                                                }}>
-                                                    {abrv}
-                                                </span>
-                                            )}
                                         </div>
                                     </React.Fragment>
                                 );

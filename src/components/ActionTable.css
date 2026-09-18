@@ -281,6 +281,13 @@
 .input-desc {
     width: var(--col-desc-w, 160px) !important;
     font-size: 1.5em;
+    /* Multiligne, comme Action_Micro : la hauteur suit le contenu, sans
+       poignée de redimensionnement ni ascenseur interne. */
+    min-height: 16px;
+    resize: none;
+    overflow: hidden;
+    line-height: 1.2;
+    vertical-align: top;
 }
 
 .input-time-xs {
