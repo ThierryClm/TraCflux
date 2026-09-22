@@ -1997,6 +1997,7 @@ function App() {
             showAlert({ title: 'Erreur', message: "Erreur lors de l'ouverture de l'onde verte." });
         }
     };
+
     // Handle opening green wave from file system
     const handleOpenGreenWaveFromFile = async () => {
         if (!window.showOpenFilePicker) {
