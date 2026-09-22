@@ -26,6 +26,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Vérification de types en JSDoc (cf. tsconfig.json). Ne concerne que les
+      # fichiers portant `// @ts-check` : le modèle de données et les modules
+      # qui le manipulent. Un écart entre les types et le code s'arrête ici,
+      # plutôt que d'être découvert sur un projet d'utilisateur.
+      - name: Type check (JSDoc)
+        run: npm run types
+
       - name: Run Vitest suite
         run: npm test -- --run
 

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Pure helpers for Plan de Feu (PF) management.
  * No React, no side effects — safe to unit test.
@@ -14,6 +15,8 @@ export const MAX_GROUPS = 32;
 
 /**
  * Create an empty action row with the given id.
+ * @param {number} id
+ * @returns {import('../types/projet.js').ActionMicro}
  */
 export const createEmptyActionRow = (id) => ({
     id,
@@ -42,6 +45,10 @@ export const createEmptyActionData = () =>
  * Build a diagram array from a list of groups.
  * Used to initialize pf.diagram when missing.
  */
+/**
+ * @param {import('../types/projet.js').Groupe[]|undefined} sourceGroups
+ * @returns {import('../types/projet.js').LigneDiagramme[]}
+ */
 export const buildDiagramFromGroups = (sourceGroups) => {
     if (!Array.isArray(sourceGroups)) return [];
     return sourceGroups.map(g => ({
@@ -58,6 +65,10 @@ export const buildDiagramFromGroups = (sourceGroups) => {
 /**
  * Build an empty conflict matrix sized to groupCount x groupCount.
  */
+/**
+ * @param {number} groupCount
+ * @returns {import('../types/projet.js').Matrice}
+ */
 export const buildEmptyMatrix = (groupCount) => {
     const n = Math.max(0, groupCount || 0);
     return Array.from({ length: n }, () => new Array(n).fill(''));
@@ -65,6 +76,11 @@ export const buildEmptyMatrix = (groupCount) => {
 
 /**
  * Create a new PF with all required fields guaranteed.
+ */
+/**
+ * @param {Partial<import('../types/projet.js').PlanDeFeu> & {
+ *   sourceGroups?: import('../types/projet.js').Groupe[], groupCount?: number }} [opts]
+ * @returns {import('../types/projet.js').PlanDeFeu}
  */
 export const createEmptyPF = (opts = {}) => {
     const { id, name, sourceGroups, groupCount } = opts;
@@ -87,6 +103,13 @@ export const createEmptyPF = (opts = {}) => {
 /**
  * Ensure every PF in the array has a complete structure.
  * Idempotent: preserves existing valid fields, fills only what's missing.
+ */
+/**
+ * @param {import('../types/projet.js').PlanDeFeu[]|undefined} pfTabsArr
+ * @param {import('../types/projet.js').Groupe[]|undefined} fallbackGroups
+ * @param {import('../types/projet.js').Matrice|undefined} fallbackMatrix
+ * @param {number} [fallbackCycle]
+ * @returns {import('../types/projet.js').PlanDeFeu[]}
  */
 export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix, fallbackCycle = DEFAULT_CYCLE) => {
     if (!Array.isArray(pfTabsArr)) return [];
@@ -133,7 +156,7 @@ export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix, fal
             remarques: pf.remarques ?? '',
             ...(pf.color !== undefined ? { color: pf.color } : {})
         };
-    }).filter(Boolean);
+    }).filter(pf => pf !== null);
 };
 
 /**
@@ -151,9 +174,9 @@ export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix, fal
  * Les données partagées (groups, trafficDatasets, propriétés, image…) sont
  * conservées telles quelles. Renvoie null si la sélection est vide.
  *
- * @param {object} fullState état complet (getFullState)
+ * @param {import('../types/projet.js').Projet} fullState état complet (getFullState)
  * @param {Array<number>} selectedIds ids de PF à conserver
- * @returns {object|null}
+ * @returns {import('../types/projet.js').Projet|null}
  */
 export const selectPfSubset = (fullState, selectedIds) => {
     if (!fullState || !Array.isArray(fullState.pfTabs)) return null;
@@ -166,6 +189,7 @@ export const selectPfSubset = (fullState, selectedIds) => {
         : pfTabs[0].id;
     const active = pfTabs.find(p => Number(p.id) === Number(activePFId));
 
+    /** @type {Record<string, string>} */
     const pfTrafficDatasetMap = {};
     Object.entries(fullState.pfTrafficDatasetMap || {}).forEach(([k, v]) => {
         if (ids.has(Number(k))) pfTrafficDatasetMap[k] = v;
@@ -186,7 +210,7 @@ export const selectPfSubset = (fullState, selectedIds) => {
     let groups = fullState.groups;
     if (active && Array.isArray(active.diagram) && Array.isArray(groups)) {
         const byId = new Map(active.diagram.map(d => [d.groupId, d]));
-        groups = groups.map(g => {
+        groups = groups.map(/** @returns {import('../types/projet.js').Groupe} */ g => {
             const d = byId.get(g.id);
             if (!d) return g;
             return {
@@ -232,7 +256,10 @@ const STANDARD_TRAFFIC_DATASETS = ['HPM', 'HPS', 'HC', 'Estimation', 'Projection
  * - Respecte la limite MAX_PF (avertissement + troncature si dépassement).
  * - opts.readOnly : marque les PF importés en lecture seule (par PF).
  *
- * @returns {{ state?: object, warnings?: string[], addedCount?: number, error?: string }}
+ * @param {import('../types/projet.js').Projet} current projet ouvert
+ * @param {import('../types/projet.js').Projet} imported projet lu dans le fichier
+ * @param {{ readOnly?: boolean }} [opts]
+ * @returns {{ state?: import('../types/projet.js').Projet, warnings?: string[], addedCount?: number, error?: string }}
  */
 export const mergePfFromProject = (current, imported, opts = {}) => {
     const warnings = [];
@@ -284,7 +311,9 @@ export const mergePfFromProject = (current, imported, opts = {}) => {
     });
 
     // Rapatriement des jeux de données trafic référencés par les PF importés.
+    /** @type {Record<string, import('../types/projet.js').JeuTrafic>} */
     const trafficDatasets = { ...(current.trafficDatasets || {}) };
+    /** @type {Set<string>} */
     const customNames = new Set(current.customTrafficDatasetNames || []);
     const pfTrafficDatasetMap = { ...(current.pfTrafficDatasetMap || {}) };
     newPfs.forEach(({ source, clone }) => {
@@ -319,6 +348,10 @@ export const mergePfFromProject = (current, imported, opts = {}) => {
  * Copie profonde d'une matrice (tableau de tableaux). Utilisée pour copier la
  * matrice d'interverts d'un plan de feux à un autre sans partage de référence.
  */
+/**
+ * @param {import('../types/projet.js').Matrice} m
+ * @returns {import('../types/projet.js').Matrice}
+ */
 export const deepCopyMatrix = (m) =>
     Array.isArray(m) ? m.map(row => (Array.isArray(row) ? [...row] : row)) : m;
 
@@ -336,6 +369,11 @@ export const deepCopyMatrix = (m) =>
  * alors ce cycle-là DANS le plan actif, effaçant le sien : un plan à 122 s
  * rouvert dans un projet à 120 repartait à 120 la fois d'après, avec des
  * actions calées sur 122 qui débordaient du cycle.
+ */
+/**
+ * @param {Partial<import('../types/projet.js').Projet>|null|undefined} state
+ * @param {number} defaut
+ * @returns {number}
  */
 export const cycleDuPlanActif = (state, defaut) => {
     const plans = Array.isArray(state?.pfTabs) ? state.pfTabs : [];

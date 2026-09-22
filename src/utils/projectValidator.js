@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Validates that a parsed JSON object looks like a Diagramme de Feux project.
  *
@@ -9,8 +10,12 @@
  * individual fields (we can still load a partial project). This prevents
  * accidentally loading unrelated JSON (logs, configuration files, etc.)
  * while remaining forward/backward compatible with schema tweaks.
+ *
+ * @param {unknown} data contenu lu dans le fichier, de provenance quelconque
+ * @returns {{ ok: boolean, error?: string, warnings: string[] }}
  */
 export const validateProject = (data) => {
+    /** @type {string[]} */
     const warnings = [];
 
     // Must be a plain object (not null, not array, not scalar)
@@ -22,14 +27,19 @@ export const validateProject = (data) => {
         };
     }
 
+    // Le contenu vient d'un fichier choisi par l'utilisateur : rien ne garantit
+    // sa forme, et c'est précisément ce que cette fonction est là pour établir.
+    // On le lit donc comme un objet quelconque, champ par champ.
+    const p = /** @type {Record<string, any>} */ (data);
+
     // Must have at least one schema-specific marker — prevents accidentally
     // loading random JSON from another app
-    const hasGroups = Array.isArray(data.groups);
-    const hasPfTabs = Array.isArray(data.pfTabs);
-    const hasCycle = typeof data.cycleLength === 'number';
-    const hasMatrix = Array.isArray(data.conflictMatrix);
+    const hasGroups = Array.isArray(p.groups);
+    const hasPfTabs = Array.isArray(p.pfTabs);
+    const hasCycle = typeof p.cycleLength === 'number';
+    const hasMatrix = Array.isArray(p.conflictMatrix);
     // Signature spécifique de l'onde verte (module Onde verte de TraCflux)
-    const looksLikeGreenWave = Array.isArray(data.intersections);
+    const looksLikeGreenWave = Array.isArray(p.intersections);
 
     if (!hasGroups && !hasPfTabs && !hasCycle && !hasMatrix) {
         if (looksLikeGreenWave) {
@@ -53,7 +63,7 @@ export const validateProject = (data) => {
 
     // Per-group sanity checks
     if (hasGroups) {
-        data.groups.forEach((g, i) => {
+        p.groups.forEach((/** @type {any} */ g, /** @type {number} */ i) => {
             if (!g || typeof g !== 'object') {
                 warnings.push(`Groupe ${i} : format inattendu, peut être ignoré au chargement.`);
                 return;
@@ -68,7 +78,7 @@ export const validateProject = (data) => {
 
     // Per-PF sanity checks
     if (hasPfTabs) {
-        data.pfTabs.forEach((pf, i) => {
+        p.pfTabs.forEach((/** @type {any} */ pf, /** @type {number} */ i) => {
             if (!pf || typeof pf !== 'object') {
                 warnings.push(`Plan de feux ${i} : format inattendu.`);
                 return;
@@ -80,9 +90,9 @@ export const validateProject = (data) => {
 
     // Conflict matrix shape (if groups present)
     if (hasGroups && hasMatrix) {
-        const n = data.groups.length;
-        if (data.conflictMatrix.length !== n) {
-            warnings.push(`Matrice de conflits : ${data.conflictMatrix.length} ligne(s) pour ${n} groupe(s) — incohérence probable.`);
+        const n = p.groups.length;
+        if (p.conflictMatrix.length !== n) {
+            warnings.push(`Matrice de conflits : ${p.conflictMatrix.length} ligne(s) pour ${n} groupe(s) — incohérence probable.`);
         }
     }
 

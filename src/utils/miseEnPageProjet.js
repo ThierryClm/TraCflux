@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Les réglages de mise en page qui appartiennent au projet.
  *
@@ -16,7 +17,15 @@
  */
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from './floatingImageBox';
 
-/** Les sept drapeaux de détachement, plus les quatre options d'affichage. */
+/**
+ * Les sept drapeaux de détachement, plus les quatre options d'affichage.
+ *
+ * La liste est liée au type : ajouter un drapeau ici sans l'ajouter à
+ * `OptionsMiseEnPage` — ou l'inverse — devient une erreur de vérification.
+ * C'est tout l'intérêt, puisque c'est un drapeau oublié d'un côté qui fait
+ * perdre un réglage.
+ * @type {(keyof import('../types/projet.js').OptionsMiseEnPage)[]}
+ */
 const DRAPEAUX_MISE_EN_PAGE = [
     'showParameters', 'showComments', 'showRemarks', 'showActionDescription',
     'showFloatingForm', 'showFloatingMatrix', 'showFloatingTraffic',
@@ -28,6 +37,9 @@ const DRAPEAUX_MISE_EN_PAGE = [
  * Compose les six clés à partir de l'état courant de l'application.
  * Le résultat est fusionné dans `getFullState`, donc écrit à l'identique dans
  * le fichier et dans le cache.
+ *
+ * @param {Record<string, any>} v état courant, tel que l'application le tient
+ * @returns {Partial<import('../types/projet.js').Projet>}
  */
 export const lireMiseEnPage = (v) => ({
     diagramHeight: v.diagramHeight,
@@ -63,6 +75,10 @@ export const lireMiseEnPage = (v) => ({
  * enregistré avant l'existence d'une option ne doit pas hériter du réglage du
  * projet précédent. C'est pourquoi l'absence d'une clé remet une valeur neutre
  * plutôt que de ne rien faire.
+ *
+ * @param {Partial<import('../types/projet.js').Projet>|null|undefined} data projet lu
+ * @param {Record<string, ((valeur?: any) => void) | undefined>} s poseurs d'état de l'application
+ * @returns {void}
  */
 export const appliquerMiseEnPage = (data, s) => {
     if (!data || typeof data !== 'object') return;
@@ -114,8 +130,10 @@ export const appliquerMiseEnPage = (data, s) => {
         s.setShowComments?.(!!aDesCommentaires);
         s.setShowRemarks?.(!!(data.pfTabs || []).some(pf => pf.remarques && pf.remarques.trim() !== ''));
         s.setSidebarVisible?.(true);
-        ['showFloatingForm', 'showFloatingMatrix', 'showFloatingTraffic', 'showFloatingImage',
-            'showFloatingConditions', 'showFloatingVariables', 'showFloatingRemarks']
+        // Les sept drapeaux de détachement : tous ceux de la liste sauf les
+        // quatre options d'affichage, traitées juste au-dessus.
+        DRAPEAUX_MISE_EN_PAGE
+            .filter(nom => nom.startsWith('showFloating'))
             .forEach(nom => poseurs[nom]?.(false));
     }
 
