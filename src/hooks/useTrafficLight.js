@@ -8,8 +8,10 @@ import {
     buildDiagramFromGroups,
     buildEmptyMatrix,
     createEmptyPF,
-    ensurePFIntegrity
+    ensurePFIntegrity,
+    cycleDuPlanActif
 } from '../utils/pfHelpers';
+import { ACTIONS_HORS_SIMULATION, actionsSimulables } from '../utils/simulationCalculator';
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
@@ -857,7 +859,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 setGroups(migratedGroups);
             }
 
-            if (data.cycleLength) setCycleLength(data.cycleLength);
+            // Le cycle du PLAN ACTIF fait foi, pas celui du projet : cf.
+            // cycleDuPlanActif. Prendre celui du projet faisait écraser le
+            // cycle du plan par la recopie qui suit le chargement.
+            setCycleLength(cycleDuPlanActif(data, DEFAULT_CYCLE));
 
             // Ensure conflict matrix matches group count
             const groupCount = data.groups ? data.groups.length : 0;
@@ -1044,15 +1049,26 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
             // Reset simulation state when loading a project
             setSimulationEnabled(false);
-            setSimulationSelectedActions([]);
 
             // Move project to top of the order list
             updateProjectOrder(name);
 
-            // Reset loading flag after a delay to let React batch updates settle
+            // Le verrou de chargement se lève en différé, le temps que React
+            // pose l'état. Il ne touche PLUS aux repères de synchronisation :
+            // ceux-là sont remis à jour au-dessus, à l'instant du chargement.
+            //
+            // Les remettre ici aussi était un piège à retardement. Trois
+            // secondes après l'ouverture, ce rappel réinstallait comme « plan
+            // courant » celui qui était actif AU CHARGEMENT. Si l'utilisateur
+            // avait changé d'onglet entre-temps — ce qui prend moins de trois
+            // secondes — la recopie « diagramme → plan actif » croyait ensuite
+            // être encore sur l'ancien plan : la première durée de cycle saisie
+            // partait dans CE plan-là, tandis que celui qu'on avait sous les
+            // yeux gardait la sienne. Le plan édité semblait refuser la valeur,
+            // un autre la recevait en silence, et la réouverture révélait les
+            // deux dégâts d'un coup.
             setTimeout(() => {
                 isLoadingProjectRef.current = false;
-                resetPfSyncRefs(loadedActivePFId);
             }, 3000);
 
             return data;
@@ -1184,8 +1200,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 setGroups(Array.from({ length: 5 }, (_, i) => createGroup(i + 1)));
             }
 
-            // Toujours mettre à jour la durée du cycle
-            setCycleLength(state.cycleLength || DEFAULT_CYCLE);
+            // Toujours mettre à jour la durée du cycle — celle du plan actif,
+            // qui fait foi (cf. cycleDuPlanActif).
+            setCycleLength(cycleDuPlanActif(state, DEFAULT_CYCLE));
 
             // Mettre à jour la matrice de conflits
             if (state.conflictMatrix && Array.isArray(state.conflictMatrix)) {
@@ -1274,7 +1291,6 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
             // Reset simulation state when loading full state
             setSimulationEnabled(false);
-            setSimulationSelectedActions([]);
 
             // Reset dependency gap if provided
             if (state.dependencyGap !== undefined) {
@@ -1372,7 +1388,6 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
         // Reset simulation state
         setSimulationEnabled(false);
-        setSimulationSelectedActions([]);
 
         // Clear history
         setHistory([]);
@@ -1408,7 +1423,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         projectProperties,
         // Champs de projet portés par d'autres modules (cf. champsProjetRef).
         ...(champsProjetRef?.current?.lire?.() || {})
-        // Note: simulation state is NOT included (per user request)
+        // L'onglet Simulation ouvert ou non ne s'enregistre pas : c'est un état
+        // de session. Le SCÉNARIO, lui — son nom et les actions cochées — voyage
+        // avec son plan de feu, dans pfTabs.
     });
 
     // Réf toujours à jour vers le sérialiseur canonique. Source UNIQUE pour
@@ -1435,7 +1452,6 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
     // Simulation mode state (not persisted - resets on page load)
     const [simulationEnabled, setSimulationEnabled] = useState(false);
-    const [simulationSelectedActions, setSimulationSelectedActions] = useState([]);
 
     // Intersection image state (persisted with project)
     const [intersectionImage, setIntersectionImage] = useState(null);
@@ -1878,40 +1894,65 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, []);
 
     // Simulation functions
-    const toggleSimulationAction = useCallback((actionId) => {
-        setSimulationSelectedActions(prev => {
-            if (prev.includes(actionId)) {
-                return prev.filter(id => id !== actionId);
-            } else {
-                return [...prev, actionId];
-            }
-        });
-    }, []);
+    //
+    // Le scénario — son nom et les actions cochées — appartient au PLAN DE FEU,
+    // et non à la session. Il était tenu dans un état local, perdu à chaque
+    // fermeture : on retrouvait un projet avec ses actions de micro-régulation
+    // saisies mais plus aucune trace de la combinaison qu'on avait retenue,
+    // ni de son intitulé.
+    //
+    // Il n'y a délibérément PAS de second état recopié vers l'onglet actif : la
+    // valeur affichée EST celle du plan. Les recopies miroir de ce fichier ont
+    // coûté trois défauts d'intégrité en septembre 2026 — un plan héritant du
+    // cycle d'un autre — et rien ici n'en justifie une de plus.
+    const planActif = useMemo(
+        () => pfTabs.find(pf => pf.id === activePFId) || null,
+        [pfTabs, activePFId]);
 
-    const EXCLUDED_FROM_SIMULATION = [
-        'Début de bande passante',
-        'Fin de bande passante',
-        'Priorité piétons',
-        'Signal aide conduite',
-        'Synchro BTS'
-    ];
+    const simulationSelectedActions = useMemo(
+        () => (Array.isArray(planActif?.simulationActions) ? planActif.simulationActions : []),
+        [planActif]);
+
+    const simulationName = planActif?.simulationName || '';
+
+    /** Écrit dans le plan de feu actif, seul dépositaire du scénario. */
+    const ecrireScenario = useCallback((maj) => {
+        setPfTabs(prev => prev.map(pf => {
+            if (pf.id !== activePFId) return pf;
+            const actuelles = Array.isArray(pf.simulationActions) ? pf.simulationActions : [];
+            return { ...pf, ...maj(actuelles, pf) };
+        }));
+    }, [activePFId]);
+
+    const updateSimulationName = useCallback((nom) => {
+        if (isEditLocked()) return;
+        ecrireScenario(() => ({ simulationName: String(nom || '').slice(0, 60) }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ecrireScenario]);
+
+    const toggleSimulationAction = useCallback((actionId) => {
+        ecrireScenario(actuelles => ({
+            simulationActions: actuelles.includes(actionId)
+                ? actuelles.filter(id => id !== actionId)
+                : [...actuelles, actionId]
+        }));
+    }, [ecrireScenario]);
 
     const selectAllSimulationActions = useCallback(() => {
-        const activeIds = actionData
-            .filter(a => a.action && a.action !== '' && !EXCLUDED_FROM_SIMULATION.includes(a.action))
-            .map(a => a.id);
-        setSimulationSelectedActions(activeIds);
-    }, [actionData]);
+        ecrireScenario(() => ({ simulationActions: actionsSimulables(actionData).map(a => a.id) }));
+    }, [ecrireScenario, actionData]);
 
     const deselectAllSimulationActions = useCallback(() => {
-        // Keep excluded actions untouched, only deselect simulation-visible actions
-        setSimulationSelectedActions(prev =>
-            prev.filter(id => {
+        // Les familles hors simulation ne sont pas affichées : on ne les décoche
+        // pas, faute de quoi elles disparaîtraient d'un scénario sans que rien
+        // ne l'ait demandé.
+        ecrireScenario(actuelles => ({
+            simulationActions: actuelles.filter(id => {
                 const action = actionData.find(a => a.id === id);
-                return action && EXCLUDED_FROM_SIMULATION.includes(action.action);
+                return action && ACTIONS_HORS_SIMULATION.includes(action.action);
             })
-        );
-    }, [actionData]);
+        }));
+    }, [ecrireScenario, actionData]);
 
     // Save project - defined after all state declarations to capture current values
     const saveProject = useCallback(async (name) => {
@@ -2979,6 +3020,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         simulationEnabled,
         setSimulationEnabled,
         simulationSelectedActions,
+        simulationName,
+        updateSimulationName,
         toggleSimulationAction,
         selectAllSimulationActions,
         deselectAllSimulationActions,

@@ -321,3 +321,24 @@ export const mergePfFromProject = (current, imported, opts = {}) => {
  */
 export const deepCopyMatrix = (m) =>
     Array.isArray(m) ? m.map(row => (Array.isArray(row) ? [...row] : row)) : m;
+
+/**
+ * La durée de cycle à installer en ouvrant un projet.
+ *
+ * Deux valeurs cohabitent dans un projet enregistré : celle du projet, qui est
+ * l'état vivant au moment de l'enregistrement, et celle que chaque plan de feu
+ * garde pour lui. Elles devraient toujours s'accorder — mais il suffit qu'elles
+ * divergent une fois pour que le désaccord s'installe.
+ *
+ * C'est le plan de feu qui fait foi : c'est sa valeur que l'application
+ * réinstalle à chaque changement d'onglet. En ouvrant un projet, on prenait
+ * pourtant celle du projet. La recopie « diagramme → plan actif » écrivait
+ * alors ce cycle-là DANS le plan actif, effaçant le sien : un plan à 122 s
+ * rouvert dans un projet à 120 repartait à 120 la fois d'après, avec des
+ * actions calées sur 122 qui débordaient du cycle.
+ */
+export const cycleDuPlanActif = (state, defaut) => {
+    const plans = Array.isArray(state?.pfTabs) ? state.pfTabs : [];
+    const actif = plans.find(pf => pf.id === (state?.activePFId || 1));
+    return actif?.cycleLength || state?.cycleLength || defaut;
+};

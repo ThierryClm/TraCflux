@@ -172,3 +172,137 @@ describe("Cycle par plan de feu — l'annulation et le rétablissement", () => {
             .toEqual([130, 90, 80]);
     });
 });
+
+describe("Cycle par plan de feu — le plan actif fait foi à l'ouverture", () => {
+    /**
+     * Un projet enregistré porte DEUX durées de cycle : celle du projet — l'état
+     * vivant au moment de l'enregistrement — et celle que chaque plan garde pour
+     * lui. C'est le plan qui fait foi : c'est sa valeur que l'application
+     * réinstalle à chaque changement d'onglet.
+     *
+     * À l'ouverture, on installait pourtant celle du projet. La recopie
+     * « diagramme → plan actif » écrivait alors ce cycle-là DANS le plan actif et
+     * effaçait le sien. Le désaccord ne se voyait pas tout de suite — l'écran
+     * affichait encore la bonne valeur — mais le plan était abîmé dans le cache
+     * comme dans le fichier, et la fois suivante il repartait avec le cycle d'un
+     * autre, ses actions restant calées sur l'ancien : un escamotage de phase
+     * débordait alors du cycle, seul signe visible.
+     */
+    const projetDivergent = (groupes, matrice) => {
+        const diagramme = () => JSON.parse(JSON.stringify(buildDiagramFromGroups(groupes)));
+        return {
+            projectName: 'essai', intersectionName: 'Carrefour témoin',
+            groups: groupes,
+            cycleLength: 120,   // cycle du PROJET
+            conflictMatrix: matrice,
+            pfTabs: [
+                { id: 1, name: 'PF1', data: [], diagram: diagramme(), cycleLength: 122, remarques: '' },
+                { id: 2, name: 'PF2', data: [], diagram: diagramme(), cycleLength: 90, remarques: '' }
+            ],
+            activePFId: 1       // actif = celui à 122
+        };
+    };
+
+    it("le cycle du plan actif n'est pas remplacé par celui du projet", async () => {
+        const result = await monter();
+        localStorage.setItem('traffic_project_essai', JSON.stringify(
+            projetDivergent(result.current.groups, result.current.conflictMatrix)));
+
+        await act(async () => { result.current.loadProject('essai'); });
+        await act(async () => { await pause(500); });
+
+        expect(result.current.cycleLength, "l'écran doit afficher le cycle du plan actif").toBe(122);
+        expect(cycles(result), 'le plan actif a été réécrit avec le cycle du projet').toEqual([122, 90]);
+    });
+
+    it('et il survit à un aller-retour entre onglets', async () => {
+        const result = await monter();
+        localStorage.setItem('traffic_project_essai', JSON.stringify(
+            projetDivergent(result.current.groups, result.current.conflictMatrix)));
+
+        await act(async () => { result.current.loadProject('essai'); });
+        await act(async () => { await pause(500); });
+        await act(async () => { result.current.setActivePFId(2); });
+        await act(async () => { await pause(200); });
+        await act(async () => { result.current.setActivePFId(1); });
+        await act(async () => { await pause(200); });
+
+        // C'est ici que le défaut se voyait : de retour sur le plan, on lisait
+        // le cycle que l'ouverture y avait écrit, non le sien.
+        expect(result.current.cycleLength).toBe(122);
+        expect(cycles(result)).toEqual([122, 90]);
+    });
+
+    it("ce qui est réenregistré porte la même valeur des deux côtés", async () => {
+        const result = await monter();
+        localStorage.setItem('traffic_project_essai', JSON.stringify(
+            projetDivergent(result.current.groups, result.current.conflictMatrix)));
+
+        await act(async () => { result.current.loadProject('essai'); });
+        await act(async () => { await pause(500); });
+
+        const sauve = result.current.getFullState();
+        const planActif = sauve.pfTabs.find(pf => pf.id === sauve.activePFId);
+        expect(sauve.cycleLength, 'le projet et son plan actif doivent dire la même chose')
+            .toBe(planActif.cycleLength);
+        expect(sauve.cycleLength).toBe(122);
+    });
+});
+
+describe("Cycle par plan de feu — changer d'onglet juste après l'ouverture", () => {
+    /**
+     * Le piège à retardement.
+     *
+     * L'ouverture d'un projet posait un rappel à trois secondes qui
+     * réinstallait comme « plan courant », pour la recopie « diagramme → plan
+     * actif », celui qui était actif AU CHARGEMENT. Changer d'onglet prend
+     * moins de trois secondes : la recopie croyait alors être restée sur
+     * l'ancien plan, et la première durée de cycle saisie partait dans CE
+     * plan-là. Le plan qu'on avait sous les yeux gardait la sienne — il
+     * semblait refuser la valeur — et un autre la recevait en silence.
+     *
+     * Les deux dégâts ne se voyaient qu'à la réouverture suivante, sous la
+     * forme d'un cycle inattendu et d'actions qui débordent de leur cycle.
+     */
+    it("la durée saisie va dans le plan affiché, pas dans celui de l'ouverture", async () => {
+        const result = await monter();
+        localStorage.setItem('traffic_project_essai', JSON.stringify(
+            projetTroisPlans(result.current.groups, result.current.conflictMatrix, 1)));
+
+        await act(async () => { result.current.loadProject('essai'); });
+        // Changement d'onglet AVANT que le rappel de trois secondes ne se déclenche.
+        await act(async () => { await pause(300); });
+        await act(async () => { result.current.setActivePFId(2); });
+        await act(async () => { await pause(300); });
+        expect(result.current.cycleLength, 'PF2 doit afficher son propre cycle').toBe(90);
+
+        // On laisse passer l'instant où le rappel se déclenchait.
+        await act(async () => { await pause(3200); });
+        await act(async () => { result.current.setCycleLength(122); });
+        await act(async () => { await pause(300); });
+
+        expect(result.current.cycleLength).toBe(122);
+        expect(cycles(result), 'la valeur saisie sur PF2 est partie dans un autre plan')
+            .toEqual([120, 122, 80]);
+    }, 20000);
+
+    it('et elle y reste après un aller-retour', async () => {
+        const result = await monter();
+        localStorage.setItem('traffic_project_essai', JSON.stringify(
+            projetTroisPlans(result.current.groups, result.current.conflictMatrix, 1)));
+
+        await act(async () => { result.current.loadProject('essai'); });
+        await act(async () => { await pause(300); });
+        await act(async () => { result.current.setActivePFId(2); });
+        await act(async () => { await pause(3200); });
+        await act(async () => { result.current.setCycleLength(122); });
+        await act(async () => { await pause(300); });
+
+        await act(async () => { result.current.setActivePFId(1); });
+        await act(async () => { await pause(250); });
+        expect(result.current.cycleLength, 'PF1 a été contaminé').toBe(120);
+        await act(async () => { result.current.setActivePFId(2); });
+        await act(async () => { await pause(250); });
+        expect(result.current.cycleLength).toBe(122);
+    }, 20000);
+});

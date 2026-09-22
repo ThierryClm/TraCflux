@@ -404,3 +404,39 @@
     opacity: 0.85;
     color: #bbb;
 }
+
+/* Nom du scénario, sous l'en-tête du panneau. */
+.simulation-scenario {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px 0;
+}
+
+.simulation-scenario-label {
+    font-size: 0.8em;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex: 0 0 auto;
+}
+
+.simulation-scenario-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: #2a2a2a;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.9em;
+}
+
+.simulation-scenario-input:focus {
+    outline: none;
+    border-color: #4ecdc4;
+}
+
+.simulation-scenario-input:disabled {
+    opacity: 0.5;
+}

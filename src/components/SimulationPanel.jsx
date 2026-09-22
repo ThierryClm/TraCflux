@@ -1,54 +1,6 @@
 import { useMemo } from 'react';
-import { calculateSimulatedDiagram } from '../utils/simulationCalculator';
+import { calculateSimulatedDiagram, actionsSimulables, conflitsSimules } from '../utils/simulationCalculator';
 import './SimulationPanel.css';
-
-/**
- * Les actions que la simulation sait rejouer.
- *
- * Six familles n'ont aucun effet sur le déroulé d'un cycle — elles annotent le
- * diagramme ou concernent un autre système — et la simulation les écarte.
- * Cette liste était enfermée dans le composant ; le dossier imprimé en aurait
- * tenu une copie, et les deux listes auraient fini par diverger comme l'ont
- * fait, ici même, le tableau de trafic imprimé et celui de l'écran. Elle est
- * donc exportée : une seule liste, deux lecteurs.
- */
-export const ACTIONS_HORS_SIMULATION = [
-    'Début de bande passante',
-    'Fin de bande passante',
-    'Priorité piétons',
-    'Signal aide conduite',
-    'Synchro BTS',
-    "Flèche d'anticipation"
-];
-
-/** Les actions d'un plan que la simulation prend en compte, dans l'ordre saisi. */
-export const actionsSimulables = (actionData = []) => actionData.filter(a =>
-    a.action && a.action !== '' && !ACTIONS_HORS_SIMULATION.includes(a.action)
-);
-
-/**
- * Les conflits que la simulation retient, escamotages cochés déduits.
- *
- * Un escamotage coché prend en charge le couple de groupes qu'il nomme : le
- * dégagement y est assuré par l'escamotage lui-même, le conflit calculé sur les
- * temps n'a plus lieu d'être signalé. Exporté pour que le dossier imprimé
- * affiche exactement la liste du panneau, et non une seconde lecture des mêmes
- * règles.
- */
-export const conflitsSimules = (conflitsBruts = [], actionData = [], selectedActions = []) => {
-    const escamotagesCoches = actionData.filter(action =>
-        action.action === 'Escamotage' && action.gf && action.actGf1 &&
-        selectedActions.includes(action.id)
-    );
-    if (escamotagesCoches.length === 0) return conflitsBruts;
-
-    const idDe = (v) => parseInt(v?.toString().replace(/[Gg]/g, '').trim()) || 0;
-    return conflitsBruts.filter(c => !escamotagesCoches.some(action => {
-        const source = idDe(action.gf);
-        const cible = idDe(action.actGf1);
-        return (source === c.from && cible === c.to) || (source === c.to && cible === c.from);
-    }));
-};
 
 const SimulationPanel = ({
     actionData,
@@ -61,7 +13,9 @@ const SimulationPanel = ({
     conflictMatrix,
     hoveredActionId,
     setHoveredActionId,
-    setHoveredConflict
+    setHoveredConflict,
+    scenarioName = '',
+    onScenarioNameChange = null
 }) => {
     // Les actions retenues par la simulation (liste partagée, cf. en-tête).
     const activeActions = actionsSimulables(actionData);
@@ -153,6 +107,24 @@ const SimulationPanel = ({
                     {selectedCount}/{activeActions.length} actions
                 </span>
             </div>
+
+            {/* Nom du scénario. Il appartient au plan de feu et le suit : c'est
+                lui qui titre la section imprimée, et qui permet de retrouver,
+                d'une séance à l'autre, ce que cette combinaison d'actions
+                voulait démontrer. */}
+            <label className="simulation-scenario">
+                <span className="simulation-scenario-label">Scénario</span>
+                <input
+                    type="text"
+                    className="simulation-scenario-input"
+                    value={scenarioName}
+                    maxLength={60}
+                    placeholder="ex. Escamotage bus phase 1"
+                    onChange={(e) => onScenarioNameChange && onScenarioNameChange(e.target.value)}
+                    disabled={!onScenarioNameChange}
+                    title="Nom de cette combinaison d'actions. Enregistré avec le plan de feu, il titre la section Simulation du dossier imprimé."
+                />
+            </label>
 
             <div className="simulation-controls">
                 <button
