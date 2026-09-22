@@ -225,7 +225,9 @@ Vous pouvez à tout moment ouvrir le **projet exemple** depuis l'écran d'accuei
 
 ### Puis-je l'utiliser sur un smartphone ou une tablette ?
 
-**Oui, et sans rien installer** : il suffit d'ouvrir [tracflux.com](https://tracflux.com) dans le navigateur de l'appareil. L'application s'y adapte — en dessous d'un écran de 900 pixels, le panneau des paramètres cesse d'être posé à côté du diagramme et vient **au-dessus** de lui. Tout s'atteint alors par le défilement vertical, et le diagramme, plus large que l'écran, se fait glisser latéralement du doigt.
+**Oui, et sans rien installer** : il suffit d'ouvrir [tracflux.com](https://tracflux.com) dans le navigateur de l'appareil. L'application s'y adapte — sur un écran étroit, ou bas comme l'est un téléphone tenu en paysage, le panneau des paramètres cesse d'être posé à côté du diagramme et vient **au-dessus** de lui. Tout s'atteint alors par le défilement vertical, et le diagramme, plus large que l'écran, se fait glisser latéralement du doigt. Le tableau des conditions de micro-régulation défile de la même façon.
+
+**Éprouvé sur le terrain.** La consultation d'un projet depuis un téléphone fonctionne : les défilements horizontal et vertical répondent, les plans de feux se parcourent, les tableaux se lisent.
 
 **À quoi cela sert.** Consulter un plan de feux sur le terrain, au pied du carrefour, en vérifiant un décalage ou une durée de vert. Montrer un phasage à un interlocuteur sans sortir d'ordinateur. Rouvrir un projet reçu par courriel pour en prendre connaissance avant une réunion.
 
@@ -327,7 +329,33 @@ Pas de limite stricte. L'application a été testée avec une trentaine de group
 
 ### À quoi sert le mode simulation ?
 
-À **tester l'effet d'actions** (escamotage, ouverture anticipée, point de repos, adaptatif vertical…) sur un cycle existant **sans modifier le projet original**. Vous cochez les actions que vous voulez activer, le diagramme se redessine en montrant le cycle simulé, et vous pouvez visualiser conflits et décalages. Désactiver les cases revient instantanément à l'état initial.
+À **tester l'effet d'actions** (escamotage, ouverture anticipée, point de repos, adaptatif vertical…) sur un cycle existant **sans modifier le projet original**. Vous cochez les actions que vous voulez activer, le diagramme se redessine en montrant le cycle simulé, et vous pouvez visualiser conflits et décalages. Décocher les cases revient instantanément à l'état initial.
+
+Six familles d'actions ne sont pas rejouées, parce qu'elles n'agissent pas sur le déroulé du cycle : début et fin de bande passante, priorité piétons, signal d'aide à la conduite, synchro BTS, flèche d'anticipation. Elles n'apparaissent donc pas dans la liste du panneau.
+
+La combinaison que vous retenez, une fois nommée, devient un **scénario** enregistré avec le plan de feu — voir la question suivante.
+
+### Comment construire et justifier un scénario de micro-régulation ?
+
+Un **scénario** est une combinaison d'actions de micro-régulation retenue sur un plan de feu, et le nom qu'on lui donne : « escamotage bus phase 1 », « priorité bus seule », « priorité bus + ouverture anticipée ». C'est l'unité de travail quand il s'agit de proposer une évolution et de la défendre devant un maître d'ouvrage.
+
+La démarche tient en six temps.
+
+1. **Saisir les actions** dans le tableau des conditions de micro-régulation du plan concerné. À ce stade, elles sont décrites mais inactives : le diagramme ne change pas.
+
+2. **Ouvrir l'onglet Simulation**, puis **cocher une seule action**. C'est la précaution qui fait gagner du temps : l'effet d'un escamotage seul se lit d'un coup d'œil, celui de quatre actions combinées se discute pendant une heure. Le diagramme passe en lecture seule et se redessine.
+
+3. **Lire le cycle simulé**, affiché en tête du diagramme avec son écart au cycle nominal — `122 s (−15 s)`. C'est souvent le premier argument : ce que l'action rend comme temps, et à qui.
+
+4. **Vérifier les conflits**. Le panneau les liste sous les actions. Un escamotage coché prend en charge le dégagement du couple de groupes qu'il nomme : ce conflit-là disparaît de la liste, ce qui est normal. Les autres sont à traiter.
+
+5. **Mesurer l'effet sur la capacité**. Le tableau des données de trafic, sous le panneau de simulation, suit les actions cochées : les groupes dont une action supprime le vert — escamotage de phase, fermeture anticipée, adaptatif vertical — n'affichent plus de capacité, puisqu'elle n'aurait plus de sens. Pour comparer plusieurs programmes entre eux plutôt que plusieurs scénarios, le menu *Diagramme → Comparer la capacité des plans de feu* met les plans côte à côte, à trafic égal si vous le demandez.
+
+6. **Nommer le scénario** dans le champ *Scénario*, en tête du panneau. Le nom et les actions cochées sont **enregistrés avec le plan de feu** : vous les retrouvez à la réouverture du projet, et chaque plan a le sien.
+
+**Le livrable.** Une fois le scénario nommé, *Fichier → Imprimer le projet...* propose une case **Scénario**, cochée d'emblée. Elle produit le diagramme recalculé, titré du nom que vous lui avez donné et de son cycle simulé, accompagné au choix de la liste des actions — chacune avec sa coche, celles écartées restant visibles en gris —, de la liste des conflits, des données de trafic et de la réserve de capacité. De quoi montrer sur la même page ce qui a été retenu, ce qui a été écarté, et ce que cela change.
+
+L'impression porte sur le **plan de feu actif**. Pour comparer deux scénarios dans un même dossier, imprimez-les l'un après l'autre, ou portez-les sur deux plans de feu distincts.
 
 ---
 

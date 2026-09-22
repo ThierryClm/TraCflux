@@ -568,6 +568,8 @@ const HelpContent = ({ initialAnchor = null }) => {
             <section className="help-section">
                 <h4>Simulation</h4>
                 <p>L'onglet Simulation permet de tester l'effet des actions de micro-régulation sur le diagramme.</p>
+                <p><strong>Un scénario</strong> est une combinaison d'actions cochées, et le nom qu'on lui donne dans le champ <em>Scénario</em>, en tête du panneau. Le nom et les actions cochées appartiennent au <strong>plan de feu</strong> : ils sont enregistrés avec le projet, se retrouvent à la réouverture, et chaque plan a le sien. C'est ce nom qui titre la section correspondante du dossier imprimé.</p>
+                <p><strong>Six familles d'actions ne sont pas rejouées</strong>, faute d'agir sur le déroulé du cycle : début et fin de bande passante, priorité piétons, signal d'aide à la conduite, synchro BTS, flèche d'anticipation. Elles n'apparaissent pas dans la liste du panneau et « Tout cocher » ne les sélectionne pas.</p>
                 <ul>
                     <li><strong>Actions cochables :</strong> Chaque action définie dans les conditions de micro-régulation peut être cochée individuellement. Le diagramme se met à jour en temps réel pour visualiser l'effet combiné des actions sélectionnées.</li>
                     <li><strong>Ordre de traitement :</strong> Les actions sont traitées dans l'ordre suivant : Point de repos → Ouverture anticipée → Fermeture anticipée → Escamotage (groupe) → Adaptatif vertical → Escamotage de phase. Chaque action s'applique sur le diagramme virtuel résultant des actions précédentes.</li>
@@ -578,7 +580,8 @@ const HelpContent = ({ initialAnchor = null }) => {
                     <li><strong>Actions grisées :</strong> Les actions dont la plage [Déb, Fin] tombe entièrement dans une zone supprimée (AV ou EP) sont affichées en grisé dans la liste.</li>
                     <li><strong>Conflits simulés :</strong> Le tableau des conflits se met à jour selon les temps de vert simulés. Les groupes réduits à un vert nul sont exclus des conflits. Le survol d'un conflit affiche une flèche rouge pointillée dans le diagramme depuis les positions simulées.</li>
                     <li><strong>Données trafic :</strong> Les données V.Utile, Cap.U, Retard et File d'attente sont toujours affichées. Les valeurs inhibées par les actions cochées apparaissent en grisé.</li>
-                    <li><strong>Tout cocher / Tout décocher :</strong> Permet de sélectionner ou désélectionner rapidement toutes les actions.</li>
+                    <li><strong>Tout cocher / Tout décocher :</strong> Permet de sélectionner ou désélectionner rapidement toutes les actions. « Tout décocher » laisse intactes les familles non rejouées, qui ne sont pas affichées.</li>
+                    <li><strong>Impression du scénario :</strong> Le scénario du plan actif s'imprime dans le dossier (case <em>Scénario</em>), que l'onglet Simulation soit ouvert ou non — il suffit qu'au moins une action soit cochée. Voir « Impression du dossier », plus bas.</li>
                 </ul>
             </section>
 
@@ -688,6 +691,19 @@ const HelpContent = ({ initialAnchor = null }) => {
                             <li><em>Variables micro :</em> Variables personnalisées de micro-régulation du PF</li>
                             <li><em>Phasage bulle :</em> Représentation graphique des phases du PF sous forme de bulles sur l'image du carrefour (disponible si l'image et les flèches existent)</li>
                             <li><em>Données de trafic et capacité :</em> Tableau des données trafic associées au PF</li>
+                            <li><em>Réserve de capacité :</em> Capacité offerte, degré de saturation, réserve, attente et file moyennes, courant par courant</li>
+                        </ul>
+                    </li>
+                    <li><strong>Scénario</strong> (dernière case de la liste, décochée par défaut) :
+                        <ul>
+                            <li>Imprime le diagramme <strong>recalculé par le scénario du plan actif</strong>, titré du nom donné dans le champ <em>Scénario</em> et de son cycle simulé, avec l'écart au cycle nominal</li>
+                            <li>La case naît cochée lorsque le plan actif porte déjà un nom de scénario à la première ouverture de cette boîte ; une fois décochée, elle le reste, et ce choix s'enregistre avec le projet</li>
+                            <li>Elle reste inerte tant qu'aucune action n'est cochée dans l'onglet Simulation : il n'y a alors rien à imprimer</li>
+                            <li>L'impression porte sur le <strong>plan de feu actif</strong> uniquement</li>
+                            <li><em>Liste des actions :</em> Les actions que la simulation prend en compte, chacune avec sa coche ; les actions écartées restent visibles, en gris</li>
+                            <li><em>Liste des conflits :</em> Les conflits du diagramme simulé, escamotages cochés déduits</li>
+                            <li><em>Données de trafic et calcul de capacité :</em> Le tableau de l'écran, nourri des temps simulés</li>
+                            <li><em>Réserve de capacité :</em> Mêmes formules, groupes aux temps simulés ; les groupes qu'une action inhibe n'y affichent plus de capacité, comme dans le tableau de trafic</li>
                         </ul>
                     </li>
                 </ul>
@@ -696,7 +712,8 @@ const HelpContent = ({ initialAnchor = null }) => {
                 <ul>
                     <li><strong>Page de titre :</strong> Nom du carrefour</li>
                     <li><strong>Sections globales :</strong> Image du carrefour, formulaire, matrice de sécurité et matrice des temps interverts (si cochées)</li>
-                    <li><strong>Pour chaque PF coché :</strong> Diagramme du plan de feu, suivi de ses conditions de micro-régulation, variables micro, phasage bulle et données de trafic/capacité (selon les sous-options cochées)</li>
+                    <li><strong>Pour chaque PF coché :</strong> Diagramme du plan de feu, suivi de ses conditions de micro-régulation, variables micro, phasage bulle, données de trafic/capacité et réserve de capacité (selon les sous-options cochées)</li>
+                    <li><strong>Scénario</strong> (si coché, en fin de dossier) : Diagramme recalculé du plan actif, puis actions retenues, conflits, trafic et réserve selon les sous-options</li>
                     <li><strong>Pied de page :</strong> « TraCflux » et le numéro de version, en bas à gauche de chaque page</li>
                 </ul>
                 <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Paramètres d'impression recommandés</h5>
