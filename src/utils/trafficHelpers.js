@@ -38,3 +38,29 @@ export const parseTrafficVol = (val) => {
 
 /** Vrai si le trafic est marqué coordonné (suffixe « c »). */
 export const isCoordinated = (val) => String(val || '').endsWith('c');
+
+/**
+ * Les groupes de feu qu'une action cochée en simulation inhibe.
+ *
+ * Trois familles suppriment ou écourtent le vert d'un groupe au point que sa
+ * capacité n'a plus de sens : escamotage de phase, fermeture anticipée,
+ * adaptatif vertical. Le tableau Données Trafic laisse alors leurs colonnes
+ * calculées vides — et la réserve de capacité, qui lit les mêmes groupes, doit
+ * en faire autant : elle affichait un degré de saturation pour un groupe dont
+ * le tableau juste au-dessus ne donnait aucune capacité.
+ *
+ * Rend un Set d'identifiants de groupes ; vide si aucune action n'est cochée.
+ */
+export const INHIBITEURS = ['Escamotage de phase', 'Fermeture anticipée', 'Adaptatif vertical'];
+
+export const groupesInhibes = (actionData = [], selectedActions = []) => {
+    const inhibes = new Set();
+    actionData.forEach(action => {
+        if (!selectedActions.includes(action.id)) return;
+        if (!INHIBITEURS.includes(action.action)) return;
+        if (!action.gf) return;
+        const gfId = parseInt(action.gf.toString().replace(/[Gg]/g, '').trim());
+        if (gfId > 0) inhibes.add(gfId);
+    });
+    return inhibes;
+};

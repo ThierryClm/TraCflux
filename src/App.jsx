@@ -28,7 +28,7 @@ import { buildDiagnosticReport, downloadDiagnosticReport, buildErrorJournal, bui
 import { getInterceptedEntries, clearInterceptedEntries } from './utils/errorInterceptor';
 import CreateGreenWaveDialog from './components/CreateGreenWaveDialog';
 import GreenWaveViewer from './components/GreenWaveViewer';
-import SimulationPanel from './components/SimulationPanel';
+import SimulationPanel, { actionsSimulables, conflitsSimules } from './components/SimulationPanel';
 import PhasageBulle from './components/PhasageBulle';
 import { fitBubblesToPage, REF_IMAGE_BOX_WIDTH, REF_IMAGE_BOX_HEIGHT } from './utils/phasageLayout';
 import { safeShowOpenFilePicker } from './utils/filePicker';
@@ -70,6 +70,7 @@ import './components/GroupTable.css';
 import './components/IntergreenMatrix.css';
 import './App.css';
 import { lireMiseEnPage, appliquerMiseEnPage } from './utils/miseEnPageProjet';
+import { groupesInhibes } from './utils/trafficHelpers';
 
 function App() {
     const askConfirm = useConfirm();
@@ -4255,6 +4256,63 @@ function App() {
                                 </div>
                                 );
                             })}
+                            {/* Simulation — le diagramme tel que la simulation le recalcule.
+                                Elle ne vit que pendant que l'onglet Simulation est ouvert :
+                                simulationResult est nul sinon, et il n'y aurait rien à
+                                imprimer. La case reste donc visible mais inerte, avec la
+                                raison en infobulle, plutôt que de disparaître de la liste. */}
+                            {(() => {
+                                const simDispo = !!simulationResult;
+                                const simCochee = (dossierSections.simulation || false) && simDispo;
+                                return (
+                            <div className="dossier-pf-group">
+                                <label
+                                    className={simDispo ? '' : 'dossier-option-indisponible'}
+                                    title={tip(simDispo
+                                        ? "Imprime le diagramme recalculé par la simulation, avec son cycle simulé."
+                                        : "Ouvrez l'onglet Simulation pour pouvoir l'inclure au dossier.")}
+                                >
+                                    <input type="checkbox" checked={simCochee} disabled={!simDispo}
+                                        onChange={e => {
+                                            const checked = e.target.checked;
+                                            setDossierSections(s => ({
+                                                ...s,
+                                                simulation: checked,
+                                                simulationActions: checked,
+                                                simulationConflits: checked,
+                                                simulationTrafic: checked,
+                                                simulationReserve: checked,
+                                            }));
+                                        }} />
+                                    Simulation
+                                </label>
+                                {simCochee && (
+                                <div className="dossier-pf-suboptions">
+                                    <label>
+                                        <input type="checkbox" checked={dossierSections.simulationActions || false}
+                                            onChange={e => { const v = e.target.checked; setDossierSections(s => ({...s, simulationActions: v})); }} />
+                                        Liste des actions
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" checked={dossierSections.simulationConflits || false}
+                                            onChange={e => { const v = e.target.checked; setDossierSections(s => ({...s, simulationConflits: v})); }} />
+                                        Liste des conflits
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" checked={dossierSections.simulationTrafic || false}
+                                            onChange={e => { const v = e.target.checked; setDossierSections(s => ({...s, simulationTrafic: v})); }} />
+                                        Données de trafic et calcul de capacité
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" checked={dossierSections.simulationReserve || false}
+                                            onChange={e => { const v = e.target.checked; setDossierSections(s => ({...s, simulationReserve: v})); }} />
+                                        Réserve de capacité
+                                    </label>
+                                </div>
+                                )}
+                            </div>
+                                );
+                            })()}
                         </div>
                         <div className="modal-footer">
                             <button className="btn-cancel" onClick={() => setDossierDialog(false)}>Annuler</button>
@@ -5262,6 +5320,189 @@ function App() {
                                         </Fragment>
                                             );
                                         })}
+
+                                        {/* Simulation — le plan tel que la simulation le recalcule.
+                                            Elle porte sur le plan de feu ACTIF : c'est celui que
+                                            l'onglet Simulation rejoue, et simulationResult n'existe
+                                            que pendant ce temps-là. Les temps changent, les formules
+                                            non — le tableau de trafic est le composant de l'écran,
+                                            nourri du diagramme simulé. */}
+                                        {dossierSections.simulation && simulationResult && (() => {
+                                            const simCycle = simulationResult.simulatedCycleLength || cycleLength;
+                                            const simPfName = pfTabs.find(pf => pf.id === activePFId)?.name || '';
+                                            // Mêmes règles d'échelle que les diagrammes ci-dessus :
+                                            // une seconde vaut la même largeur d'une page à l'autre,
+                                            // le cycle simulé se compare donc à l'œil au cycle du plan.
+                                            const diagramPageHeight = 648;
+                                            const diagramRenderedHeight = 50 + 1 + groups.length * 31 + 90;
+                                            const combinedScale = Math.min(1, diagramPageHeight / diagramRenderedHeight);
+                                            const largeurColonneVisuelle = dossierSidebarReal * combinedScale;
+                                            const timelineDispo = dossierUsableWidth - largeurColonneVisuelle;
+                                            const ppsVisuel = simCycle <= refCycle
+                                                ? timelineDispo / refCycle
+                                                : timelineDispo / simCycle;
+                                            const simPPS = ppsVisuel / combinedScale;
+                                            // Les groupes aux temps simulés, pour la réserve de capacité :
+                                            // DiagnosticPanel calcule à partir des durées de vert des
+                                            // groupes, il faut donc les lui donner déjà simulées.
+                                            const groupesSimules = groups.map(g => {
+                                                const sim = simulationResult.simulatedGroups?.find(sg => sg.id === g.id);
+                                                if (!sim) return g;
+                                                return {
+                                                    ...g,
+                                                    offset: sim.simulatedOffset ?? g.offset,
+                                                    durations: { ...g.durations, green: sim.simulatedGreen ?? g.durations.green }
+                                                };
+                                            });
+                                            const actionsRetenues = actionsSimulables(actionData);
+                                            return (
+                                        <Fragment key="simulation">
+                                            <div className="print-dossier-section print-dossier-diagram">
+                                                <h3>Simulation{simPfName ? ` du plan de feu : ${simPfName}` : ''} — Cycle simulé : {simCycle}s{simCycle !== cycleLength ? ` (${simCycle - cycleLength > 0 ? '+' : ''}${simCycle - cycleLength}s)` : ''}</h3>
+                                                <div style={{
+                                                    height: `${Math.ceil(diagramRenderedHeight * combinedScale)}px`,
+                                                    overflow: 'hidden',
+                                                    background: '#fff'
+                                                }}>
+                                                    <div className="print-diagram-content dossier-diagram-content" style={{
+                                                        width: `${Math.ceil(dossierSidebarReal + simCycle * simPPS)}px`,
+                                                        transform: combinedScale !== 1 ? `scale(${combinedScale.toFixed(3)})` : 'none',
+                                                        transformOrigin: 'top left'
+                                                    }}>
+                                                        <TimelineDiagram
+                                                            groups={groups}
+                                                            globalTime={0}
+                                                            onGroupClick={() => {}}
+                                                            pixelsPerSecond={simPPS}
+                                                            conflicts={[]}
+                                                            conflictMatrix={conflictMatrix}
+                                                            updateGroupParams={() => {}}
+                                                            cycleLength={cycleLength}
+                                                            actionData={actionData}
+                                                            updateActionRow={() => {}}
+                                                            startDrag={() => {}}
+                                                            endDrag={() => {}}
+                                                            showDependencies={false}
+                                                            dependencyGap={20}
+                                                            hoveredActionId={null}
+                                                            setHoveredActionId={() => {}}
+                                                            simulationFilter={new Set(simulationSelectedActions)}
+                                                            simulationResult={simulationResult}
+                                                            planName={simPfName}
+                                                            isPrintMode={true}
+                                                            showComments={false}
+                                                            showRemarks={false}
+                                                            tooltipsEnabled={tooltipPrefs.diagram}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Liste des actions, avec la coche de chacune : c'est le
+                                                choix de scénario qui explique le diagramme ci-dessus. */}
+                                            {dossierSections.simulationActions && actionsRetenues.length > 0 && (
+                                                <div className="print-dossier-section print-dossier-actions">
+                                                    <h3>Actions retenues par la simulation{simPfName ? ` - ${simPfName}` : ''}</h3>
+                                                    <table className="print-simulation-actions">
+                                                        <thead>
+                                                            <tr>
+                                                                <th className="col-coche">Simulée</th>
+                                                                <th className="col-gf">GF</th>
+                                                                <th className="col-action">Action</th>
+                                                                <th className="col-temps">Temps</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {actionsRetenues.map(action => {
+                                                                const cochee = simulationSelectedActions.includes(action.id);
+                                                                const temps = action.deb === '' ? ''
+                                                                    : (action.fin === '' ? `${action.deb}s` : `${action.deb}-${action.fin}s`);
+                                                                return (
+                                                                    <tr key={action.id} className={cochee ? 'action-cochee' : 'action-decochee'}>
+                                                                        <td className="col-coche">{cochee ? '\u2612' : '\u2610'}</td>
+                                                                        <td className="col-gf">{action.gf ? `GF${action.gf}` : ''}</td>
+                                                                        <td className="col-action">{action.action}</td>
+                                                                        <td className="col-temps">{temps}</td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+
+                                            {/* Liste des conflits du diagramme simulé — la même que le
+                                                panneau à l'écran, escamotages cochés déduits. */}
+                                            {dossierSections.simulationConflits && (() => {
+                                                const conflits = conflitsSimules(
+                                                    simulationResult.conflicts || [], actionData, simulationSelectedActions);
+                                                return (
+                                                <div className="print-dossier-section print-dossier-conflits">
+                                                    <h3>Conflits de la simulation{simPfName ? ` - ${simPfName}` : ''} : {conflits.length}</h3>
+                                                    {conflits.length === 0 ? (
+                                                        <p className="print-conflits-aucun">Aucun conflit sur le diagramme simulé.</p>
+                                                    ) : (
+                                                        <table className="print-simulation-conflits">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th className="col-gf">Groupes</th>
+                                                                    <th>Conflit</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {conflits.map((c, i) => (
+                                                                    <tr key={i}>
+                                                                        <td className="col-gf">GF{c.from} - GF{c.to}</td>
+                                                                        <td>{c.message}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    )}
+                                                </div>
+                                                );
+                                            })()}
+
+                                            {dossierSections.simulationTrafic && (
+                                                <div className="print-dossier-section print-dossier-traffic">
+                                                    <h3>Données de trafic et calcul de capacité - Simulation&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Données de trafic : {activeTrafficDataset}</h3>
+                                                    <TrafficTable
+                                                        groups={groups}
+                                                        cycleLength={cycleLength}
+                                                        activeTrafficDataset={activeTrafficDataset}
+                                                        setActiveTrafficDataset={() => {}}
+                                                        updateTrafficData={() => {}}
+                                                        getTrafficData={(id) => (trafficDatasets[activeTrafficDataset] || {})[id] || {}}
+                                                        updateGroupParams={() => {}}
+                                                        trafficDatasetNames={trafficDatasetNames}
+                                                        copyTrafficDataset={() => {}}
+                                                        addCustomTrafficDataset={() => {}}
+                                                        actionData={actionData}
+                                                        simulationSelectedActions={simulationSelectedActions}
+                                                        simulationResult={simulationResult}
+                                                        readOnly
+                                                        tooltipsEnabled={false}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {dossierSections.simulationReserve && (
+                                                <div className="print-dossier-section print-dossier-reserve">
+                                                    <h3>Réserve de capacité - Simulation</h3>
+                                                    <DiagnosticPanel
+                                                        groups={groupesSimules}
+                                                        cycleLength={simCycle}
+                                                        getTrafficData={(id) => (trafficDatasets[activeTrafficDataset] || {})[id] || {}}
+                                                        actionData={actionData}
+                                                        activeTrafficDataset={activeTrafficDataset}
+                                                        inhibitedGroups={groupesInhibes(actionData, simulationSelectedActions)}
+                                                        hideTitle={true}
+                                                    />
+                                                </div>
+                                            )}
+                                        </Fragment>
+                                            );
+                                        })()}
 
                                         {/* Le pied de page est géré par @page margin boxes (injecté dynamiquement) */}
                                     </div>

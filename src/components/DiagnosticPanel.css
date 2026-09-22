@@ -157,3 +157,12 @@ body.blue-night-mode .diagnostic-panel {
     padding: 0 4px;
     border-radius: 2px;
 }
+
+/* Groupe inhibé par une action cochée en simulation : ses colonnes calculées
+   sont vides, comme dans le tableau Données Trafic juste au-dessus. Le numéro
+   et le trait de la ligne restent lisibles — le groupe existe, c'est sa
+   capacité qui n'a plus de sens. */
+.diagnostic-table tbody tr.row-inhibited td:not(.dg-id) {
+    opacity: 0.5;
+    color: #666;
+}

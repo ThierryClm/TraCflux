@@ -2310,6 +2310,89 @@ body.amber-mode .help-back-to-top {
     opacity: 0.85;
 }
 
+/* Option momentanément hors d'atteinte — la simulation, tant que son onglet
+   n'est pas ouvert. Elle reste à sa place dans la liste, avec la raison en
+   infobulle : disparaître serait moins clair que rester grisée. */
+.dossier-option-indisponible {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.dossier-option-indisponible input[type="checkbox"] {
+    cursor: default;
+}
+
+/* Liste des actions retenues par la simulation, dans le dossier imprimé.
+   Les décochées restent visibles, en gris : c'est la comparaison entre ce qui
+   a été retenu et ce qui ne l'a pas été qui explique le diagramme simulé.
+
+   Le tableau ne s'étale pas sur la feuille : quatre colonnes courtes, dont la
+   plus large — le nom de l'action — tient en 25 caractères. Au-delà, le texte
+   est coupé plutôt que de pousser les autres colonnes. */
+.print-simulation-actions,
+.print-simulation-conflits {
+    border-collapse: collapse;
+    font-size: 11px;
+    table-layout: fixed;
+}
+
+.print-simulation-actions th,
+.print-simulation-actions td,
+.print-simulation-conflits th,
+.print-simulation-conflits td {
+    border: 1px solid #999;
+    padding: 2px 5px;
+    text-align: left;
+}
+
+.print-simulation-actions th,
+.print-simulation-conflits th {
+    background: #eee;
+    font-weight: bold;
+}
+
+.print-simulation-actions .col-coche {
+    width: 52px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.print-simulation-actions .col-gf {
+    width: 48px;
+}
+
+.print-simulation-actions .col-action {
+    width: 25ch;
+    max-width: 25ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.print-simulation-actions .col-temps {
+    width: 70px;
+    white-space: nowrap;
+}
+
+.print-simulation-actions .action-decochee {
+    color: #777;
+}
+
+/* Conflits du diagramme simulé : le couple de groupes, puis le motif. */
+.print-simulation-conflits {
+    width: 100%;
+}
+
+.print-simulation-conflits .col-gf {
+    width: 110px;
+    white-space: nowrap;
+}
+
+.print-conflits-aucun {
+    font-size: 12px;
+    margin: 4px 0 0 0;
+}
+
 .print-preview-dossier {
     display: flex;
     flex-direction: column;

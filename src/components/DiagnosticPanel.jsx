@@ -27,28 +27,37 @@ const DiagnosticPanel = ({
     onDetach = null,
     detached = false,
     hideTitle = false,
+    /* Groupes inhibés par une action cochée en simulation : le tableau Données
+       Trafic laisse leurs colonnes calculées vides, celui-ci doit faire pareil.
+       Un degré de saturation pour un groupe dont la capacité n'est pas calculée
+       juste au-dessus ne veut rien dire. Absent hors simulation. */
+    inhibitedGroups = null,
     tip = (t) => t
 }) => {
     const rows = useMemo(() => {
         return groups
             .filter(g => g.type === 'VL' || g.type === 'V')
             .map(g => {
+                const inhibe = inhibitedGroups ? inhibitedGroups.has(g.id) : false;
                 const green = getTotalGreenTime(g.id, g.durations?.green, actionData, cycleLength);
                 const raw = getTrafficData ? getTrafficData(g.id).trafficVol : 0;
                 const trafic = parseTrafficVol(raw);
                 const coord = isCoordinated(raw);
                 const coef = g.laneCoef;
+                if (inhibe) {
+                    return { g, trafic, coord, inhibe: true, capacity: null, x: null, reserve: null, delay: null, queue: null, capU: null };
+                }
                 const capacity = calculateOfferedCapacity(coef, green, cycleLength);
                 const x = calculateDegreeOfSaturation(trafic, coef, green, cycleLength);
                 const reserve = calculateReserveCapacity(trafic, coef, green, cycleLength);
                 const delay = coord && trafic ? 0 : calculateAverageDelay(trafic, coef, green, cycleLength);
                 const queue = coord && trafic ? 0 : calculateAverageQueueLength(trafic, coef, green, cycleLength);
                 const capU = x === null ? null : Math.round(x * 100);
-                return { g, trafic, coord, capacity, x, reserve, delay, queue, capU };
+                return { g, trafic, coord, inhibe: false, capacity, x, reserve, delay, queue, capU };
             })
             .filter(r => r.trafic); // uniquement les courants avec trafic renseigné
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [groups, cycleLength, getTrafficData, actionData, activeTrafficDataset]);
+    }, [groups, cycleLength, getTrafficData, actionData, activeTrafficDataset, inhibitedGroups]);
 
     const dim = useMemo(() => {
         let best = null;
@@ -94,8 +103,14 @@ const DiagnosticPanel = ({
                         </thead>
                         <tbody>
                             {rows.map(r => (
-                                <tr key={r.g.id}>
+                                <tr key={r.g.id} className={r.inhibe ? 'row-inhibited' : ''}>
                                     <td className="dg-id">GF{r.g.id}</td>
+                                    {r.inhibe ? (
+                                        <>
+                                            <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+                                        </>
+                                    ) : (
+                                        <>
                                     <td>{fmt(r.capacity)}</td>
                                     <td className={getCapacityColorClass(r.capU)}>
                                         {r.x === null ? '—' : r.x.toFixed(2)}
@@ -105,6 +120,8 @@ const DiagnosticPanel = ({
                                     </td>
                                     <td>{r.delay === null ? 'saturé' : fmt(Math.round(r.delay), ' s')}</td>
                                     <td>{r.queue === null ? 'saturé' : fmt(r.queue, ' m')}</td>
+                                        </>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
