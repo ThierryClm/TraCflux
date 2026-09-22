@@ -89,6 +89,20 @@ export default defineConfig({
     // Scope explicite : sinon vitest ramasse les fichiers *.test.js / *.spec.js
     // potentiellement presents dans les profils navigateurs preview (Edge,
     // Chrome) ou ailleurs dans le workspace.
-    include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)']
+    include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json-summary'],
+      include: ['src/**/*.{js,jsx}'],
+      exclude: ['src/**/*.{test,spec}.*', 'src/tests/**'],
+      // Plancher initial : il empêche une régression globale tout en laissant
+      // la consolidation progresser par lots sur cette application historique.
+      thresholds: {
+        statements: 30,
+        branches: 26,
+        functions: 25,
+        lines: 31
+      }
+    }
   }
 })
