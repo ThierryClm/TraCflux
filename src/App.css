@@ -4039,6 +4039,32 @@ body.print-portrait .dossier-phasage-centered .dossier-phasage-content {
     body.print-dossier .print-dossier-variables,
     body.print-dossier .dossier-variables-list,
     body.print-dossier .dossier-variables-list p,
+    /* Le tableau de trafic s'imprime sans le thème : noir sur blanc.
+     *
+     * C'est le seul tableau du dossier qui soit un composant d'écran réutilisé
+     * tel quel — le formulaire et les matrices ont leurs propres tableaux
+     * d'impression, que les thèmes n'atteignent pas. Il hérite donc des
+     * couleurs prévues pour un fond sombre : le nom du groupe passait en ambre
+     * #ffc640, soit un rapport de contraste de 1,6:1 sur du blanc, et en thème
+     * sombre il était carrément blanc sur blanc. L'en-tête, lui, imprimait un
+     * aplat noir sur chaque page.
+     *
+     * Trois éléments sont donc ramenés au noir sur blanc : le numéro du groupe,
+     * son nom et la ligne d'en-tête. Tout le reste est laissé intact — le code
+     * couleur des capacités porte une information, et le bleu des valeurs
+     * calculées se lit sans peine sur du papier.
+     */
+    body.print-dossier .print-dossier-traffic .traffic-table .col-id,
+    body.print-dossier .print-dossier-traffic .traffic-table .col-name-readonly,
+    body.print-dossier .print-dossier-traffic .traffic-table th {
+        color: #000 !important;
+    }
+
+    body.print-dossier .print-dossier-traffic .traffic-table th {
+        background: #eee !important;
+        background-color: #eee !important;
+    }
+
     body.print-dossier .print-dossier-traffic,
     body.print-dossier .print-dossier-actions,
     body.print-dossier .print-actions-table td,
