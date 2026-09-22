@@ -27,6 +27,7 @@ export default function WorkspaceSidebar({ model }) {
         deselectAllSimulationActions,
         cycleLength,
         conflictMatrix,
+        setMatrixValue,
         hoveredActionId,
         setHoveredActionId,
         setHoveredConflict,

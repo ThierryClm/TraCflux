@@ -6,7 +6,11 @@ vi.mock('../SimulationPanel', () => ({ default: () => <div data-testid="simulati
 vi.mock('../TrafficTable', () => ({ default: () => <div data-testid="traffic-table" /> }));
 vi.mock('../PropertiesPanel', () => ({ default: () => <div data-testid="properties-panel" /> }));
 vi.mock('../GroupTable', () => ({ default: () => <div data-testid="group-table" /> }));
-vi.mock('../IntergreenMatrix', () => ({ default: () => <div data-testid="matrix" /> }));
+vi.mock('../IntergreenMatrix', () => ({
+    default: ({ setMatrixValue }) => (
+        <div data-testid="matrix" data-has-setter={String(typeof setMatrixValue === 'function')} />
+    ),
+}));
 vi.mock('../DiagnosticPanel', () => ({ default: () => <div data-testid="diagnostic" /> }));
 vi.mock('../ConflictList', () => ({ default: () => <div data-testid="conflicts" /> }));
 
@@ -34,6 +38,7 @@ const buildModel = (overrides = {}) => ({
     deselectAllSimulationActions: vi.fn(),
     cycleLength: 60,
     conflictMatrix: [],
+    setMatrixValue: vi.fn(),
     hoveredActionId: null,
     setHoveredActionId: vi.fn(),
     setHoveredConflict: vi.fn(),
@@ -115,5 +120,12 @@ describe('WorkspaceSidebar', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Matrice' }));
         expect(model.setActiveTab).toHaveBeenCalledWith('matrix');
         expect(model.setSidebarWidth).toHaveBeenCalledWith(300);
+    });
+
+    it('transmet la modification de matrice dans les onglets de configuration', () => {
+        const model = buildModel({ activeTab: 'config' });
+        render(<WorkspaceSidebar model={model} />);
+
+        expect(screen.getByTestId('matrix')).toHaveAttribute('data-has-setter', 'true');
     });
 });

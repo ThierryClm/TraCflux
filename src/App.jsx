@@ -2544,7 +2544,7 @@ function App() {
                         sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
                         tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction,
-                        selectAllSimulationActions, deselectAllSimulationActions, cycleLength, conflictMatrix, hoveredActionId,
+                        selectAllSimulationActions, deselectAllSimulationActions, cycleLength, conflictMatrix, setMatrixValue, hoveredActionId,
                         setHoveredActionId, setHoveredConflict, simulationName, updateSimulationName, activeTrafficDataset,
                         setActiveTrafficDataset, updateTrafficData, getTrafficData, updateGroupParams, setHoveredArrowGroupId,
                         hoveredArrowGroupId, setHoveredArrowGroupSaturated, trafficDatasetNames, setHoveredVUtile, copyTrafficDataset,
