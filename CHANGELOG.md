@@ -7,6 +7,22 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.4.1] — 2026-09-22
+
+### Ajouté
+
+- **Les scénarios de micro-régulation.** Un scénario est une combinaison d'actions cochées dans
+  l'onglet Simulation, et le nom qu'on lui donne : « escamotage bus phase 1 », « priorité bus
+  seule ». Ce nom et ces actions appartiennent désormais au **plan de feu** — ils sont enregistrés
+  avec le projet, se retrouvent à la réouverture, et chaque plan a le sien, là où la combinaison
+  retenue se perdait jusqu'ici à la fermeture. Le dossier imprimé en rend compte par une case
+  **Scénario**, cochée d'emblée dès qu'un scénario est nommé : elle produit le diagramme recalculé,
+  titré du nom et de son cycle simulé, accompagné au choix de la liste des actions — chacune avec sa
+  coche, celles écartées restant visibles en gris —, de la liste des conflits, des données de trafic
+  et de la réserve de capacité. De quoi montrer sur une même page ce qui a été retenu, ce qui a été
+  écarté, et ce que cela change. La démarche complète est décrite dans la
+  [FAQ](FAQ.md#comment-construire-et-justifier-un-scénario-de-micro-régulation).
+
 ## [1.4.0] — 2026-09-22
 
 ### Ajouté
