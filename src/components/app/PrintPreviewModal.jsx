@@ -397,7 +397,8 @@ function PrintPreviewModal({
                                         const innerValue = trafficVol * redTime / 3600 / laneCoef;
                                         return (Math.floor(innerValue) + 1) * 6;
                                     };
-                                    const parseTrafficVol = (val) => {                                        if (!val) return 0;
+                                    const parseTrafficVol = (val) => {
+                                        if (!val) return 0;
                                         return parseInt(String(val).replace(/c$/i, '')) || 0;
                                     };
 
@@ -796,7 +797,8 @@ function PrintPreviewModal({
                                                            ils occupaient tout de même 270 px de large. La mise en
                                                            page dépassait alors la feuille et le navigateur
                                                            réduisait tout le document — ce que seul le diagramme,
-                                                           dimensionné en pixels, laissait voir. Le dossier imprime                                                           les remarques dans son propre bloc, juste en dessous. */
+                                                           dimensionné en pixels, laissait voir. Le dossier imprime
+                                                           les remarques dans son propre bloc, juste en dessous. */
                                                         showComments={false}
                                                         showRemarks={false}
                                                     tooltipsEnabled={tooltipPrefs.diagram}
@@ -1195,7 +1197,8 @@ function PrintPreviewModal({
 
                                             {dossierSections.simulationTrafic && (
                                                 <div className="print-dossier-section print-dossier-traffic">
-                                                    <h3>Données de trafic et calcul de capacité - Simulation&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Données de trafic : {activeTrafficDataset}</h3>                                                    <TrafficTable
+                                                    <h3>Données de trafic et calcul de capacité - Simulation&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Données de trafic : {activeTrafficDataset}</h3>
+                                                    <TrafficTable
                                                         groups={groups}
                                                         cycleLength={cycleLength}
                                                         activeTrafficDataset={activeTrafficDataset}

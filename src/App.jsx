@@ -398,6 +398,7 @@ function App() {
     const [diagnosticMaskNames, setDiagnosticMaskNames] = useState(true);
     const [diagnosticRefresh, setDiagnosticRefresh] = useState(0);
     const printPreviewPageRef = useRef(null);
+
     // Intersection image animation state
     const {
         isPlayingSimulation, setIsPlayingSimulation,
@@ -796,7 +797,8 @@ function App() {
         // d'où le « et » qui montait d'une ligne à l'impression.
         const champMicro = document.querySelector('.action-table .micro-highlight-backdrop')
             || document.querySelector('.action-table .input-micro');
-        if (champMicro) {            const { style, utile } = utileDe(champMicro);
+        if (champMicro) {
+            const { style, utile } = utileDe(champMicro);
             // Même largeur ET même police : c'est le navigateur qui replie, avec
             // les mêmes données qu'à l'écran, donc aux mêmes endroits. Compter
             // les caractères était une approximation — 62 par ligne à
@@ -1196,6 +1198,7 @@ function App() {
             console.error('Failed to delete green wave', e);
         }
     };
+
     // Check for duplicated state on load
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -1594,7 +1597,8 @@ function App() {
                     const tabName = activePF?.name || `PF${activePFId}`;
                     if (await askConfirm({
                         title: 'Supprimer le plan de feu',
-                        message: `Êtes-vous sûr de vouloir supprimer l'onglet « ${tabName} » ?\n\nCette action est irréversible.`,                        confirmLabel: 'Supprimer',
+                        message: `Êtes-vous sûr de vouloir supprimer l'onglet « ${tabName} » ?\n\nCette action est irréversible.`,
+                        confirmLabel: 'Supprimer',
                         danger: true,
                     })) {
                         deletePF(activePFId);
@@ -2392,7 +2396,8 @@ function App() {
                     hoveredConflict={hoveredConflict}
                     hoveredVUtile={hoveredVUtile}
                     planName={simulationEnabled ? activePFName : ''}
-                    activePFName={activePFName}                    biCarrefourSeparator={biCarrefourSeparator}
+                    activePFName={activePFName}
+                    biCarrefourSeparator={biCarrefourSeparator}
                     showComments={false}
                     showRemarks={false}
                     showGroupNames={showGroupNamesDiagram}
@@ -2792,6 +2797,7 @@ function App() {
                                 )}
                                 </div>
                             )}
+
                             {displayConflicts.length > 0 && (
                                 <ConflictList
                                     conflicts={displayConflicts}
@@ -3190,7 +3196,8 @@ function App() {
                             tooltipsEnabled={tooltipPrefs.micro}
                             />
                         </div>
-                    </div>                </section>
+                    </div>
+                </section>
             </main>
             </>)}
 
@@ -3589,7 +3596,8 @@ function App() {
                                 value={report}
                                 style={{
                                     width: '100%',
-                                    height: '360px',                                    fontFamily: 'monospace',
+                                    height: '360px',
+                                    fontFamily: 'monospace',
                                     fontSize: '12px',
                                     background: '#1a1a2e',
                                     color: '#e0e0e0',
@@ -3988,7 +3996,8 @@ function App() {
                             value={moveAfterGroup}
                             onChange={(e) => { setMoveAfterGroup(e.target.value); setMoveGroupTouched(true); }}
                             style={{ marginLeft: '10px', padding: '5px' }}
-                            title={tip("Met à jour la matrice, le diagramme et le tableau des actions")}                        >
+                            title={tip("Met à jour la matrice, le diagramme et le tableau des actions")}
+                        >
                             <option value="0">Au début (première position)</option>
                             {groups
                                 .filter((g) => g.id.toString() !== groupToMove)
