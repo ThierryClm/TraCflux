@@ -29,7 +29,15 @@
 
 /**
  * Nature du courant porté par un groupe de feu.
- * @typedef {'VL'|'V'|'TC'|'B'|'Cycliste'|'CY'|'Piéton'|'P'} TypeGroupe
+ *
+ * Le formulaire propose six codes courts : V (véhicule), B (bus), P (piéton),
+ * CY (cycle), FL (flèche) et PP (priorité piéton). Les formes longues et 'VL'
+ * viennent des projets anciens et des imports, et sont encore lues partout —
+ * le code teste systématiquement les deux écritures.
+ *
+ * Relevé sur les projets réels : 'FL' et 'PP' manquaient à cette liste, alors
+ * qu'ils portent chacun un dessin propre sur le plan du carrefour.
+ * @typedef {''|'V'|'VL'|'B'|'TC'|'P'|'Piéton'|'CY'|'Cycliste'|'FL'|'PP'} TypeGroupe
  */
 
 /**
@@ -104,10 +112,10 @@
  *
  * @typedef {Object} ActionMicro
  * @property {number} id
- * @property {string} action       Famille de l'action : « Escamotage de phase »…
- * @property {string} [gf]         Groupe concerné.
- * @property {string} [deb]        Instant de début, en secondes.
- * @property {string} [fin]        Instant de fin, en secondes.
+ * @property {string} action           Famille de l'action : « Escamotage de phase »…
+ * @property {string|number} [gf]      Groupe concerné.
+ * @property {string|number} [deb]     Instant de début, en secondes.
+ * @property {string|number} [fin]     Instant de fin, en secondes.
  * @property {string} [abrv]       Abréviation portée sur le diagramme.
  * @property {string} [description]
  * @property {string} [micro]      Condition de micro-régulation, texte libre.

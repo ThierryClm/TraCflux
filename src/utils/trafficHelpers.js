@@ -20,14 +20,14 @@ export const getTotalGreenTime = (groupId, mainGreenTime, actionData = [], cycle
     if (!mainGreenTime) return 0;
     const lucarneActions = actionData.filter(
         action => action.action === 'Seconde lucarne' &&
-            parseInt(action.gf ?? '') === groupId &&
+            parseInt(String(action.gf ?? '')) === groupId &&
             action.deb !== '' && action.deb !== null &&
             action.fin !== '' && action.fin !== null
     );
     let lucarneDuration = 0;
     lucarneActions.forEach(lucarne => {
-        const deb = parseFloat(lucarne.deb ?? '');
-        const fin = parseFloat(lucarne.fin ?? '');
+        const deb = parseFloat(String(lucarne.deb ?? ''));
+        const fin = parseFloat(String(lucarne.fin ?? ''));
         if (!isNaN(deb) && !isNaN(fin)) {
             let duration = fin - deb;
             if (duration < 0) duration += cycleLength;
