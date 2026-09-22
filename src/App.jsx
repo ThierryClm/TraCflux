@@ -8,7 +8,6 @@ import { toast, getToastPrefs, setToastPref } from './utils/toast';
 import GroupTable from './components/GroupTable';
 import TrafficTable from './components/TrafficTable';
 import IntergreenMatrix from './components/IntergreenMatrix';
-import ActionTable from './components/ActionTable';
 import CapacityComparison from './components/CapacityComparison';
 import ConflictList from './components/ConflictList';
 import DiagnosticPanel from './components/DiagnosticPanel';
@@ -17,19 +16,10 @@ import ImportPfModal from './components/ImportPfModal';
 import CopyMatrixModal from './components/CopyMatrixModal';
 import DiagramLegend from './components/DiagramLegend';
 import { parseDiagfeux } from './utils/diagfeuxImporter';
-import IntersectionImage from './components/IntersectionImage';
 import MenuBar from './components/MenuBar';
-import Modal from './components/Modal';
-import MicroVariablesDialog from './components/MicroVariablesDialog';
 import { useConfirm, useAlert } from './components/ConfirmProvider';
-import { APP_VERSION, APP_NAME, APP_DESCRIPTION } from './version';
+import { APP_VERSION, APP_NAME } from './version';
 import { buildExportFilename } from './utils/exportFilename';
-import { buildDiagnosticReport, downloadDiagnosticReport, buildErrorJournal, buildDiagnosticJSON, downloadDiagnosticJSON } from './utils/diagnostics';
-import { getInterceptedEntries, clearInterceptedEntries } from './utils/errorInterceptor';
-import CreateGreenWaveDialog from './components/CreateGreenWaveDialog';
-import GreenWaveViewer from './components/GreenWaveViewer';
-import SimulationPanel from './components/SimulationPanel';
-import PhasageBulle from './components/PhasageBulle';
 import { safeShowOpenFilePicker } from './utils/filePicker';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
@@ -59,13 +49,19 @@ import useFloatingDiagnostic from './hooks/useFloatingDiagnostic';
 import useFloatingTraffic from './hooks/useFloatingTraffic';
 import useFloatingRemarks from './hooks/useFloatingRemarks';
 import RemarquesEditor from './components/RemarquesEditor';
-import HelpContent from './components/HelpContent';
 import useFileOperations from './hooks/useFileOperations';
 import useImportOperations from './hooks/useImportOperations';
 import WelcomeScreen from './components/app/WelcomeScreen';
 import ProjectHeader from './components/app/ProjectHeader';
 import DossierPrintDialog from './components/app/DossierPrintDialog';
 import PrintPreviewModal from './components/app/PrintPreviewModal';
+import DiagramEditDialogs from './components/app/DiagramEditDialogs';
+import ProjectOpenDialog from './components/app/ProjectOpenDialog';
+import ImportDialogs from './components/app/ImportDialogs';
+import GreenWaveDialogs from './components/app/GreenWaveDialogs';
+import WorkspaceSidebar from './components/app/WorkspaceSidebar';
+import WorkspaceMain from './components/app/WorkspaceMain';
+import SupportDialogs from './components/app/SupportDialogs';
 
 import './components/GroupTable.css';
 import './components/IntergreenMatrix.css';
@@ -1947,14 +1943,14 @@ function App() {
     };
 
     // Handle opening a saved green wave
-    const handleOpenSavedGreenWave = async () => {
-        if (!selectedGreenWave) return;
+    const handleOpenSavedGreenWave = async (greenWaveName = selectedGreenWave) => {
+        if (!greenWaveName) return;
 
         try {
             const saved = localStorage.getItem('savedGreenWaves');
             if (saved) {
                 const greenWaves = JSON.parse(saved);
-                const greenWaveData = greenWaves[selectedGreenWave];
+                const greenWaveData = greenWaves[greenWaveName];
 
                 if (greenWaveData && greenWaveData.intersections) {
                     const greenWaveId = Date.now().toString();
@@ -1963,7 +1959,7 @@ function App() {
                     try {
                         sessionStorage.setItem(`greenwave_${greenWaveId}`, JSON.stringify(greenWaveData.intersections));
                         sessionStorage.setItem(`greenwave_settings_${greenWaveId}`, JSON.stringify({
-                            name: selectedGreenWave,
+                            name: greenWaveName,
                             speed: greenWaveData.speed,
                             speedUp: greenWaveData.speedUp,
                             speedDown: greenWaveData.speedDown,
@@ -1975,7 +1971,7 @@ function App() {
                     } catch (e) {
                         await saveGreenWaveToIDB(`greenwave_${greenWaveId}`, greenWaveData.intersections);
                         await saveGreenWaveToIDB(`greenwave_settings_${greenWaveId}`, {
-                            name: selectedGreenWave,
+                            name: greenWaveName,
                             speed: greenWaveData.speed,
                             speedUp: greenWaveData.speedUp,
                             speedDown: greenWaveData.speedDown,
@@ -2093,46 +2089,54 @@ function App() {
         }
     };
 
-    // Handle project selection from open modal
-    const handleOpenProject = async () => {
-        if (selectedProject) {
-            // Garde-fou : si le projet courant a des modifications non
-            // sauvegardées, demander confirmation avant de l'écraser.
-            if (isDirty) {
-                const ok = await askConfirm({
-                    title: 'Modifications non enregistrées',
-                    message: 'Le projet courant a des modifications non enregistrées qui seront perdues.\n\nContinuer et ouvrir le projet sélectionné ?',
-                    confirmLabel: 'Continuer',
-                    danger: true,
-                });
-                if (!ok) return;
-            }
-            const data = loadProject(selectedProject);
-            setOpenModal(false);
-            setSelectedProject(null);
-            setFloatingCrop(data?.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
-            setFloatingZoom(data?.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
-            markLegacyCrop(data?.floatingCrop !== undefined && data?.floatingCropBasis !== CROP_BASIS);
-            // Le cache navigateur ne porte ni la hauteur du diagramme ni l'état
-            // du panneau : sans remise à zéro, ils restaient hérités du projet
-            // précédemment ouvert.
-            if (data?.diagramHeight !== undefined && data.diagramHeight !== null) {
-                setDiagramHeight(data.diagramHeight);
-            } else {
-                resetDiagramHeight();
-            }
-            setSidebarVisible(typeof data?.layoutOptions?.showParameters === 'boolean'
-                ? data.layoutOptions.showParameters
-                : true);
-            if (data && typeof data === 'object') {
-                const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
-                setShowComments(!!hasComments);
-                const pfList = data.pfTabs || [];
-                const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
-                setShowRemarks(!!hasRemarks);
-            }
-            setHasActiveProject(true);
+    const openSavedProject = async (projectNameToOpen, confirmationMessage) => {
+        if (!projectNameToOpen) return;
+
+        // Garde-fou : si le projet courant a des modifications non
+        // sauvegardées, demander confirmation avant de l'écraser.
+        if (isDirty) {
+            const ok = await askConfirm({
+                title: 'Modifications non enregistrées',
+                message: confirmationMessage,
+                confirmLabel: 'Continuer',
+                danger: true,
+            });
+            if (!ok) return;
         }
+
+        const data = loadProject(projectNameToOpen);
+        setOpenModal(false);
+        setSelectedProject(null);
+        setFloatingCrop(data?.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
+        setFloatingZoom(data?.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
+        markLegacyCrop(data?.floatingCrop !== undefined && data?.floatingCropBasis !== CROP_BASIS);
+        // Le cache navigateur ne porte ni la hauteur du diagramme ni l'état
+        // du panneau : sans remise à zéro, ils restaient hérités du projet
+        // précédemment ouvert.
+        if (data?.diagramHeight !== undefined && data.diagramHeight !== null) {
+            setDiagramHeight(data.diagramHeight);
+        } else {
+            resetDiagramHeight();
+        }
+        setSidebarVisible(typeof data?.layoutOptions?.showParameters === 'boolean'
+            ? data.layoutOptions.showParameters
+            : true);
+        if (data && typeof data === 'object') {
+            const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
+            setShowComments(!!hasComments);
+            const pfList = data.pfTabs || [];
+            const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
+            setShowRemarks(!!hasRemarks);
+        }
+        setHasActiveProject(true);
+    };
+
+    // Handle project selection from open modal
+    const handleOpenProject = (projectNameToOpen = selectedProject) => {
+        return openSavedProject(
+            projectNameToOpen,
+            `Le projet courant a des modifications non enregistrées qui seront perdues.\n\nContinuer et ouvrir « ${projectNameToOpen} » ?`,
+        );
     };
 
     // Handle slide confirmation
@@ -2535,1533 +2539,196 @@ function App() {
                 readOnly={dossierReadOnly}
             />
             <main className="split-view" ref={splitViewRef}>
-                <aside className={`sidebar${sidebarVisible ? '' : ' repliee'}`} style={{
-                    width: sidebarVisible ? `${phasageBulleEnabled ? Math.min(sidebarWidth, 350) : sidebarWidth}px` : '0px',
-                    minWidth: sidebarVisible ? (phasageBulleEnabled ? '200px' : '300px') : '0px',
-                    padding: sidebarVisible ? '1rem' : '0',
-                    overflow: 'hidden'
-                }}>
-                    {phasageBulleEnabled ? (
-                        <div className="phasage-bulle-sidebar">
-                            <div className="sidebar-header">
-                                <h3>Groupe de feux</h3>
-                                <p className="sidebar-subtitle">Sélectionnez les groupes à afficher</p>
-                            </div>
-                            <div className="phasage-group-list">
-                                {groups.map(g => {
-                                    const hasArrow = intersectionArrows.some(a => a.groupId === g.id);
-                                    const isVisible = phasageBulleVisibleGroups.has(g.id);
-                                    return (
-                                        <label
-                                            key={g.id}
-                                            className={`phasage-group-item ${isVisible ? 'checked' : ''} ${!hasArrow ? 'no-arrow' : ''} ${hoveredPhasageGroupId === g.id ? 'hovered' : ''}`}
-                                            onMouseEnter={() => hasArrow && setHoveredPhasageGroupId(g.id)}
-                                            onMouseLeave={() => setHoveredPhasageGroupId(null)}
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={isVisible}
-                                                onChange={() => togglePhasageBulleGroup(g.id)}
-                                                disabled={!hasArrow}
-                                            />
-                                            <span className="phasage-group-id">GF{g.id}</span>
-                                            <span className="phasage-group-name">{g.name || '-'}</span>
-                                            <span className="phasage-group-courant">{g.courant || '-'}</span>
-                                            {!hasArrow && (
-                                                <span className="phasage-no-arrow-hint" title={tip("Aucune flèche définie pour ce groupe")}>∅</span>
-                                            )}
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                            <div className="phasage-group-actions">
-                                <button
-                                    className="phasage-btn-select-all"
-                                    onClick={() => {
-                                        const allArrowGroups = new Set(intersectionArrows.map(a => a.groupId));
-                                        setPhasageBulleVisibleGroups(allArrowGroups);
-                                    }}
-                                >
-                                    Tout cocher
-                                </button>
-                                <button
-                                    className="phasage-btn-deselect-all"
-                                    onClick={() => setPhasageBulleVisibleGroups(new Set())}
-                                >
-                                    Tout décocher
-                                </button>
-                            </div>
-                        </div>
-                    ) : simulationEnabled ? (
-                        <>
-                            <SimulationPanel
-                                actionData={actionData}
-                                selectedActions={simulationSelectedActions}
-                                onToggle={toggleSimulationAction}
-                                onSelectAll={selectAllSimulationActions}
-                                onDeselectAll={deselectAllSimulationActions}
-                                groups={groups}
-                                cycleLength={cycleLength}
-                                conflictMatrix={conflictMatrix}
-                                hoveredActionId={hoveredActionId}
-                                setHoveredActionId={setHoveredActionId}
-                                setHoveredConflict={setHoveredConflict}
-                                scenarioName={simulationName}
-                                onScenarioNameChange={updateSimulationName}
-                            />
-                            {/* Même tableau que l'onglet Trafic, aux mêmes formules :
-                                seuls les temps changent (diagramme simulé), et la
-                                saisie est fermée. Le panneau en portait une copie
-                                réduite, aux colonnes et aux calculs divergents. */}
-                            <div onMouseEnter={() => { helpZoneRef.current = 'trafic'; }}>
-                                <TrafficTable
-                                    groups={groups}
-                                    cycleLength={cycleLength}
-                                    activeTrafficDataset={activeTrafficDataset}
-                                    setActiveTrafficDataset={setActiveTrafficDataset}
-                                    updateTrafficData={updateTrafficData}
-                                    getTrafficData={getTrafficData}
-                                    updateGroupParams={updateGroupParams}
-                                    setHoveredGroupId={setHoveredArrowGroupId}
-                                    hoveredGroupId={hoveredArrowGroupId}
-                                    setHoveredGroupSaturated={setHoveredArrowGroupSaturated}
-                                    trafficDatasetNames={trafficDatasetNames}
-                                    setHoveredVUtile={setHoveredVUtile}
-                                    copyTrafficDataset={copyTrafficDataset}
-                                    addCustomTrafficDataset={addCustomTrafficDataset}
-                                    actionData={actionData}
-                                    simulationSelectedActions={simulationSelectedActions}
-                                    simulationResult={simulationResult}
-                                    readOnly
-                                    onDetach={() => setShowFloatingTraffic(v => !v)}
-                                    tooltipsEnabled={tooltipPrefs.traffic}
-                                />
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="sidebar-tabs">
-                                <button
-                                    className={`tab-btn ${activeTab === 'properties' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('properties');
-                                        setSidebarWidth(450);
-                                    }}
-                                >
-                                    Propriétés
-                                </button>
-                                <button
-                                    className={`tab-btn ${activeTab === 'config' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('config');
-                                        setSidebarWidth(450);
-                                    }}
-                                >
-                                    Configuration
-                                    {groups.length > 0 && groups.every(g => !g.type || g.type === '') && (
-                                        <span className="tab-warning-icon" title={tip("Formulaire non renseigné")} role="img" aria-label="Formulaire non renseigné"> ⚠</span>
-                                    )}
-                                </button>
-                                <button
-                                    className={`tab-btn ${activeTab === 'matrix' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('matrix');
-                                        // Calculate optimal width for matrix:
-                                        // Find longest group name to calculate Nom column width
-                                        const maxNameLength = Math.max(3, ...groups.map(g => (g.name || '').length));
-                                        const nomColWidth = Math.max(70, maxNameLength * 7); // ~7px per character at 0.75em font-size
-                                        // Row header (24px) + Nom col (variable) + data cells (19px each with border) + first header col (19px) + padding (51px)
-                                        const matrixWidth = 24 + nomColWidth + (groups.length * 19) + 19 + 51;
-                                        setSidebarWidth(Math.min(1200, Math.max(300, matrixWidth)));
-                                    }}
-                                >
-                                    Matrice
-                                </button>
-                                <button
-                                    className={`tab-btn ${activeTab === 'traffic' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('traffic');
-                                        // Set width to display full traffic table (optimized)
-                                        // Grp(28) + Nom(160) + inputs(38*6) + padding
-                                        setSidebarWidth(520);
-                                    }}
-                                >
-                                    Trafic
-                                </button>
-                            </div>
+                <WorkspaceSidebar
+                    model={{
+                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, intersectionArrows,
+                        phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
+                        tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction,
+                        selectAllSimulationActions, deselectAllSimulationActions, cycleLength, conflictMatrix, hoveredActionId,
+                        setHoveredActionId, setHoveredConflict, simulationName, updateSimulationName, activeTrafficDataset,
+                        setActiveTrafficDataset, updateTrafficData, getTrafficData, updateGroupParams, setHoveredArrowGroupId,
+                        hoveredArrowGroupId, setHoveredArrowGroupSaturated, trafficDatasetNames, setHoveredVUtile, copyTrafficDataset,
+                        addCustomTrafficDataset, simulationResult, setShowFloatingTraffic, tooltipPrefs, activeTab,
+                        setActiveTab, setSidebarWidth, intersectionName, setIntersectionName, projectProperties,
+                        updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, setShowFloatingProperties,
+                        showGroupNamesForm, setShowFloatingForm, startDrag, endDrag, activePFId,
+                        pfTabs, biCarrefourSeparator, showGroupNamesMatrix, matricesLocked, setShowFloatingMatrix,
+                        showCapacityReserve, showFloatingDiagnostic, setShowFloatingDiagnostic, displayConflicts, isConflictGrayed,
+                        showFloatingConflicts, setShowFloatingConflicts, recentOpenDirs, recentSaveDirs, recentImportDirs,
+                        helpZoneRef,
+                    }}
+                />
 
-                            {activeTab === 'properties' && (
-                                <div onMouseEnter={() => { helpZoneRef.current = 'properties'; }}>
-                                    <PropertiesPanel
-                                        intersectionName={intersectionName}
-                                        setIntersectionName={setIntersectionName}
-                                        projectProperties={projectProperties}
-                                        updateProjectProperty={updateProjectProperty}
-                                        appCommunes={appCommunes}
-                                        appMoaLogos={appMoaLogos}
-                                        appMoeLogos={appMoeLogos}
-                                        onDetach={() => setShowFloatingProperties(v => !v)}
-                                        tooltipsEnabled={tooltipPrefs.config}
-                                    />
-                                </div>
-                            )}
-
-                            {activeTab === 'config' && (
-                                <>
-                                    <div onMouseEnter={() => { helpZoneRef.current = 'config-groupes'; }}>
-                                    <GroupTable
-                                        groups={groups}
-                                        updateGroupParams={updateGroupParams}
-                                        cycleLength={cycleLength}
-                                        showGroupNames={showGroupNamesForm}
-                                        onDetach={() => setShowFloatingForm(v => !v)}
-                                        hoveredGroupId={hoveredArrowGroupId}
-                                        startDrag={startDrag}
-                                        endDrag={endDrag}
-                                    tooltipsEnabled={tooltipPrefs.config}
-                                    />
-                                    </div>
-                                    <div style={{ marginTop: '2rem' }} onMouseEnter={() => { helpZoneRef.current = 'matrice'; }}>
-                                        <IntergreenMatrix
-                                            conflictMatrix={conflictMatrix}
-                                            setMatrixValue={setMatrixValue}
-                                            groups={groups}
-                                            cycleLength={cycleLength}
-                                            actionData={actionData}
-                                            activePFId={activePFId}
-                                            pfTabs={pfTabs}
-                                            biCarrefourSeparator={biCarrefourSeparator}
-                                            onCellHover={setHoveredConflict}
-                                            showGroupNames={showGroupNamesMatrix}
-                                            locked={matricesLocked}
-                                            onDetach={() => setShowFloatingMatrix(v => !v)}
-                                            hoveredGroupId={hoveredArrowGroupId}
-                                        tooltipsEnabled={tooltipPrefs.matrix}
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            {activeTab === 'matrix' && (
-                                <div onMouseEnter={() => { helpZoneRef.current = 'matrice'; }}>
-                                <IntergreenMatrix
-                                    conflictMatrix={conflictMatrix}
-                                    setMatrixValue={setMatrixValue}
-                                    groups={groups}
-                                    cycleLength={cycleLength}
-                                    actionData={actionData}
-                                    activePFId={activePFId}
-                                    pfTabs={pfTabs}
-                                    biCarrefourSeparator={biCarrefourSeparator}
-                                    onCellHover={setHoveredConflict}
-                                    showGroupNames={showGroupNamesMatrix}
-                                    locked={matricesLocked}
-                                    onDetach={() => setShowFloatingMatrix(v => !v)}
-                                    hoveredGroupId={hoveredArrowGroupId}
-                                tooltipsEnabled={tooltipPrefs.matrix}
-                                />
-                                </div>
-                            )}
-
-                            {activeTab === 'traffic' && (
-                                <div onMouseEnter={() => { helpZoneRef.current = 'trafic'; }}>
-                                <TrafficTable
-                                    groups={groups}
-                                    cycleLength={cycleLength}
-                                    activeTrafficDataset={activeTrafficDataset}
-                                    setActiveTrafficDataset={setActiveTrafficDataset}
-                                    updateTrafficData={updateTrafficData}
-                                    getTrafficData={getTrafficData}
-                                    updateGroupParams={updateGroupParams}
-                                    setHoveredGroupId={setHoveredArrowGroupId}
-                                    hoveredGroupId={hoveredArrowGroupId}
-                                    setHoveredGroupSaturated={setHoveredArrowGroupSaturated}
-                                    trafficDatasetNames={trafficDatasetNames}
-                                    setHoveredVUtile={setHoveredVUtile}
-                                    copyTrafficDataset={copyTrafficDataset}
-                                    addCustomTrafficDataset={addCustomTrafficDataset}
-                                    actionData={actionData}
-                                    simulationSelectedActions={simulationSelectedActions}
-                                    onDetach={() => setShowFloatingTraffic(v => !v)}
-                                tooltipsEnabled={tooltipPrefs.traffic}
-                                />
-                                {showCapacityReserve && (
-                                    <DiagnosticPanel
-                                        groups={groups}
-                                        cycleLength={cycleLength}
-                                        getTrafficData={getTrafficData}
-                                        actionData={actionData}
-                                        activeTrafficDataset={activeTrafficDataset}
-                                        onDetach={showFloatingDiagnostic ? null : () => setShowFloatingDiagnostic(true)}
-                                        tip={tip}
-                                    />
-                                )}
-                                </div>
-                            )}
-
-                            {displayConflicts.length > 0 && (
-                                <ConflictList
-                                    conflicts={displayConflicts}
-                                    groups={groups}
-                                    isConflictGrayed={isConflictGrayed}
-                                    setHoveredConflict={setHoveredConflict}
-                                    onDetach={showFloatingConflicts ? null : () => setShowFloatingConflicts(true)}
-                                    tip={tip}
-                                />
-                            )}
-
-                            {/* Répertoires mémorisés */}
-                            {(recentOpenDirs.length > 0 || recentSaveDirs.length > 0) && (
-                                <div className="directories-info">
-                                    <h4>Répertoires mémorisés</h4>
-                                    {recentOpenDirs.length > 0 && (
-                                        <div className="dir-row">
-                                            <span className="dir-label">Ouvrir:</span>
-                                            <span className="dir-value" title={tip(recentOpenDirs[0].name)}>{recentOpenDirs[0].name}</span>
-                                        </div>
-                                    )}
-                                    {recentSaveDirs.length > 0 && (
-                                        <div className="dir-row">
-                                            <span className="dir-label">Enregistrer:</span>
-                                            <span className="dir-value" title={tip(recentSaveDirs[0].name)}>{recentSaveDirs[0].name}</span>
-                                        </div>
-                                    )}
-                                    {recentImportDirs.length > 0 && (
-                                        <div className="dir-row">
-                                            <span className="dir-label">Importer:</span>
-                                            <span className="dir-value" title={tip(recentImportDirs[0].name)}>{recentImportDirs[0].name}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </>
-                    )}
-                </aside>
-
-                {/* Resizable divider */}
-                {sidebarVisible && (
-                    <div
-                        className={`resize-divider ${isResizing ? 'resizing' : ''}`}
-                        onMouseDown={handleResizeStart}
-                    />
-                )}
-
-                <section className="diagram-area" ref={diagramAreaRef} style={{ display: 'flex', flexDirection: 'column' }}>
-                    {/* PF Tabs */}
-                    <div className="pf-tabs-bar">
-                        {pfTabs.map((pf, index) => (
-                            <div
-                                key={pf.id}
-                                className={`pf-tab ${activePFId === pf.id ? 'active' : ''} ${draggedTabIndex === index ? 'dragging' : ''} ${pf.color === '#4CAF50' ? 'pf-validated' : ''} ${pf.color === '#e74c3c' ? 'pf-invalidated' : ''}`}
-                                style={{}}
-                                draggable="true"
-                                onDragStart={(e) => {
-                                    setDraggedTabIndex(index);
-                                    e.dataTransfer.effectAllowed = 'move';
-                                }}
-                                onDragOver={(e) => {
-                                    e.preventDefault();
-                                    e.dataTransfer.dropEffect = 'move';
-                                }}
-                                onDrop={(e) => {
-                                    e.preventDefault();
-                                    if (draggedTabIndex !== null && draggedTabIndex !== index) {
-                                        reorderPF(draggedTabIndex, index);
-                                    }
-                                    setDraggedTabIndex(null);
-                                }}
-                                onDragEnd={() => {
-                                    setDraggedTabIndex(null);
-                                }}
-                                onClick={() => {
-                                    setSimulationEnabled(false);
-                                    setPhasageBulleEnabled(false);
-                                    setActivePFId(pf.id);
-                                }}
-                                onDoubleClick={(e) => {
-                                    e.stopPropagation();
-                                    const newName = prompt('Nouveau nom de l\'onglet:', pf.name);
-                                    if (newName && newName.trim() !== '') {
-                                        renamePF(pf.id, newName.trim());
-                                    }
-                                }}
-                                data-pf-tooltip={pf.readOnly
-                                    ? '🔒 Importé — lecture seule (référence de comparaison)'
-                                    : 'Glissez pour réordonner, double-cliquez pour renommer'}
-                            >
-                                <span className="pf-tab-name">
-                                    {pf.readOnly && <span className="pf-tab-lock">🔒</span>}
-                                    {pf.name}
-                                </span>
-                            </div>
-                        ))}
-                        <div
-                            className={`pf-tab simulation-tab ${simulationEnabled && !phasageBulleEnabled ? 'active' : ''}`}
-                            onClick={() => {
-                                setPhasageBulleEnabled(false);
-                                const newSimState = !simulationEnabled;
-                                setSimulationEnabled(newSimState);
-                                if (newSimState) {
-                                    // Largeur du tableau Données Trafic, désormais
-                                    // celui de l'onglet Trafic : GF + Nom + Coef +
-                                    // Trafic + V.Utile + Cap.U + Retard + File.
-                                    setSidebarWidth(395);
-                                }
-                            }}
-                            title={tip("Activer/désactiver le mode simulation")}
-                        >
-                            <span className="pf-tab-name">Simulation</span>
-                        </div>
-                        <div
-                            className={`pf-tab phasage-tab ${phasageBulleEnabled ? 'active' : ''}`}
-                            onClick={() => {
-                                setSimulationEnabled(false);
-                                if (!phasageBulleEnabled) {
-                                    // Ouvrir la configuration quand on active le phasage bulle
-                                    setBrouillonPhasage(null); // repart des valeurs du plan
-                                    setPhasageBulleModal(true);
-                                }
-                                setPhasageBulleEnabled(!phasageBulleEnabled);
-                            }}
-                            title={tip("Afficher le phasage en bulles")}
-                        >
-                            <span className="pf-tab-name">Phasage bulle</span>
-                        </div>
-
-                        <div className="pf-tabs-spacer"></div>
-                    </div>
-
-                    {!phasageBulleEnabled && (
-                        <div
-                            className="diagram-panel"
-                            onMouseEnter={() => { helpZoneRef.current = 'diagramme'; }}
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                height: diagramHeight !== null ? `${diagramHeight}px` : 'auto',
-                                minHeight: diagramHeight !== null ? `${diagramHeight}px` : 'auto',
-                                maxHeight: diagramHeight !== null ? `${diagramHeight}px` : 'none',
-                                // Le défilement appartient désormais au diagramme lui-même
-                                // (prop scrollable) : le panneau ne doit pas en ajouter un second.
-                                overflow: 'hidden',
-                                // Sans hauteur imposée par le séparateur horizontal, on borne le
-                                // diagramme à la place disponible : il défile chez lui au lieu de
-                                // faire défiler toute la zone centrale, en-têtes compris.
-                                '--timeline-max-height': diagramHeight !== null ? undefined : 'calc(100vh - 320px)'
-                            }}
-                        >
-                            <TimelineDiagram
-                                scrollable
-                                readOnly={dossierReadOnly || activePfReadOnly}
-                                groups={groups}
-                                globalTime={globalTime}
-                                getGroupState={getGroupState}
-                                onGroupClick={(g) => setSelectedGroupId(g.id)}
-                                pixelsPerSecond={pixelsPerSecond}
-                                conflicts={displayConflicts}
-                                onDragConflicts={setDragConflictsFromDiagram}
-                                conflictMatrix={conflictMatrix}
-                                updateGroupParams={updateGroupParams}
-                                cycleLength={cycleLength}
-                                actionData={actionData}
-                                updateActionRow={updateActionRow}
-                                startDrag={startDrag}
-                                endDrag={endDrag}
-                                showDependencies={showDependencies}
-                                dependencyGap={dependencyGap}
-                                hoveredActionId={hoveredActionId}
-                                setHoveredActionId={setHoveredActionId}
-                                simulationFilter={simulationEnabled ? new Set(simulationSelectedActions) : null}
-                                simulationResult={simulationResult}
-                                simulationCurrentTime={simulationEnabled ? simulationCurrentTime : null}
-                                isPlayingSimulation={simulationEnabled && isPlayingSimulation}
-                                playbackTime={isPlayingSimulation ? simulationCurrentTime : null}
-                                setIsPlayingSimulation={setIsPlayingSimulation}
-                                simulationSpeed={simulationSpeed}
-                                cycleSimulationSpeed={cycleSimulationSpeed}
-                                setSimulationCurrentTime={setSimulationCurrentTime}
-                                hoveredArrowGroupId={hoveredArrowGroupId}
-                                hoveredArrowGroupSaturated={hoveredArrowGroupSaturated}
-                                hoveredConflict={hoveredConflict}
-                                setHoveredGroupId={setHoveredArrowGroupId}
-                                setHoveredDiagramTime={setHoveredDiagramTime}
-                                hoveredVUtile={hoveredVUtile}
-                                planName={simulationEnabled ? (pfTabs.find(pf => pf.id === activePFId)?.name || '') : ''}
-                                activePFName={pfTabs.find(pf => pf.id === activePFId)?.name || ''}
-                                remarques={currentRemarques}
-                                updateRemarques={updatePFRemarques}
-                                biCarrefourSeparator={biCarrefourSeparator}
-                                cycleLengthInput={cycleLengthInput}
-                                setCycleLengthInput={setCycleLengthInput}
-                                setCycleLength={setCycleLength}
-                                showComments={simulationEnabled ? false : showComments}
-                                showRemarks={simulationEnabled ? false : showRemarks}
-                                remarquesDetached={showFloatingRemarks}
-                                showGroupNames={showGroupNamesDiagram}
-                                showMicroOnHover={showMicroOnHover}
-                                showWrapFlash={showWrapFlash}
-                            tooltipsEnabled={tooltipPrefs.diagram}
-                                onDetach={showFloatingDiagram ? null : () => setShowFloatingDiagram(true)}
-                            />
-                        </div>
-                    )}
-
-                    {/* Horizontal resizable divider */}
-                    {!phasageBulleEnabled && (
-                        <div
-                            className={`horizontal-resize-divider ${isResizingDiagram ? 'resizing' : ''}`}
-                            onMouseDown={handleDiagramResizeStart}
-                            onDoubleClick={resetDiagramHeight}
-                            title={tip("Faites glisser pour redimensionner. Double-clic pour réinitialiser.")}
-                        >
-                            <div className="horizontal-resize-handle"></div>
-                        </div>
-                    )}
-
-                    <div className="action-panel" onMouseEnter={() => { helpZoneRef.current = 'actions'; }} style={{
-                        borderTop: phasageBulleEnabled ? 'none' : 'none',
-                        marginTop: phasageBulleEnabled ? 0 : 0,
-                        flex: diagramHeight !== null ? '1' : '0 0 auto',
-                        overflow: (phasageBulleEnabled || simulationEnabled) ? 'auto' : 'hidden'
-                    }}>
-                        <div style={{ display: phasageBulleEnabled ? 'block' : 'none', position: 'relative', height: '100%' }}>
-                            <PhasageBulle
-                                key={phasageBulleVersion}
-                                groups={groups}
-                                cycleLength={cycleLength}
-                                intersectionImage={intersectionImage}
-                                intersectionArrows={intersectionArrows.filter(a => phasageBulleVisibleGroups.has(a.groupId))}
-                                simulationResult={simulationResult}
-                                actionData={actionData}
-                                selectedActions={simulationSelectedActions}
-                                intersectionName={intersectionName}
-                                planName={pfTabs.find(pf => pf.id === activePFId)?.name || ''}
-                                initialTimes={phasageBulleTimes}
-                                initialCount={phasageBulleCount}
-                                hoveredGroupId={hoveredPhasageGroupId}
-                                setHoveredGroupId={setHoveredPhasageGroupId}
-                                imageBrightness={imageBrightness}
-                                imageContrast={imageContrast}
-                                initialBubbleScale={phasageBubbleScale}
-                                initialEllipseScale={phasageEllipseScale}
-                                initialBubbleRatio={phasageBubbleRatio}
-                                onBubbleScaleChange={setPhasageBubbleScale}
-                                onEllipseScaleChange={setPhasageEllipseScale}
-                                onBubbleRatioChange={setPhasageBubbleRatio}
-                            />
-                            {/* Panneau de configuration flottant en haut à gauche */}
-                            {phasageBulleModal && (
-                                <div className="phasage-config-panel">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85em' }}>
-                                            Phases :
-                                            <select
-                                                value={brouillonPhasage?.count ?? phasageBulleCount}
-                                                onChange={(e) => setBrouillonPhasage(b => ({ ...b, count: parseInt(e.target.value) }))}
-                                                style={{ padding: '3px' }}
-                                            >
-                                                {[2, 3, 4, 5, 6].map(n => (
-                                                    <option key={n} value={n}>{n}</option>
-                                                ))}
-                                            </select>
-                                        </label>
-                                        <span style={{ color: '#888', fontSize: '0.85em' }}>Cycle : {cycleLength}s</span>
-                                    </div>
-                                    {/* Le plan concerné, nommé pendant la saisie : ces instants sont
-                                        propres à chaque plan de feu (cf. phasageBulleTimes, stocké sur
-                                        le PF actif), et rien ne le disait à l'écran. */}
-                                    <div style={{ color: '#dc4edc', fontSize: '0.8em', marginBottom: '6px' }}>
-                                        Phasage du plan {pfTabs.find(p => p.id === activePFId)?.name || ''}
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, auto)', gap: '3px 6px', justifyContent: 'start' }}>
-                                        {Array.from({ length: brouillonPhasage?.count ?? phasageBulleCount }, (_, i) => (
-                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                                <span style={{ color: '#dc4edc', fontWeight: 'bold', fontSize: '0.85em' }}>P{i + 1}:</span>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    max={cycleLength - 1}
-                                                    value={(brouillonPhasage?.times ?? phasageBulleTimes)[i] || 0}
-                                                    onChange={(e) => {
-                                                        const valeur = Math.max(0, Math.min(cycleLength - 1, parseInt(e.target.value) || 0));
-                                                        setBrouillonPhasage(b => {
-                                                            const times = [...(b?.times ?? phasageBulleTimes)];
-                                                            times[i] = valeur;
-                                                            return { count: b?.count ?? phasageBulleCount, times };
-                                                        });
-                                                    }}
-                                                    style={{ width: '30px', padding: '2px', textAlign: 'center' }}
-                                                />
-                                                <span style={{ color: '#888', fontSize: '0.85em' }}>s</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px', justifyContent: 'flex-end' }}>
-                                        <button
-                                            className="modal-btn modal-btn-secondary"
-                                            style={{ padding: '3px 10px', fontSize: '0.85em' }}
-                                            disabled={!phasageModifie}
-                                            title={tip("Abandonner les modifications en cours : les champs retrouvent les valeurs du plan de feu.")}
-                                            onClick={() => {
-                                                // Le projet n'a rien reçu : il suffit de jeter le brouillon
-                                                // pour que les champs repartent des valeurs du plan. Le
-                                                // panneau reste ouvert, comme après OK.
-                                                setBrouillonPhasage(null);
-                                            }}
-                                        >
-                                            Annuler
-                                        </button>
-                                        <button
-                                            className="modal-btn modal-btn-primary"
-                                            style={{ padding: '3px 10px', fontSize: '0.85em' }}
-                                            title={tip("Valider ces valeurs pour le plan de feu courant")}
-                                            onClick={() => {
-                                                // C'est ce clic, et lui seul, qui écrit dans le projet.
-                                                if (brouillonPhasage) {
-                                                    setPhasageBulleCount(brouillonPhasage.count);
-                                                    setPhasageBulleTimes(brouillonPhasage.times);
-                                                }
-                                                // Le brouillon revient à null : les champs repartent des
-                                                // valeurs du plan, qui sont désormais celles qu'on vient
-                                                // de valider. Le panneau reste ouvert — valider n'est pas
-                                                // fermer, et on enchaîne souvent plusieurs essais.
-                                                setBrouillonPhasage(null);
-                                                setPhasageBulleEnabled(true);
-                                                setSimulationEnabled(false);
-                                                setPhasageBulleVersion(v => v + 1);
-                                                const nomPlan = pfTabs.find(p => p.id === activePFId)?.name;
-                                                toast.success(nomPlan
-                                                    ? `Phasage enregistré pour le plan de feu ${nomPlan}`
-                                                    : 'Phasage enregistré pour le plan de feu courant');
-                                            }}
-                                        >
-                                            OK
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <div style={{ display: simulationEnabled && !phasageBulleEnabled ? 'contents' : 'none' }}>
-                            <IntersectionImage
-                                groups={groups}
-                                imageData={intersectionImage}
-                                onImageChange={setIntersectionImage}
-                                arrows={intersectionArrows}
-                                onArrowsChange={setIntersectionArrows}
-                                cycleLength={cycleLength}
-                                simulationResult={simulationResult}
-                                isPlaying={isPlayingSimulation}
-                                playbackSpeed={simulationSpeed}
-                                setIsPlaying={setIsPlayingSimulation}
-                                currentTime={simulationCurrentTime}
-                                setCurrentTime={setSimulationCurrentTime}
-                                hoveredArrowGroupId={hoveredArrowGroupId}
-                                setHoveredArrowGroupId={setHoveredArrowGroupId}
-                                imageFondClair={imageFondClair}
-                                hoveredDiagramTime={hoveredDiagramTime}
-                                actionData={actionData}
-                                selectedActions={simulationSelectedActions}
-                                conflictMatrix={conflictMatrix}
-                                lastImageDirectoryRef={lastImageDirectoryRef}
-                                saveDirectoryHandle={saveDirectoryHandle}
-                                recentImageDirs={recentImageDirs}
-                                addRecentDirectory={addRecentDirectory}
-                                onShowFloatingImage={() => setShowFloatingImage(true)}
-                                intersectionName={intersectionName}
-                                imageBrightness={imageBrightness}
-                                setImageBrightness={setImageBrightness}
-                                imageContrast={imageContrast}
-                                setImageContrast={setImageContrast}
-                            />
-                        </div>
-                        <div style={{ display: !phasageBulleEnabled && !simulationEnabled ? 'contents' : 'none' }}>
-                            <ActionTable
-                                actionData={actionData}
-                                updateActionRow={updateActionRow}
-                                reorderActions={reorderActions}
-                                cycleLength={cycleLength}
-                                maxGroup={groups.length}
-                                hoveredActionId={hoveredActionId}
-                                setHoveredActionId={setHoveredActionId}
-                                microCustomFields={microCustomFields}
-                                updateMicroCustomField={updateMicroCustomField}
-                                onResizePanel={handleActionPanelResize}
-                                showFloatingConditions={showFloatingConditions}
-                                setShowFloatingConditions={setShowFloatingConditions}
-                                showFloatingVariables={showFloatingVariables}
-                                setShowFloatingVariables={setShowFloatingVariables}
-                                showWrapFlash={showWrapFlash}
-                                showDescription={showActionDescription}
-                                actionColWidths={actionColWidths}
-                                setActionColWidths={setActionColWidths}
-                            tooltipsEnabled={tooltipPrefs.micro}
-                            />
-                        </div>
-                    </div>
-                </section>
+                <WorkspaceMain
+                    model={{
+                        actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
+                        biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
+                        cycleLengthInput, cycleSimulationSpeed, dependencyGap, diagramAreaRef, diagramHeight,
+                        displayConflicts, dossierReadOnly, draggedTabIndex, endDrag, getGroupState,
+                        globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
+                        helpZoneRef, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict,
+                        hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
+                        imageFondClair, intersectionArrows, intersectionImage, intersectionName, isPlayingSimulation,
+                        isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
+                        phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
+                        phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,
+                        pixelsPerSecond, recentImageDirs, renamePF, reorderActions, reorderPF,
+                        resetDiagramHeight, saveDirectoryHandle, setActionColWidths, setActivePFId, setBrouillonPhasage,
+                        setCycleLength, setCycleLengthInput, setDragConflictsFromDiagram, setDraggedTabIndex, setHoveredActionId,
+                        setHoveredArrowGroupId, setHoveredDiagramTime, setHoveredPhasageGroupId, setImageBrightness, setImageContrast,
+                        setIntersectionArrows, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
+                        setPhasageBulleCount, setPhasageBulleEnabled, setPhasageBulleModal, setPhasageBulleTimes, setPhasageBulleVersion,
+                        setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, setShowFloatingImage,
+                        setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
+                        showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
+                        showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,
+                        sidebarVisible, simulationCurrentTime, simulationEnabled, simulationResult, simulationSelectedActions,
+                        simulationSpeed, startDrag, tip, tooltipPrefs, updateActionRow,
+                        updateGroupParams, updateMicroCustomField, updatePFRemarques,
+                    }}
+                />
             </main>
             </>)}
 
-            {/* Modal Ouvrir */}
-            <Modal isOpen={openModal} onClose={() => setOpenModal(false)} title={tip("Ouvrir un projet")} overlayClassName="modal-menu-overlay">
-                {getAllSaves().length > 0 ? (
-                    <>
-                        <div className="project-list-container">
-                            <ul className="project-list">
-                                {getAllSaves().map((project) => {
-                                    const formatDate = (isoString) => {
-                                        if (!isoString) return '-';
-                                        const date = new Date(isoString);
-                                        return date.toLocaleDateString('fr-FR', {
-                                            day: '2-digit', month: '2-digit', year: 'numeric',
-                                            hour: '2-digit', minute: '2-digit'
-                                        });
-                                    };
-                                    const formatSize = (bytes) => {
-                                        if (!bytes) return '-';
-                                        return `${(bytes / 1024).toFixed(1)} Ko`;
-                                    };
-                                    return (
-                                        <li
-                                            key={project.name}
-                                            className={selectedProject === project.name ? 'selected' : ''}
-                                            onClick={() => setSelectedProject(project.name)}
-                                            onDoubleClick={async () => {
-                                                // Garde-fou : modifications non sauvegardées
-                                                if (isDirty) {
-                                                    const ok = await askConfirm({
-                                                        title: 'Modifications non enregistrées',
-                                                        message: `Le projet courant a des modifications non enregistrées qui seront perdues.\n\nContinuer et ouvrir « ${project.name} » ?`,
-                                                        confirmLabel: 'Continuer',
-                                                        danger: true,
-                                                    });
-                                                    if (!ok) return;
-                                                }
-                                                setSelectedProject(project.name);
-                                                const data = loadProject(project.name);
-                                                setOpenModal(false);
-                                                setSelectedProject(null);
-                                                if (data && typeof data === 'object') {
-                                                    const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
-                                                    setShowComments(!!hasComments);
-                                                    const pfList = data.pfTabs || [];
-                                                    const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
-                                                    setShowRemarks(!!hasRemarks);
-                                                }
-                                                setHasActiveProject(true);
-                                            }}
-                                        >
-                                            <span className="project-icon"></span>
-                                            <div className="project-info-modal">
-                                                <span className="project-name">{project.name}</span>
-                                                <span className="project-details-modal">{formatDate(project.savedAt)} - {formatSize(project.size)}</span>
-                                            </div>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-                        <div className="modal-actions">
-                            <button className="modal-btn modal-btn-secondary" onClick={() => setOpenModal(false)}>
-                                Annuler
-                            </button>
-                            <button
-                                className="modal-btn modal-btn-primary"
-                                onClick={handleOpenProject}
-                                disabled={!selectedProject}
-                            >
-                                Ouvrir
-                            </button>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <p className="no-projects">Aucun projet sauvegardé</p>
-                        <div className="modal-actions">
-                            <button className="modal-btn modal-btn-secondary" onClick={() => setOpenModal(false)}>
-                                Fermer
-                            </button>
-                        </div>
-                    </>
-                )}
-            </Modal>
-
-            {/* Modal Glisser */}
-            <Modal isOpen={slideModal} onClose={() => setSlideModal(false)} title={tip("Glisser le diagramme")} overlayClassName="modal-menu-overlay modal-compact-overlay">
-                <div className="form-row">
-                    <label>
-                        Du groupe :
-                        <select
-                            value={slideFromGroup}
-                            onChange={(e) => { setSlideFromGroup(parseInt(e.target.value)); setSlideTouched(true); }}
-                            style={{ marginLeft: '10px', padding: '5px' }}
-                            title={tip("Premier groupe de la plage à décaler")}
-                        >
-                            {groups.map((g) => (
-                                <option key={g.id} value={g.id}>
-                                    {g.name || `Groupe ${g.id}`}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                </div>
-                <div className="form-row">
-                    <label>
-                        Au groupe :
-                        <select
-                            value={slideToGroup}
-                            onChange={(e) => { setSlideToGroup(parseInt(e.target.value)); setSlideTouched(true); }}
-                            style={{ marginLeft: '10px', padding: '5px' }}
-                            title={tip("Dernier groupe de la plage à décaler")}
-                        >
-                            {groups.map((g) => (
-                                <option key={g.id} value={g.id}>
-                                    {g.name || `Groupe ${g.id}`}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                </div>
-                <div className="form-row">
-                    <label>
-                        Décalage (secondes) :
-                        <input
-                            type="number"
-                            value={slideValue}
-                            onChange={(e) => { setSlideValue(parseInt(e.target.value) || 0); setSlideTouched(true); }}
-                            title={tip("Positif : décale vers la droite / Négatif : décale vers la gauche")}
-                        />
-                    </label>
-                </div>
-                <div className="modal-actions">
-                    <button className="modal-btn modal-btn-secondary" onClick={() => setSlideModal(false)}>
-                        Annuler
-                    </button>
-                    <button className="modal-btn modal-btn-primary" onClick={handleSlide} disabled={!slideTouched}>
-                        Appliquer
-                    </button>
-                </div>
-            </Modal>
-
-            {/* Modal Inserer */}
-            <Modal isOpen={insertModal} onClose={() => setInsertModal(false)} title={tip("Insérer une plage")} overlayClassName="modal-menu-overlay modal-compact-overlay">
-                <div className="form-row">
-                    <label>
-                        À partir de la seconde :
-                        <input
-                            type="number"
-                            min="0"
-                            max={cycleLength}
-                            value={insertStart}
-                            onChange={(e) => { setInsertStart(parseInt(e.target.value) || 0); setInsertTouched(true); }}
-                            title={tip(`Les groupes après cette seconde seront décalés. Cycle: ${cycleLength}s`)}
-                        />
-                    </label>
-                </div>
-                <div className="form-row">
-                    <label>
-                        Durée à insérer (s) :
-                        <input
-                            type="number"
-                            min="1"
-                            value={insertDuration}
-                            onChange={(e) => { setInsertDuration(parseInt(e.target.value) || 1); setInsertTouched(true); }}
-                            title={tip(`Le cycle passera de ${cycleLength}s à ${cycleLength + insertDuration}s`)}
-                        />
-                    </label>
-                </div>
-                <div className="modal-actions">
-                    <button className="modal-btn modal-btn-secondary" onClick={() => setInsertModal(false)}>
-                        Annuler
-                    </button>
-                    <button className="modal-btn modal-btn-primary" onClick={handleInsert} disabled={!insertTouched}>
-                        Insérer
-                    </button>
-                </div>
-            </Modal>
-
-            {/* Modal Réduire */}
-            <Modal isOpen={reduceModal} onClose={() => setReduceModal(false)} title={tip("Réduire une plage")} overlayClassName="modal-menu-overlay modal-compact-overlay">
-                <div className="form-row">
-                    <label>
-                        À partir de la seconde :
-                        <input
-                            type="number"
-                            min="0"
-                            max={cycleLength - 1}
-                            value={reduceStart}
-                            onChange={(e) => { setReduceStart(parseInt(e.target.value) || 0); setReduceTouched(true); }}
-                            title={tip(`Les groupes après cette position seront décalés. Cycle: ${cycleLength}s`)}
-                        />
-                    </label>
-                </div>
-                <div className="form-row">
-                    <label>
-                        Durée à supprimer (s) :
-                        <input
-                            type="number"
-                            min="1"
-                            max={cycleLength - reduceStart}
-                            value={reduceDuration}
-                            onChange={(e) => { setReduceDuration(parseInt(e.target.value) || 1); setReduceTouched(true); }}
-                            title={tip(`Le cycle passera de ${cycleLength}s à ${Math.max(1, cycleLength - reduceDuration)}s`)}
-                        />
-                    </label>
-                </div>
-                <div className="modal-actions">
-                    <button className="modal-btn modal-btn-secondary" onClick={() => setReduceModal(false)}>
-                        Annuler
-                    </button>
-                    <button className="modal-btn modal-btn-primary" onClick={handleReduce} disabled={!reduceTouched}>
-                        Réduire
-                    </button>
-                </div>
-            </Modal>
-
-            {/* Fenêtre « Variables Priorité Bus » (référence éditable, persistée) */}
-            <MicroVariablesDialog
-                isOpen={microVariablesModal}
-                onClose={() => setMicroVariablesModal(false)}
-                tooltipsEnabled={tooltipPrefs.main}
+            <ProjectOpenDialog
+                isOpen={openModal}
+                onClose={() => setOpenModal(false)}
+                projects={getAllSaves()}
+                selectedProject={selectedProject}
+                onSelect={setSelectedProject}
+                onOpen={handleOpenProject}
+                tip={tip}
             />
 
-            {/* Modal Options - Légende des actions */}
-            <Modal isOpen={optionsModal} onClose={() => setOptionsModal(false)} title={tip("Options - Légende des actions")}>
-                <div className="legend-container">
-                    <div className="legend-item">
-                        <div className="legend-preview legend-adaptatif"></div>
-                        <span>Adaptatif vertical</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="legend-preview legend-escamotage"></div>
-                        <span>Escamotage de phase</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="legend-preview legend-ouverture"></div>
-                        <span>Ouverture anticipée</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="legend-preview legend-fermeture"></div>
-                        <span>Fermeture anticipée</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="legend-preview legend-signa">
-                            <div className="legend-signa-orange"></div>
-                            <div className="legend-signa-blue"></div>
-                        </div>
-                        <span>Signal aide conduite</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="legend-preview legend-bande-debut"></div>
-                        <span>Début de bande passante</span>
-                    </div>
-                    <div className="legend-item">
-                        <div className="legend-preview legend-bande-fin"></div>
-                        <span>Fin de bande passante</span>
-                    </div>
-                </div>
-                <div className="modal-actions" style={{ marginTop: '20px' }}>
-                    <button className="modal-btn modal-btn-primary" onClick={() => setOptionsModal(false)}>
-                        Fermer
-                    </button>
-                </div>
-            </Modal>
-
-            {/* Modal Aide en ligne */}
-            <Modal isOpen={helpModal} onClose={() => setHelpModal(false)} title={tip("Aide - TraCflux")} className="modal-wide">
-                <HelpContent initialAnchor={helpAnchor} />
-            </Modal>
-
-            {/* Comparateur de capacité : rendu dans une fenêtre détachée
-                (usePopupWindow ci-dessus), non modale et déplaçable. */}
-
-            {/* Modal À propos */}
-            <Modal isOpen={aboutModal} onClose={() => setAboutModal(false)} title={tip(`À propos — ${APP_NAME}`)}>
-                <div style={{ padding: '10px 4px', textAlign: 'center', position: 'relative' }}>
-                    <img
-                        src="./logo.svg"
-                        alt=""
-                        style={{
-                            position: 'absolute',
-                            top: '4px',
-                            right: '8px',
-                            width: '80px',
-                            height: '80px',
-                            userSelect: 'none',
-                            pointerEvents: 'none'
-                        }}
-                    />
-                    <div style={{ fontSize: '1.4em', fontWeight: 'bold', color: '#4ecdc4', marginBottom: '8px' }}>
-                        {APP_NAME}
-                    </div>
-                    <div style={{ fontSize: '1.1em', color: '#aaa', marginBottom: '4px' }}>
-                        Version {APP_VERSION}
-                    </div>
-                    <div style={{ fontSize: '0.9em', color: '#888', marginBottom: '20px', maxWidth: '400px', margin: '0 auto 20px' }}>
-                        {APP_DESCRIPTION}
-                    </div>
-                    <hr style={{ border: 'none', borderTop: '1px solid #444', margin: '16px 0' }} />
-                    <div style={{ fontSize: '0.85em', color: '#888', lineHeight: '1.6' }}>
-                        <div>Développée avec <strong>React</strong> + <strong>Vite</strong></div>
-                        <div style={{ marginTop: '8px' }}>© 2026 Thierry Colmon</div>
-                        <div style={{ marginTop: '12px' }}>
-                            Licence{' '}
-                            <a
-                                href="https://www.gnu.org/licenses/agpl-3.0.html"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: '#4ecdc4' }}
-                            >
-                                GNU AGPL v3
-                            </a>
-                        </div>
-                        <div style={{ marginTop: '4px' }}>
-                            Code source :{' '}
-                            <a
-                                href="https://github.com/ThierryClm/TraCflux"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: '#4ecdc4' }}
-                            >
-                                github.com/ThierryClm/TraCflux
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </Modal>
-
-            {/* Modal Rapport de diagnostic */}
-            <Modal isOpen={diagnosticModal} onClose={() => setDiagnosticModal(false)} title={tip("Rapport de diagnostic")} className="modal-wide">
-                {(() => {
-                    // diagnosticRefresh is read here so the modal re-renders when the journal is cleared
-                    void diagnosticRefresh;
-                    const report = buildDiagnosticReport({
-                        intersectionName,
-                        projectName,
-                        groups,
-                        pfTabs,
-                        activePFId,
-                        cycleLength,
-                        actionData,
-                        conflictMatrix,
-                        intersectionImage,
-                        imageNaturalDims,
-                        dossierReadOnly,
-                        activePfReadOnly,
-                        matricesLocked,
-                        includeProject: diagnosticIncludeProject,
-                        maskNames: diagnosticMaskNames
-                    });
-                    const journalEntries = getInterceptedEntries();
-                    const journalCount = journalEntries.length;
-                    const hasErrors = journalEntries.some(e => e.type === 'error' || e.type === 'runtime' || e.type === 'promise');
-                    return (
-                        <div style={{ padding: '8px 4px' }}>
-                            <div style={{ fontSize: '0.9em', color: '#aaa', marginBottom: '12px' }}>
-                                Ce rapport contient des informations techniques utiles pour signaler un bug.
-                                Aucune donnée n'est envoyée — le contenu reste sur votre poste. Vous pouvez le
-                                copier dans le presse-papiers ou le télécharger comme fichier texte.
-                                {' '}<strong>Une issue GitHub est publique</strong> : les noms de projet
-                                et de carrefour sont masqués par défaut, car ils désignent une commune
-                                et des rues réelles.
-                            </div>
-                            <div style={{
-                                fontSize: '0.85em',
-                                marginBottom: '10px',
-                                padding: '6px 10px',
-                                background: hasErrors ? '#3a2020' : journalCount > 0 ? '#3a3320' : '#203a20',
-                                border: `1px solid ${hasErrors ? '#8a4a4a' : journalCount > 0 ? '#8a8a4a' : '#4a8a4a'}`,
-                                borderRadius: '4px',
-                                color: '#e0e0e0'
-                            }}>
-                                Journal d'erreurs : <strong>{journalCount}</strong> entrée(s) interceptée(s) depuis l'ouverture de l'application.
-                            </div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={diagnosticIncludeProject}
-                                    onChange={(e) => setDiagnosticIncludeProject(e.target.checked)}
-                                />
-                                Inclure le projet en cours (données détaillées — ne pas partager si sensibles)
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={diagnosticMaskNames}
-                                    onChange={(e) => setDiagnosticMaskNames(e.target.checked)}
-                                />
-                                Masquer les noms de projet et de carrefour (recommandé pour une issue publique)
-                            </label>
-                            <textarea
-                                readOnly
-                                value={report}
-                                style={{
-                                    width: '100%',
-                                    height: '360px',
-                                    fontFamily: 'monospace',
-                                    fontSize: '12px',
-                                    background: '#1a1a2e',
-                                    color: '#e0e0e0',
-                                    border: '1px solid #444',
-                                    borderRadius: '4px',
-                                    padding: '8px',
-                                    resize: 'vertical'
-                                }}
-                            />
-                            <div className="modal-actions" style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                                <button
-                                    className="modal-btn modal-btn-secondary"
-                                    onClick={() => setDiagnosticModal(false)}
-                                >
-                                    Fermer
-                                </button>
-                                <button
-                                    className="modal-btn modal-btn-secondary"
-                                    disabled={journalCount === 0}
-                                    title={tip(journalCount === 0 ? 'Aucune entrée à copier' : 'Copier uniquement le journal d\'erreurs')}
-                                    onClick={async () => {
-                                        try {
-                                            await navigator.clipboard.writeText(buildErrorJournal());
-                                            toast.success(`Journal copié (${journalCount} entrée${journalCount > 1 ? 's' : ''})`);
-                                        } catch (e) {
-                                            toast.error('Copie impossible : ' + e.message);
-                                        }
-                                    }}
-                                >
-                                    Copier le journal ({journalCount})
-                                </button>
-                                <button
-                                    className="modal-btn modal-btn-secondary"
-                                    disabled={journalCount === 0}
-                                    title={tip(journalCount === 0 ? 'Journal déjà vide' : 'Vider le journal — utile pour repartir propre avant de reproduire un bug')}
-                                    onClick={() => {
-                                        const n = journalCount;
-                                        clearInterceptedEntries();
-                                        setDiagnosticRefresh(v => v + 1);
-                                        toast.success(`Journal vidé (${n} entrée${n > 1 ? 's' : ''} supprimée${n > 1 ? 's' : ''})`);
-                                    }}
-                                >
-                                    Vider le journal
-                                </button>
-                                <button
-                                    className="modal-btn modal-btn-primary"
-                                    onClick={async () => {
-                                        try {
-                                            await navigator.clipboard.writeText(report);
-                                            toast.success('Rapport copié dans le presse-papiers');
-                                        } catch (e) {
-                                            toast.error('Copie impossible : ' + e.message);
-                                        }
-                                    }}
-                                >
-                                    Copier le rapport
-                                </button>
-                                <button
-                                    className="modal-btn modal-btn-primary"
-                                    onClick={() => {
-                                        downloadDiagnosticReport(report, 'diagnostic');
-                                        toast.success('Rapport téléchargé (.txt)');
-                                    }}
-                                >
-                                    Télécharger .txt
-                                </button>
-                                <button
-                                    className="modal-btn modal-btn-primary"
-                                    title={tip("Version structurée (JSON) — plus facile à parser ou analyser")}
-                                    onClick={() => {
-                                        const obj = buildDiagnosticJSON({
-                                            intersectionName,
-                                            projectName,
-                                            groups,
-                                            pfTabs,
-                                            activePFId,
-                                            cycleLength,
-                                            actionData,
-                                            conflictMatrix,
-                                            intersectionImage,
-                                            imageNaturalDims,
-                                            dossierReadOnly,
-                                            activePfReadOnly,
-                                            matricesLocked,
-                                            includeProject: diagnosticIncludeProject,
-                                            maskNames: diagnosticMaskNames
-                                        });
-                                        downloadDiagnosticJSON(obj, 'diagnostic');
-                                        toast.success('Rapport téléchargé (.json)');
-                                    }}
-                                >
-                                    Télécharger .json
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })()}
-            </Modal>
-
-            {/* Modal Importer CSV/Excel */}
-            <Modal isOpen={importModal} onClose={() => setImportModal(false)} title={tip("Importer un fichier")}>
-                {importHintDir && (
-                    <div style={{
-                        backgroundColor: '#2a3a2a',
-                        border: '1px solid #4a6a4a',
-                        borderRadius: '4px',
-                        padding: '10px',
-                        marginBottom: '15px',
-                        fontSize: '0.9em'
-                    }}>
-                        <span style={{ color: '#8f8' }}>Répertoire suggéré :</span>
-                        <div style={{ color: '#aaa', marginTop: '5px', wordBreak: 'break-all' }}>
-                            {importHintDir}
-                        </div>
-                    </div>
-                )}
-                <div className="form-row">
-                    <label>
-                        Sélectionner un fichier CSV ou Excel :
-                        <input
-                            type="file"
-                            accept=".csv,.xlsx,.xls"
-                            onChange={handleFileSelect}
-                            style={{
-                                display: 'block',
-                                marginTop: '10px',
-                                padding: '10px',
-                                border: '1px dashed #555',
-                                borderRadius: '4px',
-                                backgroundColor: '#2a2a2a',
-                                color: '#ddd',
-                                cursor: 'pointer',
-                                width: '100%'
-                            }}
-                        />
-                    </label>
-                </div>
-
-                {/* Recent files list */}
-                {recentFiles.length > 0 && (
-                    <div style={{ marginTop: '20px', marginBottom: '10px' }}>
-                        <h4 style={{ fontSize: '0.9em', color: '#aaa', marginBottom: '10px' }}>Fichiers récents (cliquez pour réimporter) :</h4>
-                        <div style={{
-                            maxHeight: '150px',
-                            overflowY: 'auto',
-                            backgroundColor: '#1a1a1a',
-                            borderRadius: '4px',
-                            padding: '5px'
-                        }}>
-                            {recentFiles.map((file, idx) => (
-                                <div
-                                    key={idx}
-                                    onClick={() => {
-                                        // Note: Due to browser security, we can't access the file directly
-                                        // We can only show the filename as a hint to the user
-                                        showAlert({
-                                            title: 'Re-sélection du fichier nécessaire',
-                                            message: `Pour réimporter « ${file.name} », veuillez le sélectionner à nouveau via le bouton ci-dessus.\n\nPour des raisons de sécurité, le navigateur ne permet pas d'accéder directement aux fichiers précédemment sélectionnés.`
-                                        });
-                                    }}
-                                    style={{
-                                        padding: '8px 10px',
-                                        margin: '2px 0',
-                                        backgroundColor: '#2a2a2a',
-                                        borderRadius: '3px',
-                                        fontSize: '0.85em',
-                                        cursor: 'pointer',
-                                        borderLeft: '3px solid #4a9eff',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3a3a3a'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2a2a2a'}
-                                >
-                                    <div style={{ color: '#ddd', fontWeight: '500' }}>{file.name}</div>
-                                    <div style={{ color: '#888', fontSize: '0.9em', marginTop: '2px' }}>
-                                        {formatDate(file.timestamp)}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Recent directories list */}
-                {getRecentDirectories().length > 0 && (
-                    <div style={{ marginTop: '15px', marginBottom: '10px' }}>
-                        <h4 style={{ fontSize: '0.9em', color: '#aaa', marginBottom: '10px' }}>Répertoires récents :</h4>
-                        <div style={{
-                            maxHeight: '120px',
-                            overflowY: 'auto',
-                            backgroundColor: '#1a1a1a',
-                            borderRadius: '4px',
-                            padding: '5px'
-                        }}>
-                            {getRecentDirectories().map((dir, idx) => (
-                                <div
-                                    key={idx}
-                                    style={{
-                                        padding: '6px 10px',
-                                        margin: '2px 0',
-                                        backgroundColor: '#2a2a2a',
-                                        borderRadius: '3px',
-                                        fontSize: '0.8em',
-                                        color: '#999',
-                                        borderLeft: '3px solid #6a6a6a'
-                                    }}
-                                >
-                                    {dir}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {importFile && (
-                    <p style={{ color: '#8f8', fontSize: '0.9em', marginTop: '10px' }}>
-                        Fichier sélectionné : {importFile.name}
-                    </p>
-                )}
-                {importError && (
-                    <p style={{ color: '#f66', fontSize: '0.9em', marginTop: '10px' }}>
-                        {importError}
-                    </p>
-                )}
-                <div style={{ color: '#888', fontSize: '0.8em', marginTop: '15px', padding: '10px', backgroundColor: '#1a1a1a', borderRadius: '4px' }}>
-                    <strong>Format supporté :</strong>
-                    <ul style={{ marginTop: '8px', marginBottom: '0', paddingLeft: '20px' }}>
-                        <li><strong>Excel (.xlsx/.xls)</strong> avec structure :
-                            <ul style={{ marginTop: '5px', fontSize: '0.95em' }}>
-                                <li>Feuille "Formulaire" : Configuration des groupes (A6, B6, C6, D6, E6... puis A8, B8, C8...)</li>
-                                <li>6ème feuille : Matrice de dégagement</li>
-                                <li>Feuilles 6, 7, 8... : Onglets PF1, PF2, PF3... (diagrammes et tableaux d'actions)</li>
-                                <li>Feuille "Trafic" : Données de trafic (E6, E8, E10...)</li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
-                <div className="modal-actions">
-                    <button className="modal-btn modal-btn-secondary" onClick={() => setImportModal(false)}>
-                        Annuler
-                    </button>
-                    <button className="modal-btn modal-btn-primary" onClick={handleImport} disabled={!importFile}>
-                        OK
-                    </button>
-                </div>
-            </Modal>
-
-            {/* Modal Importer HTM */}
-            <Modal isOpen={importHTMModal} onClose={() => setImportHTMModal(false)} title={tip("Importer un fichier HTM")}>
-                <div className="form-row">
-                    <label>
-                        Sélectionner un fichier HTM :
-                        <input
-                            type="file"
-                            accept=".htm,.html"
-                            onChange={handleHTMFileSelect}
-                            style={{
-                                display: 'block',
-                                marginTop: '10px',
-                                padding: '10px',
-                                border: '1px dashed #555',
-                                borderRadius: '4px',
-                                backgroundColor: '#2a2a2a',
-                                color: '#ddd',
-                                cursor: 'pointer',
-                                width: '100%'
-                            }}
-                        />
-                    </label>
-                </div>
-                {htmFile && (
-                    <p style={{ color: '#8f8', fontSize: '0.9em', marginTop: '10px' }}>
-                        Fichier sélectionné : {htmFile.name}
-                    </p>
-                )}
-                {htmImportError && (
-                    <p style={{ color: '#f66', fontSize: '0.9em', marginTop: '10px' }}>
-                        {htmImportError}
-                    </p>
-                )}
-                <div style={{ color: '#888', fontSize: '0.8em', marginTop: '15px', padding: '10px', backgroundColor: '#1a1a1a', borderRadius: '4px' }}>
-                    <strong>Format HTM attendu :</strong><br />
-                    <span style={{ fontSize: '0.9em' }}>Le fichier doit contenir un tableau avec les données des groupes de feu (nom, durée vert, orange, etc.)</span>
-                </div>
-                <div className="modal-actions">
-                    <button className="modal-btn modal-btn-secondary" onClick={() => setImportHTMModal(false)}>
-                        Annuler
-                    </button>
-                    <button className="modal-btn modal-btn-primary" onClick={handleHTMImport} disabled={!htmFile}>
-                        Importer et ouvrir
-                    </button>
-                </div>
-            </Modal>
-
-            {/* Open Green Wave Modal */}
-            {openGreenWaveModal && (
-                <div className="modal-overlay" onClick={() => setOpenGreenWaveModal(false)}>
-                    <div className="modal-content open-greenwave-modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Ouvrir une onde verte</h3>
-                            <button className="modal-close" onClick={() => setOpenGreenWaveModal(false)} aria-label="Fermer la fenêtre">×</button>
-                        </div>
-                        <div className="modal-body">
-                            {getSavedGreenWaves().length > 0 ? (
-                                <div className="project-list">
-                                    {getSavedGreenWaves().map((gw) => (
-                                        <div
-                                            key={gw.name}
-                                            className={`project-item ${selectedGreenWave === gw.name ? 'selected' : ''}`}
-                                            onClick={() => setSelectedGreenWave(gw.name)}
-                                            onDoubleClick={() => {
-                                                setSelectedGreenWave(gw.name);
-                                                setTimeout(handleOpenSavedGreenWave, 0);
-                                            }}
-                                        >
-                                            <div className="project-icon green-wave-icon"></div>
-                                            <div className="project-info">
-                                                <span className="project-name">{gw.name}</span>
-                                                <span className="project-details">
-                                                    {gw.intersections?.length || 0} carrefours • {gw.speedUp || gw.speed || 50} km/h
-                                                    {gw.savedAt && ` • ${formatDate(gw.savedAt)}`}
-                                                </span>
-                                            </div>
-                                            <button
-                                                className="btn-delete-item"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    deleteGreenWave(gw.name);
-                                                }}
-                                                title={tip("Supprimer")}
-                                            >
-                                                ×
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="no-projects">Aucune onde verte sauvegardée.</p>
-                            )}
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn-cancel" onClick={() => setOpenGreenWaveModal(false)}>
-                                Annuler
-                            </button>
-                            <button
-                                className="btn-confirm"
-                                onClick={handleOpenSavedGreenWave}
-                                disabled={!selectedGreenWave}
-                            >
-                                Ouvrir
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Create Green Wave Dialog */}
-            <CreateGreenWaveDialog
-                isOpen={createGreenWaveModal}
-                onClose={() => setCreateGreenWaveModal(false)}
-                onConfirm={handleCreateGreenWave}
-                getAllSaves={getAllSaves}
-                loadProjectData={getProjectData}
+            <DiagramEditDialogs
+                groups={groups}
+                cycleLength={cycleLength}
+                tip={tip}
+                slide={{
+                    isOpen: slideModal,
+                    onClose: () => setSlideModal(false),
+                    fromGroup: slideFromGroup,
+                    onFromGroupChange: (value) => { setSlideFromGroup(value); setSlideTouched(true); },
+                    toGroup: slideToGroup,
+                    onToGroupChange: (value) => { setSlideToGroup(value); setSlideTouched(true); },
+                    value: slideValue,
+                    onValueChange: (value) => { setSlideValue(value); setSlideTouched(true); },
+                    touched: slideTouched,
+                    onConfirm: handleSlide,
+                }}
+                insert={{
+                    isOpen: insertModal,
+                    onClose: () => setInsertModal(false),
+                    start: insertStart,
+                    onStartChange: (value) => { setInsertStart(value); setInsertTouched(true); },
+                    duration: insertDuration,
+                    onDurationChange: (value) => { setInsertDuration(value); setInsertTouched(true); },
+                    touched: insertTouched,
+                    onConfirm: handleInsert,
+                }}
+                reduce={{
+                    isOpen: reduceModal,
+                    onClose: () => setReduceModal(false),
+                    start: reduceStart,
+                    onStartChange: (value) => { setReduceStart(value); setReduceTouched(true); },
+                    duration: reduceDuration,
+                    onDurationChange: (value) => { setReduceDuration(value); setReduceTouched(true); },
+                    touched: reduceTouched,
+                    onConfirm: handleReduce,
+                }}
+                moveGroup={{
+                    isOpen: moveGroupModal,
+                    onClose: () => setMoveGroupModal(false),
+                    groupId: groupToMove,
+                    onGroupChange: (value) => { setGroupToMove(value); setMoveGroupTouched(true); },
+                    afterGroupId: moveAfterGroup,
+                    onAfterGroupChange: (value) => { setMoveAfterGroup(value); setMoveGroupTouched(true); },
+                    touched: moveGroupTouched,
+                    onConfirm: () => {
+                        moveGroupToPosition(parseInt(groupToMove), parseInt(moveAfterGroup));
+                        setMoveGroupTouched(false);
+                    },
+                }}
+                biCarrefour={{
+                    isOpen: biCarrefourModal,
+                    onClose: () => setBiCarrefourModal(false),
+                    groupId: biCarrefourGroupId,
+                    onGroupChange: (value) => { setBiCarrefourGroupId(value); setBiCarrefourTouched(true); },
+                    touched: biCarrefourTouched,
+                    onConfirm: () => {
+                        setBiCarrefourSeparator(parseInt(biCarrefourGroupId));
+                        setBiCarrefourModal(false);
+                    },
+                }}
             />
 
-            {/* Green Wave Viewer */}
-            <GreenWaveViewer
-                isOpen={greenWaveViewer}
-                onClose={() => setGreenWaveViewer(false)}
-                intersections={greenWaveData}
+            <SupportDialogs
+                model={{
+                        aboutModal, actionData, activePFId, activePfReadOnly, conflictMatrix,
+                        cycleLength, diagnosticIncludeProject, diagnosticMaskNames, diagnosticModal, diagnosticRefresh,
+                        dossierReadOnly, groups, helpAnchor, helpModal, imageNaturalDims,
+                        intersectionImage, intersectionName, matricesLocked, microVariablesModal, optionsModal,
+                        pfTabs, projectName, setAboutModal, setDiagnosticIncludeProject, setDiagnosticMaskNames,
+                        setDiagnosticModal, setDiagnosticRefresh, setHelpModal, setMicroVariablesModal, setOptionsModal,
+                        tip, tooltipPrefs,
+                }}
             />
 
-            {/* Modal Déplacer un groupe */}
-            <Modal isOpen={moveGroupModal} onClose={() => setMoveGroupModal(false)} title={tip("Déplacer un groupe de feu")} overlayClassName="modal-menu-overlay modal-compact-overlay">
-                <div className="form-row">
-                    <label>
-                        Groupe à déplacer :
-                        <select
-                            value={groupToMove}
-                            onChange={(e) => { setGroupToMove(e.target.value); setMoveGroupTouched(true); }}
-                            style={{ marginLeft: '10px', padding: '5px' }}
-                            title={tip("Sélectionnez le groupe à repositionner")}
-                        >
-                            {groups.map((g) => (
-                                <option key={g.id} value={g.id}>
-                                    {g.name || `Groupe ${g.id}`}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                </div>
-                <div className="form-row">
-                    <label>
-                        Insérer après :
-                        <select
-                            value={moveAfterGroup}
-                            onChange={(e) => { setMoveAfterGroup(e.target.value); setMoveGroupTouched(true); }}
-                            style={{ marginLeft: '10px', padding: '5px' }}
-                            title={tip("Met à jour la matrice, le diagramme et le tableau des actions")}
-                        >
-                            <option value="0">Au début (première position)</option>
-                            {groups
-                                .filter((g) => g.id.toString() !== groupToMove)
-                                .map((g) => (
-                                    <option key={g.id} value={g.id}>
-                                        {g.name || `Groupe ${g.id}`}
-                                    </option>
-                                ))}
-                        </select>
-                    </label>
-                </div>
-                <div className="modal-actions">
-                    <button className="modal-btn modal-btn-secondary" onClick={() => setMoveGroupModal(false)}>
-                        Annuler
-                    </button>
-                    <button
-                        className="modal-btn modal-btn-primary"
-                        disabled={!moveGroupTouched}
-                        onClick={() => {
-                            moveGroupToPosition(parseInt(groupToMove), parseInt(moveAfterGroup));
-                            setMoveGroupTouched(false);
-                        }}
-                    >
-                        Déplacer
-                    </button>
-                </div>
-            </Modal>
+            <ImportDialogs
+                spreadsheet={{
+                    isOpen: importModal,
+                    onClose: () => setImportModal(false),
+                    hintDirectory: importHintDir,
+                    onFileSelect: handleFileSelect,
+                    file: importFile,
+                    error: importError,
+                    onImport: handleImport,
+                }}
+                html={{
+                    isOpen: importHTMModal,
+                    onClose: () => setImportHTMModal(false),
+                    onFileSelect: handleHTMFileSelect,
+                    file: htmFile,
+                    error: htmImportError,
+                    onImport: handleHTMImport,
+                }}
+                recent={{
+                    files: recentFiles,
+                    directories: getRecentDirectories(),
+                    formatDate,
+                    onFileClick: (file) => showAlert({
+                        title: 'Re-sélection du fichier nécessaire',
+                        message: `Pour réimporter « ${file.name} », veuillez le sélectionner à nouveau via le bouton ci-dessus.\n\nPour des raisons de sécurité, le navigateur ne permet pas d'accéder directement aux fichiers précédemment sélectionnés.`,
+                    }),
+                }}
+                tip={tip}
+            />
 
-            {/* Modal Bi-Carrefour */}
-            <Modal isOpen={biCarrefourModal} onClose={() => setBiCarrefourModal(false)} title={tip("Intégrer un bi-Carrefour")} overlayClassName="modal-menu-overlay modal-compact-overlay">
-                <div className="form-row">
-                    <label>
-                        Séparation après le groupe :
-                        <select
-                            value={biCarrefourGroupId}
-                            onChange={(e) => { setBiCarrefourGroupId(e.target.value); setBiCarrefourTouched(true); }}
-                            style={{ marginLeft: '10px', padding: '5px' }}
-                            title={tip("Une ligne de séparation sera affichée dans la matrice et le diagramme après ce groupe")}
-                        >
-                            {groups.slice(0, -1).map((g) => (
-                                <option key={g.id} value={g.id}>
-                                    {g.name || `Groupe ${g.id}`}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                </div>
-                <div className="modal-actions">
-                    <button className="modal-btn modal-btn-secondary" onClick={() => setBiCarrefourModal(false)}>
-                        Annuler
-                    </button>
-                    <button
-                        className="modal-btn modal-btn-primary"
-                        disabled={!biCarrefourTouched}
-                        onClick={() => {
-                            setBiCarrefourSeparator(parseInt(biCarrefourGroupId));
-                            setBiCarrefourModal(false);
-                        }}
-                    >
-                        OK
-                    </button>
-                </div>
-            </Modal>
+            <GreenWaveDialogs
+                openDialog={{
+                    isOpen: openGreenWaveModal,
+                    onClose: () => setOpenGreenWaveModal(false),
+                    savedGreenWaves: getSavedGreenWaves(),
+                    selectedName: selectedGreenWave,
+                    onSelect: setSelectedGreenWave,
+                    onOpen: handleOpenSavedGreenWave,
+                    onDelete: deleteGreenWave,
+                    formatDate,
+                }}
+                createDialog={{
+                    isOpen: createGreenWaveModal,
+                    onClose: () => setCreateGreenWaveModal(false),
+                    onConfirm: handleCreateGreenWave,
+                    getAllSaves,
+                    loadProjectData: getProjectData,
+                }}
+                viewer={{
+                    isOpen: greenWaveViewer,
+                    onClose: () => setGreenWaveViewer(false),
+                    intersections: greenWaveData,
+                }}
+                tip={tip}
+            />
 
             {/* Modal Phasage bulle supprimé - remplacé par panneau flottant dans la zone phasage bulle */}
 
