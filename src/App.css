@@ -296,15 +296,27 @@ body.light-mode .welcome-screen .welcome-hint strong { color: #555; }
  * `overflow-x: hidden` coupe sans recours ce qui dépasse. Sur un téléphone il
  * ne restait qu'une soixantaine de pixels au diagramme, inaccessibles au-delà.
  *
- * En dessous de 900 px — un téléphone en paysage ou une petite tablette
- * dépassent 768 px tout en restant trop étroits — les deux colonnes s'empilent.
+ * Les deux colonnes s'empilent donc dans deux cas :
+ *
+ *  — en dessous de 900 px de large : une petite tablette dépasse 768 px tout
+ *    en restant trop étroite ;
+ *  — sur un écran BAS et pas très large : un téléphone en paysage fait
+ *    915 px sur 412, et passait juste au-dessus du premier seuil. Le panneau
+ *    des paramètres restait donc à côté du diagramme et lui prenait la moitié
+ *    de la largeur. Mesuré dans ce cas : 365 px pour la boîte du diagramme,
+ *    dont 326 pour la colonne des noms collée à gauche — il restait 39 px de
+ *    barres. La boîte défilait bien, mais sur 39 px : à l'usage, le diagramme
+ *    ne défilait pas. Empilé, il dispose des 900 px et en montre 574.
+ *    La borne haute de 1100 px tient à l'écart une fenêtre d'ordinateur
+ *    simplement raccourcie, qui n'a pas ce besoin.
+ *
  * Tout redevient atteignable par le défilement vertical, et chaque bloc trop
  * large défile dans sa propre boîte plutôt que d'être rogné.
  *
  * Rien de tout cela n'existe sur un écran d'ordinateur : ces règles ne sont
- * lues qu'en dessous du seuil.
+ * lues qu'en dessous des seuils.
  * ============================================================ */
-@media (max-width: 900px) {
+@media (max-width: 900px), (max-height: 520px) and (max-width: 1100px) {
     .split-view {
         flex-direction: column;
     }
@@ -426,6 +438,18 @@ body.light-mode .welcome-screen .welcome-hint strong { color: #555; }
     background: #242424;
     overflow: visible;
     /* Let split-view handle scroll */
+
+    /* Un élément flex refuse par défaut de descendre sous la largeur de son
+       contenu : la zone centrale gardait donc celle du diagramme, débordait de
+       `.split-view`, et son `overflow-x: hidden` coupait le surplus sans
+       recours. Le `overflow: auto` de `.timeline-layout` ne se déclenchait
+       jamais, faute d'être à l'étroit. En paysage sur un téléphone, le
+       diagramme était ainsi tronqué à droite, sans défilement possible, alors
+       que le tableau des conditions défilait, lui, dans sa propre boîte.
+
+       `min-width: 0` rend à la zone le droit de rétrécir : le diagramme défile
+       alors chez lui, colonne des noms accrochée à gauche. */
+    min-width: 0;
 }
 
 .conflict-list {
