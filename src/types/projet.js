@@ -149,6 +149,28 @@
  */
 
 /**
+ * Les options de mise en page enregistrées avec le projet.
+ *
+ * Onze drapeaux : quatre d'affichage, sept de détachement. Ils sont nommés un
+ * par un plutôt que laissés en objet libre, parce que c'est leur disparition
+ * silencieuse — un champ écrit par un chemin, ignoré par l'autre — qui a fait
+ * perdre des réglages.
+ *
+ * @typedef {Object} OptionsMiseEnPage
+ * @property {boolean} [showParameters]
+ * @property {boolean} [showComments]
+ * @property {boolean} [showRemarks]
+ * @property {boolean} [showActionDescription]
+ * @property {boolean} [showFloatingForm]
+ * @property {boolean} [showFloatingMatrix]
+ * @property {boolean} [showFloatingTraffic]
+ * @property {boolean} [showFloatingImage]
+ * @property {boolean} [showFloatingConditions]
+ * @property {boolean} [showFloatingVariables]
+ * @property {boolean} [showFloatingRemarks]
+ */
+
+/**
  * Un projet enregistré, tel que `getFullState` le produit.
  *
  * C'est le contrat des DEUX chemins d'enregistrement — fichier `.json` et
@@ -185,7 +207,7 @@
  * @property {Object} [floatingCrop]
  * @property {string} [floatingCropBasis]
  * @property {number} [floatingZoom]
- * @property {Object} [layoutOptions]
+ * @property {OptionsMiseEnPage} [layoutOptions]
  * @property {Object} [directoryNames]
  * @property {string} [savedAt]                Horodatage, posé à l'écriture.
  */

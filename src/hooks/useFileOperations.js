@@ -11,6 +11,29 @@ import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBo
  * Gère les opérations d'ouverture et de sauvegarde de fichiers projet
  * via la File System Access API (avec fallback localStorage).
  */
+/**
+ * Les dépendances du crochet.
+ *
+ * Seules sont nommées celles dont le TYPE porte une information : le
+ * sérialiseur canonique et son pendant en lecture. Tout le reste — une
+ * soixantaine de poseurs d'état et de références — est laissé libre : les
+ * énumérer un par un donnerait soixante lignes de `Function` sans rien
+ * apprendre à personne, et il faudrait les tenir à jour.
+ *
+ * La vérification de types n'est pas encore activée sur ce fichier : elle
+ * bute sur l'absence de types pour React et pour l'API d'accès aux fichiers,
+ * deux choix d'outillage à faire à part. Le contrat ci-dessous documente
+ * néanmoins ce que le crochet attend.
+ *
+ * @typedef {{
+ *   getFullState: () => import('../types/projet.js').Projet,
+ *   loadFullState: (etat: Partial<import('../types/projet.js').Projet>) => any
+ * } & Record<string, any>} DependancesFichier
+ */
+
+/**
+ * @param {DependancesFichier} deps
+ */
 const useFileOperations = ({
     projectName, diagramHeight, floatingCrop, floatingZoom,
     setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
