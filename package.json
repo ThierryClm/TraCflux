@@ -15,6 +15,7 @@
         "types": "tsc --noEmit",
         "build": "vite build",
         "preview": "vite preview",
+        "preview:deploy": "node scripts/deploy-preview.mjs",
         "serve": "node scripts/serve-local.mjs",
         "clean": "rmdir /S /Q dist 2>nul & taskkill /F /IM node.exe /T 2>nul",
         "test": "vitest",

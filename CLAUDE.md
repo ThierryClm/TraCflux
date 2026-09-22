@@ -9,10 +9,32 @@ npm install      # Install dependencies
 npm run dev      # Start dev server at http://localhost:3000
 npm run build    # Production build
 npm run preview  # Preview production build
+npm run preview:deploy  # Build and deploy the current feature branch to Surge
 npm run check    # Dependency health report (audit + outdated, prod vs dev)
 npm run serve    # Rebuild dist/ and make sure the local server is up (see below)
 npx vitest run   # Run the test suite once (`npm test` starts watch mode)
 ```
+
+### Delivery workflow
+
+Never commit or push feature work directly to `master`: every push to that
+branch deploys the public application through GitHub Pages.
+
+For each change:
+
+1. Work on an isolated `feature/*`, `fix/*` or `chore/*` branch, preferably in
+   a dedicated Git worktree.
+2. Run the type check, tests and production build.
+3. Deploy the branch with `npm run preview:deploy`. The script refuses to run
+   on `master` or `main` and publishes a stable URL derived from the branch
+   name, such as `https://tracflux-feature-example.surge.sh`.
+4. Send that URL to the user and wait for explicit validation.
+5. Only after validation, merge the pull request into `master`.
+
+The deployment command expects `SURGE_LOGIN` and `SURGE_TOKEN` in the runtime
+environment. Never write those values to the repository, command line, logs or
+conversation. Set `TRACFLUX_PREVIEW_DOMAIN` only when a custom preview domain
+is needed.
 
 ### Voir une modification dans TraCflux local
 
