@@ -7,6 +7,39 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.4.0] — 2026-09-22
+
+### Ajouté
+
+- **La simulation s'imprime dans le dossier.** Une case « Simulation », décochée par défaut, s'ajoute
+  à la fin de la boîte « Imprimer le dossier », au même rang que les diagrammes des plans de feu.
+  Elle porte le diagramme recalculé par la simulation, titré de son cycle simulé et de l'écart au
+  cycle du plan, aux mêmes règles d'échelle que les autres pages — une seconde garde la même largeur
+  d'une page à l'autre. Quatre sous-options l'accompagnent : la liste des actions, chacune avec sa
+  coche, celles écartées restant visibles en gris ; la liste des conflits du diagramme simulé ; les
+  données de trafic et le calcul de capacité ; la réserve de capacité. La case reste grisée tant que
+  l'onglet Simulation n'est pas ouvert, la simulation n'existant que pendant ce temps-là.
+
+- **Les groupes inhibés par la simulation n'affichent plus de capacité dans la réserve.** Une action
+  cochée qui supprime le vert d'un groupe — escamotage de phase, fermeture anticipée, adaptatif
+  vertical — laissait déjà vides ses colonnes calculées dans les données de trafic ; la réserve de
+  capacité en annonçait pourtant le degré de saturation. Les deux tableaux lisent désormais la même
+  règle, et un groupe inhibé ne peut plus être désigné courant dimensionnant du carrefour.
+
+### Modifié
+
+- **Le diagramme occupe toute la largeur sur un téléphone en paysage.** Le panneau des paramètres
+  passait à côté du diagramme dès 915 pixels de large et lui prenait la moitié de la place : il ne
+  restait qu'une quarantaine de pixels de barres sous la colonne des noms, et le glissement latéral
+  n'avait plus rien à montrer. Sur un écran bas, le panneau vient maintenant au-dessus du diagramme,
+  comme il le faisait déjà en dessous de 900 pixels. Une fenêtre d'ordinateur simplement raccourcie
+  garde la disposition côte à côte.
+
+- **Dans l'onglet Trafic, « Associé à » devient « Donnée »**, en texte simple plutôt qu'en demi-bouton
+  collé à la liste déroulante, avec son rôle en infobulle.
+
+*Sous le capot, 664 tests automatisés, contre 647 à la version précédente.*
+
 ## [1.3.0] — 2026-09-18
 
 ### Ajouté
