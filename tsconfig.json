@@ -1,0 +1,37 @@
+{
+    // Vérification de types SANS TypeScript.
+    //
+    // Le code reste du JavaScript : aucun fichier n'est renommé, aucune étape
+    // de compilation n'est ajoutée — Vite et Vitest ne lisent même pas ce
+    // fichier. Seul `npm run types` s'en sert, pour passer le compilateur
+    // TypeScript en lecture sur les fichiers qui le demandent.
+    //
+    // `checkJs` est à false : la vérification n'est PAS globale. Un fichier
+    // n'est contrôlé que s'il porte `// @ts-check` en tête. On étend donc la
+    // couverture fichier par fichier, sans jamais se retrouver devant trois
+    // mille erreurs d'un coup, et sans bloquer qui que ce soit.
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+
+        "allowJs": true,
+        "checkJs": false,
+        "noEmit": true,
+
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+
+        // Les types des dépendances ne sont pas notre affaire : les vérifier
+        // n'apprend rien sur ce dépôt et noie le vrai signal.
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist"]
+}
