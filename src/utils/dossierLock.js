@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Marqueur « dossier en lecture seule » pour l'export, volontairement OBSCURCI.
  *
@@ -16,16 +17,24 @@
 // Champ au nom neutre (pas « lectureSeule ») + valeur encodée base64.
 const FIELD = 'stamp';
 
-/** Ajoute le marqueur lecture seule à un objet projet (immuable). */
+/**
+ * Ajoute le marqueur lecture seule à un objet projet (immuable).
+ * @param {import('../types/projet.js').Projet} data
+ * @returns {import('../types/projet.js').Projet & Record<string, any>}
+ */
 export const stampReadOnly = (data) => ({
     ...data,
     [FIELD]: btoa(JSON.stringify({ ro: 1, v: 1 }))
 });
 
-/** Vrai si l'objet projet porte le marqueur lecture seule. */
+/**
+ * Vrai si l'objet projet porte le marqueur lecture seule.
+ * @param {unknown} data contenu de provenance quelconque
+ * @returns {boolean}
+ */
 export const isReadOnlyStamped = (data) => {
     try {
-        const raw = data && data[FIELD];
+        const raw = data && /** @type {Record<string, any>} */ (data)[FIELD];
         if (typeof raw !== 'string' || !raw) return false;
         const obj = JSON.parse(atob(raw));
         return !!obj && obj.ro === 1;
