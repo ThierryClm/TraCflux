@@ -670,38 +670,22 @@ body.light-mode .custom-field-input::placeholder {
 
 /* Modal */
 body.light-mode .modal-content {
-    background: #f5f5f5;
-    color: #222;
+    --md-bg: #f5f5f5;
+    --md-border: #bbb;
+    --md-text: #222;
+    --md-muted: #666;
+    --md-hover: #e2e2e2;
+    --md-separator: #ccc;
+    --md-field-bg: #fff;
+    --md-field-border: #999;
+    --md-field-text: #222;
 }
 
-body.light-mode .modal-header {
-    background: #555;
-    color: #fff;
-    border-bottom-color: #666;
-}
 
-body.light-mode .modal-header h3 {
-    color: #fff;
-}
 
-body.light-mode .modal-close {
-    color: #ccc;
-}
 
-body.light-mode .modal-close:hover {
-    color: #fff;
-}
 
-body.light-mode .modal-body {
-    color: #222;
-}
 
-body.light-mode .modal-body input,
-body.light-mode .modal-body select {
-    background: #fff;
-    color: #222;
-    border-color: #999;
-}
 
 body.light-mode .modal-btn-secondary {
     background: #d0d0d0;
@@ -1497,38 +1481,22 @@ body.high-contrast-mode .floating-panel-body {
 
 /* Modal */
 body.high-contrast-mode .modal-content {
-    background: #0f1440;
-    color: #ffffff;
+    --md-bg: #0f1440;
+    --md-border: #4466bb;
+    --md-text: #ffffff;
+    --md-muted: #c8d4ff;
+    --md-hover: #1a2050;
+    --md-separator: #4466bb;
+    --md-field-bg: #1a2050;
+    --md-field-border: #4466bb;
+    --md-field-text: #ffffff;
 }
 
-body.high-contrast-mode .modal-header {
-    background: #1a2050;
-    color: #ffdd00;
-    border-bottom-color: #3355aa;
-}
 
-body.high-contrast-mode .modal-header h3 {
-    color: #ffdd00;
-}
 
-body.high-contrast-mode .modal-close {
-    color: #ff4444;
-}
 
-body.high-contrast-mode .modal-close:hover {
-    color: #ff6666;
-}
 
-body.high-contrast-mode .modal-body {
-    color: #ffffff;
-}
 
-body.high-contrast-mode .modal-body input,
-body.high-contrast-mode .modal-body select {
-    background: #1a2050;
-    color: #ffffff;
-    border-color: #4466bb;
-}
 
 body.high-contrast-mode .modal-btn-secondary {
     background: #253080;
@@ -2381,38 +2349,22 @@ body.amber-mode .floating-panel-body {
 
 /* Modal */
 body.amber-mode .modal-content {
-    background: #222222;
-    color: #f5f0e8;
+    --md-bg: #222222;
+    --md-border: #666;
+    --md-text: #f5f0e8;
+    --md-muted: #b0a99e;
+    --md-hover: #303030;
+    --md-separator: #444;
+    --md-field-bg: #303030;
+    --md-field-border: #666;
+    --md-field-text: #f5f0e8;
 }
 
-body.amber-mode .modal-header {
-    background: #303030;
-    color: #ffb300;
-    border-bottom-color: #555;
-}
 
-body.amber-mode .modal-header h3 {
-    color: #ffb300;
-}
 
-body.amber-mode .modal-close {
-    color: #ff5555;
-}
 
-body.amber-mode .modal-close:hover {
-    color: #ff7777;
-}
 
-body.amber-mode .modal-body {
-    color: #f5f0e8;
-}
 
-body.amber-mode .modal-body input,
-body.amber-mode .modal-body select {
-    background: #303030;
-    color: #f5f0e8;
-    border-color: #666;
-}
 
 body.amber-mode .modal-btn-secondary {
     background: #404040;
@@ -2844,9 +2796,15 @@ body.daltonian-mode textarea {
     border: 1px solid #415a77;
 }
 body.daltonian-mode .modal-content {
-    background: #1b263b;
-    color: #e0e1dd;
-    border: 1px solid #415a77;
+    --md-bg: #1b263b;
+    --md-border: #415a77;
+    --md-text: #e0e1dd;
+    --md-muted: #a7b0bd;
+    --md-hover: #24314a;
+    --md-separator: #415a77;
+    --md-field-bg: #0d1b2a;
+    --md-field-border: #415a77;
+    --md-field-text: #e0e1dd;
 }
 body.daltonian-mode .modal-btn-primary {
     background: #4361ee;
@@ -2912,9 +2870,15 @@ body.sepia-mode textarea {
     border: 1px solid #c9b88e;
 }
 body.sepia-mode .modal-content {
-    background: #faf3e0;
-    color: #5b4636;
-    border: 1px solid #c9b88e;
+    --md-bg: #faf3e0;
+    --md-border: #c9b88e;
+    --md-text: #5b4636;
+    --md-muted: #8a7358;
+    --md-hover: #f0e6cc;
+    --md-separator: #c9b88e;
+    --md-field-bg: #fffdf5;
+    --md-field-border: #c9b88e;
+    --md-field-text: #5b4636;
 }
 body.sepia-mode .modal-btn-primary {
     background: #8b4513;
@@ -3026,9 +2990,15 @@ body.blue-night-mode textarea {
     border: 1px solid #586e75;
 }
 body.blue-night-mode .modal-content {
-    background: #073642;
-    color: #93a1a1;
-    border: 1px solid #586e75;
+    --md-bg: #073642;
+    --md-border: #586e75;
+    --md-text: #93a1a1;
+    --md-muted: #7b8c8c;
+    --md-hover: #0b4553;
+    --md-separator: #586e75;
+    --md-field-bg: #002b36;
+    --md-field-border: #586e75;
+    --md-field-text: #eee8d5;
 }
 body.blue-night-mode .modal-btn-primary {
     background: #268bd2;

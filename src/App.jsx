@@ -28,7 +28,8 @@ import { buildDiagnosticReport, downloadDiagnosticReport, buildErrorJournal, bui
 import { getInterceptedEntries, clearInterceptedEntries } from './utils/errorInterceptor';
 import CreateGreenWaveDialog from './components/CreateGreenWaveDialog';
 import GreenWaveViewer from './components/GreenWaveViewer';
-import SimulationPanel, { actionsSimulables, conflitsSimules } from './components/SimulationPanel';
+import SimulationPanel from './components/SimulationPanel';
+import { actionsSimulables, conflitsSimules } from './utils/simulationCalculator';
 import PhasageBulle from './components/PhasageBulle';
 import { fitBubblesToPage, REF_IMAGE_BOX_WIDTH, REF_IMAGE_BOX_HEIGHT } from './utils/phasageLayout';
 import { safeShowOpenFilePicker } from './utils/filePicker';
@@ -140,6 +141,8 @@ function App() {
         simulationEnabled,
         setSimulationEnabled,
         simulationSelectedActions,
+        simulationName,
+        updateSimulationName,
         toggleSimulationAction,
         selectAllSimulationActions,
         deselectAllSimulationActions,
@@ -580,6 +583,18 @@ function App() {
         markLegacyCrop(false);
     }, [setFloatingCrop, setFloatingZoom, markLegacyCrop]);
 
+    // Taille du contenu du comparateur, annoncée par le composant lui-même à
+    // chaque mise en page. La fenêtre s'y ajuste, au lieu de rester au gabarit
+    // fixe qui laissait un grand vide sous un tableau court.
+    const [tailleComparateur, setTailleComparateur] = useState(null);
+    const noterTailleComparateur = useCallback((taille) => {
+        // Le seuil coupe la boucle : redimensionner la fenêtre relance une mise
+        // en page, donc une mesure, à un ou deux pixels près.
+        setTailleComparateur(prec => (prec
+            && Math.abs(prec.width - taille.width) < 4
+            && Math.abs(prec.height - taille.height) < 4) ? prec : taille);
+    }, []);
+
     // Fenêtre détachée (non modale, déplaçable) du comparateur de capacité.
     const capacityComparisonPopup = usePopupWindow({
         geometryKey: 'capacityComparison',
@@ -587,7 +602,8 @@ function App() {
         onClose: () => setCapacityCompareModal(false),
         title: 'Comparer la capacité des plans de feu',
         width: 920,
-        height: 620
+        height: 620,
+        contentSize: capacityCompareModal ? tailleComparateur : null
     });
 
     // Miroir de présentation du diagramme (fenêtre détachée, lecture seule).
@@ -630,6 +646,22 @@ function App() {
         );
     }, [simulationEnabled, groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix]);
 
+    // Le scénario du plan actif, recalculé POUR L'IMPRESSION.
+    //
+    // Distinct du précédent, et à dessein. Celui-ci n'existe que pendant que
+    // l'onglet Simulation est ouvert — c'est ce qui fait basculer le diagramme
+    // à l'écran en mode simulé, et il ne doit surtout pas le faire en dehors.
+    // Mais depuis que le scénario est enregistré avec son plan de feu, il reste
+    // imprimable une fois l'onglet refermé : sans cette seconde lecture, il
+    // aurait fallu rouvrir l'onglet Simulation avant chaque tirage, et la case
+    // « Scénario » serait restée grise alors qu'un scénario est bel et bien là.
+    const simulationResultImpression = useMemo(() => {
+        if (!simulationSelectedActions || simulationSelectedActions.length === 0) return null;
+        return calculateSimulatedDiagram(
+            groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix
+        );
+    }, [groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix]);
+
     // Déclaré APRÈS simulationResult : son titre affiche le cycle simulé,
     // et un `const` n'est pas accessible avant son initialisation.
     const diagramPopup = usePopupWindow({
@@ -639,7 +671,7 @@ function App() {
         // Le miroir n'affiche plus sa ligne de titre : elle est ici, donc
         // lisible aussi dans la barre du navigateur et sur une fenêtre reléguée
         // en arrière-plan. Le cycle suit la simulation quand elle tourne.
-        title: `Diagramme${activePFName ? ` — ${activePFName}` : ''} · Cycle ${(simulationEnabled && simulationResult?.simulatedCycleLength) || cycleLength} s`,
+        title: `Diagramme${simulationEnabled && simulationName ? ` (${simulationName})` : ''}${activePFName ? ` — ${activePFName}` : ''} · Cycle ${(simulationEnabled && simulationResult?.simulatedCycleLength) || cycleLength} s`,
         width: 1180,
         height: 620
     });
@@ -715,37 +747,6 @@ function App() {
     })();
 
     const [microPrintStyle, setMicroPrintStyle] = useState(null);
-    useEffect(() => {
-        // On mesure le calque d'affichage, pas la zone de saisie : c'est lui que
-        // l'utilisateur lit (le texte de la zone de saisie est transparent), et
-        // sa largeur de repli est la bonne au pixel près. La zone de saisie, elle,
-        // réserve de quoi loger un caractère de plus — d'où le « et » qui montait
-        // d'une ligne à l'impression.
-        const champ = document.querySelector('.action-table .micro-highlight-backdrop')
-            || document.querySelector('.action-table .input-micro');
-        if (!champ) return; // tableau non monté (simulation, phasage) : on garde la dernière mesure
-        const style = window.getComputedStyle(champ);
-        const utile = champ.clientWidth
-            - (parseFloat(style.paddingLeft) || 0)
-            - (parseFloat(style.paddingRight) || 0);
-        if (utile > 0) {
-            // Même largeur ET même police : c'est le navigateur qui replie, avec
-            // les mêmes données qu'à l'écran, donc aux mêmes endroits. Compter
-            // les caractères était une approximation — 62 par ligne à
-            // l'impression contre 57 à l'écran — et l'équation se coupait
-            // ailleurs, ce qui est précisément ce qu'il faut éviter ici.
-            setMicroPrintStyle({
-                width: `${Math.round(utile)}px`,
-                fontFamily: style.fontFamily,
-                fontSize: style.fontSize,
-                lineHeight: style.lineHeight
-            });
-        }
-        // Pas de printType dans les dépendances : il est déclaré plus bas, et le
-        // citer ici plantait le module au chargement (accès avant initialisation).
-        // La mesure se refait au montage et à chaque redimensionnement de colonne,
-        // ce qui couvre les cas réels.
-    }, [actionColWidths?.micro, activeTab, simulationEnabled, phasageBulleEnabled]);
 
     // Même recette pour la Description, devenue multiligne : sans report de la
     // largeur d'écran, l'impression replie où elle veut, et sans `pre-wrap`
@@ -757,31 +758,108 @@ function App() {
     // ligne peut se placer autrement qu'à l'écran.
     const [descriptionPrintStyle, setDescriptionPrintStyle] = useState(null);
     const [largeurTableauConditions, setLargeurTableauConditions] = useState(0);
-    useEffect(() => {
-        const champ = document.querySelector('.action-table .input-desc');
-        if (!champ) return; // tableau non monté : on garde la dernière mesure
-        // La largeur totale du tableau sert à le RÉDUIRE en portrait plutôt
-        // qu'à redistribuer ses colonnes : c'est la seule façon de garder la
-        // présentation de l'écran quand 190 mm ne suffisent pas.
+    /**
+     * Relève sur l'écran les largeurs dont l'impression a besoin.
+     *
+     * Trois mesures, un seul relevé : la largeur totale du tableau des
+     * conditions — qui sert à le réduire en portrait — et les largeurs utiles
+     * des colonnes Action_Micro et Description, reportées telles quelles à
+     * l'impression pour que le navigateur y replie le texte aux mêmes endroits
+     * qu'à l'écran.
+     *
+     * Elle ne se contente plus de tourner au montage. Le tableau n'est pas
+     * toujours monté à cet instant — un projet chargé ensuite, l'onglet
+     * Simulation ou Phasage actif — et plus rien ne relançait la mesure : la
+     * largeur restait à zéro, le tableau partait à l'impression à sa largeur
+     * d'écran, sans réduction. Plus large que la feuille en portrait, il
+     * faisait alors rétrécir TOUT le document par le navigateur, diagramme
+     * compris. Elle est donc aussi appelée à l'ouverture de la boîte
+     * d'impression, où le tableau est à coup sûr en place.
+     */
+    const mesurerColonnesImpression = useCallback(() => {
         const tableau = document.querySelector('.action-table');
         if (tableau?.offsetWidth) setLargeurTableauConditions(tableau.offsetWidth);
-        const style = window.getComputedStyle(champ);
-        const utile = champ.clientWidth
-            - (parseFloat(style.paddingLeft) || 0)
-            - (parseFloat(style.paddingRight) || 0);
-        if (utile > 0) {
+
+        /** Largeur intérieure d'un champ, rembourrage déduit. */
+        const utileDe = (champ) => {
+            const style = window.getComputedStyle(champ);
+            return {
+                style,
+                utile: champ.clientWidth
+                    - (parseFloat(style.paddingLeft) || 0)
+                    - (parseFloat(style.paddingRight) || 0)
+            };
+        };
+
+        // Action_Micro : on mesure le calque d'affichage, pas la zone de saisie.
+        // C'est lui que l'utilisateur lit (le texte de la zone de saisie est
+        // transparent), et sa largeur de repli est la bonne au pixel près. La
+        // zone de saisie, elle, réserve de quoi loger un caractère de plus —
+        // d'où le « et » qui montait d'une ligne à l'impression.
+        const champMicro = document.querySelector('.action-table .micro-highlight-backdrop')
+            || document.querySelector('.action-table .input-micro');
+        if (champMicro) {
+            const { style, utile } = utileDe(champMicro);
+            // Même largeur ET même police : c'est le navigateur qui replie, avec
+            // les mêmes données qu'à l'écran, donc aux mêmes endroits. Compter
+            // les caractères était une approximation — 62 par ligne à
+            // l'impression contre 57 à l'écran — et l'équation se coupait
+            // ailleurs, ce qui est précisément ce qu'il faut éviter ici.
+            if (utile > 0) setMicroPrintStyle({
+                width: `${Math.round(utile)}px`,
+                fontFamily: style.fontFamily,
+                fontSize: style.fontSize,
+                lineHeight: style.lineHeight
+            });
+        }
+
+        // Description : pas de calque d'affichage, on mesure la zone de saisie.
+        const champDesc = document.querySelector('.action-table .input-desc');
+        if (champDesc) {
+            const { style, utile } = utileDe(champDesc);
             // Pas de fontFamily : à l'écran ce champ est en monospace, comme
             // tout `select` et `textarea` du tableau, mais à l'impression il
             // doit s'aligner sur la colonne Action, en proportionnelle. Le
             // repli peut donc différer d'un mot de celui de l'écran ; la
             // largeur, elle, est respectée.
-            setDescriptionPrintStyle({
+            if (utile > 0) setDescriptionPrintStyle({
                 width: `${Math.round(utile)}px`,
                 fontSize: style.fontSize,
                 lineHeight: style.lineHeight
             });
         }
-    }, [actionColWidths?.description, activeTab, simulationEnabled, phasageBulleEnabled]);
+    }, []);
+
+    // La mesure se refait au montage et à chaque redimensionnement de colonne.
+    // Pas de printType dans les dépendances : il est déclaré plus bas, et le
+    // citer ici plantait le module au chargement (accès avant initialisation).
+    useEffect(() => {
+        mesurerColonnesImpression();
+    }, [mesurerColonnesImpression, actionColWidths?.micro, actionColWidths?.description,
+        activeTab, simulationEnabled, phasageBulleEnabled]);
+    /**
+     * Largeur du tableau des conditions à retenir pour l'impression.
+     *
+     * La mesure d'écran est la bonne valeur — elle porte les colonnes telles que
+     * l'utilisateur les a réglées. Mais elle suppose le tableau monté, ce qu'il
+     * n'est pas lorsqu'on imprime depuis l'onglet Simulation ou Phasage. Sans
+     * repli, le tableau partait alors à sa largeur naturelle, débordait la
+     * feuille en portrait, et le navigateur réduisait TOUT le document —
+     * diagramme compris, aux trois quarts de sa taille.
+     *
+     * Le repli reconstruit cette largeur à partir des trois colonnes réglables
+     * et d'une constante pour les dix autres, relevée à 343 px sur le tableau
+     * par défaut (961 px pour 160 + 420 + 38 de colonnes réglables). Une
+     * approximation suffit : elle ne sert qu'à décider d'un facteur de
+     * réduction, et quelques pixels d'écart ne se voient pas.
+     */
+    const LARGEUR_COLONNES_FIXES = 343;
+    const largeurConditionsImpression = largeurTableauConditions > 0
+        ? largeurTableauConditions
+        : LARGEUR_COLONNES_FIXES
+            + (actionColWidths?.description ?? 160)
+            + (actionColWidths?.micro ?? 420)
+            + (actionColWidths?.abrv ?? 38);
 
     // Synchronize traffic dataset with active PF tab (only when no saved mapping)
     useEffect(() => {
@@ -1462,16 +1540,31 @@ function App() {
                 exportSectionAsPng('.phasage-bulle-container', 'PhasageBulle', 'Phasage bulle');
                 break;
             case 'printDossier':
+                // Relever les largeurs d'écran MAINTENANT : le tableau des
+                // conditions est encore monté derrière la boîte, et c'est sa
+                // largeur qui décide de la réduction en portrait.
+                mesurerColonnesImpression();
                 // Ouvrir le dialog de sélection des sections
                 // Initialiser uniquement si vide (premier accès), sinon conserver les choix
                 setDossierSections(prev => {
+                    // Une fois posés, les choix de l'utilisateur font foi : une
+                    // case décochée le reste, et s'enregistre ainsi avec le
+                    // projet. Seul le premier accès propose une sélection.
                     if (Object.keys(prev).length > 0) return prev;
+                    // Un scénario nommé sur le plan actif vaut intention de
+                    // l'imprimer : sa case naît cochée.
+                    const scenarioNomme = !!(simulationName || '').trim();
                     return {
                         image: true,
                         gfNumbers: true,
                         formulaire: true,
                         securiteMatrix: false,
                         matrice: true,
+                        simulation: scenarioNomme,
+                        simulationActions: scenarioNomme,
+                        simulationConflits: scenarioNomme,
+                        simulationTrafic: scenarioNomme,
+                        simulationReserve: scenarioNomme,
                         ...Object.fromEntries(pfTabs.flatMap(pf => {
                             const checked = pf.color === '#4CAF50';
                             return [
@@ -2269,9 +2362,10 @@ function App() {
                 setSelectedPfIds={setCapacityCompareSelection}
                 datasetChoice={capacityCompareDataset}
                 setDatasetChoice={setCapacityCompareDataset}
+                onContentSize={noterTailleComparateur}
             />
         );
-    }, [capacityCompareModal, pfTabs, groups, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames, capacityCompareSelection, setCapacityCompareSelection, capacityCompareDataset, setCapacityCompareDataset, capacityComparisonPopup.renderToPopup]);
+    }, [capacityCompareModal, pfTabs, groups, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames, capacityCompareSelection, setCapacityCompareSelection, capacityCompareDataset, setCapacityCompareDataset, noterTailleComparateur, capacityComparisonPopup.renderToPopup]);
 
     // Render read-only diagram mirror into its detached popup (présentation).
     // Reflète le diagramme du PF actif en direct (offsets, verts, simulation)
@@ -2668,6 +2762,8 @@ function App() {
                                 hoveredActionId={hoveredActionId}
                                 setHoveredActionId={setHoveredActionId}
                                 setHoveredConflict={setHoveredConflict}
+                                scenarioName={simulationName}
+                                onScenarioNameChange={updateSimulationName}
                             />
                             {/* Même tableau que l'onglet Trafic, aux mêmes formules :
                                 seuls les temps changent (diagramme simulé), et la
@@ -4257,20 +4353,21 @@ function App() {
                                 );
                             })}
                             {/* Simulation — le diagramme tel que la simulation le recalcule.
-                                Elle ne vit que pendant que l'onglet Simulation est ouvert :
-                                simulationResult est nul sinon, et il n'y aurait rien à
-                                imprimer. La case reste donc visible mais inerte, avec la
+                                Un scénario nommé sur le plan actif coche la case à
+                                l'ouverture de cette boîte : l'avoir nommé vaut intention de
+                                l'imprimer. Sans aucune action cochée il n'y a rien à
+                                imprimer ; la case reste alors visible mais inerte, avec la
                                 raison en infobulle, plutôt que de disparaître de la liste. */}
                             {(() => {
-                                const simDispo = !!simulationResult;
+                                const simDispo = !!simulationResultImpression;
                                 const simCochee = (dossierSections.simulation || false) && simDispo;
                                 return (
                             <div className="dossier-pf-group">
                                 <label
                                     className={simDispo ? '' : 'dossier-option-indisponible'}
                                     title={tip(simDispo
-                                        ? "Imprime le diagramme recalculé par la simulation, avec son cycle simulé."
-                                        : "Ouvrez l'onglet Simulation pour pouvoir l'inclure au dossier.")}
+                                        ? "Imprime le diagramme recalculé par le scénario du plan actif, avec son cycle simulé."
+                                        : "Cochez des actions dans l'onglet Simulation pour pouvoir inclure un scénario.")}
                                 >
                                     <input type="checkbox" checked={simCochee} disabled={!simDispo}
                                         onChange={e => {
@@ -4284,7 +4381,7 @@ function App() {
                                                 simulationReserve: checked,
                                             }));
                                         }} />
-                                    Simulation
+                                    Scénario
                                 </label>
                                 {simCochee && (
                                 <div className="dossier-pf-suboptions">
@@ -4481,7 +4578,7 @@ function App() {
                                         {actionData.filter(row => row.gf || row.action || row.description || row.deb !== '' || row.fin !== '').length > 0 && (
                                             <div className="print-actions-section">
                                                 <h4>Conditions de micro-régulation</h4>
-                                                <table className="print-actions-table" style={largeurTableauConditions > 0 ? { width: `${largeurTableauConditions}px` } : undefined}>
+                                                <table className="print-actions-table" style={{ width: `${largeurConditionsImpression}px` }}>
                                                     <thead>
                                                         <tr>
                                                             <th>GF</th>
@@ -4594,9 +4691,7 @@ function App() {
                                     // les coupures retombent aux mêmes mots.
                                     // Plafond à 1,5 : au-delà, un tableau étroit à l'écran
                                     // deviendrait démesuré sur la feuille.
-                                    const zoomConditions = largeurTableauConditions > 0
-                                        ? Math.min(1.5, dossierUsableWidth / largeurTableauConditions)
-                                        : 1;
+                                    const zoomConditions = Math.min(1.5, dossierUsableWidth / largeurConditionsImpression);
                                     const availableWidth = dossierUsableWidth - dossierSidebarReal;
                                     // Cycle de référence de l'échelle homogène, propre au format.
                                     //
@@ -5108,7 +5203,7 @@ function App() {
                                                     et le contenu démarrait plus ou moins haut d'un plan de
                                                     feu à l'autre. */}
                                                 <div style={zoomConditions !== 1 ? { zoom: zoomConditions.toFixed(3) } : undefined}>
-                                                <table className="print-actions-table" style={largeurTableauConditions > 0 ? { width: `${largeurTableauConditions}px` } : undefined}>
+                                                <table className="print-actions-table" style={{ width: `${largeurConditionsImpression}px` }}>
                                                     <thead>
                                                         <tr>
                                                             <th>GF</th>
@@ -5321,15 +5416,17 @@ function App() {
                                             );
                                         })}
 
-                                        {/* Simulation — le plan tel que la simulation le recalcule.
-                                            Elle porte sur le plan de feu ACTIF : c'est celui que
-                                            l'onglet Simulation rejoue, et simulationResult n'existe
-                                            que pendant ce temps-là. Les temps changent, les formules
-                                            non — le tableau de trafic est le composant de l'écran,
-                                            nourri du diagramme simulé. */}
-                                        {dossierSections.simulation && simulationResult && (() => {
-                                            const simCycle = simulationResult.simulatedCycleLength || cycleLength;
+                                        {/* Scénario — le plan tel que les actions cochées le
+                                            recalculent. Il porte sur le plan de feu ACTIF, seul
+                                            dépositaire du scénario, et s'imprime que l'onglet
+                                            Simulation soit ouvert ou non. Les temps changent, les
+                                            formules non — le tableau de trafic est le composant de
+                                            l'écran, nourri du diagramme simulé. */}
+                                        {dossierSections.simulation && simulationResultImpression && (() => {
+                                            const simu = simulationResultImpression;
+                                            const simCycle = simu.simulatedCycleLength || cycleLength;
                                             const simPfName = pfTabs.find(pf => pf.id === activePFId)?.name || '';
+                                            const simScenario = (simulationName || '').trim();
                                             // Mêmes règles d'échelle que les diagrammes ci-dessus :
                                             // une seconde vaut la même largeur d'une page à l'autre,
                                             // le cycle simulé se compare donc à l'œil au cycle du plan.
@@ -5346,7 +5443,7 @@ function App() {
                                             // DiagnosticPanel calcule à partir des durées de vert des
                                             // groupes, il faut donc les lui donner déjà simulées.
                                             const groupesSimules = groups.map(g => {
-                                                const sim = simulationResult.simulatedGroups?.find(sg => sg.id === g.id);
+                                                const sim = simu.simulatedGroups?.find(sg => sg.id === g.id);
                                                 if (!sim) return g;
                                                 return {
                                                     ...g,
@@ -5358,7 +5455,10 @@ function App() {
                                             return (
                                         <Fragment key="simulation">
                                             <div className="print-dossier-section print-dossier-diagram">
-                                                <h3>Simulation{simPfName ? ` du plan de feu : ${simPfName}` : ''} — Cycle simulé : {simCycle}s{simCycle !== cycleLength ? ` (${simCycle - cycleLength > 0 ? '+' : ''}${simCycle - cycleLength}s)` : ''}</h3>
+                                                {/* Le nom du scénario, quand il est renseigné, titre la
+                                                    section : c'est lui qui dit ce que cette combinaison
+                                                    d'actions démontre. À défaut, on s'en tient au plan. */}
+                                                <h3>Simulation{simScenario ? ` : ${simScenario}` : ''}{simPfName ? ` — plan de feu ${simPfName}` : ''} — Cycle simulé : {simCycle}s{simCycle !== cycleLength ? ` (${simCycle - cycleLength > 0 ? '+' : ''}${simCycle - cycleLength}s)` : ''}</h3>
                                                 <div style={{
                                                     height: `${Math.ceil(diagramRenderedHeight * combinedScale)}px`,
                                                     overflow: 'hidden',
@@ -5387,7 +5487,7 @@ function App() {
                                                             hoveredActionId={null}
                                                             setHoveredActionId={() => {}}
                                                             simulationFilter={new Set(simulationSelectedActions)}
-                                                            simulationResult={simulationResult}
+                                                            simulationResult={simu}
                                                             planName={simPfName}
                                                             isPrintMode={true}
                                                             showComments={false}
@@ -5402,7 +5502,7 @@ function App() {
                                                 choix de scénario qui explique le diagramme ci-dessus. */}
                                             {dossierSections.simulationActions && actionsRetenues.length > 0 && (
                                                 <div className="print-dossier-section print-dossier-actions">
-                                                    <h3>Actions retenues par la simulation{simPfName ? ` - ${simPfName}` : ''}</h3>
+                                                    <h3>Actions retenues{simScenario ? ` : ${simScenario}` : ''}{simPfName ? ` - ${simPfName}` : ''}</h3>
                                                     <table className="print-simulation-actions">
                                                         <thead>
                                                             <tr>
@@ -5410,6 +5510,7 @@ function App() {
                                                                 <th className="col-gf">GF</th>
                                                                 <th className="col-action">Action</th>
                                                                 <th className="col-temps">Temps</th>
+                                                                <th className="col-micro">Action_Micro</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -5423,6 +5524,12 @@ function App() {
                                                                         <td className="col-gf">{action.gf ? `GF${action.gf}` : ''}</td>
                                                                         <td className="col-action">{action.action}</td>
                                                                         <td className="col-temps">{temps}</td>
+                                                                        {/* Même rendu que le tableau des conditions du plan :
+                                                                            largeur et police relevées à l'écran, le navigateur
+                                                                            replie donc aux mêmes endroits. */}
+                                                                        <td className="col-micro print-micro-cell">
+                                                                            <div className="print-micro-wrap" style={microPrintStyle || undefined}>{action.micro}</div>
+                                                                        </td>
                                                                     </tr>
                                                                 );
                                                             })}
@@ -5435,10 +5542,10 @@ function App() {
                                                 panneau à l'écran, escamotages cochés déduits. */}
                                             {dossierSections.simulationConflits && (() => {
                                                 const conflits = conflitsSimules(
-                                                    simulationResult.conflicts || [], actionData, simulationSelectedActions);
+                                                    simu.conflicts || [], actionData, simulationSelectedActions);
                                                 return (
                                                 <div className="print-dossier-section print-dossier-conflits">
-                                                    <h3>Conflits de la simulation{simPfName ? ` - ${simPfName}` : ''} : {conflits.length}</h3>
+                                                    <h3>Conflits{simScenario ? ` : ${simScenario}` : ''}{simPfName ? ` - ${simPfName}` : ''} : {conflits.length}</h3>
                                                     {conflits.length === 0 ? (
                                                         <p className="print-conflits-aucun">Aucun conflit sur le diagramme simulé.</p>
                                                     ) : (
@@ -5446,14 +5553,14 @@ function App() {
                                                             <thead>
                                                                 <tr>
                                                                     <th className="col-gf">Groupes</th>
-                                                                    <th>Conflit</th>
+                                                                    <th className="col-motif">Conflit</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
                                                                 {conflits.map((c, i) => (
                                                                     <tr key={i}>
                                                                         <td className="col-gf">GF{c.from} - GF{c.to}</td>
-                                                                        <td>{c.message}</td>
+                                                                        <td className="col-motif">{c.message}</td>
                                                                     </tr>
                                                                 ))}
                                                             </tbody>
@@ -5479,7 +5586,7 @@ function App() {
                                                         addCustomTrafficDataset={() => {}}
                                                         actionData={actionData}
                                                         simulationSelectedActions={simulationSelectedActions}
-                                                        simulationResult={simulationResult}
+                                                        simulationResult={simu}
                                                         readOnly
                                                         tooltipsEnabled={false}
                                                     />

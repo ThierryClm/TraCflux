@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { calculateVUtile, calculateCapacity, getCapacityColorClass } from '../utils/capacityCalc';
 import { toast } from '../utils/toast';
 import './CapacityComparison.css';
@@ -32,10 +32,45 @@ const CapacityComparison = ({
     selectedPfIds = null,
     setSelectedPfIds = () => {},
     datasetChoice = PER_PF,
-    setDatasetChoice = () => {}
+    setDatasetChoice = () => {},
+    /* Appelée après chaque mise en page avec la taille NATURELLE du contenu.
+       La fenêtre détachée s'y ajuste : elle était figée à 920 × 620 quel que
+       soit le nombre de plans comparés, laissant la moitié de sa hauteur vide
+       sous un tableau de six lignes. La mesure est faite ici parce qu'elle est
+       le seul endroit qui connaisse la taille réelle — l'estimer depuis
+       l'appelant demandait de recopier les règles de sélection des groupes, et
+       la faire mesurer par la fenêtre elle-même dépendait de l'instant où elle
+       regardait : selon que le contenu était rendu ou non, elle tombait juste
+       ou pas du tout. */
+    onContentSize = null
 }) => {
     const [exporting, setExporting] = useState(false);
     const tableRef = useRef(null);
+    const racineRef = useRef(null);
+
+    // Taille naturelle du contenu : du haut du premier bloc au bas du dernier,
+    // rembourrage compris. On ne peut pas prendre la hauteur du conteneur, qui
+    // vaut celle de la fenêtre ; ni la somme des enfants, qui oublierait les
+    // marges entre eux.
+    useLayoutEffect(() => {
+        if (!onContentSize) return;
+        const racine = racineRef.current;
+        if (!racine || racine.children.length === 0) return;
+        const style = window.getComputedStyle(racine);
+        const premier = racine.children[0].getBoundingClientRect();
+        const dernier = racine.children[racine.children.length - 1].getBoundingClientRect();
+        const hauteur = (dernier.bottom - premier.top)
+            + (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
+        // La largeur ne se lit pas non plus sur le conteneur : il occupe la
+        // fenêtre, et rendrait toujours la largeur courante. C'est le plus
+        // large de ses blocs qui commande — le tableau, le plus souvent.
+        const largeur = Math.max(...[...racine.children].map(el => el.scrollWidth))
+            + (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+        if (hauteur > 0) onContentSize({
+            width: Math.ceil(largeur),
+            height: Math.ceil(hauteur)
+        });
+    });
 
     const allPfIds = useMemo(() => pfTabs.map(pf => pf.id), [pfTabs]);
     // Repli « tous cochés » quand aucune sélection n'est enregistrée.
@@ -148,7 +183,7 @@ const CapacityComparison = ({
     };
 
     return (
-        <div className="capacity-comparison">
+        <div className="capacity-comparison" ref={racineRef}>
             {/* Sélection des PF */}
             <div className="cc-controls">
                 <div className="cc-pf-select">
@@ -197,7 +232,9 @@ const CapacityComparison = ({
             ) : vlGroups.length === 0 ? (
                 <p className="cc-empty">Aucun groupe VL à comparer dans ce projet.</p>
             ) : (
-                <div className="cc-table-scroll">
+                /* data-fit-scroll : repère lu par usePopupWindow, qui
+                   agrandit la fenêtre du débordement réellement mesuré. */
+                <div className="cc-table-scroll" data-fit-scroll>
                     <table className="cc-table" ref={tableRef}>
                         <thead>
                             <tr>
@@ -269,13 +306,18 @@ const CapacityComparison = ({
                 </div>
             )}
 
-            <p className="cc-note">
-                Valeurs nominales de chaque PF (vert et cycle propres), hors actions de micro-régulation.
-                Code couleur : <span className="capacity-green">&lt; 76 %</span> ·
-                <span className="capacity-orange"> ≤ 85 %</span> ·
-                <span className="capacity-red"> ≤ 100 %</span> ·
-                <span className="capacity-black"> &gt; 100 %</span>.
-            </p>
+            <div className="cc-note">
+                <p className="cc-note-portee">
+                    Valeurs nominales de chaque plan de feu — vert et cycle propres —, hors actions
+                    de micro-régulation.
+                </p>
+                <p className="cc-note-couleurs">
+                    Code couleur : <span className="capacity-green">&lt; 76 %</span> ·
+                    <span className="capacity-orange"> ≤ 85 %</span> ·
+                    <span className="capacity-red"> ≤ 100 %</span> ·
+                    <span className="capacity-black"> &gt; 100 %</span>
+                </p>
+            </div>
         </div>
     );
 };

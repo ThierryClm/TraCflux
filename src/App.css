@@ -2077,6 +2077,17 @@ body.amber-mode .help-back-to-top {
     border-collapse: collapse;
     font-size: 0.7rem;
     background: #fff;
+
+    /* Garde-fou : le tableau ne peut jamais être plus large que la feuille.
+       Sa largeur est normalement posée en ligne, relevée sur l'écran, et
+       réduite par un zoom quand 190 mm ne suffisent pas. Mais cette mesure
+       demande que le tableau soit monté : en imprimant depuis l'onglet
+       Simulation ou Phasage, il ne l'est pas. Il partait alors à sa largeur
+       d'écran, dépassait la feuille en portrait, et le navigateur réduisait
+       TOUT le document — le diagramme sortait aux trois quarts de sa taille
+       sans que rien ne le signale. Le plafond ne coûte rien quand le zoom
+       joue : dans l'espace zoomé, 100 % vaut davantage que la largeur posée. */
+    max-width: 100%;
 }
 
 .print-actions-table th,
@@ -2249,7 +2260,10 @@ body.amber-mode .help-back-to-top {
     gap: 2px;
     padding: 12px 20px;
     overflow-y: auto;
-    max-height: 65vh;
+    /* La liste se comprime pour laisser les boutons visibles, au lieu de garder
+       une hauteur propre qui les repoussait hors de la boîte. */
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .dossier-dialog-body label {
@@ -2336,6 +2350,14 @@ body.amber-mode .help-back-to-top {
     table-layout: fixed;
 }
 
+/* Le tableau des actions prend la largeur de la feuille : c'est la colonne
+   Action_Micro qui reçoit ce que les quatre autres laissent. Sa largeur ne peut
+   donc jamais dépasser la page — un tableau plus large qu'elle ferait rétrécir
+   tout le document par le navigateur. */
+.print-simulation-actions {
+    width: 100%;
+}
+
 .print-simulation-actions th,
 .print-simulation-actions td,
 .print-simulation-conflits th,
@@ -2374,17 +2396,43 @@ body.amber-mode .help-back-to-top {
     white-space: nowrap;
 }
 
+/* Action_Micro : même colonne que dans le tableau des conditions du plan.
+   Sa largeur et sa police sont posées en ligne, relevées sur l'écran, et le
+   texte s'y replie sur plusieurs lignes comme il le fait là-bas. */
+.print-simulation-actions .col-micro {
+    width: auto;
+}
+
+/* La condition micro garde la police relevée à l'écran — donc le même aspect
+   et le même repli que dans le tableau des conditions du plan — mais occupe la
+   colonne qu'on lui donne ici plutôt que sa largeur d'écran, qui sortirait de
+   la feuille. */
+.print-simulation-actions .print-micro-wrap {
+    width: auto !important;
+    max-width: 100%;
+}
+
 .print-simulation-actions .action-decochee {
     color: #777;
 }
 
-/* Conflits du diagramme simulé : le couple de groupes, puis le motif. */
+/* Conflits du diagramme simulé : le couple de groupes, puis le motif.
+   Le tableau ne prend pas la largeur de la feuille — deux colonnes courtes
+   suffisent à le lire, et le motif tient en 45 caractères. */
 .print-simulation-conflits {
-    width: 100%;
+    width: auto;
 }
 
 .print-simulation-conflits .col-gf {
     width: 110px;
+    white-space: nowrap;
+}
+
+.print-simulation-conflits .col-motif {
+    width: 45ch;
+    max-width: 45ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 

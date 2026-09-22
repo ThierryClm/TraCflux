@@ -122,9 +122,14 @@ body.sepia-mode .cc-corner-gf { color: #222; }
 body.light-mode .cc-trafic-spacer,
 body.sepia-mode .cc-trafic-spacer { background: #e8e8e8; }
 
+/* Le tableau ne s'étire plus pour remplir la fenêtre : il prend sa hauteur, et
+   la note vient juste en dessous. Étiré, il laissait un vide entre la dernière
+   ligne et la note, reléguée en bas de fenêtre — et la fenêtre elle-même ne
+   pouvait pas être ajustée à son contenu, puisque ce contenu se dilatait pour
+   la remplir. */
 .cc-table-scroll {
     overflow: auto;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
 }
 
@@ -188,10 +193,22 @@ body.sepia-mode .cc-trafic-spacer { background: #e8e8e8; }
 .cc-capacity { font-weight: bold; }
 
 .cc-empty,
+/* Note de bas de fenêtre, sur deux lignes : la portée du tableau, puis le code
+   couleur. Sur une seule ligne, les deux se lisaient comme une même phrase et
+   la ligne devenait très longue dès que la fenêtre s'élargissait. */
 .cc-note {
+    margin-top: 10px;
+    flex: 0 0 auto;
+}
+
+.cc-note p {
     color: #888;
     font-size: 0.85em;
-    margin-top: 12px;
+    margin: 0;
+}
+
+.cc-note .cc-note-couleurs {
+    margin-top: 3px;
 }
 
 .cc-note .capacity-green,

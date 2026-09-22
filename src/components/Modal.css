@@ -11,15 +11,49 @@
     z-index: 2000;
 }
 
+/* Palette d'une fenêtre, déclinée par thème.
+ *
+ * Les sept thèmes repeignaient chacun quelques sélecteurs de cette feuille —
+ * et trois d'entre eux, sépia, nuit bleue et daltonien, n'en repeignaient
+ * presque aucun : le fond de la fenêtre changeait, ses libellés, ses champs et
+ * ses listes restaient dans les gris du thème sombre, illisibles sur un fond
+ * clair. Une palette de variables remplace ces réécritures : un thème n'a plus
+ * qu'à donner ses couleurs, les règles ci-dessous s'en servent partout.
+ */
 .modal-content {
-    background: #3a3a3a;
-    border: 1px solid #555;
+    --md-bg: #3a3a3a;
+    --md-border: #555;
+    --md-text: #e0e0e0;
+    --md-muted: #aaa;
+    --md-hover: #505050;
+    --md-separator: #555;
+    --md-field-bg: #444;
+    --md-field-border: #666;
+    --md-field-text: #fff;
+
+    background: var(--md-bg);
+    border: 1px solid var(--md-border);
+    color: var(--md-text);
     border-radius: 8px;
     min-width: 300px;
     max-width: 500px;
     max-height: 80vh;
     overflow: hidden;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+    /* Bandeau, corps, boutons : trois bandes, dont seule celle du milieu se
+       comprime. Sans cela, le corps gardait sa hauteur propre — 60 vh, 65 vh
+       pour la boîte d'impression — et poussait les boutons hors de la fenêtre,
+       que `overflow: hidden` coupait net. Sur un téléphone en paysage, la boîte
+       « Imprimer le projet » perdait ainsi ses boutons dès que la liste des
+       cases s'allongeait : l'impression devenait inatteignable. */
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header,
+.modal-footer {
+    flex: 0 0 auto;
 }
 
 .modal-content.modal-wide {
@@ -27,29 +61,62 @@
     width: 90vw;
 }
 
+/* En-tête des fenêtres de l'application : le même bandeau gris que les fenêtres
+ * détachées.
+ *
+ * Deux fenêtres qui se chevauchent n'ont pas de frontière lisible quand elles
+ * portent les couleurs du thème : c'est ce constat qui a donné leur bandeau aux
+ * fenêtres détachées, dans le gris des barres de défilement du navigateur —
+ * l'œil le lit comme un cadre de fenêtre, pas comme du contenu. Les fenêtres
+ * posées DANS la page méritent le même repère, et le même dans tous les thèmes :
+ * il ne se décline pas, il encadre.
+ *
+ * Les thèmes n'ont donc plus à repeindre cet en-tête. Ils le faisaient chacun de
+ * leur côté — et trois d'entre eux, sépia, nuit bleue et daltonien, l'avaient
+ * oublié : leurs fenêtres s'ouvraient avec un en-tête sombre sur un corps clair.
+ */
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid #555;
-    background: #444;
+    gap: 12px;
+    height: 28px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    background: linear-gradient(#6b6b6b, #5a5a5a);
+    border-bottom: 1px solid #3a3a3a;
+    color: #fff;
+    user-select: none;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .modal-header h3 {
     margin: 0;
-    color: #eee;
-    font-size: 1em;
+    color: #fff;
+    font: bold 12px system-ui, sans-serif;
+    letter-spacing: .2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Les thèmes clairs reçoivent le gris plus clair des fenêtres détachées : un
+   cadre, sans trouer la page. */
+body.light-mode .modal-header,
+body.sepia-mode .modal-header {
+    background: linear-gradient(#9a9a9a, #868686);
+    border-bottom-color: #6f6f6f;
 }
 
 .modal-close {
     background: transparent;
     border: none;
-    color: #aaa;
-    font-size: 1.5em;
+    color: #e8e8e8;
+    font-size: 1.2em;
     cursor: pointer;
     padding: 0;
     line-height: 1;
+    flex: 0 0 auto;
 }
 
 .modal-close:hover {
@@ -58,22 +125,34 @@
 
 .modal-body {
     padding: 16px;
-    max-height: 60vh;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
 }
 
 .modal-body label {
     display: block;
-    color: #e0e0e0;
+    color: inherit;
     margin-bottom: 8px;
     font-size: 0.9em;
 }
 
+/* Les champs de saisie suivent la palette de la fenêtre. Chaque thème posait
+   auparavant sa propre règle — trois l'avaient oubliée, et leurs champs
+   restaient dans les gris du thème sombre sur un fond clair. */
+.modal-body input:not([type="checkbox"]):not([type="radio"]),
+.modal-body select,
+.modal-body textarea {
+    background: var(--md-field-bg);
+    border: 1px solid var(--md-field-border);
+    color: var(--md-field-text);
+}
+
 .modal-body input[type="number"] {
     width: 80px;
-    background: #444;
-    border: 1px solid #666;
-    color: #fff;
+    background: var(--md-field-bg);
+    border: 1px solid var(--md-field-border);
+    color: var(--md-field-text);
     padding: 6px 10px;
     border-radius: 4px;
     margin-left: 8px;
@@ -90,7 +169,7 @@
     justify-content: flex-end;
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid #555;
+    border-top: 1px solid var(--md-separator);
 }
 
 .modal-btn {
@@ -132,15 +211,14 @@
 
 .project-list li {
     padding: 10px 12px;
-    border-bottom: 1px solid #555;
+    border-bottom: 1px solid var(--md-separator);
     cursor: pointer;
-    color: #e0e0e0;
+    color: inherit;
     transition: background 0.15s;
 }
 
 .project-list li:hover {
-    background: #505050;
-    color: #fff;
+    background: var(--md-hover);
 }
 
 .project-list li:last-child {
@@ -148,7 +226,7 @@
 }
 
 .no-projects {
-    color: #aaa;
+    color: var(--md-muted);
     text-align: center;
     padding: 20px;
 }
