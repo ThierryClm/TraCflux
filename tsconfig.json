@@ -25,6 +25,13 @@
         "noImplicitAny": true,
         "strictNullChecks": true,
 
+        // Une exception assumée à `strict`. TypeScript type la variable d'un
+        // bloc `catch` en `unknown`, ce qui est plus sûr dans l'absolu mais
+        // obligerait à convertir une trentaine de `catch (e) { ... e.message }`
+        // sans rien apprendre sur ce dépôt : on n'y rattrape que des erreurs
+        // du navigateur et des exceptions de JSON.parse.
+        "useUnknownInCatchVariables": false,
+
         // Les types des dépendances ne sont pas notre affaire : les vérifier
         // n'apprend rien sur ce dépôt et noie le vrai signal.
         "skipLibCheck": true,
