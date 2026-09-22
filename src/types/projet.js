@@ -141,6 +141,9 @@
  * @property {number[]} [simulationActions]    Identifiants des actions cochées.
  * @property {number} [phasageBulleCount]
  * @property {number[]} [phasageBulleTimes]
+ * @property {number} [phasageBubbleScale]    Taille des bulles, en %.
+ * @property {number} [phasageEllipseScale]   Taille des ellipses, en %.
+ * @property {number} [phasageBubbleRatio]    Rapport largeur/hauteur des bulles.
  */
 
 /**
