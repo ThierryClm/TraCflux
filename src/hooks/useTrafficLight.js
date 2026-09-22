@@ -1025,6 +1025,23 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             // liste des projets, ils revenaient vides.
             champsProjetRef?.current?.ecrire?.(data);
 
+            // Le verrou de chargement se lève en différé — le temps que React
+            // pose l'état — mais les repères de synchronisation, eux, doivent
+            // être remis À L'INSTANT.
+            //
+            // Sans cela, la recopie « groupes → PF actif » voyait l'ouverture
+            // d'un projet comme un changement d'onglet : elle croyait devoir
+            // sauver les modifications en cours dans le PF qu'elle croyait
+            // quitter — celui qui était actif AVANT l'ouverture — et y écrivait
+            // le diagramme et la durée de cycle du projet qu'on venait
+            // d'ouvrir. Le plan de feu portant cet identifiant se retrouvait
+            // avec le cycle d'un autre, sans le moindre avertissement.
+            // C'est la même remise à zéro que fait loadFullState, à la même
+            // place : pendant l'installation des données, pas trois secondes
+            // après.
+            const loadedActivePFId = data.activePFId || 1;
+            resetPfSyncRefs(loadedActivePFId);
+
             // Reset simulation state when loading a project
             setSimulationEnabled(false);
             setSimulationSelectedActions([]);
@@ -1033,7 +1050,6 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             updateProjectOrder(name);
 
             // Reset loading flag after a delay to let React batch updates settle
-            const loadedActivePFId = data.activePFId || 1;
             setTimeout(() => {
                 isLoadingProjectRef.current = false;
                 resetPfSyncRefs(loadedActivePFId);
@@ -2050,11 +2066,18 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     // lieu — l'état est alors posé — le délai ne servant plus que de filet si un
     // chargement de projet était encore en cours à ce moment-là.
     const isInitialLoadRef = useRef(true);
+    // Le PF actif, lisible depuis une fermeture qui date du montage. L'effet
+    // ci-dessous n'a pas de dépendances : il ne voyait donc que la valeur de
+    // départ — PF1 — et remettait le repère de synchronisation sur ce PF-là,
+    // alors qu'un projet chargé entre-temps en avait désigné un autre. Le PF1
+    // héritait alors du diagramme et du cycle du plan réellement actif.
+    const activePFIdRef = useRef(activePFId);
+    activePFIdRef.current = activePFId;
     useEffect(() => {
         const lever = () => {
             if (!isInitialLoadRef.current) return;
             isInitialLoadRef.current = false;
-            resetPfSyncRefs(activePFId);
+            resetPfSyncRefs(activePFIdRef.current);
         };
         // Un tour de boucle suffit dans le cas courant ; le délai couvre le cas
         // où un projet est encore en cours de chargement.
@@ -2519,6 +2542,14 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         setCycleLength(previousState.cycleLength);
         setIntersectionName(previousState.intersectionName);
 
+        // Une annulation réinstalle d'un bloc les groupes, le cycle, les plans
+        // de feu ET le plan actif. Sans cette remise à zéro, la recopie
+        // « groupes → PF actif » y voyait un changement d'onglet : elle écrivait
+        // le cycle et le diagramme qu'on venait de restaurer dans le plan de feu
+        // actif AVANT l'annulation, écrasant ce que l'historique venait de
+        // rendre. Annuler sur un plan revenait ainsi à abîmer l'autre.
+        resetPfSyncRefs(previousState.activePFId || activePFId);
+
         // Remove the last history entry
         setHistory(prev => prev.slice(0, -1));
 
@@ -2558,6 +2589,11 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         }
         setCycleLength(nextState.cycleLength);
         setIntersectionName(nextState.intersectionName);
+
+        // Même raison que dans undo : le rétablissement réinstalle le plan actif
+        // en même temps que l'état, la synchronisation ne doit pas le prendre
+        // pour un changement d'onglet.
+        resetPfSyncRefs(nextState.activePFId || activePFId);
 
         // Remove the last redo history entry
         setRedoHistory(prev => prev.slice(0, -1));
