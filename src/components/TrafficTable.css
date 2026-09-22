@@ -47,21 +47,23 @@
     position: relative;
 }
 
+/* Libellé du sélecteur de jeu de trafic.
+   Simple texte : il portait un fond et un filet qui, collés au sélecteur,
+   formaient un bouton apparent. Ce faux bouton haussait l'en-tête du volet
+   Trafic et décalait ses lignes par rapport aux groupes du diagramme. */
 .traffic-dataset-label {
     color: #aaa;
     font-size: 0.85rem;
-    background: #333;
-    border: 1px solid #555;
-    border-right: none;
-    border-radius: 4px 0 0 4px;
-    padding: 4px 6px;
+    background: none;
+    border: none;
+    padding: 0 6px 0 0;
 }
 
 .traffic-dataset-selector {
     background: #333;
     color: #fff;
     border: 1px solid #555;
-    border-radius: 0 4px 4px 0;
+    border-radius: 4px;
     padding: 4px 8px;
     font-size: 0.85rem;
     cursor: pointer;
@@ -193,7 +195,7 @@
     background: #333;
     color: #fff;
     border: 1px solid #555;
-    border-radius: 0 4px 4px 0;
+    border-radius: 4px;
     padding: 4px 8px;
     font-size: 0.85rem;
     min-width: 110px;

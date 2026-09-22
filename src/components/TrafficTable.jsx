@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import EmptyState from './EmptyState';
 import { useAlert } from './ConfirmProvider';
-import { getTotalGreenTime as computeTotalGreenTime, parseTrafficVol, isCoordinated } from '../utils/trafficHelpers';
+import { getTotalGreenTime as computeTotalGreenTime, parseTrafficVol, isCoordinated, groupesInhibes } from '../utils/trafficHelpers';
 import './TrafficTable.css';
 
 const TrafficTable = ({
@@ -100,18 +100,8 @@ const TrafficTable = ({
     // suivre les actions cochées — il reçoit alors simulationResult, et les
     // groupes qu'une action inhibe repassent en grisé.
     const inhibitedGroups = useMemo(() => {
-        const inhibited = new Set();
-        if (!simulationResult) return inhibited;
-        const inhibitActions = ['Escamotage de phase', 'Fermeture anticipée', 'Adaptatif vertical'];
-        actionData.forEach(action => {
-            if (simulationSelectedActions.includes(action.id) &&
-                inhibitActions.includes(action.action) &&
-                action.gf) {
-                const gfId = parseInt(action.gf.toString().replace(/[Gg]/g, '').trim());
-                if (gfId > 0) inhibited.add(gfId);
-            }
-        });
-        return inhibited;
+        if (!simulationResult) return new Set();
+        return groupesInhibes(actionData, simulationSelectedActions);
     }, [simulationResult, actionData, simulationSelectedActions]);
 
     // Bases de calcul : verts, décalages et cycle du diagramme SIMULÉ quand la
@@ -297,7 +287,10 @@ const TrafficTable = ({
                     Tous les Grp
                 </label>
                 <div className="traffic-dataset-group" onMouseEnter={handleDatasetMouseEnter} onMouseLeave={handleDatasetMouseLeave}>
-                    <span className="traffic-dataset-label">Associé à</span>
+                    <span
+                        className="traffic-dataset-label"
+                        title={tip("Jeu de données de trafic à associer")}
+                    >Donnée</span>
                     {readOnly ? (
                         <span className="traffic-dataset-nom">{activeTrafficDataset}</span>
                     ) : (

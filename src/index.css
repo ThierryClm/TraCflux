@@ -314,11 +314,15 @@ body.light-mode .sidebar .traffic-table .capacity-black {
     font-weight: bold;
 }
 
-body.light-mode .traffic-dataset-label,
 body.light-mode .traffic-dataset-selector {
     background: #d0d0d0;
     color: #222;
     border-color: #999;
+}
+
+/* Le libellé du sélecteur est du texte, pas un bouton : pas de fond ni de filet. */
+body.light-mode .traffic-dataset-label {
+    color: #444;
 }
 
 body.light-mode .paste-dropdown {
@@ -1242,11 +1246,14 @@ body.high-contrast-mode .sidebar .traffic-table .capacity-black {
     font-weight: bold;
 }
 
-body.high-contrast-mode .traffic-dataset-label,
 body.high-contrast-mode .traffic-dataset-selector {
     background: #1a2050;
     color: #ffdd00;
     border-color: #4466bb;
+}
+
+body.high-contrast-mode .traffic-dataset-label {
+    color: #ffdd00;
 }
 
 body.high-contrast-mode .paste-dropdown {
@@ -2126,11 +2133,14 @@ body.amber-mode .sidebar .traffic-table .capacity-black {
     font-weight: bold;
 }
 
-body.amber-mode .traffic-dataset-label,
 body.amber-mode .traffic-dataset-selector {
     background: #303030;
     color: #ffb300;
     border-color: #666;
+}
+
+body.amber-mode .traffic-dataset-label {
+    color: #ffb300;
 }
 
 body.amber-mode .paste-dropdown {
