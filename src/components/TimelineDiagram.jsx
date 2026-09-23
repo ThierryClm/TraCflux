@@ -1,11 +1,12 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import LocalInput from './LocalInput';
-import NumericInput from './NumericInput';
 import CustomTooltip from './CustomTooltip';
-import EmptyState from './EmptyState';
 import RemarquesEditor from './RemarquesEditor';
+import TimelineFloatingOverlays from './timeline/TimelineFloatingOverlays';
+import TimelineGridBackground, { TimelineEmptyState } from './timeline/TimelineGridBackground';
+import TimelineHeader from './timeline/TimelineHeader';
+import TimelineSidebar from './timeline/TimelineSidebar';
+import { createTimelineGeometry } from './timeline/timelineGeometry';
 import { useMicroVariables } from './MicroVariablesProvider';
-import { tokenizeMicroText } from '../utils/microVariables';
 import './TimelineDiagram.css';
 
 const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }) => {
@@ -932,108 +933,15 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     const ROW_TOTAL_HEIGHT = ROW_HEIGHT + 1; // Row height + 1px border
     const svgHeight = RULER_HEIGHT + 1 + groups.length * ROW_TOTAL_HEIGHT + 30;
 
-    // Helper: generate a manually dashed SVG path (dash=5px, gap=5px)
-    // Used for bande passante arrows because stroke-dasharray is lost at print time
-    const dashedPath = (x1, y1, x2, y2, dashLen = 5) => {
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist === 0) return '';
-        const ux = dx / dist;
-        const uy = dy / dist;
-        const segments = [];
-        let pos = 0;
-        let drawing = true;
-        while (pos < dist) {
-            const segEnd = Math.min(pos + dashLen, dist);
-            if (drawing) {
-                segments.push(`M${x1 + ux * pos},${y1 + uy * pos}L${x1 + ux * segEnd},${y1 + uy * segEnd}`);
-            }
-            pos = segEnd;
-            drawing = !drawing;
-        }
-        return segments.join('');
-    };
-
-    // Helper to get the Y position for a group row (center of the row)
-    const getGroupRowY = (groupId) => {
-        const groupIndex = groups.findIndex(g => g.id === parseInt(groupId));
-        if (groupIndex === -1) return null;
-        // RULER_HEIGHT + 1px ruler border + (index * row total height) + half row height
-        return RULER_HEIGHT + 1 + (groupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
-    };
-
-    // Helper to get group start position (beginning of green bar on screen)
-    // Uses simulated offset when in simulation mode
-    const getGroupStartPos = (groupId) => {
-        const group = groups.find(g => g.id === parseInt(groupId));
-        if (!group) return null;
-
-        // In simulation mode, use simulated offset if available
-        if (simulationResult) {
-            const simGroup = simulationResult.simulatedGroups.find(g => g.id === parseInt(groupId));
-            if (simGroup) {
-                return simGroup.simulatedOffset % effectiveCycleLength;
-            }
-        }
-
-        // The sidebar shows start = offset, so the green begins at position offset
-        return group.offset % cycleLength;
-    };
-
-    // Helper to get group end position (end of green bar on screen)
-    // Uses simulated offset and green duration when in simulation mode
-    const getGroupEndPos = (groupId) => {
-        const group = groups.find(g => g.id === parseInt(groupId));
-        if (!group) return null;
-
-        let startPos;
-        let greenDuration;
-        // In simulation mode, use simulated offset and green duration if available
-        if (simulationResult) {
-            const simGroup = simulationResult.simulatedGroups.find(g => g.id === parseInt(groupId));
-            if (simGroup) {
-                startPos = simGroup.simulatedOffset % effectiveCycleLength;
-                greenDuration = simGroup.simulatedGreen !== undefined ? simGroup.simulatedGreen : (group.durations?.green || 0);
-            } else {
-                startPos = group.offset % cycleLength;
-                greenDuration = group.durations?.green || 0;
-            }
-        } else {
-            startPos = group.offset % cycleLength;
-            greenDuration = group.durations?.green || 0;
-        }
-
-        const cycle = simulationResult ? effectiveCycleLength : cycleLength;
-        const endPos = startPos + greenDuration;
-        // If end position equals cycle exactly, keep it at cycle instead of wrapping to 0
-        return endPos === cycle ? cycle : (endPos % cycle);
-    };
-
-    // Helper to check if a group wraps around the cycle (green crosses cycle boundary)
-    const doesGroupWrap = (groupId) => {
-        const group = groups.find(g => g.id === parseInt(groupId));
-        if (!group) return false;
-
-        let startPos;
-        let greenDuration;
-        if (simulationResult) {
-            const simGroup = simulationResult.simulatedGroups.find(g => g.id === parseInt(groupId));
-            if (simGroup) {
-                startPos = simGroup.simulatedOffset % effectiveCycleLength;
-                greenDuration = simGroup.simulatedGreen !== undefined ? simGroup.simulatedGreen : (group.durations?.green || 0);
-            } else {
-                startPos = group.offset % cycleLength;
-                greenDuration = group.durations?.green || 0;
-            }
-        } else {
-            startPos = group.offset % cycleLength;
-            greenDuration = group.durations?.green || 0;
-        }
-
-        const cycle = simulationResult ? effectiveCycleLength : cycleLength;
-        return (startPos + greenDuration) > cycle;
-    };
+    const { dashedPath, doesGroupWrap, getGroupEndPos, getGroupRowY, getGroupStartPos } = createTimelineGeometry({
+        cycleLength,
+        effectiveCycleLength,
+        groups,
+        rowHeight: ROW_HEIGHT,
+        rowTotalHeight: ROW_TOTAL_HEIGHT,
+        rulerHeight: RULER_HEIGHT,
+        simulationResult
+    });
 
     return (<>
         <div
@@ -1043,333 +951,67 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
             onMouseMove={suivreCurseur}
             onMouseLeave={() => setIsMouseInDiagram(false)}
         >
-            {/* En fenêtre détachée, le bandeau porte le titre ET le cycle. Le
-                bouton Détacher et les commandes de lecture sont de toute façon
-                exclus par readOnly : rien d'autre ne vit dans cet en-tête. */}
-            {!titreEnBandeau && (
-                <h3 className="diagram-title">
-                    <span>Diagramme{planName ? ` : simulation du plan de feu ${planName}` : (activePFName ? ` - ${activePFName}` : '')}</span>
-                    {setCycleLengthInput && (
-                        (planName || readOnly) ? (
-                            <span style={{ marginLeft: '50px', fontSize: '14px', fontWeight: 'normal' }}>
-                                Cycle {simulationResult?.simulatedCycleLength || cycleLength} secondes
-                            </span>
-                        ) : (
-                            <label className="cycle-input-label" style={{ marginLeft: '50px', fontSize: '14px', fontWeight: 'normal' }}>
-                                Cycle:
-                                <NumericInput
-                                    className="input-count"
-                                    value={cycleLengthInput}
-                                    min={10}
-                                    allowEmpty={false}
-                                    selectOnFocus
-                                    onCommit={(val) => {
-                                        const newCycle = parseInt(val);
-                                        if (!isNaN(newCycle) && newCycle >= 10 && newCycle !== cycleLength) {
-                                            setCycleLength(newCycle);
-                                        } else {
-                                            setCycleLengthInput(cycleLength.toString());
-                                        }
-                                    }}
-                                    title={tip("Durée du cycle (min 10s)")}
-                                />
-                                <span>s</span>
-                            </label>
-                        )
-                    )}
-                    {onDetach && !readOnly && (
-                        <button
-                            className="detach-btn diagram-detach-btn"
-                            onClick={onDetach}
-                            title={tip("Ouvrir le diagramme dans une fenêtre séparée (miroir lecture seule, ex. 2e écran)")}
-                        >Détacher</button>
-                    )}
-                    {planName && setIsPlayingSimulation && !readOnly && (
-                        <div className="diagram-playback" style={{ marginLeft: '20px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 'normal' }}>
-                            <CustomTooltip text={isPlayingSimulation ? 'Pause' : 'Lecture'}>
-                                <button
-                                    className={`sim-btn ${isPlayingSimulation ? 'playing' : ''}`}
-                                    onClick={() => setIsPlayingSimulation(!isPlayingSimulation)}
-                                    aria-label={isPlayingSimulation ? 'Mettre la simulation en pause' : 'Lancer la simulation'}
-                                >
-                                    {isPlayingSimulation ? '⏸' : '▶'}
-                                </button>
-                            </CustomTooltip>
-                            <CustomTooltip text="Réinitialiser">
-                                <button
-                                    className="sim-btn reset-btn"
-                                    onClick={() => { setIsPlayingSimulation(false); setSimulationCurrentTime(0); }}
-                                    aria-label="Réinitialiser la simulation"
-                                >
-                                    ⏹
-                                </button>
-                            </CustomTooltip>
-                            {cycleSimulationSpeed && (
-                                <CustomTooltip text="Vitesse de déroulement — cliquer pour changer">
-                                    <button
-                                        className={`sim-btn sim-speed-btn ${simulationSpeed > 1 ? 'accelere' : ''}`}
-                                        onClick={cycleSimulationSpeed}
-                                        aria-label={`Vitesse de déroulement : ×${simulationSpeed}. Cliquer pour changer.`}
-                                    >
-                                        ×{simulationSpeed}
-                                    </button>
-                                </CustomTooltip>
-                            )}
-                            <CustomTooltip text="Position dans le cycle">
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max={(simulationResult?.simulatedCycleLength || cycleLength) - 1}
-                                    value={simulationCurrentTime || 0}
-                                    onChange={(e) => setSimulationCurrentTime(parseInt(e.target.value) || 0)}
-                                    className="time-slider"
-                                    aria-label="Position courante dans le cycle de simulation"
-                                />
-                            </CustomTooltip>
-                            <span className="sim-time" style={{ color: '#fff', whiteSpace: 'nowrap', fontSize: '14px' }}>
-                                {simulationCurrentTime || 0}s / {simulationResult?.simulatedCycleLength || cycleLength}s
-                            </span>
-                        </div>
-                    )}
-                </h3>
-            )}
+            <TimelineHeader
+                activePFName={activePFName}
+                cycleLength={cycleLength}
+                cycleLengthInput={cycleLengthInput}
+                cycleSimulationSpeed={cycleSimulationSpeed}
+                isPlayingSimulation={isPlayingSimulation}
+                onDetach={onDetach}
+                planName={planName}
+                readOnly={readOnly}
+                setCycleLength={setCycleLength}
+                setCycleLengthInput={setCycleLengthInput}
+                setIsPlayingSimulation={setIsPlayingSimulation}
+                setSimulationCurrentTime={setSimulationCurrentTime}
+                simulationCurrentTime={simulationCurrentTime}
+                simulationResult={simulationResult}
+                simulationSpeed={simulationSpeed}
+                titreEnBandeau={titreEnBandeau}
+                tooltipsEnabled={tooltipsEnabled}
+            />
             <div className="timeline-layout">
-                <div className="timeline-sidebar" style={!showGroupNames ? { width: '165px' } : undefined}>
-                    {/* Header Label for Sidebar */}
-                    <div className="sidebar-header-row">
-                        <span className="col-label col-grp">GF</span>
-                        {showGroupNames && <span className="col-label col-name">Nom</span>}
-                        <CustomTooltip text="Code trajet (2 caractères) concernant la procédure d'approche bus.">
-                            <span className="col-label col-da">DA</span>
-                        </CustomTooltip>
-                        <span className="col-label col-time">Déb</span>
-                        <span className="col-label col-time">Fin</span>
-                        <span className="col-label col-time">Durée</span>
-                    </div>
-
-                    {groups.map(g => {
-                        // Use simulated values during simulation, original values otherwise
-                        const simGroup = simulationResult ? getSimulatedGroup(g.id) : null;
-                        const isSimEscamoted = simGroup?.isEscamoted || false;
-                        const start = simGroup
-                            ? (simGroup.simulatedOffset % effectiveCycleLength)
-                            : (g.offset % cycleLength);
-                        const duration = simGroup
-                            ? simGroup.simulatedGreen
-                            : g.durations.green;
-                        const end = isSimEscamoted ? 0 : ((start + duration) % (simGroup ? effectiveCycleLength : cycleLength));
-                        // Show both values if green duration > 0 (and not escamoted during simulation)
-                        // Hide when green is reduced to 0 (e.g. by Fermeture anticipée)
-                        const hasValue = !isSimEscamoted && duration > 0;
-
-                        const isLabelHighlighted = hoveredArrowGroupId === g.id;
-                        return (
-                            <div
-                                key={g.id}
-                                className="row-label-container"
-                                style={{ ...(isLabelHighlighted ? { backgroundColor: hoveredArrowGroupSaturated ? 'rgba(231, 76, 60, 0.25)' : 'rgba(100, 150, 255, 0.2)' } : {}), ...(biCarrefourSeparator != null && g.id === biCarrefourSeparator ? { borderBottom: '1px solid white' } : {}) }}
-                                tabIndex={0}
-                                onClick={() => onGroupClick(g)}
-                                onKeyDown={(e) => handlePhaseFlagKeyDown(e, g.id, g.phaseFlag)}
-                            >
-                                <span className="label-id">{g.id}</span>
-                                {showGroupNames && (
-                                    <div
-                                        className="label-name-wrapper"
-                                        onMouseEnter={() => handleNameMouseEnter(g.id)}
-                                        onMouseLeave={handleNameMouseLeave}
-                                    >
-                                        <span
-                                            className="label-name"
-                                            onMouseEnter={(e) => {
-                                                const el = e.currentTarget;
-                                                el.title = el.scrollWidth > el.clientWidth ? g.name : '';
-                                            }}
-                                            style={{
-                                                backgroundColor:
-                                                    (g.type === 'VL' || g.type === 'V') ? 'rgba(100, 180, 255, 0.25)' :
-                                                    (g.type === 'TC' || g.type === 'B') ? 'rgba(148, 0, 211, 0.1)' :
-                                                    (g.type === 'Piéton' || g.type === 'P') ? 'rgba(0, 255, 0, 0.1)' :
-                                                    (g.type === 'Cycliste' || g.type === 'CY') ? 'rgba(255, 255, 0, 0.1)' :
-                                                    'transparent'
-                                            }}
-                                        >
-                                            {g.name || '-'}
-                                            {(g.phaseFlag || (!g.phaseFlag && escamotageGroupIds.has(g.id))) && (
-                                                <CustomTooltip
-                                                    text={(g.phaseFlag || 'e') === 'a' ? 'Aiguillage' : 'Escamotage'}
-                                                    delay={100}
-                                                >
-                                                    <span className="phase-flag-indicator">{g.phaseFlag || 'e'}</span>
-                                                </CustomTooltip>
-                                            )}
-                                        </span>
-                                        {phaseFlagTooltipId === g.id && (
-                                            <div className="phase-flag-tooltip">
-                                                Alt+A : aiguillage, Alt+E : escamotage
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {(g.type === 'V' || g.type === 'B') ? (
-                                    <CustomTooltip text="Code trajet">
-                                        <LocalInput
-                                            className="input-da"
-                                            value={g.da || ''}
-                                            onCommit={(val) => updateGroupParams(g.id, { da: val.slice(0, 2) })}
-                                            onClick={(e) => e.stopPropagation()}
-                                            selectOnFocus
-                                            maxLength={2}
-                                            placeholder=""
-                                            disabled={readOnly || !!simulationResult}
-                                        />
-                                    </CustomTooltip>
-                                ) : (
-                                    <span className="input-da-placeholder"></span>
-                                )}
-                                {g.type ? (
-                                    <>
-                                        <NumericInput
-                                            className="input-time-sm"
-                                            value={hasValue ? start : ''}
-                                            onCommit={(val) => !simulationResult && handleStartChange(g.id, val)}
-                                            disabled={readOnly || !!simulationResult}
-                                            onClick={(e) => e.stopPropagation()}
-                                            selectOnFocus
-                                            placeholder=""
-                                            wrapAt={cycleLength}
-                                            showWrapFlash={showWrapFlash}
-                                        />
-                                        <NumericInput
-                                            className="input-time-sm"
-                                            value={hasValue ? end : ''}
-                                            onCommit={(val) => !simulationResult && handleEndChange(g.id, val, start)}
-                                            disabled={readOnly || !!simulationResult}
-                                            onClick={(e) => e.stopPropagation()}
-                                            selectOnFocus
-                                            wrapAt={cycleLength}
-                                            showWrapFlash={showWrapFlash}
-                                            style={{ color: duration < g.minGreen ? '#ff4d4d' : 'inherit' }}
-                                            placeholder=""
-                                        />
-                                        <CustomTooltip text="Durée nominale dans le cycle">
-                                        <input
-                                            type="number"
-                                            className="input-time-sm"
-                                            value={hasValue && duration > 0 ? duration : ''}
-                                            readOnly
-                                            onClick={(e) => e.stopPropagation()}
-                                            style={{
-                                                color: duration < g.minGreen ? '#ff4d4d' : 'inherit',
-                                                cursor: 'default',
-                                                background: 'transparent',
-                                                border: 'none'
-                                            }}
-                                            placeholder=""
-                                        />
-                                        </CustomTooltip>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span className="input-time-sm-placeholder"></span>
-                                        <span className="input-time-sm-placeholder"></span>
-                                        <span className="input-time-sm-placeholder"></span>
-                                    </>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
+                <TimelineSidebar
+                    biCarrefourSeparator={biCarrefourSeparator}
+                    cycleLength={cycleLength}
+                    effectiveCycleLength={effectiveCycleLength}
+                    escamotageGroupIds={escamotageGroupIds}
+                    groups={groups}
+                    handleEndChange={handleEndChange}
+                    handleNameMouseEnter={handleNameMouseEnter}
+                    handleNameMouseLeave={handleNameMouseLeave}
+                    handlePhaseFlagKeyDown={handlePhaseFlagKeyDown}
+                    handleStartChange={handleStartChange}
+                    hoveredArrowGroupId={hoveredArrowGroupId}
+                    hoveredArrowGroupSaturated={hoveredArrowGroupSaturated}
+                    onGroupClick={onGroupClick}
+                    phaseFlagTooltipId={phaseFlagTooltipId}
+                    readOnly={readOnly}
+                    showGroupNames={showGroupNames}
+                    showWrapFlash={showWrapFlash}
+                    simulationResult={simulationResult}
+                    updateGroupParams={updateGroupParams}
+                />
 
                 <div className="timeline-scroll-area" style={{ width: `${totalWidth}px`, position: 'relative' }}>
-                    {/* Empty state: no group has a configured green duration */}
-                    {groups.length > 0 && !groups.some(g => (g.durations?.green || 0) > 0) && (() => {
-                        const formEmpty = groups.every(g => !g.type || g.type === '');
-                        const matrixEmpty = Array.isArray(conflictMatrix) && conflictMatrix.length > 0 &&
-                            conflictMatrix.every(row => row.every(v => v === '' || v === null || v === undefined));
-                        const steps = [];
-                        if (formEmpty) steps.push("Renseigner le formulaire des groupes de feu (onglet Configuration)");
-                        if (matrixEmpty) steps.push("Renseigner la matrice des temps interverts");
-                        steps.push("Saisir les durées de vert pour voir les phases apparaître");
-                        const hint = 'Veuillez :\n' + steps.map(s => `•  ${s}`).join('\n');
-                        return (
-                            <div className="empty-state-overlay">
-                                <EmptyState
-                                    icon="diagram"
-                                    title={tip("Diagramme vide")}
-                                    hint={hint}
-                                />
-                            </div>
-                        );
-                    })()}
+                    <TimelineEmptyState
+                        conflictMatrix={conflictMatrix}
+                        groups={groups}
+                        tooltipsEnabled={tooltipsEnabled}
+                    />
                     <div className="timeline-track-container" style={{ width: `${totalWidth}px` }}>
-                        {/* Grid lines */}
-                        <div className="timeline-grid">
-                            {Array.from({ length: TIME_WINDOW + 1 }).map((_, i) => {
-                                let gridClass = 'grid-line grid-1s';
-                                if (i === TIME_WINDOW) gridClass = 'grid-line grid-cycle-end';
-                                else if (i % 10 === 0) gridClass = 'grid-line grid-10s';
-                                else if (i % 5 === 0) gridClass = 'grid-line grid-5s';
-                                return (
-                                    <div
-                                        key={i}
-                                        className={gridClass}
-                                        style={{ left: `${i * pixelsPerSecond}px` }}
-                                    />
-                                );
-                            })}
-                        </div>
-
-                        {/* Ruler */}
-                        <div className="timeline-ruler">
-                            {Array.from({ length: TIME_WINDOW / 5 + 1 }).map((_, i) => (
-                                <div key={i} className="ruler-tick" style={{ left: `${i * 5 * pixelsPerSecond}px` }}>
-                                    {i * 5}
-                                </div>
-                            ))}
-                            {/* Avancement de l'animation, dans la bande des temps UNIQUEMENT.
-                                L'animation continue de tourner quand on revient sur un plan de
-                                feu, mais le curseur de lecture, lui, appartient à l'onglet
-                                Simulation : sans ce repère, rien n'indiquait qu'elle était
-                                active ni où elle en était du cycle. Hors animation, la barre
-                                n'est pas rendue — pas de trace sur un diagramme à l'arrêt. */}
-                            {playbackTime !== null && (
-                                <div
-                                    className="ruler-playback"
-                                    style={{ width: `${(((playbackTime % TIME_WINDOW) + TIME_WINDOW) % TIME_WINDOW) * pixelsPerSecond}px` }}
-                                    title={tip(`Animation en cours — ${Math.floor(playbackTime)}s / ${TIME_WINDOW}s`)}
-                                />
-                            )}
-                        </div>
-
-                        {/* Rest points (Point de repos) — frozen-cycle bands */}
-                        {simulationResult?.restPoints?.map((rp, idx) => (
-                            <div
-                                key={`rest-${idx}`}
-                                className="rest-point-band"
-                                style={{
-                                    left: `${rp.deb * pixelsPerSecond}px`,
-                                    width: `${rp.duration * pixelsPerSecond}px`,
-                                    height: `${RULER_HEIGHT + 1 + (groups.length * ROW_TOTAL_HEIGHT) + 30}px`
-                                }}
-                                title={tip(`Point de repos — ${rp.duration}s à t=${rp.originalDeb}s`)}
-                            >
-                                <span className="rest-point-label">Repos</span>
-                            </div>
-                        ))}
-
-                        {/* Playhead - Simulation time cursor */}
-                        {simulationCurrentTime !== null && (
-                            <div
-                                className={`simulation-playhead ${isPlayingSimulation ? 'playing' : ''}`}
-                                style={{
-                                    left: `${simulationCurrentTime * pixelsPerSecond}px`,
-                                    height: `${RULER_HEIGHT + 1 + (groups.length * ROW_TOTAL_HEIGHT) + 30}px`
-                                }}
-                            >
-                                <div className="playhead-time">{simulationCurrentTime}s</div>
-                            </div>
-                        )}
+                        <TimelineGridBackground
+                            groups={groups}
+                            isPlayingSimulation={isPlayingSimulation}
+                            pixelsPerSecond={pixelsPerSecond}
+                            playbackTime={playbackTime}
+                            rowTotalHeight={ROW_TOTAL_HEIGHT}
+                            rulerHeight={RULER_HEIGHT}
+                            simulationCurrentTime={simulationCurrentTime}
+                            simulationResult={simulationResult}
+                            timeWindow={TIME_WINDOW}
+                            tooltipsEnabled={tooltipsEnabled}
+                        />
 
                         {/* Rows */}
                         {groups.map((group) => {
@@ -4529,103 +4171,13 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                 )}
             </div>
         </div>
-        {dragState && dragState.deltaSeconds !== undefined && dragState.mouseX !== undefined && dragState.groupId !== undefined && (() => {
-            const ds = dragState.deltaSeconds;
-            let displayValue;
-            if (dragState.type === 'start') {
-                displayValue = ((dragState.initialValue + ds) % cycleLength + cycleLength) % cycleLength;
-            } else {
-                displayValue = ((dragState.initialValue + ds) % cycleLength + cycleLength) % cycleLength;
-            }
-            return (
-                <div style={{
-                    position: 'fixed',
-                    left: dragState.mouseX + 12,
-                    top: dragState.mouseY - 28,
-                    background: '#222',
-                    color: '#4ecdc4',
-                    border: '1px solid #4ecdc4',
-                    borderRadius: '4px',
-                    padding: '2px 6px',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    fontFamily: 'monospace',
-                    pointerEvents: 'none',
-                    zIndex: 9999,
-                    whiteSpace: 'nowrap'
-                }}>
-                    {Math.round(displayValue)}s
-                </div>
-            );
-        })()}
-        {dragState && dragState.showTooltip && dragState.mouseX !== undefined && dragState.currentValue !== undefined && (
-            <div style={{
-                position: 'fixed',
-                left: dragState.mouseX + 12,
-                top: dragState.mouseY - 28,
-                background: '#222',
-                color: '#4ecdc4',
-                border: '1px solid #4ecdc4',
-                borderRadius: '4px',
-                padding: '2px 6px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                fontFamily: 'monospace',
-                pointerEvents: 'none',
-                zIndex: 9999,
-                whiteSpace: 'nowrap'
-            }}>
-                {Math.round(dragState.currentValue)}s
-            </div>
-        )}
-        {actionTooltip && (() => {
-            const action = actionData.find(a => a.id === actionTooltip.actionId);
-            if (!action) return null;
-            const deb = parseInt(action.deb) || 0;
-            const fin = parseInt(action.fin) || 0;
-            // Actions ponctuelles (un seul instant, pas de plage) : on n'affiche
-            // que « seconde N », pas « seconde N à 0 » qui n'a pas de sens.
-            const isPointInTime = action.action === 'Point de repos'
-                || action.action === 'Instant Co' || action.action === 'Instant CO';
-            // Fermeture anticipée : lister les GF cibles (glissement), si renseignés.
-            const glissementGroups = action.action === 'Fermeture anticipée'
-                ? [action.actGf1, action.actGf1Gf2, action.actGf1Gf3, action.actGf1Gf4]
-                    .map(v => (v == null ? '' : v.toString().replace(/[^0-9]/g, '').trim()))
-                    .filter(v => v !== '')
-                    .map(v => `GF${v}`)
-                : [];
-            const joinFr = (arr) => arr.length <= 1
-                ? (arr[0] || '')
-                : `${arr.slice(0, -1).join(', ')} et ${arr[arr.length - 1]}`;
-            const hasMicro = actionTooltip.showMicro && action.micro;
-            return (
-                <div className="action-hover-tooltip" style={{
-                    position: 'fixed',
-                    left: actionTooltip.x + 12,
-                    top: actionTooltip.y + 8,
-                    pointerEvents: 'none',
-                    zIndex: 9999,
-                    maxWidth: '350px'
-                }}>
-                    <div className="action-hover-tooltip-name">{action.action}</div>
-                    <div className="action-hover-tooltip-seconds">{isPointInTime ? `seconde ${deb}` : `seconde ${deb} à ${fin}`}</div>
-                    {glissementGroups.length > 0 && (
-                        <div className="action-hover-tooltip-seconds">glissement sur {joinFr(glissementGroups)}</div>
-                    )}
-                    {hasMicro && (
-                        <div className="action-hover-tooltip-micro">
-                            {tokenizeMicroText(action.micro, microVariableNames).map((tok, i) =>
-                                tok.type === 'keyword'
-                                    ? <span key={i} className="micro-keyword">{tok.text}</span>
-                                    : tok.type === 'bold'
-                                        ? <span key={i} className="micro-bold">{tok.text}</span>
-                                        : tok.text
-                            )}
-                        </div>
-                    )}
-                </div>
-            );
-        })()}
+        <TimelineFloatingOverlays
+            actionData={actionData}
+            actionTooltip={actionTooltip}
+            cycleLength={cycleLength}
+            dragState={dragState}
+            microVariableNames={microVariableNames}
+        />
     </>);
 };
 
