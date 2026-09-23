@@ -397,7 +397,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         e.preventDefault();
         if (startDrag) startDrag(); // Save history once at drag start
 
-        // Store initial values for linked "Début de bande passante" actions (linked to START of green)        let linkedDebutBandeActions = [];
+        // Store initial values for linked "Début de bande passante" actions (linked to START of green)
+        let linkedDebutBandeActions = [];
         if (type === 'start' && actionData) {
             linkedDebutBandeActions = actionData
                 .filter(action => {
@@ -796,7 +797,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     // Get all "Signal aide conduite" actions
     // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
     const signaActions = actionData.filter(action => {
-        if (action.action !== 'Signal aide conduite') return false;        if (action.deb === '' || action.fin === '') return false;
+        if (action.action !== 'Signal aide conduite') return false;
+        if (action.deb === '' || action.fin === '') return false;
         if (simulationFilter && simulationFilter.has(action.id)) return false;
         const deb = parseInt(action.deb) || 0;
         const fin = parseInt(action.fin) || 0;
@@ -1195,7 +1197,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                                             return (
                                                 <React.Fragment>
-                                                    {/* First part: from offset to end of cycle */}                                                    <div
+                                                    {/* First part: from offset to end of cycle */}
+                                                    <div
                                                         className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
                                                         style={{ left: `${offset * pixelsPerSecond}px` }}
                                                     >
@@ -1594,7 +1597,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                                             <div className={`phase-bar ${lucarneOrangeClass}`} style={{ width: `${orangeWidth}px` }}></div>
                                                             <div
                                                                 className="drag-handle drag-handle-end"
-                                                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}                                                                style={{ left: `${greenWidth}px` }}
+                                                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}
+                                                                style={{ left: `${greenWidth}px` }}
 
                                                             />
                                                         </div>
@@ -1993,7 +1997,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             <line
                                                 x1={sourceX}
                                                 y1={sourceY}
-                                                x2={cycleEndX}                                                y2={sourceY + (targetY - sourceY) * ((cycleEndX - sourceX) / (cycleEndX - sourceX + targetX))}
+                                                x2={cycleEndX}
+                                                y2={sourceY + (targetY - sourceY) * ((cycleEndX - sourceX) / (cycleEndX - sourceX + targetX))}
                                                 stroke="#ff0000"
                                                 strokeWidth="1.5"
                                             />
@@ -2393,6 +2398,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         <div
                                             className="action-drag-handle action-drag-handle-end"
                                             onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}
+
                                             style={{ pointerEvents: 'auto' }}
                                         />
                                     </div>
@@ -2791,7 +2797,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             {abrv}
                                         </div>
                                     )}
-                                </React.Fragment>                            );
+                                </React.Fragment>
+                            );
                         })}
 
                         {/* Instant Co arrows - vertical orange arrows */}
@@ -3190,7 +3197,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                                                 style={{ pointerEvents: 'auto' }}
                                             />
-                                        </div>                                        <div
+                                        </div>
+                                        <div
                                             className={`fleche-anticipation-bar ${isHighlighted ? 'highlighted' : ''}`}
                                             style={barStyle(secondPartLeft, secondPartWidth)}
                                         >
@@ -3589,7 +3597,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     top: 0,
                                     left: 0,
                                     pointerEvents: 'none',
-                                    zIndex: 5                                }}
+                                    zIndex: 5
+                                }}
                             >
                                 <defs>
                                     <marker
@@ -3988,6 +3997,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     const fromId = parseInt(fromLucarne.gf);
                                     const fromIndex = groups.findIndex(g => g.id === fromId);
                                     if (fromIndex === -1) return null;
+
                                     const fromLucarneEnd = parseInt(fromLucarne.fin) || 0;
                                     const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
                                     const fromX = fromLucarneEnd * pixelsPerSecond;
