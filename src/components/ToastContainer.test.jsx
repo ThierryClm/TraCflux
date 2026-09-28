@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ToastContainer from './ToastContainer';
 import { getToastPrefs, setToastPref, subscribeToasts, toast } from '../utils/toast';
@@ -13,6 +13,7 @@ beforeEach(() => {
 
 afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
 });
 
 describe('bus de notifications', () => {
@@ -63,6 +64,49 @@ describe('ToastContainer', () => {
         expect(item).toHaveClass('toast-leaving');
         act(() => vi.advanceTimersByTime(250));
         expect(screen.queryByText('Traitement')).toBeNull();
+    });
+
+    it('met le délai en pause au survol puis le reprend avec le temps restant', () => {
+        vi.useFakeTimers();
+        render(<ToastContainer />);
+        act(() => { toast.info('Message à lire'); });
+        const item = screen.getByText('Message à lire').closest('.toast');
+
+        act(() => vi.advanceTimersByTime(1000));
+        fireEvent.mouseEnter(item);
+        act(() => vi.advanceTimersByTime(5000));
+
+        expect(item).not.toHaveClass('toast-leaving');
+        expect(screen.getByText('Message à lire')).toBeInTheDocument();
+
+        fireEvent.mouseLeave(item);
+        act(() => vi.advanceTimersByTime(1999));
+        expect(item).not.toHaveClass('toast-leaving');
+        act(() => vi.advanceTimersByTime(1));
+        expect(item).toHaveClass('toast-leaving');
+        act(() => vi.advanceTimersByTime(250));
+        expect(screen.queryByText('Message à lire')).toBeNull();
+    });
+
+    it('annule aussi la disparition si le survol commence pendant la sortie', () => {
+        vi.useFakeTimers();
+        render(<ToastContainer />);
+        act(() => { toast.info('Message rattrapé'); });
+        const item = screen.getByText('Message rattrapé').closest('.toast');
+
+        act(() => vi.advanceTimersByTime(3000));
+        expect(item).toHaveClass('toast-leaving');
+
+        fireEvent.mouseEnter(item);
+        act(() => vi.advanceTimersByTime(1000));
+        expect(item).not.toHaveClass('toast-leaving');
+        expect(screen.getByText('Message rattrapé')).toBeInTheDocument();
+
+        fireEvent.mouseLeave(item);
+        act(() => vi.advanceTimersByTime(0));
+        expect(item).toHaveClass('toast-leaving');
+        act(() => vi.advanceTimersByTime(250));
+        expect(screen.queryByText('Message rattrapé')).toBeNull();
     });
 
     it('se désabonne et annule ses minuteurs au démontage', () => {
