@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import CustomTooltip from './CustomTooltip';
 import RemarquesEditor from './RemarquesEditor';
 import TimelineFloatingOverlays from './timeline/TimelineFloatingOverlays';
@@ -6,6 +6,8 @@ import TimelineGridBackground, { TimelineEmptyState } from './timeline/TimelineG
 import TimelineHeader from './timeline/TimelineHeader';
 import TimelineSidebar from './timeline/TimelineSidebar';
 import { createTimelineGeometry } from './timeline/timelineGeometry';
+import { createTimelineSimulation } from './timeline/timelineSimulation';
+import { useTimelineDrag } from './timeline/useTimelineDrag';
 import { useMicroVariables } from './MicroVariablesProvider';
 import './TimelineDiagram.css';
 
@@ -17,8 +19,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     // Used to suppress the action tooltip when hovering actions via the ActionTable rows
     const [isMouseInDiagram, setIsMouseInDiagram] = useState(false);
 
-    // Drag state - supports both group bars and action overlays
-    const [dragState, setDragState] = useState(null);
     // Hovered group id for showing dependencies only for that group
     const [hoveredGroupIdLocal, setHoveredGroupIdLocal] = useState(null);
     // Use local state for internal logic, but also call prop setter if provided
@@ -114,474 +114,39 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         }
     }, [updateGroupParams]);
 
-    // dragState = { groupId, type: 'start' | 'end', initialMouseX, initialValue }
-    // OR dragState = { actionId, field: 'deb' | 'fin', initialMouseX, initialValue }
-    // Use simulated cycle length when in simulation mode
-    const effectiveCycleLength = simulationResult ? simulationResult.simulatedCycleLength : cycleLength;
-    const TIME_WINDOW = effectiveCycleLength || 100; // Use cycle length as time window
+    const {
+        effectiveCycleLength,
+        getShiftedActionPosition,
+        getSimulatedGroup
+    } = createTimelineSimulation({
+        groups,
+        cycleLength,
+        simulationResult
+    });
 
-    // Determine total width in pixels
+    const TIME_WINDOW = effectiveCycleLength || 100;
     const totalWidth = TIME_WINDOW * pixelsPerSecond;
-
-    // Helper to get simulated group data
-    const getSimulatedGroup = (groupId) => {
-        if (!simulationResult) return null;
-        return simulationResult.simulatedGroups.find(g => g.id === groupId);
-    };
-
-    // Helper to get the shift amount for a group (how much its offset changed)
-    // Returns the difference: originalOffset - simulatedOffset (positive = shifted left)
-    const getGroupShift = (groupId) => {
-        if (!simulationResult) return 0;
-        const originalGroup = groups.find(g => g.id === parseInt(groupId));
-        const simGroup = simulationResult.simulatedGroups.find(g => g.id === parseInt(groupId));
-        if (!originalGroup || !simGroup) return 0;
-
-        // Calculate shift (positive = moved left/earlier)
-        const cycle = simulationResult.simulatedCycleLength || cycleLength;
-        let shift = originalGroup.offset - simGroup.simulatedOffset;
-
-        // Handle wrap-around: normalize to [0, cycle)
-        shift = ((shift % cycle) + cycle) % cycle;
-
-        // If shift is more than half the cycle, it's actually a shift to the right
-        // For "Fermeture anticipée" glissement, we want left shifts only
-        if (shift > cycle / 2) {
-            return 0; // No left shift
-        }
-
-        return shift;
-    };
-
-    // Helper to get the END shift for a group (how much its green end changed)
-    // Returns the difference: originalGreenEnd - simulatedGreenEnd (positive = end moved left)
-    const getGroupEndShift = (groupId) => {
-        if (!simulationResult) return 0;
-        const originalGroup = groups.find(g => g.id === parseInt(groupId));
-        const simGroup = simulationResult.simulatedGroups.find(g => g.id === parseInt(groupId));
-        if (!originalGroup || !simGroup) return 0;
-
-        const cycle = simulationResult.simulatedCycleLength || cycleLength;
-        const originalEnd = (originalGroup.offset + originalGroup.durations.green) % cycleLength;
-        const simulatedEnd = (simGroup.simulatedOffset + simGroup.simulatedGreen) % cycle;
-
-        let shift = originalEnd - simulatedEnd;
-        shift = ((shift % cycle) + cycle) % cycle;
-        if (shift > cycle / 2) return 0;
-        return shift;
-    };
-
-    // Helper to calculate shifted position for action overlays
-    // Returns adjusted deb/fin values after applying time shifts
-    // Also returns hidden=true if the action is within a removed period
-    // actionType: optional action type - "Seconde lucarne" is NOT shifted by group glissement
-    const getShiftedActionPosition = (deb, fin, groupId = null, actionType = null, actionPlage = null, actionId = null) => {
-        let hidden = false;
-        let totalShift = 0;
-        let adjustedDeb = deb;
-        let adjustedFin = fin;
-        let fullShiftOnDeb = 0;
-        let fullShiftOnFin = 0;
-        const isAvOrEscamotage = actionType === 'Escamotage de phase' || actionType === 'Adaptatif vertical';
-
-        // For full Adaptatif vertical (applies to all groups), apply special logic:
-        // - If BOTH deb and fin are inside [avDeb, avFin] → hidden = true
-        // - If only deb is inside → clamp deb to avDeb
-        // - If only fin is inside → clamp fin to avDeb
-        // - If deb OR fin is >= avFin → shift that value left by adaptatif width
-        // - Wrap-around bars (deb > fin) are handled naturally: each value is shifted independently
-        // - For 'Escamotage de phase' and 'Adaptatif vertical' actions, only apply shifting (not hiding/clamping)
-        if (simulationResult?.timeShifts?.length) {
-            const cycle = effectiveCycleLength || cycleLength;
-
-            simulationResult.timeShifts.forEach(shift => {
-                if (shift.amount > 0 && (!shift.isPartial || isAvOrEscamotage)) {
-                    // Only process non-partial shifts for regular actions
-                    // For AV/EP overlays, also process partial shifts (from other AV with plage)
-                    if (shift.isPartial && !isAvOrEscamotage) return;
-
-                    // AV/EP overlays: skip only own timeShift (not shifted by itself)
-                    if (isAvOrEscamotage && actionId && shift.actionId === actionId) return;
-
-                    // Full or partial contraction zone
-                    const avDeb = shift.from - shift.amount;
-                    const avFin = shift.from;
-                    const avWidth = shift.amount;
-
-                    // For Adaptatif vertical and Escamotage de phase, skip hiding/clamping
-                    if (!isAvOrEscamotage) {
-                        const debInside = adjustedDeb >= avDeb && adjustedDeb < avFin;
-                        const finInside = adjustedFin > avDeb && adjustedFin <= avFin;
-
-                        if (debInside && finInside) {
-                            // Both deb and fin are inside the adaptatif zone → hide the bar
-                            hidden = true;
-                        } else if (debInside) {
-                            // Only deb is inside → clamp to avDeb
-                            adjustedDeb = avDeb;
-                        } else if (finInside) {
-                            // Only fin is inside → clamp to avDeb
-                            adjustedFin = avDeb;
-                        }
-                    }
-
-                    // Shift values that are after the contraction zone (applies to ALL action types)
-                    // Track how much was applied on deb to avoid double-counting with getGroupShift later
-                    if (adjustedDeb >= avFin) {
-                        adjustedDeb -= avWidth;
-                        fullShiftOnDeb += avWidth;
-                    }
-                    if (adjustedFin >= avFin) {
-                        adjustedFin -= avWidth;
-                        fullShiftOnFin += avWidth;
-                    }
-
-                }
-            });
-        }
-
-        // Compute Point de repos expansion shifts separately, applied at the very end
-        // so they don't interact with the totalShift / groupShift logic below.
-        // Rule: any value (deb or fin) >= rp.originalDeb is shifted by +rp.duration.
-        // This applies uniformly to all action types — including Fermeture anticipée
-        // and group-bound actions whose group offset may also have shifted.
-        let restShiftDeb = 0;
-        let restShiftFin = 0;
-        if (simulationResult?.restPoints?.length) {
-            simulationResult.restPoints.forEach(rp => {
-                if (deb >= rp.originalDeb) restShiftDeb += rp.duration;
-                if (fin >= rp.originalDeb) restShiftFin += rp.duration;
-            });
-        }
-
-        // Check if action falls within any removed period (for Escamotage de phase)
-        // NOTE: Use ORIGINAL deb/fin values (before timeShift adjustments) since removedPeriods
-        // are in the original timeline coordinate system
-        // NOTE: 'Escamotage de phase' is NOT hidden by removed periods (it IS the contraction)
-        // NOTE: 'Adaptatif vertical' CAN be hidden by EP-sourced removed periods (AV inside EP zone)
-        // NOTE: Micro-regulation actions (Priorité piétons, Flèche anticipation, Signal aide conduite)
-        // are shifted, not hidden
-        if (simulationResult?.removedPeriods?.length && actionType !== 'Escamotage de phase' && actionType !== 'Priorité piétons' && actionType !== 'Flèche d\'anticipation' && actionType !== 'Signal aide conduite') {
-            for (const period of simulationResult.removedPeriods) {
-                // AV overlays can only be hidden by EP-sourced periods
-                if (actionType === 'Adaptatif vertical' && period.source !== 'Escamotage de phase') continue;
-                // Action is hidden only if BOTH original deb AND fin are inside the removed period
-                const debInPeriod = deb >= period.deb && deb < period.fin;
-                const finInPeriod = fin > period.deb && fin <= period.fin;
-                if (debInPeriod && finInPeriod) {
-                    hidden = true;
-                    break;
-                }
-            }
-        }
-
-        // For actions with a groupId, use the actual group shift (getGroupShift) which already
-        // accounts for Escamotage de phase, Adaptatif vertical (full and partial) via simulatedOffset.
-        // For actions WITHOUT a groupId, use timeShifts instead.
-        // This avoids double-counting when both mechanisms would apply the same shift.
-        // NOTE: "Seconde lucarne" actions are NOT shifted by group glissement (from Fermeture anticipée),
-        //       but SHOULD be shifted by Escamotage de phase timeShifts.
-        // NOTE: For full Adaptatif vertical, shifts are already applied above, so skip here
-        if (groupId && simulationResult && actionType !== 'Seconde lucarne' && actionType !== 'Adaptatif vertical' && actionType !== 'Escamotage de phase') {
-            // Determine if this action is closer to the START or END of the group's green
-            // For actions near the END, use the end shift (which may be 0 if only start moved via glissement)
-            const originalGroup = groups.find(g => g.id === parseInt(groupId));
-            let useEndShift = false;
-            if (originalGroup && actionType === 'Fermeture anticipée') {
-                const cycle = simulationResult.simulatedCycleLength || cycleLength;
-                const greenStart = originalGroup.offset;
-                const greenEnd = (originalGroup.offset + originalGroup.durations.green) % cycleLength;
-                const actionMid = (adjustedDeb + ((adjustedFin > adjustedDeb ? adjustedFin - adjustedDeb : 0) / 2)) % cycle;
-                const circDist = (a, b) => { const d = Math.abs(a - b); return Math.min(d, cycle - d); };
-                useEndShift = circDist(actionMid, greenEnd) < circDist(actionMid, greenStart);
-            }
-
-            const groupShift = useEndShift ? getGroupEndShift(groupId) : getGroupShift(groupId);
-            if (groupShift > 0) {
-                // Subtract shift already applied by the full shift logic above to avoid double-counting
-                // (Escamotage de phase and full Adaptatif vertical shift deb in both places)
-                totalShift = Math.max(0, groupShift - (useEndShift ? fullShiftOnFin : fullShiftOnDeb));
-            }
-            // Note: No need to add partial Adaptatif vertical shifts here - getGroupShift() already
-            // includes them since simulatedOffset is modified for groups in the plage range.
-        } else if (simulationResult?.timeShifts?.length) {
-            // For actions without a groupId, OR for "Seconde lucarne" (which has groupId but
-            // should NOT use getGroupShift), use timeShifts directly for Escamotage de phase shifts
-            simulationResult.timeShifts.forEach(shift => {
-                if (adjustedDeb >= shift.from) {
-                    if (!shift.isPartial) {
-                        // Full shift (Escamotage de phase) - but NOT Adaptatif vertical (handled above)
-                        // Check if this is an Escamotage de phase shift vs Adaptatif vertical
-                        // Adaptatif vertical shifts have amount > 0 and are already handled above
-                        // This section is for Escamotage de phase only
-                    } else if (groupId) {
-                        // Partial shift (Adaptatif vertical) - check if group is in plage range
-                        const gId = parseInt(groupId);
-                        if (gId >= shift.plage1 && gId <= shift.plage2) {
-                            totalShift += shift.amount;
-                        }
-                    } else {
-                        // Partial shift for actions without groupId
-                        // Only shift if the action's plage is entirely within the shift's plage range
-                        // Actions without plage (e.g., Escamotage de phase) or with plage extending
-                        // outside the shift's plage are NOT shifted (independent diagrams)
-                        if (actionPlage &&
-                            actionPlage.plage1 >= shift.plage1 &&
-                            actionPlage.plage2 <= shift.plage2) {
-                            totalShift += shift.amount;
-                        }
-                    }
-                }
-            });
-        }
-
-        // Apply remaining shift with wrap-around handling (for group shifts and partial Adaptatif vertical)
-        const cycle = effectiveCycleLength || cycleLength;
-
-        // AV/EP overlays: no modulo — they are time zones, not phase bars
-        // Their positions are already correctly adjusted by timeShifts above
-        if (isAvOrEscamotage) {
-            return {
-                deb: adjustedDeb - totalShift + restShiftDeb,
-                fin: adjustedFin - totalShift + restShiftFin,
-                hidden
-            };
-        }
-
-        const shiftedDeb = ((adjustedDeb - totalShift) % cycle + cycle) % cycle + restShiftDeb;
-
-        // If original fin equals cycle, don't apply modulo (keep at cycle position)
-        const finAfterShift = adjustedFin - totalShift;
-        const shiftedFin = ((fin === cycle)
-            ? finAfterShift
-            : ((finAfterShift % cycle + cycle) % cycle)) + restShiftFin;
-
-        return { deb: shiftedDeb, fin: shiftedFin, hidden };
-    };
-
-    // Handlers (Duplicated from GroupTable logic, could be extracted to hook)
-    const handleStartChange = (id, value) => {
-        // When changing Deb, keep Fin fixed and update duration
-        const group = groups.find(g => g.id === id);
-        if (!group) return;
-
-        const newStart = parseInt(value) || 0;
-        const oldStart = group.offset % cycleLength;
-        const oldDuration = group.durations.green;
-        const oldEnd = (oldStart + oldDuration) % cycleLength;
-
-        // Calculate new duration to keep Fin fixed
-        let newDuration = oldEnd - newStart;
-        if (newDuration <= 0) newDuration += cycleLength;
-
-        updateGroupParams(id, {
-            offset: newStart,
-            durations: { green: Math.max(1, newDuration) }
-        });
-    };
-
-    const handleDurationChange = (id, value) => {
-        updateGroupParams(id, { durations: { green: parseInt(value) || 0 } });
-    };
-
-    const handleEndChange = (id, endValue, startValue) => {
-        let duration = (parseInt(endValue) || 0) - startValue;
-        if (duration < 0) duration += cycleLength;
-        updateGroupParams(id, { durations: { green: Math.max(0, duration) } });
-    };
-
-    // Drag handlers for resizing phase bars
-    const handleDragStart = useCallback((e, groupId, type, currentValue) => {
-        if (readOnly) return; // miroir de présentation : pas d'édition
-        e.stopPropagation();
-        e.preventDefault();
-        if (startDrag) startDrag(); // Save history once at drag start
-
-        // Store initial values for linked "Début de bande passante" actions (linked to START of green)
-        let linkedDebutBandeActions = [];
-        if (type === 'start' && actionData) {
-            linkedDebutBandeActions = actionData
-                .filter(action => {
-                    const rowGf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                    return rowGf === groupId &&
-                        action.action === 'Début de bande passante' &&
-                        action.deb !== '';
-                })
-                .map(action => ({
-                    id: action.id,
-                    initialDeb: parseInt(action.deb) || 0,
-                    initialFin: action.fin !== '' ? parseInt(action.fin) || 0 : null
-                }));
-        }
-
-        // Store initial values for linked "Fin de bande passante" actions (linked to END of green)
-        let linkedFinBandeActions = [];
-        if (type === 'end' && actionData) {
-            linkedFinBandeActions = actionData
-                .filter(action => {
-                    const rowGf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                    return rowGf === groupId &&
-                        action.action === 'Fin de bande passante' &&
-                        action.deb !== '';
-                })
-                .map(action => ({
-                    id: action.id,
-                    initialDeb: parseInt(action.deb) || 0,
-                    initialFin: action.fin !== '' ? parseInt(action.fin) || 0 : null
-                }));
-        }
-
-        setDragState({
-            groupId,
-            type, // 'start' or 'end'
-            initialMouseX: e.clientX,
-            initialValue: currentValue,
-            linkedDebutBandeActions, // Store initial values of linked "Début de bande passante" actions
-            linkedFinBandeActions // Store initial values of linked "Fin de bande passante" actions
-        });
-    }, [startDrag, actionData]);
-
-    // Drag handler for action overlays
-    const handleActionDragStart = useCallback((e, actionId, field, currentValue) => {
-        if (readOnly) return; // miroir de présentation : pas d'édition
-        e.stopPropagation();
-        e.preventDefault();
-        if (startDrag) startDrag(); // Save history once at drag start
-
-        // For "Début de bande passante" and "Fin de bande passante", store initial fin value when dragging deb
-        const action = actionData.find(a => a.id === actionId);
-        let initialFinValue = null;
-        if (action &&
-            (action.action === 'Début de bande passante' || action.action === 'Fin de bande passante') &&
-            field === 'deb' &&
-            action.fin !== '') {
-            initialFinValue = parseInt(action.fin) || 0;
-        }
-
-        // Show floating position tooltip for vertical-arrow actions only
-        const tooltipActions = ['Point de repos', 'Synchro BTS', 'Instant CO'];
-        const showTooltip = action && tooltipActions.includes(action.action);
-
-        setDragState({
-            actionId,
-            field, // 'deb' or 'fin'
-            initialMouseX: e.clientX,
-            initialValue: parseInt(currentValue) || 0,
-            initialFinValue, // Store initial fin value for bande passante
-            showTooltip
-        });
-    }, [startDrag, actionData]);
-
-    // During drag: action overlays update in real-time, group bars only visually
-    const handleDragMove = useCallback((e) => {
-        if (!dragState) return;
-        const deltaX = e.clientX - dragState.initialMouseX;
-        const deltaSeconds = Math.round(deltaX / pixelsPerSecond);
-
-        // Action overlays (AV, EP, FA, OA): update in real-time
-        if (dragState.actionId !== undefined && updateActionRow) {
-            let newValue = dragState.initialValue + deltaSeconds;
-            newValue = ((newValue % cycleLength) + cycleLength) % cycleLength;
-
-            if (dragState.initialFinValue !== null && dragState.initialFinValue !== undefined) {
-                const newFin = ((dragState.initialFinValue + deltaSeconds) % cycleLength + cycleLength) % cycleLength;
-                updateActionRow(dragState.actionId, 'deb', newValue.toString());
-                updateActionRow(dragState.actionId, 'fin', newFin.toString());
-            } else {
-                updateActionRow(dragState.actionId, dragState.field, newValue.toString());
-            }
-            // Also track mouse position + new value for the optional floating tooltip
-            setDragState(prev => prev ? { ...prev, deltaSeconds, mouseX: e.clientX, mouseY: e.clientY, currentValue: newValue } : null);
-            return;
-        }
-
-        // Group bar drag: only update visual delta (no state update until mouseup)
-        setDragState(prev => prev ? { ...prev, deltaSeconds, mouseX: e.clientX, mouseY: e.clientY } : null);
-    }, [dragState, pixelsPerSecond, cycleLength, updateActionRow]);
-
-    // Apply group bar changes on mouseup (actions already applied in real-time)
-    const handleDragEnd = useCallback(() => {
-        if (dragState && dragState.deltaSeconds !== undefined && dragState.deltaSeconds !== 0) {
-            const deltaSeconds = dragState.deltaSeconds;
-
-            // Action overlays already updated in real-time — skip
-            if (dragState.actionId !== undefined) {
-                // Nothing to do
-            }
-            // Handle group bar drag — apply final values
-            else if (dragState.type === 'start') {
-                let newOffset = dragState.initialValue + deltaSeconds;
-                newOffset = ((newOffset % cycleLength) + cycleLength) % cycleLength;
-
-                const group = groups.find(g => g.id === dragState.groupId);
-                if (group) {
-                    const oldEnd = (dragState.initialValue + group.durations.green) % cycleLength;
-                    let newDuration = oldEnd - newOffset;
-                    if (newDuration <= 0) newDuration += cycleLength;
-                    if (newDuration > 0 && newDuration <= cycleLength) {
-                        updateGroupParams(dragState.groupId, {
-                            offset: newOffset,
-                            durations: { green: newDuration }
-                        });
-
-                        if (dragState.linkedDebutBandeActions && dragState.linkedDebutBandeActions.length > 0 && updateActionRow) {
-                            dragState.linkedDebutBandeActions.forEach(linkedAction => {
-                                const newDeb = ((linkedAction.initialDeb + deltaSeconds) % cycleLength + cycleLength) % cycleLength;
-                                updateActionRow(linkedAction.id, 'deb', newDeb.toString());
-                                if (linkedAction.initialFin !== null) {
-                                    const newFin = ((linkedAction.initialFin + deltaSeconds) % cycleLength + cycleLength) % cycleLength;
-                                    updateActionRow(linkedAction.id, 'fin', newFin.toString());
-                                }
-                            });
-                        }
-                    }
-                }
-            } else if (dragState.type === 'end') {
-                const group = groups.find(g => g.id === dragState.groupId);
-                if (group) {
-                    const offset = group.offset % cycleLength;
-                    let newEnd = dragState.initialValue + deltaSeconds;
-                    newEnd = ((newEnd % cycleLength) + cycleLength) % cycleLength;
-                    let newDuration = newEnd - offset;
-                    if (newDuration <= 0) newDuration += cycleLength;
-                    if (newDuration > 0 && newDuration <= cycleLength) {
-                        updateGroupParams(dragState.groupId, { durations: { green: newDuration } });
-
-                        if (dragState.linkedFinBandeActions && dragState.linkedFinBandeActions.length > 0 && updateActionRow) {
-                            dragState.linkedFinBandeActions.forEach(linkedAction => {
-                                const newDeb = ((linkedAction.initialDeb + deltaSeconds) % cycleLength + cycleLength) % cycleLength;
-                                updateActionRow(linkedAction.id, 'deb', newDeb.toString());
-                                if (linkedAction.initialFin !== null) {
-                                    const newFin = ((linkedAction.initialFin + deltaSeconds) % cycleLength + cycleLength) % cycleLength;
-                                    updateActionRow(linkedAction.id, 'fin', newFin.toString());
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        if (endDrag) endDrag();
-        setDragState(null);
-    }, [dragState, endDrag, cycleLength, groups, updateGroupParams, updateActionRow]);
-
-    // Global mouse event listeners for drag
-    useEffect(() => {
-        if (dragState) {
-            const handleMouseMove = (e) => handleDragMove(e);
-            const handleMouseUp = () => handleDragEnd();
-
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-
-            return () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            };
-        }
-    }, [dragState, handleDragMove, handleDragEnd]);
-
+    const {
+        activeConflicts,
+        dragState,
+        handleActionDragStart,
+        handleDragStart,
+        handleEndChange,
+        handleStartChange
+    } = useTimelineDrag({
+        actionData,
+        conflictMatrix,
+        conflicts,
+        cycleLength,
+        endDrag,
+        groups,
+        onDragConflicts,
+        pixelsPerSecond,
+        readOnly,
+        startDrag,
+        updateActionRow,
+        updateGroupParams
+    });
     // Helper to get actions for a specific group
     // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
     const getActionsForGroup = (groupId) => {
@@ -591,69 +156,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                 (!simulationFilter || !simulationFilter.has(action.id));
         });
     };
-
-    // Recalculate conflicts in real-time during drag (simplified: intergreen + overlap only)
-    const dragConflicts = useMemo(() => {
-        if (!dragState || dragState.deltaSeconds === undefined || dragState.deltaSeconds === 0) return null;
-        if (!dragState.groupId) return null; // Only for group drags
-
-        const ds = dragState.deltaSeconds;
-        const dragGroupId = dragState.groupId;
-        const list = [];
-
-        // Build virtual groups with drag offset applied
-        const getVirtualOffset = (g) => {
-            if (g.id !== dragGroupId) return g.offset % cycleLength;
-            if (dragState.type === 'start') {
-                return ((dragState.initialValue + ds) % cycleLength + cycleLength) % cycleLength;
-            }
-            return g.offset % cycleLength;
-        };
-        const getVirtualGreen = (g) => {
-            if (g.id !== dragGroupId) return g.durations.green;
-            if (dragState.type === 'start') {
-                const newOffset = ((dragState.initialValue + ds) % cycleLength + cycleLength) % cycleLength;
-                const oldEnd = (dragState.initialValue + g.durations.green) % cycleLength;
-                let dur = oldEnd - newOffset;
-                if (dur <= 0) dur += cycleLength;
-                return (dur > 0 && dur <= cycleLength) ? dur : g.durations.green;
-            }
-            if (dragState.type === 'end') {
-                let newEnd = ((dragState.initialValue + ds) % cycleLength + cycleLength) % cycleLength;
-                const offset = g.offset % cycleLength;
-                let dur = newEnd - offset;
-                if (dur <= 0) dur += cycleLength;
-                return (dur > 0 && dur <= cycleLength) ? dur : g.durations.green;
-            }
-            return g.durations.green;
-        };
-
-        for (let from = 0; from < groups.length; from++) {
-            if (!conflictMatrix[from]) continue;
-            for (let to = 0; to < groups.length; to++) {
-                const minGap = conflictMatrix[from][to];
-                if ((minGap === '' || minGap === undefined || minGap === null) || from === to) continue;
-
-                const gFrom = groups[from], gTo = groups[to];
-                const endA = (getVirtualOffset(gFrom) + getVirtualGreen(gFrom)) % cycleLength;
-                const startB = getVirtualOffset(gTo);
-                let distance = (startB - endA + cycleLength) % cycleLength;
-
-                if (distance < minGap) {
-                    list.push({ from: gFrom.id, to: gTo.id, required: minGap, actual: distance, type: 'intergreen' });
-                }
-            }
-        }
-        return list;
-    }, [dragState, groups, conflictMatrix, cycleLength]);
-
-    // Use drag conflicts when dragging, otherwise use prop conflicts
-    const activeConflicts = dragConflicts || conflicts;
-
-    // Notify parent of drag conflicts for list/counter display
-    useEffect(() => {
-        if (onDragConflicts) onDragConflicts(dragConflicts);
-    }, [dragConflicts, onDragConflicts]);
 
     // Get SELECTED "Escamotage de phase" actions (for hiding overlays and arrows within their range)
     const selectedEscamotageDePhase = simulationFilter ? actionData.filter(action =>
