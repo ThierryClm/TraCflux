@@ -132,6 +132,16 @@ export default function SupportDialogs({ model }) {
                                 github.com/ThierryClm/TraCflux
                             </a>
                         </div>
+                        <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #444' }}>
+                            <strong style={{ color: '#aaa' }}>Confidentialité</strong>
+                            <div style={{ marginTop: '6px', maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto' }}>
+                                Les données de vos projets restent sur votre ordinateur et ne sont jamais
+                                envoyées par la mesure d’audience. Sur tracflux.com uniquement, une mesure
+                                agrégée des ouvertures, des performances et des sources de visite est réalisée
+                                avec Cloudflare Web Analytics, sans cookie ni identifiant persistant. Elle est
+                                désactivée lorsque le navigateur active Do Not Track ou Global Privacy Control.
+                            </div>
+                        </div>
                     </div>
                 </div>
             </Modal>

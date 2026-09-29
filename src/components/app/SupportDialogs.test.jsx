@@ -81,6 +81,15 @@ describe('SupportDialogs', () => {
         expect(screen.getByText('Aide diagramme')).toBeInTheDocument();
     });
 
+    it('explique la mesure d’audience sans collecte des projets', () => {
+        render(<SupportDialogs model={buildModel({ aboutModal: true })} />);
+
+        expect(screen.getByText('Confidentialité')).toBeInTheDocument();
+        expect(screen.getByText(/Les données de vos projets restent sur votre ordinateur/)).toBeInTheDocument();
+        expect(screen.getByText(/sans cookie ni identifiant persistant/)).toBeInTheDocument();
+        expect(screen.getByText(/Do Not Track ou Global Privacy Control/)).toBeInTheDocument();
+    });
+
     it('construit et télécharge les deux formats de diagnostic', () => {
         const model = buildModel({ diagnosticModal: true });
         render(<SupportDialogs model={model} />);

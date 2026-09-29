@@ -46,6 +46,10 @@ jobs:
 
       - name: Production build
         run: npm run build
+        env:
+          # Identifiant public du site Cloudflare Web Analytics. Le code ne
+          # charge le beacon que sur tracflux.com et respecte DNT/GPC.
+          VITE_CLOUDFLARE_ANALYTICS_TOKEN: ${{ vars.CLOUDFLARE_ANALYTICS_TOKEN }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v6

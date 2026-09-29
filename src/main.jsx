@@ -5,10 +5,12 @@ import GreenWavePage from './GreenWavePage.jsx'
 import { ConfirmProvider } from './components/ConfirmProvider'
 import { MicroVariablesProvider } from './components/MicroVariablesProvider.jsx'
 import ReloadPrompt from './components/ReloadPrompt.jsx'
+import { initPrivacyFriendlyAnalytics } from './utils/analytics'
 import { installErrorInterceptor } from './utils/errorInterceptor'
 import './index.css'
 
 installErrorInterceptor();
+initPrivacyFriendlyAnalytics();
 
 // Check URL parameters to decide which component to render
 const urlParams = new URLSearchParams(window.location.search);
