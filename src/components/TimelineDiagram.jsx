@@ -1,6 +1,779 @@
-[earlier output was discarded at the retention cap and cannot be recovered]
+import React, { useRef, useState, useCallback, useEffect } from 'react';
+import CustomTooltip from './CustomTooltip';
+import RemarquesEditor from './RemarquesEditor';
+import TimelineFloatingOverlays from './timeline/TimelineFloatingOverlays';
+import TimelineGridBackground, { TimelineEmptyState } from './timeline/TimelineGridBackground';
+import TimelineHeader from './timeline/TimelineHeader';
+import TimelineSidebar from './timeline/TimelineSidebar';
+import { createTimelineGeometry } from './timeline/timelineGeometry';
+import { createTimelineSimulation } from './timeline/timelineSimulation';
+import { useTimelineDrag } from './timeline/useTimelineDrag';
+import { useMicroVariables } from './MicroVariablesProvider';
+import './TimelineDiagram.css';
 
-className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
+const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }) => {
+    const tip = (text) => tooltipsEnabled ? text : undefined;
+    const { names: microVariableNames } = useMicroVariables();
+    const containerRef = useRef(null);
+    // Whether the mouse is currently over the diagram container (not the action table)
+    // Used to suppress the action tooltip when hovering actions via the ActionTable rows
+    const [isMouseInDiagram, setIsMouseInDiagram] = useState(false);
+
+    // Hovered group id for showing dependencies only for that group
+    const [hoveredGroupIdLocal, setHoveredGroupIdLocal] = useState(null);
+    // Use local state for internal logic, but also call prop setter if provided
+    const hoveredGroupId = hoveredGroupIdLocal;
+    const setHoveredGroupId = useCallback((id) => {
+        setHoveredGroupIdLocal(id);
+        if (setHoveredGroupIdProp) {
+            setHoveredGroupIdProp(id);
+        }
+    }, [setHoveredGroupIdProp]);
+    // Action tooltip: info at 2s + micro condition at 4s
+    const [actionTooltip, setActionTooltip] = useState(null); // { actionId, showMicro, x, y }
+    const tooltipTimer1Ref = useRef(null);
+    const tooltipTimer2Ref = useRef(null);
+    const actionTooltipMouseRef = useRef({ x: 0, y: 0 });
+
+    useEffect(() => {
+        if (tooltipTimer1Ref.current) { clearTimeout(tooltipTimer1Ref.current); tooltipTimer1Ref.current = null; }
+        if (tooltipTimer2Ref.current) { clearTimeout(tooltipTimer2Ref.current); tooltipTimer2Ref.current = null; }
+        setActionTooltip(null);
+
+        // Only show the tooltip when the mouse is in the diagram,
+        // not when the hover comes from the ActionTable (to avoid redundancy with the micro field)
+        if (!hoveredActionId || !isMouseInDiagram) return;
+
+        const action = actionData.find(a => a.id === hoveredActionId);
+        if (!action) return;
+
+        // Capture mouse position at hover start (fixed top-left corner)
+        const pos = { ...actionTooltipMouseRef.current };
+
+        // After 0.5s: show tooltip with action name + seconds
+        tooltipTimer1Ref.current = setTimeout(() => {
+            setActionTooltip({ actionId: hoveredActionId, showMicro: false, x: pos.x, y: pos.y });
+        }, 500);
+
+        // After 3s: enrich with micro text if enabled and available
+        if (showMicroOnHover && action.micro) {
+            tooltipTimer2Ref.current = setTimeout(() => {
+                setActionTooltip(prev => prev && prev.actionId === hoveredActionId ? { ...prev, showMicro: true } : prev);
+            }, 3000);
+        }
+
+        return () => {
+            if (tooltipTimer1Ref.current) { clearTimeout(tooltipTimer1Ref.current); tooltipTimer1Ref.current = null; }
+            if (tooltipTimer2Ref.current) { clearTimeout(tooltipTimer2Ref.current); tooltipTimer2Ref.current = null; }
+        };
+    }, [hoveredActionId, showMicroOnHover, actionData, isMouseInDiagram]);
+
+    // Position du curseur, pour poser l'infobulle.
+    //
+    // Relevée par React sur le conteneur lui-même, et non par un écouteur sur
+    // `document` : ce composant est aussi rendu dans une fenêtre détachée, où
+    // `document` désigne encore la fenêtre principale. L'écouteur s'y posait
+    // donc sur le mauvais document — position jamais mise à jour, et surtout
+    // aucune trace du survol dans la fenêtre où se trouvait réellement le
+    // curseur. Passer par l'événement React supprime la question : il est
+    // délivré dans la fenêtre qui porte le diagramme, quelle qu'elle soit.
+    const suivreCurseur = useCallback((e) => {
+        actionTooltipMouseRef.current = { x: e.clientX, y: e.clientY };
+        // Filet : si un re-rendu a avalé le mouseenter, le premier mouvement
+        // rétablit l'état. Sans lui, l'infobulle restait muette dans la
+        // fenêtre détachée alors que le surlignage, lui, fonctionnait.
+        setIsMouseInDiagram(true);
+    }, []);
+
+    // Phase flag tooltip (aiguillage/escamotage)
+    const [phaseFlagTooltipId, setPhaseFlagTooltipId] = useState(null);
+    const phaseFlagTimerRef = useRef(null);
+
+    const handleNameMouseEnter = useCallback((groupId) => {
+        phaseFlagTimerRef.current = setTimeout(() => {
+            setPhaseFlagTooltipId(groupId);
+        }, 5000);
+    }, []);
+
+    const handleNameMouseLeave = useCallback(() => {
+        if (phaseFlagTimerRef.current) {
+            clearTimeout(phaseFlagTimerRef.current);
+            phaseFlagTimerRef.current = null;
+        }
+        setPhaseFlagTooltipId(null);
+    }, []);
+
+    // Handle Alt+A / Alt+E to toggle phaseFlag
+    const handlePhaseFlagKeyDown = useCallback((e, groupId, currentFlag) => {
+        if (e.altKey && (e.key === 'a' || e.key === 'A')) {
+            e.preventDefault();
+            updateGroupParams(groupId, { phaseFlag: currentFlag === 'a' ? '' : 'a' });
+        } else if (e.altKey && (e.key === 'e' || e.key === 'E')) {
+            e.preventDefault();
+            updateGroupParams(groupId, { phaseFlag: currentFlag === 'e' ? '' : 'e' });
+        }
+    }, [updateGroupParams]);
+
+    const {
+        effectiveCycleLength,
+        getShiftedActionPosition,
+        getSimulatedGroup
+    } = createTimelineSimulation({
+        groups,
+        cycleLength,
+        simulationResult
+    });
+
+    const TIME_WINDOW = effectiveCycleLength || 100;
+    const totalWidth = TIME_WINDOW * pixelsPerSecond;
+    const {
+        activeConflicts,
+        dragState,
+        handleActionDragStart,
+        handleDragStart,
+        handleEndChange,
+        handleStartChange
+    } = useTimelineDrag({
+        actionData,
+        conflictMatrix,
+        conflicts,
+        cycleLength,
+        endDrag,
+        groups,
+        onDragConflicts,
+        pixelsPerSecond,
+        readOnly,
+        startDrag,
+        updateActionRow,
+        updateGroupParams
+    });
+    // Helper to get actions for a specific group
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    const getActionsForGroup = (groupId) => {
+        return actionData.filter(action => {
+            const gf = action.gf?.toString().replace(/[Gg]/g, '').trim();
+            return gf === groupId.toString() && action.deb !== '' && action.fin !== '' &&
+                (!simulationFilter || !simulationFilter.has(action.id));
+        });
+    };
+
+    // Get SELECTED "Escamotage de phase" actions (for hiding overlays and arrows within their range)
+    const selectedEscamotageDePhase = simulationFilter ? actionData.filter(action =>
+        action.action === 'Escamotage de phase' && action.deb !== '' && action.fin !== '' &&
+        simulationFilter.has(action.id)
+    ) : [];
+
+    // Get SELECTED "Adaptatif vertical" actions (for hiding arrows within their range)
+    const selectedAdaptatifVertical = simulationFilter ? actionData.filter(action =>
+        action.action === 'Adaptatif vertical' && action.deb !== '' && action.fin !== '' &&
+        simulationFilter.has(action.id)
+    ) : [];
+
+    // Helper to check if a time range overlaps with any selected Escamotage de phase or Adaptatif vertical
+    const isWithinSelectedEscamotageOrAdaptatif = (deb, fin) => {
+        const allSelectedZones = [...selectedEscamotageDePhase, ...selectedAdaptatifVertical];
+        if (allSelectedZones.length === 0) return false;
+        for (const zone of allSelectedZones) {
+            const zoneDeb = parseInt(zone.deb) || 0;
+            const zoneFin = parseInt(zone.fin) || 0;
+            // Check if ranges overlap (handling wrap-around)
+            if (zoneDeb <= zoneFin) {
+                // Normal case: zone doesn't wrap
+                if (deb >= zoneDeb && deb < zoneFin) return true;
+                if (fin > zoneDeb && fin <= zoneFin) return true;
+                if (deb <= zoneDeb && fin >= zoneFin) return true;
+            } else {
+                // Zone wraps around cycle
+                if (deb >= zoneDeb || deb < zoneFin) return true;
+                if (fin > zoneDeb || fin <= zoneFin) return true;
+            }
+        }
+        return false;
+    };
+
+    // Helper to check if a time range overlaps with any selected Escamotage de phase only
+    const isWithinSelectedEscamotage = (deb, fin) => {
+        if (selectedEscamotageDePhase.length === 0) return false;
+        for (const escamotage of selectedEscamotageDePhase) {
+            const escDeb = parseInt(escamotage.deb) || 0;
+            const escFin = parseInt(escamotage.fin) || 0;
+            // Check if ranges overlap (handling wrap-around)
+            if (escDeb <= escFin) {
+                // Normal case: escamotage doesn't wrap
+                if (deb >= escDeb && deb < escFin) return true;
+                if (fin > escDeb && fin <= escFin) return true;
+                if (deb <= escDeb && fin >= escFin) return true;
+            } else {
+                // Escamotage wraps around cycle
+                if (deb >= escDeb || deb < escFin) return true;
+                if (fin > escDeb || fin <= escFin) return true;
+            }
+        }
+        return false;
+    };
+
+    // Get all "Adaptatif vertical" actions
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    // Also hide if within a SELECTED Escamotage de phase
+    const adaptatifActions = actionData.filter(action => {
+        if (action.action !== 'Adaptatif vertical' || action.deb === '' || action.fin === '') return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        // Ne pas masquer les AV par les EP — ils sont décalés, pas supprimés
+        return true;
+    });
+
+    // Get all "Fermeture anticipée" actions with arrows and braces
+    // In simulation mode: show overlay and arrows when action is UNCHECKED (inverted logic)
+    // Arrows and braces are inseparable - they appear/disappear together
+    // Also hide if within a SELECTED Escamotage de phase
+    const fermetureActions = actionData.filter(action => {
+        if (action.action !== 'Fermeture anticipée' || action.deb === '' || action.fin === '') return false;
+        if (!(action.actGf1 || action.actGf1Gf2 || action.actGf1Gf3 || action.actGf1Gf4)) return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        // Hide if within a selected Escamotage de phase or Adaptatif vertical
+        const deb = parseInt(action.deb) || 0;
+        const fin = parseInt(action.fin) || 0;
+        if (isWithinSelectedEscamotageOrAdaptatif(deb, fin)) return false;
+        return true;
+    });
+
+    // Get all "Escamotage de phase" actions
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    const escamotageActions = actionData.filter(action =>
+        action.action === 'Escamotage de phase' && action.deb !== '' && action.fin !== '' &&
+        (!simulationFilter || !simulationFilter.has(action.id))
+    );
+
+    // Get all "Escamotage" actions (linked to specific group via actGf1)
+    // No deb/fin required - arrows are calculated from group times and intergreen
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    // Note: actGf1 is optional - if not set, rectangle is shown on source group without arrows
+    const escamotageGroupActions = actionData.filter(action =>
+        action.action === 'Escamotage' && action.gf &&
+        (!simulationFilter || !simulationFilter.has(action.id))
+    );
+
+    // Get SELECTED "Escamotage" actions (for cutting target group bar when checked)
+    const selectedEscamotageGroup = simulationFilter ? actionData.filter(action =>
+        action.action === 'Escamotage' && action.gf && action.actGf1 &&
+        simulationFilter.has(action.id)
+    ) : [];
+
+    // Groupes impliqués dans des actions "Escamotage" (GF source + actGf cibles) → afficher "e" automatiquement
+    const escamotageGroupIds = new Set();
+    actionData.forEach(action => {
+        if (action.action === 'Escamotage' && action.gf) {
+            const gfId = parseInt(action.gf.toString().replace(/[Gg]/g, '').trim());
+            if (gfId) escamotageGroupIds.add(gfId);
+            [action.actGf1, action.actGf1Gf2, action.actGf1Gf3, action.actGf1Gf4].forEach(actGf => {
+                if (actGf) {
+                    const id = parseInt(actGf.toString().replace(/[Gg]/g, '').trim());
+                    if (id) escamotageGroupIds.add(id);
+                }
+            });
+        }
+    });
+
+    // Precompute shifted zone ranges for brace truncation (SELECTED/checked zones only - simulation mode)
+    const braceZoneRanges = [];
+    selectedEscamotageDePhase.forEach(a => {
+        const zDeb = parseInt(a.deb) || 0;
+        const zFin = parseInt(a.fin) || 0;
+        const shifted = getShiftedActionPosition(zDeb, zFin, null, 'Escamotage de phase', null, a.id);
+        if (!shifted.hidden) {
+            braceZoneRanges.push({ deb: shifted.deb, fin: shifted.fin, rawDeb: zDeb, rawFin: zFin });
+        }
+    });
+    selectedAdaptatifVertical.forEach(a => {
+        const zDeb = parseInt(a.deb) || 0;
+        const zFin = parseInt(a.fin) || 0;
+        const plage1 = parseInt(a.plage1) || 0;
+        const plage2 = parseInt(a.plage2) || 0;
+        const avPlage = (plage1 > 0 && plage2 > 0) ? { plage1, plage2 } : null;
+        const shifted = getShiftedActionPosition(zDeb, zFin, null, 'Adaptatif vertical', avPlage, a.id);
+        if (!shifted.hidden) {
+            braceZoneRanges.push({ deb: shifted.deb, fin: shifted.fin, rawDeb: zDeb, rawFin: zFin, plage1, plage2, isPartial: !!avPlage });
+        }
+    });
+
+    // Get all "Signal aide conduite" actions
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    const signaActions = actionData.filter(action => {
+        if (action.action !== 'Signal aide conduite') return false;
+        if (action.deb === '' || action.fin === '') return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        const deb = parseInt(action.deb) || 0;
+        const fin = parseInt(action.fin) || 0;
+        if (deb === fin) return false;
+        // Only show if orange zone exists (fin - 5 > deb)
+        if (fin - 5 <= deb) return false;
+        return true;
+    });
+
+    // Get all "Contrôle de flot" actions
+    // Shows: intermittent yellow/gray from DEB to minGreen, then orange for orange duration, then red to FIN
+    const controleFlotActions = actionData.filter(action => {
+        if (action.action !== 'Contrôle de flot') return false;
+        if (action.gf === '' || action.gf === undefined) return false;
+        if (action.deb === '' || action.fin === '') return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        const deb = parseInt(action.deb) || 0;
+        const fin = parseInt(action.fin) || 0;
+        if (deb >= fin) return false;
+        return true;
+    });
+
+    // Get all "Point de repos" actions
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    // If plage1 is not set, default to 1 (first group)
+    // If plage2 is not set, default to groups.length (total number of groups)
+    const pointReposActions = actionData.filter(action => {
+        if (action.action !== 'Point de repos') return false;
+        if (action.deb === '' || action.deb === undefined) return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        return true;
+    }).map(action => ({
+        ...action,
+        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(parseInt(action.plage1)) || parseInt(action.plage1) < 1)
+            ? 1
+            : action.plage1,
+        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(parseInt(action.plage2)) || parseInt(action.plage2) < 1)
+            ? groups.length
+            : action.plage2
+    }));
+
+    // Get all "Synchro BTS" actions
+    // In simulation mode: show overlay ONLY when action is CHECKED (normal logic - hidden by default)
+    // If plage1 is not set, default to 1 (first group)
+    // If plage2 is not set, default to groups.length (total number of groups)
+    const synchroBtsActions = actionData.filter(action => {
+        if (action.action !== 'Synchro BTS') return false;
+        if (action.deb === '' || action.deb === undefined) return false;
+        if (simulationFilter && !simulationFilter.has(action.id)) return false;
+        return true;
+    }).map(action => ({
+        ...action,
+        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(parseInt(action.plage1)) || parseInt(action.plage1) < 1)
+            ? 1
+            : action.plage1,
+        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(parseInt(action.plage2)) || parseInt(action.plage2) < 1)
+            ? groups.length
+            : action.plage2
+    }));
+
+    // Get all "Instant Co" actions
+    // In simulation mode: show overlay ONLY when action is CHECKED (normal logic - hidden by default)
+    // If plage1 is not set, default to 1 (first group)
+    // If plage2 is not set, default to groups.length (total number of groups)
+    const instantCoActions = actionData.filter(action => {
+        if (action.action !== 'Instant Co') return false;
+        if (action.deb === '' || action.deb === undefined) return false;
+        if (simulationFilter && !simulationFilter.has(action.id)) return false;
+        return true;
+    }).map(action => ({
+        ...action,
+        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(parseInt(action.plage1)) || parseInt(action.plage1) < 1)
+            ? 1
+            : action.plage1,
+        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(parseInt(action.plage2)) || parseInt(action.plage2) < 1)
+            ? groups.length
+            : action.plage2
+    }));
+
+    // Get all "Priorité piétons" actions
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    // Also hide if within a SELECTED Escamotage de phase or Adaptatif vertical
+    const prioritePietonsActions = actionData.filter(action => {
+        if (action.action !== 'Priorité piétons') return false;
+        if (action.gf === '' || action.deb === '' || action.fin === '') return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        // Ne pas masquer : les contractions décalent cette action via getShiftedActionPosition
+        return true;
+    });
+
+    // Get all "Flèche d'anticipation" actions (same representation as Priorité piétons)
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    // Also hide if within a SELECTED Escamotage de phase or Adaptatif vertical
+    const flecheAnticipationActions = actionData.filter(action => {
+        if (action.action !== "Flèche d'anticipation") return false;
+        if (action.gf === '' || action.deb === '' || action.fin === '') return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        // Ne pas masquer : les contractions décalent cette action via getShiftedActionPosition
+        return true;
+    });
+
+    // Get all "Début de bande passante" actions
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    // Also hide if within a SELECTED Escamotage de phase or Adaptatif vertical
+    const debutBandeActions = actionData.filter(action => {
+        if (action.action !== 'Début de bande passante') return false;
+        if (action.gf === '' || action.deb === '' || action.fin === '' || action.actGf1 === '') return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        // Hide if within a selected Escamotage de phase or Adaptatif vertical
+        const deb = parseInt(action.deb) || 0;
+        const fin = parseInt(action.fin) || 0;
+        if (isWithinSelectedEscamotageOrAdaptatif(deb, fin)) return false;
+        return true;
+    });
+
+    // Get all "Fin de bande passante" actions
+    // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
+    // Also hide if within a SELECTED Escamotage de phase or Adaptatif vertical
+    const finBandeActions = actionData.filter(action => {
+        if (action.action !== 'Fin de bande passante') return false;
+        if (action.gf === '' || action.deb === '' || action.fin === '' || action.actGf1 === '') return false;
+        if (simulationFilter && simulationFilter.has(action.id)) return false;
+        // Hide if within a selected Escamotage de phase or Adaptatif vertical
+        const deb = parseInt(action.deb) || 0;
+        const fin = parseInt(action.fin) || 0;
+        if (isWithinSelectedEscamotageOrAdaptatif(deb, fin)) return false;
+        return true;
+    });
+
+    const ROW_HEIGHT = 30; // Height of each row in pixels
+    const RULER_HEIGHT = 50; // Height of the ruler
+    const ROW_TOTAL_HEIGHT = ROW_HEIGHT + 1; // Row height + 1px border
+    const svgHeight = RULER_HEIGHT + 1 + groups.length * ROW_TOTAL_HEIGHT + 30;
+
+    const { dashedPath, doesGroupWrap, getGroupEndPos, getGroupRowY, getGroupStartPos } = createTimelineGeometry({
+        cycleLength,
+        effectiveCycleLength,
+        groups,
+        rowHeight: ROW_HEIGHT,
+        rowTotalHeight: ROW_TOTAL_HEIGHT,
+        rulerHeight: RULER_HEIGHT,
+        simulationResult
+    });
+
+    return (<>
+        <div
+            className={`timeline-container ${dragState ? 'dragging' : ''}${readOnly ? ' read-only' : ''}${scrollable ? ' scrollable' : ''}`}
+            ref={containerRef}
+            onMouseEnter={() => setIsMouseInDiagram(true)}
+            onMouseMove={suivreCurseur}
+            onMouseLeave={() => setIsMouseInDiagram(false)}
+        >
+            <TimelineHeader
+                activePFName={activePFName}
+                cycleLength={cycleLength}
+                cycleLengthInput={cycleLengthInput}
+                cycleSimulationSpeed={cycleSimulationSpeed}
+                isPlayingSimulation={isPlayingSimulation}
+                onDetach={onDetach}
+                planName={planName}
+                readOnly={readOnly}
+                setCycleLength={setCycleLength}
+                setCycleLengthInput={setCycleLengthInput}
+                setIsPlayingSimulation={setIsPlayingSimulation}
+                setSimulationCurrentTime={setSimulationCurrentTime}
+                simulationCurrentTime={simulationCurrentTime}
+                simulationResult={simulationResult}
+                simulationSpeed={simulationSpeed}
+                titreEnBandeau={titreEnBandeau}
+                tooltipsEnabled={tooltipsEnabled}
+            />
+            <div className="timeline-layout">
+                <TimelineSidebar
+                    biCarrefourSeparator={biCarrefourSeparator}
+                    cycleLength={cycleLength}
+                    effectiveCycleLength={effectiveCycleLength}
+                    escamotageGroupIds={escamotageGroupIds}
+                    groups={groups}
+                    handleEndChange={handleEndChange}
+                    handleNameMouseEnter={handleNameMouseEnter}
+                    handleNameMouseLeave={handleNameMouseLeave}
+                    handlePhaseFlagKeyDown={handlePhaseFlagKeyDown}
+                    handleStartChange={handleStartChange}
+                    hoveredArrowGroupId={hoveredArrowGroupId}
+                    hoveredArrowGroupSaturated={hoveredArrowGroupSaturated}
+                    onGroupClick={onGroupClick}
+                    phaseFlagTooltipId={phaseFlagTooltipId}
+                    readOnly={readOnly}
+                    showGroupNames={showGroupNames}
+                    showWrapFlash={showWrapFlash}
+                    simulationResult={simulationResult}
+                    updateGroupParams={updateGroupParams}
+                />
+
+                <div className="timeline-scroll-area" style={{ width: `${totalWidth}px`, position: 'relative' }}>
+                    <TimelineEmptyState
+                        conflictMatrix={conflictMatrix}
+                        groups={groups}
+                        tooltipsEnabled={tooltipsEnabled}
+                    />
+                    <div className="timeline-track-container" style={{ width: `${totalWidth}px` }}>
+                        <TimelineGridBackground
+                            groups={groups}
+                            isPlayingSimulation={isPlayingSimulation}
+                            pixelsPerSecond={pixelsPerSecond}
+                            playbackTime={playbackTime}
+                            rowTotalHeight={ROW_TOTAL_HEIGHT}
+                            rulerHeight={RULER_HEIGHT}
+                            simulationCurrentTime={simulationCurrentTime}
+                            simulationResult={simulationResult}
+                            timeWindow={TIME_WINDOW}
+                            tooltipsEnabled={tooltipsEnabled}
+                        />
+
+                        {/* Rows */}
+                        {groups.map((group) => {
+                            const groupActions = getActionsForGroup(group.id);
+                            // Filter out conflicts that are managed by a SELECTED Escamotage action
+                            const isConflict = activeConflicts && activeConflicts.some(c => {
+                                if (c.from !== group.id && c.to !== group.id) return false;
+                                // Check if this conflict is inhibited by a selected Escamotage action
+                                const isInhibitedByEscamotage = selectedEscamotageGroup.some(action => {
+                                    const sourceGfId = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                                    const targetGfId = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                                    return (sourceGfId === c.from && targetGfId === c.to) ||
+                                           (sourceGfId === c.to && targetGfId === c.from);
+                                });
+                                if (isInhibitedByEscamotage) return false;
+                                // Check if first group has a phaseFlag (aiguillage/escamotage)
+                                const fromGrp = groups.find(g => g.id === c.from);
+                                if (fromGrp?.phaseFlag) return false;
+                                return true;
+                            });
+                            const orangeDuration = group.durations.orange || 3;
+
+                            // Get simulated group data if in simulation mode
+                            const simGroup = getSimulatedGroup(group.id);
+                            const isEscamoted = simGroup?.isEscamoted || false;
+
+                            // Use simulated values when in simulation mode, otherwise use original values
+                            let offset = simGroup
+                                ? (simGroup.simulatedOffset % effectiveCycleLength)
+                                : (group.offset % cycleLength);
+                            let greenDuration = simGroup
+                                ? simGroup.simulatedGreen
+                                : group.durations.green;
+
+                            // Apply visual drag offset (no state update yet, just visual)
+                            if (dragState?.groupId === group.id && dragState.deltaSeconds) {
+                                const ds = dragState.deltaSeconds;
+                                if (dragState.type === 'start') {
+                                    const newOffset = ((dragState.initialValue + ds) % cycleLength + cycleLength) % cycleLength;
+                                    const oldEnd = (dragState.initialValue + greenDuration) % cycleLength;
+                                    let newDur = oldEnd - newOffset;
+                                    if (newDur <= 0) newDur += cycleLength;
+                                    if (newDur > 0 && newDur <= cycleLength) {
+                                        offset = newOffset;
+                                        greenDuration = newDur;
+                                    }
+                                } else if (dragState.type === 'end') {
+                                    let newEnd = ((dragState.initialValue + ds) % cycleLength + cycleLength) % cycleLength;
+                                    let newDur = newEnd - offset;
+                                    if (newDur <= 0) newDur += cycleLength;
+                                    if (newDur > 0 && newDur <= cycleLength) {
+                                        greenDuration = newDur;
+                                    }
+                                }
+                            }
+
+                            const endValue = (offset + greenDuration) % effectiveCycleLength;
+                            const hasPhase = !isEscamoted && greenDuration > 0;
+
+                            // Calculate base bars from group offset/duration
+                            const totalDuration = group.durations.green + group.durations.orange + group.durations.red;
+                            const cyclesToRender = Math.ceil(TIME_WINDOW / totalDuration) + 1;
+
+                            const isHighlightedByArrow = hoveredArrowGroupId === group.id;
+                            const arrowHighlightClass = isHighlightedByArrow ? (hoveredArrowGroupSaturated ? 'arrow-highlighted arrow-saturated' : 'arrow-highlighted') : '';
+
+                            return (
+                                <div
+                                    key={group.id}
+                                    className={`timeline-row-track ${isConflict ? 'row-conflict' : ''}`}
+                                    onClick={() => onGroupClick(group)}
+                                    style={{ backgroundColor: isHighlightedByArrow ? (hoveredArrowGroupSaturated ? 'rgba(231, 76, 60, 0.25)' : 'rgba(100, 150, 255, 0.2)') : (isConflict ? 'rgba(231, 76, 60, 0.1)' : 'transparent'), ...(biCarrefourSeparator != null && group.id === biCarrefourSeparator ? { borderBottom: '1px solid white' } : {}) }}
+                                    onMouseEnter={() => setHoveredGroupId(group.id)}
+                                    onMouseLeave={() => {
+                                        setHoveredGroupId(null);
+                                        if (setHoveredDiagramTime) setHoveredDiagramTime(null);
+                                    }}
+                                    onMouseMove={(e) => {
+                                        if (setHoveredDiagramTime) {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            const x = e.clientX - rect.left;
+                                            const time = Math.floor(x / pixelsPerSecond);
+                                            setHoveredDiagramTime(Math.max(0, Math.min(time, effectiveCycleLength - 1)));
+                                        }
+                                    }}
+                                >
+                                    {/* Base bars from group Début/Fin (sidebar values) - only if phase exists */}
+                                    {hasPhase && (() => {
+                                        const isPedestrian = group.type === 'P' || group.type === 'Piéton';
+                                        const isCyclist = group.type === 'CY' || group.type === 'Cycliste';
+                                        const isFlOrPP = group.type === 'FL' || group.type === 'PP';
+
+                                        // FL and PP types don't show the green bar (only yellow intermittent bar)
+                                        if (isFlOrPP) return null;
+
+                                        // P (piéton) gets red bar (pedestrian-orange), CY (cycle) gets dashed red bar (cyclist-orange), others get yellow (orange)
+                                        const orangeClass = isPedestrian ? 'pedestrian-orange' : isCyclist ? 'cyclist-orange' : 'orange';
+                                        const orangeDur = group.durations.orange;
+                                        const orangeWidth = orangeDur * pixelsPerSecond;
+
+                                        // Check if green bar wraps around cycle
+                                        const currentCycleLen = simGroup ? effectiveCycleLength : cycleLength;
+                                        const greenWrapsAround = offset + greenDuration > currentCycleLen;
+                                        // Check if orange bar wraps around cycle (for pedestrians and cyclists with their special display)
+                                        const greenEnd = (offset + greenDuration) % currentCycleLen;
+                                        const orangeEnd = (greenEnd + orangeDur) % currentCycleLen;
+                                        const orangeWrapsAround = (isPedestrian || isCyclist) && (greenEnd + orangeDur > currentCycleLen);
+
+                                        // V.Utile overlay (capacity color on first green seconds) - available for ALL cases
+                                        const showVUtileOverlay = hoveredVUtile && hoveredVUtile.groupId === group.id;
+                                        const vUtileSec = showVUtileOverlay ? Math.min(hoveredVUtile.vUtile, greenDuration) : 0;
+                                        const getCapacityColorClass = (value) => {
+                                            if (value === null || value === undefined) return '';
+                                            if (value < 76) return 'vutile-green';
+                                            if (value <= 85) return 'vutile-orange';
+                                            if (value <= 100) return 'vutile-red';
+                                            return 'vutile-black';
+                                        };
+                                        const vUtileColorClass = showVUtileOverlay ? getCapacityColorClass(hoveredVUtile.capacityValue) : '';
+                                        const vUtileTitle = showVUtileOverlay ? `V.Utile: ${hoveredVUtile.vUtile}s (${hoveredVUtile.capacityValue}%)` : '';
+
+                                        if (greenWrapsAround) {
+                                            // Green bar wraps around
+                                            const firstPartSec = currentCycleLen - offset;
+                                            const secondPartSec = (offset + greenDuration) % currentCycleLen;
+                                            const firstPartWidth = firstPartSec * pixelsPerSecond;
+                                            const secondPartWidth = secondPartSec * pixelsPerSecond;
+                                            // V.Utile split across the two green parts
+                                            const vUtileFirstSec = Math.min(vUtileSec, firstPartSec);
+                                            const vUtileSecondSec = Math.max(0, vUtileSec - firstPartSec);
+
+                                            // Check if orange also wraps
+                                            if (orangeWrapsAround) {
+                                                const orangeFirstPartWidth = (currentCycleLen - greenEnd) * pixelsPerSecond;
+                                                const orangeSecondPartWidth = orangeEnd * pixelsPerSecond;
+
+                                                return (
+                                                    <React.Fragment>
+                                                        {/* First part: from offset to end of cycle */}
+                                                        <div
+                                                            className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
+                                                            style={{ left: `${offset * pixelsPerSecond}px` }}
+                                                        >
+                                                            <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                                                <div
+                                                                    className="drag-handle drag-handle-start"
+                                                                    onMouseDown={(e) => handleDragStart(e, group.id, 'start', offset)}
+                                                                />
+                                                            </CustomTooltip>
+                                                            <div className="phase-bar green" style={{ width: `${firstPartWidth}px` }}></div>
+                                                            {showVUtileOverlay && vUtileFirstSec > 0 && (
+                                                                <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileFirstSec * pixelsPerSecond}px` }} /></CustomTooltip>
+                                                            )}
+                                                        </div>
+                                                        {/* Second part: green from 0 + orange first part to end of cycle */}
+                                                        <div
+                                                            className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
+                                                            style={{ left: '0px' }}
+                                                        >
+                                                            <div className="phase-bar green" style={{ width: `${secondPartWidth}px` }}></div>
+                                                            <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeFirstPartWidth}px` }}></div>
+                                                            {showVUtileOverlay && vUtileSecondSec > 0 && (
+                                                                <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileSecondSec * pixelsPerSecond}px` }} /></CustomTooltip>
+                                                            )}
+                                                            <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                                                <div
+                                                                    className="drag-handle drag-handle-end"
+                                                                    onMouseDown={(e) => handleDragStart(e, group.id, 'end', endValue)}
+                                                                    style={{ left: `${secondPartWidth}px` }}
+                                                                />
+                                                            </CustomTooltip>
+                                                        </div>
+                                                        {/* Third part: orange continuation at start of cycle */}
+                                                        <div
+                                                            className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
+                                                            style={{ left: '0px' }}
+                                                        >
+                                                            <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeSecondPartWidth}px` }}></div>
+                                                        </div>
+                                                    </React.Fragment>
+                                                );
+                                            }
+
+                                            return (
+                                                <React.Fragment>
+                                                    {/* First part: from offset to end of cycle */}
+                                                    <div
+                                                        className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
+                                                        style={{ left: `${offset * pixelsPerSecond}px` }}
+                                                    >
+                                                        <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                                            <div
+                                                                className="drag-handle drag-handle-start"
+                                                                onMouseDown={(e) => handleDragStart(e, group.id, 'start', offset)}
+                                                            />
+                                                        </CustomTooltip>
+                                                        <div className="phase-bar green" style={{ width: `${firstPartWidth}px` }}></div>
+                                                        {showVUtileOverlay && vUtileFirstSec > 0 && (
+                                                            <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileFirstSec * pixelsPerSecond}px` }} /></CustomTooltip>
+                                                        )}
+                                                    </div>
+                                                    {/* Second part: from start of cycle to end */}
+                                                    <div
+                                                        className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
+                                                        style={{ left: '0px' }}
+                                                    >
+                                                        <div className="phase-bar green" style={{ width: `${secondPartWidth}px` }}></div>
+                                                        <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeWidth}px` }}></div>
+                                                        {showVUtileOverlay && vUtileSecondSec > 0 && (
+                                                            <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileSecondSec * pixelsPerSecond}px` }} /></CustomTooltip>
+                                                        )}
+                                                        <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                                            <div
+                                                                className="drag-handle drag-handle-end"
+                                                                onMouseDown={(e) => handleDragStart(e, group.id, 'end', endValue)}
+                                                                style={{ left: `${secondPartWidth}px` }}
+                                                            />
+                                                        </CustomTooltip>
+                                                    </div>
+                                                </React.Fragment>
+                                            );
+                                        }
+
+                                        // Green doesn't wrap, but orange might wrap (for pedestrians/cyclists)
+                                        const greenWidth = greenDuration * pixelsPerSecond;
+
+                                        if (orangeWrapsAround) {
+                                            const orangeFirstPartWidth = (currentCycleLen - greenEnd) * pixelsPerSecond;
+                                            const orangeSecondPartWidth = orangeEnd * pixelsPerSecond;
+                                            const vUtileWidthPx = vUtileSec * pixelsPerSecond;
+
+                                            return (
+                                                <React.Fragment>
+                                                    {/* Main part: green + first part of orange */}
+                                                    <div
+                                                        className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
+                                                        style={{ left: `${offset * pixelsPerSecond}px` }}
+                                                    >
+                                                        <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                                            <div
+                                                                className="drag-handle drag-handle-start"
+                                                                onMouseDown={(e) => handleDragStart(e, group.id, 'start', offset)}
+                                                            />
+                                                        </CustomTooltip>
+                                                        <div className="phase-bar green" style={{ width: `${greenWidth}px` }}></div>
+                                                        <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeFirstPartWidth}px` }}></div>
+                                                        {showVUtileOverlay && vUtileSec > 0 && (
+                                                            <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileWidthPx}px` }} /></CustomTooltip>
+                                                        )}
+                                                        <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                                            <div
+                                                                className="drag-handle drag-handle-end"
+                                                                onMouseDown={(e) => handleDragStart(e, group.id, 'end', endValue)}
+                                                                style={{ left: `${greenWidth}px` }}
+                                                            />
+                                                        </CustomTooltip>
+                                                    </div>
+                                                    {/* Orange continuation at start of cycle */}
+                                                    <div
+                                                        className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
                                                         style={{ left: '0px' }}
                                                     >
                                                         <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeSecondPartWidth}px` }}></div>
@@ -848,4 +1621,2081 @@ className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${a
                                             <div
                                                 className="action-drag-handle action-drag-handle-end"
                                                 onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', origFin)}
-...(OpenClaw truncated dynamic tool result: original 200071 chars, weighted budget 64000; rerun with narrower args.)
+
+                                            />
+                                            {abrv && (
+                                                <span className="escamotage-label">{abrv}</span>
+                                            )}
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            }
+
+                            const duration = Math.max(0, fin - deb);
+                            const width = duration * pixelsPerSecond;
+
+                            return (
+                                <div
+                                    key={`escamotage-${idx}`}
+                                    className={`escamotage-overlay ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                    style={{
+                                        left: `${leftPos}px`,
+                                        width: `${width}px`,
+                                        top: `${topPos}px`,
+                                        height: `${height}px`
+                                    }}
+                                    onMouseEnter={() => setHoveredActionId(action.id)}
+                                    onMouseLeave={() => setHoveredActionId(null)}
+                                >
+                                    {/* Drag handle for start (left edge) */}
+                                    <div
+                                        className="action-drag-handle action-drag-handle-start"
+                                        onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', origDeb)}
+
+
+                                    />
+                                    {/* Drag handle for end (right edge) */}
+                                    <div
+                                        className="action-drag-handle action-drag-handle-end"
+                                        onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', origFin)}
+
+
+                                    />
+                                    {abrv && (
+                                        <span className="escamotage-label">{abrv}</span>
+                                    )}
+                                </div>
+                            );
+                        })}
+
+                        {/* Escamotage (group-specific) with arrows */}
+                        {escamotageGroupActions.map((action, idx) => {
+                            const sourceGfId = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const targetGfId = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const isHighlighted = hoveredActionId === action.id;
+                            const hasTarget = targetGfId > 0 && targetGfId <= groups.length;
+
+                            if (sourceGfId === 0) return null;
+                            if (sourceGfId > groups.length) return null;
+
+                            const sourceGroup = groups.find(g => g.id === sourceGfId);
+                            if (!sourceGroup) return null;
+
+                            const targetGroup = hasTarget ? groups.find(g => g.id === targetGfId) : null;
+
+                            // Find actual group indices in the array
+                            const sourceGroupIndex = groups.findIndex(g => g.id === sourceGfId);
+                            const targetGroupIndex = hasTarget ? groups.findIndex(g => g.id === targetGfId) : sourceGroupIndex;
+                            if (sourceGroupIndex === -1) return null;
+
+                            // Source group times
+                            const sourceStart = sourceGroup.offset % cycleLength;
+                            const sourceEndRaw = sourceStart + sourceGroup.durations.green;
+                            // If end equals cycle, keep it at cycle instead of wrapping to 0
+                            const sourceEnd = sourceEndRaw === cycleLength ? cycleLength : (sourceEndRaw % cycleLength);
+
+                            // Calculate rectangle position based on whether target is defined
+                            let rectX, rectWidth, arrow1SourceX, arrow1TargetX, arrow2SourceX, arrow2TargetX, sourceY, targetY;
+                            const barHeight = ROW_HEIGHT - 14; // Bar has top:7px and bottom:7px (16px)
+                            const rectHeight = barHeight / 2; // Half the bar height (8px)
+
+                            if (hasTarget && targetGroup) {
+                                // Get intergreen times from conflict matrix
+                                const intergreenSourceToTarget = conflictMatrix[sourceGfId - 1]?.[targetGfId - 1] || 0;
+                                const intergreenTargetToSource = conflictMatrix[targetGfId - 1]?.[sourceGfId - 1] || 0;
+
+                                // Y positions (center of each row)
+                                sourceY = RULER_HEIGHT + 1 + (sourceGroupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+
+                                // Arrow 1: From start of source GF to (source start - intergreen target→source)
+                                arrow1SourceX = sourceStart * pixelsPerSecond;
+                                arrow1TargetX = ((sourceStart - intergreenTargetToSource + cycleLength) % cycleLength) * pixelsPerSecond;
+
+                                // Arrow 2: From end of source GF to (source end + intergreen source→target)
+                                arrow2SourceX = sourceEnd * pixelsPerSecond;
+                                const arrow2TargetRaw = sourceEnd + intergreenSourceToTarget;
+                                // If arrow end equals cycle, keep it at cycle instead of wrapping to 0
+                                arrow2TargetX = (arrow2TargetRaw === cycleLength ? cycleLength : (arrow2TargetRaw % cycleLength)) * pixelsPerSecond;
+
+                                // Rectangle between arrow endpoints on target row (lower half of bar)
+                                rectX = Math.min(arrow1TargetX, arrow2TargetX);
+                                rectWidth = Math.abs(arrow2TargetX - arrow1TargetX);
+
+                                // Calculate exact bar bottom position and align rectangle there
+                                const rowTopY = RULER_HEIGHT + 1 + (targetGroupIndex * ROW_TOTAL_HEIGHT);
+                                const barBottomY = rowTopY + ROW_HEIGHT - 7; // Exact bottom of bar
+                                targetY = barBottomY - rectHeight + 1 + rectHeight; // Arrow target Y points to bottom of rectangle
+                            } else {
+                                // No target defined - show rectangle on source group
+                                // If deb/fin are specified, use them (e.g. for seconde lucarne); otherwise use green phase
+                                const actionDeb = action.deb !== '' ? parseInt(action.deb) : null;
+                                const actionFin = action.fin !== '' ? parseInt(action.fin) : null;
+                                if (actionDeb !== null && actionFin !== null && !isNaN(actionDeb) && !isNaN(actionFin)) {
+                                    rectX = actionDeb * pixelsPerSecond;
+                                    rectWidth = (actionFin > actionDeb ? actionFin - actionDeb : (cycleLength - actionDeb + actionFin)) * pixelsPerSecond;
+                                } else {
+                                    rectX = sourceStart * pixelsPerSecond;
+                                    rectWidth = (sourceEnd - sourceStart) * pixelsPerSecond;
+                                    if (rectWidth < 0) rectWidth += cycleLength * pixelsPerSecond; // Handle wrap-around
+                                }
+                            }
+
+                            // Calculate exact bar bottom position and align rectangle there
+                            const displayGroupIndex = hasTarget ? targetGroupIndex : sourceGroupIndex;
+                            const rowTopY = RULER_HEIGHT + 1 + (displayGroupIndex * ROW_TOTAL_HEIGHT);
+                            const barBottomY = rowTopY + ROW_HEIGHT - 7; // Exact bottom of bar
+                            const rectY = barBottomY - rectHeight + 1; // Rectangle bottom aligned to bar bottom +1px offset (moved up 4px)
+
+                            return (
+                                <React.Fragment key={`escamotage-group-${idx}`}>
+                                    {/* Hover zone for highlighting */}
+                                    <div
+                                        className={`escamotage-group-hover ${isHighlighted ? 'highlighted' : ''}`}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${rectX}px`,
+                                            top: `${rectY - 5}px`,
+                                            width: `${rectWidth}px`,
+                                            height: `${rectHeight + 10}px`,
+                                            zIndex: 21,
+                                            cursor: 'pointer'
+                                        }}
+                                        onMouseEnter={() => setHoveredActionId(action.id)}
+                                        onMouseLeave={() => setHoveredActionId(null)}
+                                    />
+                                    <svg
+                                        className={`escamotage-arrows ${isHighlighted ? 'highlighted' : ''}`}
+
+                                        width={totalWidth}
+                                        height={svgHeight}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            pointerEvents: 'none',
+                                            zIndex: 20
+                                        }}
+                                    >
+                                    <defs>
+                                        <marker
+                                            id={`escam-arrowhead-${idx}`}
+                                            markerWidth="8"
+                                            markerHeight="6"
+                                            refX="8"
+                                            refY="3"
+                                            orient="auto"
+                                        >
+                                            <polygon points="0 0, 8 3, 0 6" fill="#87CEEB" />
+                                        </marker>
+                                        <pattern
+                                            id={`escam-hatch-${idx}`}
+                                            patternUnits="userSpaceOnUse"
+                                            width="6"
+                                            height="6"
+                                            patternTransform="rotate(-45)"
+                                        >
+                                            <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(135,206,235,0.9)" strokeWidth="3" />
+                                        </pattern>
+                                    </defs>
+                                    {/* Hatched rectangle between arrow endpoints */}
+                                    <rect
+                                        x={rectX}
+                                        y={rectY}
+                                        width={rectWidth}
+                                        height={rectHeight}
+                                        fill={`url(#escam-hatch-${idx})`}
+                                        stroke="#006400"
+                                        strokeWidth="1"
+                                    />
+                                    {/* Arrows only when target group is defined */}
+                                    {hasTarget && (
+                                        <>
+                                            {/* Arrow 1: From source start to (source start - intergreen target→source) */}
+                                            <line
+                                                x1={arrow1SourceX}
+                                                y1={sourceY}
+                                                x2={arrow1TargetX}
+                                                y2={targetY}
+                                                stroke="#87CEEB"
+                                                strokeWidth="1"
+                                                strokeDasharray="4,2"
+                                                markerEnd={`url(#escam-arrowhead-${idx})`}
+                                            />
+                                            {/* Arrow 2: From source end to (source end + intergreen source→target) */}
+                                            <line
+                                                x1={arrow2SourceX}
+                                                y1={sourceY}
+                                                x2={arrow2TargetX}
+                                                y2={targetY}
+                                                stroke="#87CEEB"
+                                                strokeWidth="1"
+                                                strokeDasharray="4,2"
+                                                markerEnd={`url(#escam-arrowhead-${idx})`}
+                                            />
+                                        </>
+                                    )}
+                                    </svg>
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Signa d'aide à la conduite overlays */}
+                        {signaActions.map((action, idx) => {
+                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = parseInt(action.deb) || 0;
+                            const rawFin = parseInt(action.fin) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            // Find group index in array
+                            const groupIndex = groups.findIndex(g => g.id === gf);
+                            if (groupIndex === -1) return null;
+
+                            // Apply time shifts (from contractions) in simulation mode
+                            const shiftedPos = getShiftedActionPosition(rawDeb, rawFin, gf, 'Signal aide conduite');
+                            if (shiftedPos.hidden) return null;
+                            const deb = shiftedPos.deb;
+                            const fin = shiftedPos.fin;
+                            const blueStart = fin - 5;
+
+                            // Calculate positions
+                            const orangeLeftPos = deb * pixelsPerSecond;
+                            const orangeDuration = blueStart - deb; // From Déb to (Fin-5)
+                            const orangeWidth = orangeDuration * pixelsPerSecond;
+                            const blueLeftPos = blueStart * pixelsPerSecond;
+                            const blueWidth = 5 * pixelsPerSecond; // Blue zone (5s at end)
+                            const totalWidth = (fin - deb) * pixelsPerSecond;
+
+                            // Calculate stripe width based on 1 second interval
+                            const stripeWidth = pixelsPerSecond;
+
+                            // Vertical position based on group index (height reduced by 2/3 total)
+                            const height = Math.round((ROW_HEIGHT - 14) * 4 / 9);
+                            const topPos = RULER_HEIGHT + 1 + (groupIndex * ROW_TOTAL_HEIGHT) + Math.floor((ROW_HEIGHT - height) / 2);
+
+                            return (
+                                <React.Fragment key={`signa-${idx}`}>
+                                    {/* Wrapper for drag handles */}
+                                    <div
+                                        className={`signa-wrapper ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${orangeLeftPos}px`,
+                                            width: `${totalWidth}px`,
+                                            top: `${topPos}px`,
+                                            height: `${height}px`,
+                                            pointerEvents: 'auto'
+                                        }}
+                                        onMouseEnter={() => setHoveredActionId(action.id)}
+                                        onMouseLeave={() => setHoveredActionId(null)}
+                                    >
+                                        {/* Drag handle for start (left edge) */}
+                                        <div
+                                            className="action-drag-handle action-drag-handle-start"
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', deb)}
+
+                                            style={{ pointerEvents: 'auto' }}
+                                        />
+                                        {/* Drag handle for end (right edge) */}
+                                        <div
+                                            className="action-drag-handle action-drag-handle-end"
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}
+
+                                            style={{ pointerEvents: 'auto' }}
+                                        />
+                                    </div>
+                                    {/* Orange intermittent bar at start */}
+                                    <div
+                                        className={`signa-orange-bar ${isHighlighted ? 'highlighted' : ''}`}
+                                        style={{
+                                            left: `${orangeLeftPos}px`,
+                                            width: `${orangeWidth}px`,
+                                            top: `${topPos}px`,
+                                            height: `${height}px`,
+                                            '--stripe-width': `${stripeWidth}px`
+                                        }}
+                                    />
+                                    {/* Blue bar at end (last 5s) */}
+                                    <div
+                                        className={`signa-blue-bar ${isHighlighted ? 'highlighted' : ''}`}
+                                        style={{
+                                            left: `${blueLeftPos}px`,
+                                            width: `${blueWidth}px`,
+                                            top: `${topPos}px`,
+                                            height: `${height}px`
+                                        }}
+                                    >
+                                    </div>
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Contrôle de flot overlays */}
+                        {controleFlotActions.map((action, idx) => {
+                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const deb = parseInt(action.deb) || 0;
+                            const fin = parseInt(action.fin) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            // Find group and get minGreen and orange duration
+                            const group = groups.find(g => g.id === gf);
+                            if (!group) return null;
+
+                            const groupIndex = groups.findIndex(g => g.id === gf);
+                            if (groupIndex === -1) return null;
+
+                            const minGreen = group.minGreen || 0;
+                            const orangeDuration = group.durations?.orange || 3;
+
+                            // Calculate the three zones:
+                            // 1. Intermittent yellow/gray: from DEB to (DEB + minGreen)
+                            // 2. Orange/Yellow solid: from (DEB + minGreen) to (DEB + minGreen + orangeDuration)
+                            // 3. Red: from (DEB + minGreen + orangeDuration) to FIN
+
+                            const intermittentEnd = deb + minGreen;
+                            const orangeEnd = intermittentEnd + orangeDuration;
+
+                            // Positions in pixels
+                            const intermittentLeft = deb * pixelsPerSecond;
+                            const intermittentWidth = minGreen * pixelsPerSecond;
+                            const orangeLeft = intermittentEnd * pixelsPerSecond;
+                            const orangeWidth = orangeDuration * pixelsPerSecond;
+                            const redLeft = orangeEnd * pixelsPerSecond;
+                            const redWidth = Math.max(0, (fin - orangeEnd)) * pixelsPerSecond;
+                            const totalWidth = (fin - deb) * pixelsPerSecond;
+
+                            // Stripe width for intermittent pattern (1 second)
+                            const stripeWidth = pixelsPerSecond;
+
+                            // Vertical position
+                            const height = Math.round((ROW_HEIGHT - 14) * 4 / 9);
+                            const topPos = RULER_HEIGHT + 1 + (groupIndex * ROW_TOTAL_HEIGHT) + Math.floor((ROW_HEIGHT - height) / 2);
+
+                            return (
+                                <React.Fragment key={`controle-flot-${idx}`}>
+                                    {/* Wrapper for drag handles */}
+                                    <div
+                                        className={`controle-flot-wrapper ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${intermittentLeft}px`,
+                                            width: `${totalWidth}px`,
+                                            top: `${topPos}px`,
+                                            height: `${height}px`,
+                                            pointerEvents: 'auto'
+                                        }}
+                                        onMouseEnter={() => setHoveredActionId(action.id)}
+                                        onMouseLeave={() => setHoveredActionId(null)}
+                                    >
+                                        {/* Drag handle for start (left edge) */}
+                                        <div
+                                            className="action-drag-handle action-drag-handle-start"
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', deb)}
+
+                                            style={{ pointerEvents: 'auto' }}
+                                        />
+                                        {/* Drag handle for end (right edge) */}
+                                        <div
+                                            className="action-drag-handle action-drag-handle-end"
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}
+
+                                            style={{ pointerEvents: 'auto' }}
+                                        />
+                                    </div>
+                                    {/* Intermittent yellow/gray bar (from DEB to minGreen) */}
+                                    {intermittentWidth > 0 && (
+                                        <div
+                                            className={`controle-flot-intermittent ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={{
+                                                left: `${intermittentLeft}px`,
+                                                width: `${intermittentWidth}px`,
+                                                top: `${topPos}px`,
+                                                height: `${height}px`,
+                                                '--stripe-width': `${stripeWidth}px`
+                                            }}
+                                        />
+                                    )}
+                                    {/* Orange/Yellow solid bar (orange duration) */}
+                                    {orangeWidth > 0 && (
+                                        <div
+                                            className={`controle-flot-orange ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={{
+                                                left: `${orangeLeft}px`,
+                                                width: `${orangeWidth}px`,
+                                                top: `${topPos}px`,
+                                                height: `${height}px`
+                                            }}
+                                        />
+                                    )}
+                                    {/* Red bar (from orange end to FIN) */}
+                                    {redWidth > 0 && (
+                                        <div
+                                            className={`controle-flot-red ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={{
+                                                left: `${redLeft}px`,
+                                                width: `${redWidth}px`,
+                                                top: `${topPos}px`,
+                                                height: `${height}px`
+                                            }}
+                                        >
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Point de repos arrows - vertical red arrows */}
+                        {pointReposActions.map((action, idx) => {
+                            const rawDeb = parseInt(action.deb) || 0;
+                            const plage1 = parseInt(action.plage1) || 0;
+                            const plage2 = parseInt(action.plage2) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            if (plage1 < 1 || plage2 < 1 || plage1 > groups.length || plage2 > groups.length) return null;
+
+                            // Apply time shifts in simulation mode
+                            const reposPlage = (plage1 > 0 && plage2 > 0) ? { plage1, plage2 } : null;
+                            const shiftedPos = getShiftedActionPosition(rawDeb, rawDeb, null, 'Point de repos', reposPlage);
+                            if (shiftedPos.hidden) return null;
+                            const deb = shiftedPos.deb;
+
+                            // X position at deb
+                            const xPos = deb * pixelsPerSecond;
+
+                            // Arrow length fixed at 13 pixels
+                            const arrowLength = 13;
+
+                            // Downward arrow: ends just above plage1 row
+                            const downArrowEndY = RULER_HEIGHT + 1 + (plage1 - 1) * ROW_TOTAL_HEIGHT - 2;
+                            const downArrowStartY = downArrowEndY - arrowLength;
+
+                            // Upward arrow: ends just below plage2 row
+                            const upArrowEndY = RULER_HEIGHT + 1 + plage2 * ROW_TOTAL_HEIGHT + 2;
+                            const upArrowStartY = upArrowEndY + arrowLength;
+
+                            // Arrow head size
+                            const arrowSize = 5;
+
+                            // Label position below the diagram
+                            const labelY = RULER_HEIGHT + 1 + groups.length * ROW_TOTAL_HEIGHT + 20;
+
+                            // Hover zone half-width (px)
+                            const hoverHalf = 6;
+                            return (
+                                <React.Fragment key={`point-repos-${idx}`}>
+                                    <svg
+                                        className={`point-repos-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                        width={totalWidth}
+                                        height={svgHeight}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            pointerEvents: 'none',
+                                            zIndex: 100,
+                                            overflow: 'visible'
+                                        }}
+                                    >
+                                        {/* Downward arrow line */}
+                                        <line
+                                            x1={xPos}
+                                            y1={downArrowStartY}
+                                            x2={xPos}
+                                            y2={downArrowEndY}
+                                            stroke="#ff0000"
+                                            strokeWidth="2"
+                                        />
+                                        {/* Downward arrow head (pointing down) */}
+                                        <polygon
+                                            points={`${xPos - arrowSize},${downArrowEndY} ${xPos + arrowSize},${downArrowEndY} ${xPos},${downArrowEndY + arrowSize * 1.5}`}
+                                            fill="#ff0000"
+                                        />
+                                        {/* Upward arrow line */}
+                                        <line
+                                            x1={xPos}
+                                            y1={upArrowStartY}
+                                            x2={xPos}
+                                            y2={upArrowEndY}
+                                            stroke="#ff0000"
+                                            strokeWidth="2"
+                                        />
+                                        {/* Upward arrow head (pointing up) */}
+                                        <polygon
+                                            points={`${xPos - arrowSize},${upArrowEndY} ${xPos + arrowSize},${upArrowEndY} ${xPos},${upArrowEndY - arrowSize * 1.5}`}
+                                            fill="#ff0000"
+                                        />
+                                        {/* Invisible hover+drag zones for both arrows */}
+                                        <rect
+                                            x={xPos - hoverHalf}
+                                            y={downArrowStartY}
+                                            width={hoverHalf * 2}
+                                            height={downArrowEndY + arrowSize * 1.5 - downArrowStartY}
+                                            fill="transparent"
+                                            style={{ pointerEvents: 'auto', cursor: 'ew-resize' }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', rawDeb)}
+                                        />
+                                        <rect
+                                            x={xPos - hoverHalf}
+                                            y={upArrowEndY - arrowSize * 1.5}
+                                            width={hoverHalf * 2}
+                                            height={upArrowStartY - (upArrowEndY - arrowSize * 1.5)}
+                                            fill="transparent"
+                                            style={{ pointerEvents: 'auto', cursor: 'ew-resize' }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', rawDeb)}
+                                        />
+                                    </svg>
+                                    {/* Label below diagram */}
+                                    {abrv && (
+                                        <div
+                                            className="point-repos-label"
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${xPos}px`,
+                                                top: `${labelY}px`,
+                                                transform: 'translateX(-50%)',
+                                                color: '#ffffff',
+                                                fontSize: '0.7em',
+                                                fontWeight: 'bold',
+                                                whiteSpace: 'nowrap',
+                                                zIndex: 100
+                                            }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        >
+                                            {abrv}
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Synchro BTS arrows - vertical blue arrows */}
+                        {synchroBtsActions.map((action, idx) => {
+                            const rawDeb = parseInt(action.deb) || 0;
+                            const plage1 = parseInt(action.plage1) || 0;
+                            const plage2 = parseInt(action.plage2) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            if (plage1 < 1 || plage2 < 1 || plage1 > groups.length || plage2 > groups.length) return null;
+
+                            // Apply time shifts in simulation mode
+                            const btsPlage = (plage1 > 0 && plage2 > 0) ? { plage1, plage2 } : null;
+                            const shiftedPos = getShiftedActionPosition(rawDeb, rawDeb, null, 'Synchro BTS', btsPlage);
+                            if (shiftedPos.hidden) return null;
+                            const deb = shiftedPos.deb;
+
+                            // X position at deb
+                            const xPos = deb * pixelsPerSecond;
+
+                            // Arrow length fixed at 16 pixels
+                            const arrowLength = 16;
+
+                            // Downward arrow: ends just above plage1 row
+                            const downArrowEndY = RULER_HEIGHT + 1 + (plage1 - 1) * ROW_TOTAL_HEIGHT - 2;
+                            const downArrowStartY = downArrowEndY - arrowLength;
+
+                            // Upward arrow: ends just below plage2 row
+                            const upArrowEndY = RULER_HEIGHT + 1 + plage2 * ROW_TOTAL_HEIGHT + 2;
+                            const upArrowStartY = upArrowEndY + arrowLength;
+
+                            // Arrow head size
+                            const arrowSize = 5;
+
+                            // Label position below the diagram
+                            const labelY = RULER_HEIGHT + 1 + groups.length * ROW_TOTAL_HEIGHT + 20;
+
+                            return (
+                                <React.Fragment key={`synchro-bts-${idx}`}>
+                                    <svg
+                                        className={`synchro-bts-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                        width={totalWidth}
+                                        height={svgHeight}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            pointerEvents: 'none',
+                                            zIndex: 100,
+                                            overflow: 'visible'
+                                        }}
+                                    >
+                                        {/* Downward arrow line */}
+                                        <line
+                                            x1={xPos}
+                                            y1={downArrowStartY}
+                                            x2={xPos}
+                                            y2={downArrowEndY}
+                                            stroke="#0000FF"
+                                            strokeWidth="2"
+                                        />
+                                        {/* Downward arrow head (pointing down) */}
+                                        <polygon
+                                            points={`${xPos - arrowSize},${downArrowEndY} ${xPos + arrowSize},${downArrowEndY} ${xPos},${downArrowEndY + arrowSize * 1.5}`}
+                                            fill="#0000FF"
+                                        />
+                                        {/* Upward arrow line */}
+                                        <line
+                                            x1={xPos}
+                                            y1={upArrowStartY}
+                                            x2={xPos}
+                                            y2={upArrowEndY}
+                                            stroke="#0000FF"
+                                            strokeWidth="2"
+                                        />
+                                        {/* Upward arrow head (pointing up) */}
+                                        <polygon
+                                            points={`${xPos - arrowSize},${upArrowEndY} ${xPos + arrowSize},${upArrowEndY} ${xPos},${upArrowEndY - arrowSize * 1.5}`}
+                                            fill="#0000FF"
+                                        />
+                                        {/* Invisible hover+drag zones */}
+                                        <rect
+                                            x={xPos - 6}
+                                            y={downArrowStartY}
+                                            width={12}
+                                            height={downArrowEndY + arrowSize * 1.5 - downArrowStartY}
+                                            fill="transparent"
+                                            style={{ pointerEvents: 'auto', cursor: 'ew-resize' }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', rawDeb)}
+                                        />
+                                        <rect
+                                            x={xPos - 6}
+                                            y={upArrowEndY - arrowSize * 1.5}
+                                            width={12}
+                                            height={upArrowStartY - (upArrowEndY - arrowSize * 1.5)}
+                                            fill="transparent"
+                                            style={{ pointerEvents: 'auto', cursor: 'ew-resize' }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', rawDeb)}
+                                        />
+                                    </svg>
+                                    {/* Label below diagram */}
+                                    {abrv && (
+                                        <div
+                                            className="synchro-bts-label"
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${xPos}px`,
+                                                top: `${labelY}px`,
+                                                transform: 'translateX(-50%)',
+                                                color: '#ffffff',
+                                                fontSize: '0.7em',
+                                                fontWeight: 'bold',
+                                                whiteSpace: 'nowrap',
+                                                zIndex: 100
+                                            }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        >
+                                            {abrv}
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Instant Co arrows - vertical orange arrows */}
+                        {instantCoActions.map((action, idx) => {
+                            const rawDeb = parseInt(action.deb) || 0;
+                            const plage1 = parseInt(action.plage1) || 0;
+                            const plage2 = parseInt(action.plage2) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            if (plage1 < 1 || plage2 < 1 || plage1 > groups.length || plage2 > groups.length) return null;
+
+                            // Apply time shifts in simulation mode
+                            const coPlage = (plage1 > 0 && plage2 > 0) ? { plage1, plage2 } : null;
+                            const shiftedPos = getShiftedActionPosition(rawDeb, rawDeb, null, 'Instant Co', coPlage);
+                            if (shiftedPos.hidden) return null;
+                            const deb = shiftedPos.deb;
+
+                            // X position at deb
+                            const xPos = deb * pixelsPerSecond;
+
+                            // Arrow length fixed at 13 pixels
+                            const arrowLength = 13;
+
+                            // Downward arrow: ends just above plage1 row
+                            const downArrowEndY = RULER_HEIGHT + 1 + (plage1 - 1) * ROW_TOTAL_HEIGHT - 2;
+                            const downArrowStartY = downArrowEndY - arrowLength;
+
+                            // Upward arrow: ends just below plage2 row
+                            const upArrowEndY = RULER_HEIGHT + 1 + plage2 * ROW_TOTAL_HEIGHT + 2;
+                            const upArrowStartY = upArrowEndY + arrowLength;
+
+                            // Arrow head size
+                            const arrowSize = 5;
+
+                            // Label position below the diagram
+                            const labelY = RULER_HEIGHT + 1 + groups.length * ROW_TOTAL_HEIGHT + 20;
+
+                            return (
+                                <React.Fragment key={`instant-co-${idx}`}>
+                                    <svg
+                                        className={`instant-co-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                        width={totalWidth}
+                                        height={svgHeight}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            pointerEvents: 'none',
+                                            zIndex: 100,
+                                            overflow: 'visible'
+                                        }}
+                                    >
+                                        {/* Downward arrow line */}
+                                        <line
+                                            x1={xPos}
+                                            y1={downArrowStartY}
+                                            x2={xPos}
+                                            y2={downArrowEndY}
+                                            stroke="#FF8C00"
+                                            strokeWidth="2"
+                                        />
+                                        {/* Downward arrow head (pointing down) */}
+                                        <polygon
+                                            points={`${xPos - arrowSize},${downArrowEndY} ${xPos + arrowSize},${downArrowEndY} ${xPos},${downArrowEndY + arrowSize * 1.5}`}
+                                            fill="#FF8C00"
+                                        />
+                                        {/* Upward arrow line */}
+                                        <line
+                                            x1={xPos}
+                                            y1={upArrowStartY}
+                                            x2={xPos}
+                                            y2={upArrowEndY}
+                                            stroke="#FF8C00"
+                                            strokeWidth="2"
+                                        />
+                                        {/* Upward arrow head (pointing up) */}
+                                        <polygon
+                                            points={`${xPos - arrowSize},${upArrowEndY} ${xPos + arrowSize},${upArrowEndY} ${xPos},${upArrowEndY - arrowSize * 1.5}`}
+                                            fill="#FF8C00"
+                                        />
+                                        {/* Invisible hover+drag zones */}
+                                        <rect
+                                            x={xPos - 6}
+                                            y={downArrowStartY}
+                                            width={12}
+                                            height={downArrowEndY + arrowSize * 1.5 - downArrowStartY}
+                                            fill="transparent"
+                                            style={{ pointerEvents: 'auto', cursor: 'ew-resize' }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', rawDeb)}
+                                        />
+                                        <rect
+                                            x={xPos - 6}
+                                            y={upArrowEndY - arrowSize * 1.5}
+                                            width={12}
+                                            height={upArrowStartY - (upArrowEndY - arrowSize * 1.5)}
+                                            fill="transparent"
+                                            style={{ pointerEvents: 'auto', cursor: 'ew-resize' }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', rawDeb)}
+                                        />
+                                    </svg>
+                                    {/* Label below diagram */}
+                                    {abrv && (
+                                        <div
+                                            className="instant-co-label"
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${xPos}px`,
+                                                top: `${labelY}px`,
+                                                transform: 'translateX(-50%)',
+                                                color: '#FF8C00',
+                                                fontSize: '0.7em',
+                                                fontWeight: 'bold',
+                                                whiteSpace: 'nowrap',
+                                                zIndex: 100
+                                            }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        >
+                                            {abrv}
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Priorité piétons - intermittent yellow bar */}
+                        {prioritePietonsActions.map((action, idx) => {
+                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = parseInt(action.deb) || 0;
+                            const rawFin = parseInt(action.fin) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            // Find group index in array
+                            const groupIndex = groups.findIndex(g => g.id === gf);
+                            if (groupIndex === -1) return null;
+                            if (rawDeb === rawFin) return null;
+
+                            // Apply time shifts (from Adaptatif vertical) in simulation mode
+                            const shiftedPos = getShiftedActionPosition(rawDeb, rawFin, gf, 'Priorité piétons');
+                            if (shiftedPos.hidden) return null;
+                            const deb = shiftedPos.deb;
+                            const fin = shiftedPos.fin;
+
+                            // Check for wrap-around (fin < deb means the bar crosses cycle boundary)
+                            const wrapsAround = deb > fin;
+
+                            // Vertical position aligned with the group's phase bar
+                            // The ruler has height RULER_HEIGHT (50px) + 1px border-bottom = 51px
+                            // Each row has height ROW_HEIGHT (30px) + 1px border-bottom = 31px
+                            const height = ROW_HEIGHT - 14;
+                            const rowTotalHeight = ROW_HEIGHT + 1; // 30px height + 1px border
+                            const topPos = RULER_HEIGHT + 1 + (groupIndex * rowTotalHeight) + Math.floor((ROW_HEIGHT - height) / 2);
+
+                            // Stripe width based on 1 second interval
+                            const stripeWidth = pixelsPerSecond;
+
+                            // Common style for the yellow intermittent bar
+                            const barStyle = (left, width) => ({
+                                position: 'absolute',
+                                left: `${left}px`,
+                                width: `${width}px`,
+                                top: `${topPos}px`,
+                                height: `${height}px`,
+                                borderRadius: '2px',
+                                pointerEvents: 'none',
+                                zIndex: 15,
+                                background: `repeating-linear-gradient(
+                                    90deg,
+                                    #FFFF00,
+                                    #FFFF00 ${stripeWidth}px,
+                                    transparent ${stripeWidth}px,
+                                    transparent ${stripeWidth * 2}px
+                                )`,
+                                boxShadow: '0 0 3px rgba(255, 255, 0, 0.5)'
+                            });
+
+                            if (wrapsAround) {
+                                // Wrap-around case: draw 2 bars
+                                const firstPartLeft = deb * pixelsPerSecond;
+                                const firstPartWidth = (effectiveCycleLength - deb) * pixelsPerSecond;
+                                const secondPartLeft = 0;
+                                const secondPartWidth = fin * pixelsPerSecond;
+
+                                return (
+                                    <React.Fragment key={`priorite-pietons-${idx}`}>
+                                        {/* First part: from deb to end of cycle */}
+                                        <div
+                                            className={`priorite-pietons-wrapper ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${firstPartLeft}px`,
+                                                width: `${firstPartWidth}px`,
+                                                top: `${topPos}px`,
+                                                height: `${height}px`,
+                                                pointerEvents: 'auto'
+                                            }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        >
+                                            {/* Drag handle for start (left edge) */}
+                                            <div
+                                                className="action-drag-handle action-drag-handle-start"
+                                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', deb)}
+
+                                                style={{ pointerEvents: 'auto' }}
+                                            />
+                                        </div>
+                                        <div
+                                            className={`priorite-pietons-bar ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={barStyle(firstPartLeft, firstPartWidth)}
+                                        />
+
+                                        {/* Second part: from start of cycle to fin */}
+                                        <div
+                                            className={`priorite-pietons-wrapper ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${secondPartLeft}px`,
+                                                width: `${secondPartWidth}px`,
+                                                top: `${topPos}px`,
+                                                height: `${height}px`,
+                                                pointerEvents: 'auto'
+                                            }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        >
+                                            {/* Drag handle for end (right edge) */}
+                                            <div
+                                                className="action-drag-handle action-drag-handle-end"
+                                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}
+
+                                                style={{ pointerEvents: 'auto', left: 'auto', right: '0' }}
+                                            />
+                                        </div>
+                                        <div
+                                            className={`priorite-pietons-bar ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={barStyle(secondPartLeft, secondPartWidth)}
+                                        >
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            }
+
+                            // Normal case: single bar
+                            const leftPos = deb * pixelsPerSecond;
+                            const barWidth = (fin - deb) * pixelsPerSecond;
+
+                            return (
+                                <React.Fragment key={`priorite-pietons-${idx}`}>
+                                    {/* Wrapper for drag handles */}
+                                    <div
+                                        className={`priorite-pietons-wrapper ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${leftPos}px`,
+                                            width: `${barWidth}px`,
+                                            top: `${topPos}px`,
+                                            height: `${height}px`,
+                                            pointerEvents: 'auto'
+                                        }}
+                                        onMouseEnter={() => setHoveredActionId(action.id)}
+                                        onMouseLeave={() => setHoveredActionId(null)}
+                                    >
+                                        {/* Drag handle for start (left edge) */}
+                                        <div
+                                            className="action-drag-handle action-drag-handle-start"
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', deb)}
+
+                                            style={{ pointerEvents: 'auto' }}
+                                        />
+                                        {/* Drag handle for end (right edge) */}
+                                        <div
+                                            className="action-drag-handle action-drag-handle-end"
+                                            onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}
+
+                                            style={{ pointerEvents: 'auto' }}
+                                        />
+                                    </div>
+                                    {/* Intermittent yellow bar */}
+                                    <div
+                                        className={`priorite-pietons-bar ${isHighlighted ? 'highlighted' : ''}`}
+                                        style={barStyle(leftPos, barWidth)}
+                                    >
+                                    </div>
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Flèche d'anticipation - intermittent yellow bar (same as Priorité piétons) */}
+                        {flecheAnticipationActions.map((action, idx) => {
+                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = parseInt(action.deb) || 0;
+                            const rawFin = parseInt(action.fin) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            // Find group index in array
+                            const groupIndex = groups.findIndex(g => g.id === gf);
+                            if (groupIndex === -1) return null;
+                            if (rawDeb === rawFin) return null;
+
+                            // Apply time shifts (from Adaptatif vertical) in simulation mode
+                            const shiftedPos = getShiftedActionPosition(rawDeb, rawFin, gf, "Flèche d'anticipation");
+                            if (shiftedPos.hidden) return null;
+                            const deb = shiftedPos.deb;
+                            const fin = shiftedPos.fin;
+
+                            // Check for wrap-around (fin < deb means the bar crosses cycle boundary)
+                            const wrapsAround = deb > fin;
+
+                            // Vertical position aligned with the group's phase bar
+                            const height = ROW_HEIGHT - 14;
+                            const rowTotalHeight = ROW_HEIGHT + 1;
+                            const topPos = RULER_HEIGHT + 1 + (groupIndex * rowTotalHeight) + Math.floor((ROW_HEIGHT - height) / 2);
+
+                            // Stripe width based on 1 second interval
+                            const stripeWidth = pixelsPerSecond;
+
+                            // Common style for the yellow intermittent bar
+                            const barStyle = (left, width) => ({
+                                position: 'absolute',
+                                left: `${left}px`,
+                                width: `${width}px`,
+                                top: `${topPos}px`,
+                                height: `${height}px`,
+                                borderRadius: '2px',
+                                pointerEvents: 'none',
+                                zIndex: 15,
+                                background: `repeating-linear-gradient(
+                                    90deg,
+                                    #FFFF00,
+                                    #FFFF00 ${stripeWidth}px,
+                                    transparent ${stripeWidth}px,
+                                    transparent ${stripeWidth * 2}px
+                                )`,
+                                boxShadow: '0 0 3px rgba(255, 255, 0, 0.5)'
+                            });
+
+                            if (wrapsAround) {
+                                // Wrap-around case: draw 2 bars
+                                const firstPartLeft = deb * pixelsPerSecond;
+                                const firstPartWidth = (effectiveCycleLength - deb) * pixelsPerSecond;
+                                const secondPartLeft = 0;
+                                const secondPartWidth = fin * pixelsPerSecond;
+
+                                return (
+                                    <React.Fragment key={`fleche-anticipation-${idx}`}>
+                                        {/* First part: from deb to end of cycle */}
+                                        <div
+                                            className={`fleche-anticipation-wrapper ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${firstPartLeft}px`,
+                                                width: `${firstPartWidth}px`,
+                                                top: `${topPos}px`,
+                                                height: `${height}px`,
+                                                pointerEvents: 'auto'
+                                            }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        >
+                                            <div
+                                                className="action-drag-handle action-drag-handle-start"
+                                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', deb)}
+
+                                                style={{ pointerEvents: 'auto' }}
+                                            />
+                                        </div>
+                                        <div
+                                            className={`fleche-anticipation-bar ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={barStyle(firstPartLeft, firstPartWidth)}
+                                        />
+                                        {/* Second part: from start of cycle to fin */}
+                                        <div
+                                            className={`fleche-anticipation-wrapper ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${secondPartLeft}px`,
+                                                width: `${secondPartWidth}px`,
+                                                top: `${topPos}px`,
+                                                height: `${height}px`,
+                                                pointerEvents: 'auto'
+                                            }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        >
+                                            <div
+                                                className="action-drag-handle action-drag-handle-end"
+                                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}
+
+                                                style={{ pointerEvents: 'auto' }}
+                                            />
+                                        </div>
+                                        <div
+                                            className={`fleche-anticipation-bar ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={barStyle(secondPartLeft, secondPartWidth)}
+                                        >
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            } else {
+                                // Normal case: single bar
+                                const leftPos = deb * pixelsPerSecond;
+                                const barWidth = (fin - deb) * pixelsPerSecond;
+
+                                return (
+                                    <React.Fragment key={`fleche-anticipation-${idx}`}>
+                                        <div
+                                            className={`fleche-anticipation-wrapper ${dragState?.actionId === action.id ? 'dragging' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${leftPos}px`,
+                                                width: `${barWidth}px`,
+                                                top: `${topPos}px`,
+                                                height: `${height}px`,
+                                                pointerEvents: 'auto'
+                                            }}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        >
+                                            <div
+                                                className="action-drag-handle action-drag-handle-start"
+                                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', deb)}
+
+                                                style={{ pointerEvents: 'auto' }}
+                                            />
+                                            <div
+                                                className="action-drag-handle action-drag-handle-end"
+                                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'fin', fin)}
+
+                                                style={{ pointerEvents: 'auto' }}
+                                            />
+                                        </div>
+                                        <div
+                                            className={`fleche-anticipation-bar ${isHighlighted ? 'highlighted' : ''}`}
+                                            style={barStyle(leftPos, barWidth)}
+                                        >
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            }
+                        })}
+
+                        {/* Groupes de type FL ou PP - intermittent yellow bar based on green phase */}
+                        {groups.filter(g => g.type === 'FL' || g.type === 'PP').map((group, idx) => {
+                            const groupIndex = groups.findIndex(g => g.id === group.id);
+                            if (groupIndex === -1) return null;
+
+                            // Use simulated group data if available
+                            const simGroup = getSimulatedGroup(group.id);
+                            const offset = simGroup ? simGroup.simulatedOffset : group.offset;
+                            const greenDuration = simGroup ? simGroup.simulatedGreen : group.durations.green;
+
+                            if (greenDuration <= 0) return null;
+
+                            const deb = offset;
+                            const fin = (offset + greenDuration) % effectiveCycleLength;
+
+                            // Check for wrap-around
+                            const wrapsAround = offset + greenDuration > effectiveCycleLength;
+
+                            // Vertical position aligned with the group's phase bar
+                            const height = ROW_HEIGHT - 14;
+                            const rowTotalHeight = ROW_HEIGHT + 1;
+                            const topPos = RULER_HEIGHT + 1 + (groupIndex * rowTotalHeight) + Math.floor((ROW_HEIGHT - height) / 2);
+
+                            // Stripe width based on 1 second interval
+                            const stripeWidth = pixelsPerSecond;
+
+                            // Common style for the yellow intermittent bar
+                            const barStyle = (left, width) => ({
+                                position: 'absolute',
+                                left: `${left}px`,
+                                width: `${width}px`,
+                                top: `${topPos}px`,
+                                height: `${height}px`,
+                                borderRadius: '2px',
+                                pointerEvents: 'none',
+                                zIndex: 15,
+                                background: `repeating-linear-gradient(
+                                    90deg,
+                                    #FFFF00,
+                                    #FFFF00 ${stripeWidth}px,
+                                    transparent ${stripeWidth}px,
+                                    transparent ${stripeWidth * 2}px
+                                )`,
+                                boxShadow: '0 0 3px rgba(255, 255, 0, 0.5)'
+                            });
+
+                            if (wrapsAround) {
+                                // Wrap-around case: draw 2 bars
+                                const firstPartLeft = deb * pixelsPerSecond;
+                                const firstPartWidth = (effectiveCycleLength - deb) * pixelsPerSecond;
+                                const secondPartLeft = 0;
+                                const secondPartWidth = fin * pixelsPerSecond;
+
+                                return (
+                                    <React.Fragment key={`type-fl-pp-${group.id}-${idx}`}>
+                                        <div
+                                            className="type-fl-pp-bar"
+                                            style={barStyle(firstPartLeft, firstPartWidth)}
+                                        />
+                                        <div
+                                            className="type-fl-pp-bar"
+                                            style={barStyle(secondPartLeft, secondPartWidth)}
+                                        />
+                                    </React.Fragment>
+                                );
+                            } else {
+                                // Normal case: single bar
+                                const leftPos = deb * pixelsPerSecond;
+                                const barWidth = greenDuration * pixelsPerSecond;
+
+                                return (
+                                    <div
+                                        key={`type-fl-pp-${group.id}-${idx}`}
+                                        className="type-fl-pp-bar"
+                                        style={barStyle(leftPos, barWidth)}
+                                    />
+                                );
+                            }
+                        })}
+
+                        {/* Début de bande passante arrows - dashed green diagonal arrows */}
+                        {debutBandeActions.map((action, idx) => {
+                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = parseInt(action.deb) || 0;
+                            const rawFin = parseInt(action.fin) || 0;
+                            const actGf1 = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            // Find group indices
+                            const startGroupIndex = groups.findIndex(g => g.id === gf);
+                            const endGroupIndex = groups.findIndex(g => g.id === actGf1);
+                            if (startGroupIndex === -1 || endGroupIndex === -1) return null;
+
+                            // Apply time shifts in simulation mode
+                            const shiftedPos = getShiftedActionPosition(rawDeb, rawFin, gf, 'Début de bande passante');
+                            if (shiftedPos.hidden) return null;
+                            const deb = shiftedPos.deb;
+                            const fin = shiftedPos.fin;
+
+                            // Calculate positions
+                            const startX = deb * pixelsPerSecond;
+                            const endX = fin * pixelsPerSecond;
+                            const startY = RULER_HEIGHT + 1 + (startGroupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                            const endY = RULER_HEIGHT + 1 + (endGroupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                            const cycleEndX = cycleLength * pixelsPerSecond;
+
+                            // Arrow head size
+                            const arrowSize = 4;
+
+                            // Check if arrow wraps around cycle (deb > fin)
+                            const wrapsAround = deb > fin;
+
+                            if (wrapsAround) {
+                                // Calculate intermediate Y at cycle boundary
+                                const totalXDistance = (cycleLength - deb) + fin;
+                                const firstSegmentRatio = (cycleLength - deb) / totalXDistance;
+                                const intermediateY = startY + (endY - startY) * firstSegmentRatio;
+
+                                // Angle for second segment arrow head
+                                const angle2 = Math.atan2(endY - intermediateY, endX - 0);
+
+                                return (
+                                    <React.Fragment key={`debut-bande-${idx}`}>
+                                        <svg
+                                            className={`debut-bande-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                            width={totalWidth}
+                                            height={svgHeight}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                pointerEvents: 'none',
+                                                zIndex: 50,
+                                                overflow: 'visible'
+                                            }}
+                                        >
+                                            {/* First segment: from start to end of cycle */}
+                                            {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                                0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                                se survole, et l'événement remonte au <svg>. */}
+                                            <path d={`M${startX},${startY}L${cycleEndX},${intermediateY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
+                                            <path d={dashedPath(startX, startY, cycleEndX, intermediateY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
+                                            {/* Second segment: from start of cycle to end */}
+                                            {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                                0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                                se survole, et l'événement remonte au <svg>. */}
+                                            <path d={`M${0},${intermediateY}L${endX},${endY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
+                                            <path d={dashedPath(0, intermediateY, endX, endY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
+                                            {/* Arrow head at end */}
+                                            <polygon
+                                                points={`
+                                                    ${endX},${endY}
+                                                    ${endX - arrowSize * Math.cos(angle2 - Math.PI / 6)},${endY - arrowSize * Math.sin(angle2 - Math.PI / 6)}
+                                                    ${endX - arrowSize * Math.cos(angle2 + Math.PI / 6)},${endY - arrowSize * Math.sin(angle2 + Math.PI / 6)}
+                                                `}
+                                                fill="#00cc00"
+                                                stroke="none"
+                                            />
+                                        </svg>
+                                    </React.Fragment>
+                                );
+                            }
+
+                            const angle = Math.atan2(endY - startY, endX - startX);
+
+                            return (
+                                <React.Fragment key={`debut-bande-${idx}`}>
+                                    <svg
+                                        className={`debut-bande-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        width={totalWidth}
+                                        height={svgHeight}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            pointerEvents: 'none',
+                                            zIndex: 50,
+                                            overflow: 'visible'
+                                        }}
+                                    >
+                                        {/* Dashed diagonal line */}
+                                        {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                            0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                            se survole, et l'événement remonte au <svg>. */}
+                                        <path d={`M${startX},${startY}L${endX},${endY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
+                                        <path d={dashedPath(startX, startY, endX, endY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
+                                        {/* Arrow head at end */}
+                                        <polygon
+                                            points={`
+                                                ${endX},${endY}
+                                                ${endX - arrowSize * Math.cos(angle - Math.PI / 6)},${endY - arrowSize * Math.sin(angle - Math.PI / 6)}
+                                                ${endX - arrowSize * Math.cos(angle + Math.PI / 6)},${endY - arrowSize * Math.sin(angle + Math.PI / 6)}
+                                            `}
+                                            fill="#00cc00"
+                                            stroke="none"
+                                        />
+                                    </svg>
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Fin de bande passante arrows - dashed red diagonal arrows */}
+                        {finBandeActions.map((action, idx) => {
+                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = parseInt(action.deb) || 0;
+                            const rawFin = parseInt(action.fin) || 0;
+                            const actGf1 = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const abrv = action.abrv || '';
+                            const isHighlighted = hoveredActionId === action.id;
+
+                            // Find group indices
+                            const startGroupIndex = groups.findIndex(g => g.id === gf);
+                            const endGroupIndex = groups.findIndex(g => g.id === actGf1);
+                            if (startGroupIndex === -1 || endGroupIndex === -1) return null;
+
+                            // Apply time shifts in simulation mode
+                            const shiftedPos = getShiftedActionPosition(rawDeb, rawFin, gf, 'Fin de bande passante');
+                            if (shiftedPos.hidden) return null;
+                            const deb = shiftedPos.deb;
+                            const fin = shiftedPos.fin;
+
+                            // Calculate positions (same as début: from gf at deb to actGf1 at fin)
+                            const startX = deb * pixelsPerSecond;
+                            const endX = fin * pixelsPerSecond;
+                            const startY = RULER_HEIGHT + 1 + (startGroupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                            const endY = RULER_HEIGHT + 1 + (endGroupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                            const cycleEndX = cycleLength * pixelsPerSecond;
+
+                            // Arrow head size
+                            const arrowSize = 4;
+
+                            // Check if arrow wraps around cycle (deb > fin)
+                            const wrapsAround = deb > fin;
+
+                            if (wrapsAround) {
+                                // Calculate intermediate Y at cycle boundary
+                                const totalXDistance = (cycleLength - deb) + fin;
+                                const firstSegmentRatio = (cycleLength - deb) / totalXDistance;
+                                const intermediateY = startY + (endY - startY) * firstSegmentRatio;
+
+                                // Angle for second segment arrow head
+                                const angle2 = Math.atan2(endY - intermediateY, endX - 0);
+
+                                return (
+                                    <React.Fragment key={`fin-bande-${idx}`}>
+                                        <svg
+                                            className={`fin-bande-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                            width={totalWidth}
+                                            height={svgHeight}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                pointerEvents: 'none',
+                                                zIndex: 50,
+                                                overflow: 'visible'
+                                            }}
+                                        >
+                                            {/* First segment: from start to end of cycle */}
+                                            {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                                0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                                se survole, et l'événement remonte au <svg>. */}
+                                            <path d={`M${startX},${startY}L${cycleEndX},${intermediateY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
+                                            <path d={dashedPath(startX, startY, cycleEndX, intermediateY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
+                                            {/* Second segment: from start of cycle to end */}
+                                            {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                                0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                                se survole, et l'événement remonte au <svg>. */}
+                                            <path d={`M${0},${intermediateY}L${endX},${endY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
+                                            <path d={dashedPath(0, intermediateY, endX, endY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
+                                            {/* Arrow head at end */}
+                                            <polygon
+                                                points={`
+                                                    ${endX},${endY}
+                                                    ${endX - arrowSize * Math.cos(angle2 - Math.PI / 6)},${endY - arrowSize * Math.sin(angle2 - Math.PI / 6)}
+                                                    ${endX - arrowSize * Math.cos(angle2 + Math.PI / 6)},${endY - arrowSize * Math.sin(angle2 + Math.PI / 6)}
+                                                `}
+                                                fill="#00cc00"
+                                                stroke="none"
+                                            />
+                                        </svg>
+                                    </React.Fragment>
+                                );
+                            }
+
+                            const angle = Math.atan2(endY - startY, endX - startX);
+
+                            return (
+                                <React.Fragment key={`fin-bande-${idx}`}>
+                                    <svg
+                                        className={`fin-bande-arrows ${isHighlighted ? 'highlighted' : ''}`}
+                                            onMouseEnter={() => setHoveredActionId(action.id)}
+                                            onMouseLeave={() => setHoveredActionId(null)}
+                                        width={totalWidth}
+                                        height={svgHeight}
+                                        style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            pointerEvents: 'none',
+                                            zIndex: 50,
+                                            overflow: 'visible'
+                                        }}
+                                    >
+                                        {/* Dashed diagonal line */}
+                                        {/* Doublure transparente, sur la TRAJECTOIRE et non sur les
+                                                tirets : le tracé visible ne fait que
+                                            0,7 px, impossible à viser. Celle-ci ne se voit pas mais
+                                            se survole, et l'événement remonte au <svg>. */}
+                                        <path d={`M${startX},${startY}L${endX},${endY}`} className="bande-prise" stroke="transparent" strokeWidth="16" fill="none" style={{ pointerEvents: 'stroke' }} />
+                                        <path d={dashedPath(startX, startY, endX, endY)} stroke="#00cc00" strokeWidth="0.7" fill="none" />
+                                        {/* Arrow head at end */}
+                                        <polygon
+                                            points={`
+                                                ${endX},${endY}
+                                                ${endX - arrowSize * Math.cos(angle - Math.PI / 6)},${endY - arrowSize * Math.sin(angle - Math.PI / 6)}
+                                                ${endX - arrowSize * Math.cos(angle + Math.PI / 6)},${endY - arrowSize * Math.sin(angle + Math.PI / 6)}
+                                            `}
+                                            fill="#00cc00"
+                                            stroke="none"
+                                        />
+                                    </svg>
+                                </React.Fragment>
+                            );
+                        })}
+
+                        {/* Dependency arrows - intergreen times between groups */}
+                        {(showDependencies || hoveredConflict) && (
+                            <svg
+                                className="dependency-arrows"
+                                width={totalWidth}
+                                height={svgHeight}
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    pointerEvents: 'none',
+                                    zIndex: 5
+                                }}
+                            >
+                                <defs>
+                                    <marker
+                                        id="dep-arrowhead"
+                                        markerWidth="6"
+                                        markerHeight="4"
+                                        refX="6"
+                                        refY="2"
+                                        orient="auto"
+                                    >
+                                        <polygon points="0 0, 6 2, 0 4" fill="#999" />
+                                    </marker>
+                                    <marker
+                                        id="dep-arrowhead-conflict"
+                                        markerWidth="6"
+                                        markerHeight="4"
+                                        refX="6"
+                                        refY="2"
+                                        orient="auto"
+                                    >
+                                        <polygon points="0 0, 6 2, 0 4" fill="red" />
+                                    </marker>
+                                    <marker
+                                        id="dep-arrowhead-potential"
+                                        markerWidth="6"
+                                        markerHeight="4"
+                                        refX="6"
+                                        refY="2"
+                                        orient="auto"
+                                    >
+                                        <polygon points="0 0, 6 2, 0 4" fill="#ff9800" />
+                                    </marker>
+                                </defs>
+                                {/* Arrows from main green phases */}
+                                {groups.map((fromGroup, fromIndex) => {
+                                    const fromId = fromGroup.id;
+                                    // Use simulated values when simulation is active
+                                    const simFrom = simulationResult?.simulatedGroups?.find(g => g.id === fromId);
+                                    const useSimValues = simFrom && effectiveCycleLength;
+                                    const effCycle = useSimValues ? effectiveCycleLength : cycleLength;
+                                    const fromOffset = useSimValues ? (simFrom.simulatedOffset % effCycle) : (fromGroup.offset % cycleLength);
+                                    const fromGreen = useSimValues ? simFrom.simulatedGreen : fromGroup.durations.green;
+                                    const fromGreenEnd = (fromOffset + fromGreen) % effCycle;
+                                    const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                    const fromX = fromGreenEnd * pixelsPerSecond;
+
+                                    return groups.map((toGroup, toIndex) => {
+                                        const toId = toGroup.id;
+                                        if (fromId === toId) return null;
+
+                                        // Check if this arrow matches the hovered conflict (exact direction only)
+                                        const showForConflict = hoveredConflict &&
+                                            (fromId === hoveredConflict.from && toId === hoveredConflict.to);
+
+                                        // Filter: show arrows for hovered group OR hovered conflict
+                                        if (!showForConflict && hoveredGroupId !== null && fromId !== hoveredGroupId && toId !== hoveredGroupId) return null;
+                                        // If hoveredConflict is active but doesn't match this pair, hide the arrow
+                                        if (hoveredConflict && !showForConflict) return null;
+
+                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        if (intergreenTime <= 0) return null;
+
+                                        // Determine if this arrow is a conflict (from matrix hover)
+                                        const isMajorConflictArrow = showForConflict && hoveredConflict?.isConflict === true;
+                                        const isPotentialConflictArrow = showForConflict && hoveredConflict?.isConflict === false;
+                                        const arrowColor = isMajorConflictArrow ? 'red' : isPotentialConflictArrow ? '#ff9800' : '#999';
+                                        const arrowWidth = isMajorConflictArrow ? 3 : isPotentialConflictArrow ? 2 : 1;
+                                        const arrowOpacity = (isMajorConflictArrow || isPotentialConflictArrow) ? 0.9 : 0.6;
+                                        const arrowMarker = isMajorConflictArrow
+                                            ? 'url(#dep-arrowhead-conflict)'
+                                            : isPotentialConflictArrow
+                                                ? 'url(#dep-arrowhead-potential)'
+                                                : 'url(#dep-arrowhead)';
+                                        const arrowDash = (isMajorConflictArrow || isPotentialConflictArrow) ? '6,3' : undefined;
+
+                                        // Use simulated offset for target too
+                                        const simTo = simulationResult?.simulatedGroups?.find(g => g.id === toId);
+                                        const toOffset = (useSimValues && simTo) ? (simTo.simulatedOffset % effCycle) : (toGroup.offset % cycleLength);
+
+                                        // Skip if either group is escamoted or has no green in simulation
+                                        if (useSimValues && (simFrom?.isEscamoted || simFrom?.simulatedGreen <= 0)) return null;
+                                        if (useSimValues && simTo && (simTo.isEscamoted || simTo.simulatedGreen <= 0)) return null;
+
+                                        // Calculate gap between end of fromGroup green and start of toGroup green
+                                        let gap = (toOffset - fromGreenEnd + effCycle) % effCycle;
+                                        // If gap is 0, it means they're at the same time, consider it as full cycle
+                                        if (gap === 0) gap = effCycle;
+
+                                        // Don't show arrow if gap > dependencyGap seconds (unless forced by conflict hover)
+                                        if (!showForConflict && gap > dependencyGap) return null;
+
+                                        // Arrow ends at: end of green + intergreen time
+                                        const arrowEndTime = (fromGreenEnd + intergreenTime) % effCycle;
+                                        const toX = arrowEndTime * pixelsPerSecond;
+                                        const toRowY = RULER_HEIGHT + 1 + (toIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                        const cycleEndX = effCycle * pixelsPerSecond;
+
+                                        // If arrow would go backwards, split into two segments
+                                        if (fromX > toX) {
+                                            return (
+                                                <g key={`dep-${fromId}-${toId}`}>
+                                                    {/* First segment: from start to end of cycle */}
+                                                    <line
+                                                        x1={fromX}
+                                                        y1={fromRowY}
+                                                        x2={cycleEndX}
+                                                        y2={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        stroke={arrowColor}
+                                                        strokeWidth={arrowWidth}
+                                                        strokeDasharray={arrowDash}
+                                                        opacity={arrowOpacity}
+                                                    />
+                                                    {/* Second segment: from start of cycle to end point */}
+                                                    <line
+                                                        x1={0}
+                                                        y1={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        x2={toX}
+                                                        y2={toRowY}
+                                                        stroke={arrowColor}
+                                                        strokeWidth={arrowWidth}
+                                                        strokeDasharray={arrowDash}
+                                                        markerEnd={arrowMarker}
+                                                        opacity={arrowOpacity}
+                                                    />
+                                                </g>
+                                            );
+                                        }
+
+                                        return (
+                                            <line
+                                                key={`dep-${fromId}-${toId}`}
+                                                x1={fromX}
+                                                y1={fromRowY}
+                                                x2={toX}
+                                                y2={toRowY}
+                                                stroke={arrowColor}
+                                                strokeWidth={arrowWidth}
+                                                strokeDasharray={arrowDash}
+                                                markerEnd={arrowMarker}
+                                                opacity={arrowOpacity}
+                                            />
+                                        );
+                                    });
+                                })}
+
+                                {/* Arrows from Seconde lucarne phases */}
+                                {actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.fin !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((lucarne, lIdx) => {
+                                    const fromId = parseInt(lucarne.gf);
+                                    const fromIndex = groups.findIndex(g => g.id === fromId);
+                                    if (fromIndex === -1) return null;
+
+                                    const lucarneEnd = parseInt(lucarne.fin) || 0;
+                                    const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                    const fromX = lucarneEnd * pixelsPerSecond;
+
+                                    return groups.map((toGroup, toIndex) => {
+                                        const toId = toGroup.id;
+                                        if (fromId === toId) return null;
+
+                                        // Check if this arrow matches the hovered conflict (exact direction only)
+                                        const showForConflict = hoveredConflict &&
+                                            (fromId === hoveredConflict.from && toId === hoveredConflict.to);
+
+                                        // Filter: show arrows for hovered group OR hovered conflict
+                                        if (!showForConflict && hoveredGroupId !== null && fromId !== hoveredGroupId && toId !== hoveredGroupId) return null;
+                                        // If hoveredConflict is active but doesn't match this pair, hide the arrow
+                                        if (hoveredConflict && !showForConflict) return null;
+
+                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        if (intergreenTime <= 0) return null;
+
+                                        const toOffset = toGroup.offset % cycleLength;
+
+                                        // Calculate gap between end of lucarne and start of toGroup green
+                                        let gap = (toOffset - lucarneEnd + cycleLength) % cycleLength;
+                                        if (gap === 0) gap = cycleLength;
+
+                                        // Don't show arrow if gap > dependencyGap seconds
+                                        if (gap > dependencyGap) return null;
+
+                                        // Arrow ends at: end of lucarne + intergreen time
+                                        const arrowEndTime = (lucarneEnd + intergreenTime) % cycleLength;
+                                        const toX = arrowEndTime * pixelsPerSecond;
+                                        const toRowY = RULER_HEIGHT + 1 + (toIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                        const cycleEndX = cycleLength * pixelsPerSecond;
+
+                                        // If arrow would go backwards, split into two segments
+                                        if (fromX > toX) {
+                                            return (
+                                                <g key={`dep-luc-${lIdx}-${toId}`}>
+                                                    {/* First segment: from start to end of cycle */}
+                                                    <line
+                                                        x1={fromX}
+                                                        y1={fromRowY}
+                                                        x2={cycleEndX}
+                                                        y2={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        stroke="#999"
+                                                        strokeWidth="1"
+                                                        opacity="0.6"
+                                                    />
+                                                    {/* Second segment: from start of cycle to end point */}
+                                                    <line
+                                                        x1={0}
+                                                        y1={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        x2={toX}
+                                                        y2={toRowY}
+                                                        stroke="#999"
+                                                        strokeWidth="1"
+                                                        markerEnd="url(#dep-arrowhead)"
+                                                        opacity="0.6"
+                                                    />
+                                                </g>
+                                            );
+                                        }
+
+                                        return (
+                                            <line
+                                                key={`dep-luc-${lIdx}-${toId}`}
+                                                x1={fromX}
+                                                y1={fromRowY}
+                                                x2={toX}
+                                                y2={toRowY}
+                                                stroke="#999"
+                                                strokeWidth="1"
+                                                markerEnd="url(#dep-arrowhead)"
+                                                opacity="0.6"
+                                            />
+                                        );
+                                    });
+                                })}
+
+                                {/* Arrows from Seconde lucarne to other Seconde lucarne */}
+                                {actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.fin !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((fromLucarne, fromLIdx) => {
+                                    const fromId = parseInt(fromLucarne.gf);
+                                    const fromIndex = groups.findIndex(g => g.id === fromId);
+                                    if (fromIndex === -1) return null;
+
+                                    const fromLucarneEnd = parseInt(fromLucarne.fin) || 0;
+                                    const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                    const fromX = fromLucarneEnd * pixelsPerSecond;
+
+                                    return actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.deb !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((toLucarne, toLIdx) => {
+                                        const toId = parseInt(toLucarne.gf);
+                                        if (fromId === toId) return null;
+                                        if (fromLIdx === toLIdx) return null;
+
+                                        // Check if this arrow matches the hovered conflict (exact direction only)
+                                        const showForConflict = hoveredConflict &&
+                                            (fromId === hoveredConflict.from && toId === hoveredConflict.to);
+
+                                        // Filter: show arrows for hovered group OR hovered conflict
+                                        if (!showForConflict && hoveredGroupId !== null && fromId !== hoveredGroupId && toId !== hoveredGroupId) return null;
+                                        // If hoveredConflict is active but doesn't match this pair, hide the arrow
+                                        if (hoveredConflict && !showForConflict) return null;
+
+                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        if (intergreenTime <= 0) return null;
+
+                                        const toIndex = groups.findIndex(g => g.id === toId);
+                                        if (toIndex === -1) return null;
+
+                                        const toLucarneDeb = parseInt(toLucarne.deb) || 0;
+
+                                        // Calculate gap between end of fromLucarne and start of toLucarne
+                                        let gap = (toLucarneDeb - fromLucarneEnd + cycleLength) % cycleLength;
+                                        if (gap === 0) gap = cycleLength;
+
+                                        // Don't show arrow if gap > dependencyGap seconds
+                                        if (gap > dependencyGap) return null;
+
+                                        // Arrow ends at: end of lucarne + intergreen time
+                                        const arrowEndTime = (fromLucarneEnd + intergreenTime) % cycleLength;
+                                        const toX = arrowEndTime * pixelsPerSecond;
+                                        const toRowY = RULER_HEIGHT + 1 + (toIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                        const cycleEndX = cycleLength * pixelsPerSecond;
+
+                                        // If arrow would go backwards, split into two segments
+                                        if (fromX > toX) {
+                                            return (
+                                                <g key={`dep-luc2luc-${fromLIdx}-${toLIdx}`}>
+                                                    {/* First segment: from start to end of cycle */}
+                                                    <line
+                                                        x1={fromX}
+                                                        y1={fromRowY}
+                                                        x2={cycleEndX}
+                                                        y2={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        stroke="#999"
+                                                        strokeWidth="1"
+                                                        opacity="0.6"
+                                                    />
+                                                    {/* Second segment: from start of cycle to end point */}
+                                                    <line
+                                                        x1={0}
+                                                        y1={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        x2={toX}
+                                                        y2={toRowY}
+                                                        stroke="#999"
+                                                        strokeWidth="1"
+                                                        markerEnd="url(#dep-arrowhead)"
+                                                        opacity="0.6"
+                                                    />
+                                                </g>
+                                            );
+                                        }
+
+                                        return (
+                                            <line
+                                                key={`dep-luc2luc-${fromLIdx}-${toLIdx}`}
+                                                x1={fromX}
+                                                y1={fromRowY}
+                                                x2={toX}
+                                                y2={toRowY}
+                                                stroke="#999"
+                                                strokeWidth="1"
+                                                markerEnd="url(#dep-arrowhead)"
+                                                opacity="0.6"
+                                            />
+                                        );
+                                    });
+                                })}
+
+                                {/* Arrows from main green phases to Seconde lucarne */}
+                                {groups.map((fromGroup, fromIndex) => {
+                                    const fromId = fromGroup.id;
+                                    const fromOffset = fromGroup.offset % cycleLength;
+                                    const fromGreenEnd = (fromOffset + fromGroup.durations.green) % cycleLength;
+                                    const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                    const fromX = fromGreenEnd * pixelsPerSecond;
+
+                                    return actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.deb !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((toLucarne, toLIdx) => {
+                                        const toId = parseInt(toLucarne.gf);
+                                        if (fromId === toId) return null;
+
+                                        // Check if this arrow matches the hovered conflict (exact direction only)
+                                        const showForConflict = hoveredConflict &&
+                                            (fromId === hoveredConflict.from && toId === hoveredConflict.to);
+
+                                        // Filter: show arrows for hovered group OR hovered conflict
+                                        if (!showForConflict && hoveredGroupId !== null && fromId !== hoveredGroupId && toId !== hoveredGroupId) return null;
+                                        // If hoveredConflict is active but doesn't match this pair, hide the arrow
+                                        if (hoveredConflict && !showForConflict) return null;
+
+                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        if (intergreenTime <= 0) return null;
+
+                                        const toIndex = groups.findIndex(g => g.id === toId);
+                                        if (toIndex === -1) return null;
+
+                                        const toLucarneDeb = parseInt(toLucarne.deb) || 0;
+
+                                        // Calculate gap between end of main green and start of lucarne
+                                        let gap = (toLucarneDeb - fromGreenEnd + cycleLength) % cycleLength;
+                                        if (gap === 0) gap = cycleLength;
+
+                                        // Don't show arrow if gap > dependencyGap seconds
+                                        if (gap > dependencyGap) return null;
+
+                                        // Arrow ends at: end of green + intergreen time
+                                        const arrowEndTime = (fromGreenEnd + intergreenTime) % cycleLength;
+                                        const toX = arrowEndTime * pixelsPerSecond;
+                                        const toRowY = RULER_HEIGHT + 1 + (toIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                        const cycleEndX = cycleLength * pixelsPerSecond;
+
+                                        // If arrow would go backwards, split into two segments
+                                        if (fromX > toX) {
+                                            return (
+                                                <g key={`dep-main2luc-${fromId}-${toLIdx}`}>
+                                                    {/* First segment: from start to end of cycle */}
+                                                    <line
+                                                        x1={fromX}
+                                                        y1={fromRowY}
+                                                        x2={cycleEndX}
+                                                        y2={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        stroke="#999"
+                                                        strokeWidth="1"
+                                                        opacity="0.6"
+                                                    />
+                                                    {/* Second segment: from start of cycle to end point */}
+                                                    <line
+                                                        x1={0}
+                                                        y1={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        x2={toX}
+                                                        y2={toRowY}
+                                                        stroke="#999"
+                                                        strokeWidth="1"
+                                                        markerEnd="url(#dep-arrowhead)"
+                                                        opacity="0.6"
+                                                    />
+                                                </g>
+                                            );
+                                        }
+
+                                        return (
+                                            <line
+                                                key={`dep-main2luc-${fromId}-${toLIdx}`}
+                                                x1={fromX}
+                                                y1={fromRowY}
+                                                x2={toX}
+                                                y2={toRowY}
+                                                stroke="#999"
+                                                strokeWidth="1"
+                                                markerEnd="url(#dep-arrowhead)"
+                                                opacity="0.6"
+                                            />
+                                        );
+                                    });
+                                })}
+
+                                {/* Arrows from Seconde lucarne to Seconde lucarne (end to start) */}
+                                {actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.fin !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((fromLucarne, fromLIdx) => {
+                                    const fromId = parseInt(fromLucarne.gf);
+                                    const fromIndex = groups.findIndex(g => g.id === fromId);
+                                    if (fromIndex === -1) return null;
+
+                                    const fromLucarneEnd = parseInt(fromLucarne.fin) || 0;
+                                    const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                    const fromX = fromLucarneEnd * pixelsPerSecond;
+
+                                    return actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.deb !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((toLucarne, toLIdx) => {
+                                        const toId = parseInt(toLucarne.gf);
+                                        if (fromId === toId) return null;
+                                        if (fromLIdx === toLIdx) return null;
+
+                                        // Check if this arrow matches the hovered conflict (exact direction only)
+                                        const showForConflict = hoveredConflict &&
+                                            (fromId === hoveredConflict.from && toId === hoveredConflict.to);
+
+                                        // Filter: show arrows for hovered group OR hovered conflict
+                                        if (!showForConflict && hoveredGroupId !== null && fromId !== hoveredGroupId && toId !== hoveredGroupId) return null;
+                                        // If hoveredConflict is active but doesn't match this pair, hide the arrow
+                                        if (hoveredConflict && !showForConflict) return null;
+
+                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        if (intergreenTime <= 0) return null;
+
+                                        const toIndex = groups.findIndex(g => g.id === toId);
+                                        if (toIndex === -1) return null;
+
+                                        const toLucarneDeb = parseInt(toLucarne.deb) || 0;
+
+                                        // Calculate gap between end of fromLucarne and start of toLucarne
+                                        let gap = (toLucarneDeb - fromLucarneEnd + cycleLength) % cycleLength;
+                                        if (gap === 0) gap = cycleLength;
+
+                                        // Don't show arrow if gap > dependencyGap seconds
+                                        if (gap > dependencyGap) return null;
+
+                                        // Arrow ends at: end of lucarne + intergreen time
+                                        const arrowEndTime = (fromLucarneEnd + intergreenTime) % cycleLength;
+                                        const toX = arrowEndTime * pixelsPerSecond;
+                                        const toRowY = RULER_HEIGHT + 1 + (toIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
+                                        const cycleEndX = cycleLength * pixelsPerSecond;
+
+                                        // If arrow would go backwards, split into two segments
+                                        if (fromX > toX) {
+                                            return (
+                                                <g key={`dep-luc2lucdeb-${fromLIdx}-${toLIdx}`}>
+                                                    {/* First segment: from start to end of cycle */}
+                                                    <line
+                                                        x1={fromX}
+                                                        y1={fromRowY}
+                                                        x2={cycleEndX}
+                                                        y2={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        stroke="#999"
+                                                        strokeWidth="1"
+                                                        opacity="0.6"
+                                                    />
+                                                    {/* Second segment: from start of cycle to end point */}
+                                                    <line
+                                                        x1={0}
+                                                        y1={fromRowY + (toRowY - fromRowY) * ((cycleEndX - fromX) / (cycleEndX - fromX + toX))}
+                                                        x2={toX}
+                                                        y2={toRowY}
+                                                        stroke="#999"
+                                                        strokeWidth="1"
+                                                        markerEnd="url(#dep-arrowhead)"
+                                                        opacity="0.6"
+                                                    />
+                                                </g>
+                                            );
+                                        }
+
+                                        return (
+                                            <line
+                                                key={`dep-luc2lucdeb-${fromLIdx}-${toLIdx}`}
+                                                x1={fromX}
+                                                y1={fromRowY}
+                                                x2={toX}
+                                                y2={toRowY}
+                                                stroke="#999"
+                                                strokeWidth="1"
+                                                markerEnd="url(#dep-arrowhead)"
+                                                opacity="0.6"
+                                            />
+                                        );
+                                    });
+                                })}
+                            </svg>
+                        )}
+                    </div>
+                </div>
+
+                {/* Comments column - not printable */}
+                {showComments && <div className="timeline-comments no-print">
+                    {/* Header for comments */}
+                    <div className="comments-header">
+                        <span>Commentaire</span>
+                        <CustomTooltip text="Couleur verte (+)"><span className="comment-color-btn comment-color-plus" role="button" aria-label="Colorer le texte sélectionné en vert">+</span></CustomTooltip>
+                        <CustomTooltip text="Couleur rouge (-)"><span className="comment-color-btn comment-color-minus" role="button" aria-label="Colorer le texte sélectionné en rouge">−</span></CustomTooltip>
+                    </div>
+
+                    {/* Comment input for each group */}
+                    {groups.map(g => (
+                        <div key={g.id} className="comment-row">
+                            <div
+                                className="input-comment"
+                                contentEditable
+                                suppressContentEditableWarning
+                                dangerouslySetInnerHTML={{ __html: g.comment || '' }}
+                                onBlur={(e) => {
+                                    const html = e.currentTarget.innerHTML;
+                                    // Extract text to check length
+                                    const text = e.currentTarget.textContent || '';
+                                    if (text.length <= 50) {
+                                        updateGroupParams(g.id, { comment: html });
+                                    } else {
+                                        // Truncate and save
+                                        e.currentTarget.textContent = text.slice(0, 50);
+                                        updateGroupParams(g.id, { comment: e.currentTarget.innerHTML });
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === '+' || e.key === '-') {
+                                        e.preventDefault();
+                                        const color = e.key === '+' ? '#4CAF50' : '#F44336';
+                                        const selection = window.getSelection();
+
+                                        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+                                            // Has selection - wrap selection in colored span
+                                            const range = selection.getRangeAt(0);
+                                            const selectedText = range.toString();
+                                            if (selectedText) {
+                                                const span = document.createElement('span');
+                                                span.style.color = color;
+                                                range.surroundContents(span);
+                                                // Save updated HTML
+                                                updateGroupParams(g.id, { comment: e.currentTarget.innerHTML });
+                                            }
+                                        } else {
+                                            // No selection - color entire content or toggle back to white
+                                            const content = e.currentTarget.textContent || '';
+                                            if (content) {
+                                                // Check if content is already entirely wrapped in a colored span
+                                                const firstChild = e.currentTarget.firstChild;
+                                                const isEntirelyColored = firstChild &&
+                                                    firstChild.nodeType === 1 &&
+                                                    firstChild.tagName === 'SPAN' &&
+                                                    firstChild.style.color &&
+                                                    e.currentTarget.childNodes.length === 1;
+
+                                                if (isEntirelyColored) {
+                                                    // Toggle back to white (remove color)
+                                                    e.currentTarget.innerHTML = content;
+                                                } else {
+                                                    e.currentTarget.innerHTML = `<span style="color: ${color}">${content}</span>`;
+                                                }
+                                                updateGroupParams(g.id, { comment: e.currentTarget.innerHTML });
+                                            }
+                                        }
+                                    }
+                                }}
+                                data-tooltip="Commentaire (50 caractères max) - Sélectionnez du texte puis + pour vert, - pour rouge"
+                            />
+                        </div>
+                    ))}
+                </div>}
+
+                {/* Remarques column - not printable, hidden when detached into a popup */}
+                {showRemarks && !remarquesDetached && (
+                    <RemarquesEditor
+                        remarques={remarques}
+                        updateRemarques={updateRemarques}
+                        groupCount={groups.length}
+                    />
+                )}
+            </div>
+        </div>
+        <TimelineFloatingOverlays
+            actionData={actionData}
+            actionTooltip={actionTooltip}
+            cycleLength={cycleLength}
+            dragState={dragState}
+            microVariableNames={microVariableNames}
+        />
+    </>);
+};
+
+export default TimelineDiagram;
