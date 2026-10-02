@@ -697,7 +697,8 @@ const IntersectionImage = ({
         }),
         [groups, simulationResult, cycleLength, actionData, selectedActions, conflictMatrix]
     );
-// Instant affiché, règle commune avec la fenêtre détachée :
+
+    // Instant affiché, règle commune avec la fenêtre détachée :
     //   1. animation lancée  → le curseur de lecture, et lui seul. Le survol ne
     //      doit pas détourner l'affichage pendant le déroulement.
     //   2. animation à l'arrêt → le point survolé sur le diagramme, à défaut la
