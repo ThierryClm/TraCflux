@@ -1,4 +1,12 @@
-// @ts-check
+import type {
+    ActionMicro,
+    Groupe,
+    JeuTrafic,
+    LigneDiagramme,
+    Matrice,
+    PlanDeFeu,
+    Projet
+} from '../types/projet';
 /**
  * Pure helpers for Plan de Feu (PF) management.
  * No React, no side effects — safe to unit test.
@@ -13,12 +21,24 @@ export const DEFAULT_CYCLE = 60;
 export const MAX_PF = 15;
 export const MAX_GROUPS = 32;
 
+type CreatePfOptions = Partial<PlanDeFeu> & {
+    sourceGroups?: Groupe[];
+    groupCount?: number;
+};
+
+export interface MergePfResult {
+    state?: Projet;
+    warnings?: string[];
+    addedCount?: number;
+    error?: string;
+}
+
 /**
  * Create an empty action row with the given id.
  * @param {number} id
  * @returns {import('../types/projet.js').ActionMicro}
  */
-export const createEmptyActionRow = (id) => ({
+export const createEmptyActionRow = (id: number): ActionMicro => ({
     id,
     gf: '',
     action: '',
@@ -38,7 +58,7 @@ export const createEmptyActionRow = (id) => ({
 /**
  * Create an array of 30 empty action rows (default PF data).
  */
-export const createEmptyActionData = () =>
+export const createEmptyActionData = (): ActionMicro[] =>
     Array.from({ length: 30 }, (_, i) => createEmptyActionRow(i + 1));
 
 /**
@@ -49,7 +69,7 @@ export const createEmptyActionData = () =>
  * @param {import('../types/projet.js').Groupe[]|undefined} sourceGroups
  * @returns {import('../types/projet.js').LigneDiagramme[]}
  */
-export const buildDiagramFromGroups = (sourceGroups) => {
+export const buildDiagramFromGroups = (sourceGroups: Groupe[] | undefined): LigneDiagramme[] => {
     if (!Array.isArray(sourceGroups)) return [];
     return sourceGroups.map(g => ({
         groupId: g.id,
@@ -69,7 +89,7 @@ export const buildDiagramFromGroups = (sourceGroups) => {
  * @param {number} groupCount
  * @returns {import('../types/projet.js').Matrice}
  */
-export const buildEmptyMatrix = (groupCount) => {
+export const buildEmptyMatrix = (groupCount: number): Matrice => {
     const n = Math.max(0, groupCount || 0);
     return Array.from({ length: n }, () => new Array(n).fill(''));
 };
@@ -82,7 +102,7 @@ export const buildEmptyMatrix = (groupCount) => {
  *   sourceGroups?: import('../types/projet.js').Groupe[], groupCount?: number }} [opts]
  * @returns {import('../types/projet.js').PlanDeFeu}
  */
-export const createEmptyPF = (opts = {}) => {
+export const createEmptyPF = (opts: CreatePfOptions = {}): PlanDeFeu => {
     const { id, name, sourceGroups, groupCount } = opts;
     return {
         id: id ?? 1,
@@ -111,10 +131,15 @@ export const createEmptyPF = (opts = {}) => {
  * @param {number} [fallbackCycle]
  * @returns {import('../types/projet.js').PlanDeFeu[]}
  */
-export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix, fallbackCycle = DEFAULT_CYCLE) => {
+export const ensurePFIntegrity = (
+    pfTabsArr: PlanDeFeu[] | undefined,
+    fallbackGroups: Groupe[] | undefined,
+    fallbackMatrix: Matrice | undefined,
+    fallbackCycle = DEFAULT_CYCLE
+): PlanDeFeu[] => {
     if (!Array.isArray(pfTabsArr)) return [];
     const groupCount = fallbackGroups?.length || 0;
-    return pfTabsArr.map(pf => {
+    return pfTabsArr.map((pf): PlanDeFeu | null => {
         if (!pf || typeof pf !== 'object') return null;
         const hasDiagram = Array.isArray(pf.diagram) && pf.diagram.length > 0;
         const hasMatrix = Array.isArray(pf.conflictMatrix) && pf.conflictMatrix.length > 0;
@@ -156,7 +181,7 @@ export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix, fal
             remarques: pf.remarques ?? '',
             ...(pf.color !== undefined ? { color: pf.color } : {})
         };
-    }).filter(pf => pf !== null);
+    }).filter((pf): pf is PlanDeFeu => pf !== null);
 };
 
 /**
@@ -178,7 +203,7 @@ export const ensurePFIntegrity = (pfTabsArr, fallbackGroups, fallbackMatrix, fal
  * @param {Array<number>} selectedIds ids de PF à conserver
  * @returns {import('../types/projet.js').Projet|null}
  */
-export const selectPfSubset = (fullState, selectedIds) => {
+export const selectPfSubset = (fullState: Projet, selectedIds: number[]): Projet | null => {
     if (!fullState || !Array.isArray(fullState.pfTabs)) return null;
     const ids = new Set((selectedIds || []).map(Number));
     const pfTabs = fullState.pfTabs.filter(p => ids.has(Number(p.id)));
@@ -189,8 +214,7 @@ export const selectPfSubset = (fullState, selectedIds) => {
         : pfTabs[0].id;
     const active = pfTabs.find(p => Number(p.id) === Number(activePFId));
 
-    /** @type {Record<string, string>} */
-    const pfTrafficDatasetMap = {};
+    const pfTrafficDatasetMap: Record<string, string> = {};
     Object.entries(fullState.pfTrafficDatasetMap || {}).forEach(([k, v]) => {
         if (ids.has(Number(k))) pfTrafficDatasetMap[k] = v;
     });
@@ -209,8 +233,8 @@ export const selectPfSubset = (fullState, selectedIds) => {
     // Reproduit exactement la reconstitution du reverse-sync (useTrafficLight).
     let groups = fullState.groups;
     if (active && Array.isArray(active.diagram) && Array.isArray(groups)) {
-        const byId = new Map(active.diagram.map(d => [d.groupId, d]));
-        groups = groups.map(/** @returns {import('../types/projet.js').Groupe} */ g => {
+        const byId = new Map<number, LigneDiagramme>(active.diagram.map(d => [d.groupId, d]));
+        groups = groups.map((g): Groupe => {
             const d = byId.get(g.id);
             if (!d) return g;
             return {
@@ -261,8 +285,12 @@ const STANDARD_TRAFFIC_DATASETS = ['HPM', 'HPS', 'HC', 'Estimation', 'Projection
  * @param {{ readOnly?: boolean }} [opts]
  * @returns {{ state?: import('../types/projet.js').Projet, warnings?: string[], addedCount?: number, error?: string }}
  */
-export const mergePfFromProject = (current, imported, opts = {}) => {
-    const warnings = [];
+export const mergePfFromProject = (
+    current: Projet,
+    imported: Projet,
+    opts: { readOnly?: boolean } = {}
+): MergePfResult => {
+    const warnings: string[] = [];
     if (!current || !Array.isArray(current.pfTabs)) {
         return { error: 'Projet courant invalide.' };
     }
@@ -311,11 +339,9 @@ export const mergePfFromProject = (current, imported, opts = {}) => {
     });
 
     // Rapatriement des jeux de données trafic référencés par les PF importés.
-    /** @type {Record<string, import('../types/projet.js').JeuTrafic>} */
-    const trafficDatasets = { ...(current.trafficDatasets || {}) };
-    /** @type {Set<string>} */
-    const customNames = new Set(current.customTrafficDatasetNames || []);
-    const pfTrafficDatasetMap = { ...(current.pfTrafficDatasetMap || {}) };
+    const trafficDatasets: Record<string, JeuTrafic> = { ...(current.trafficDatasets || {}) };
+    const customNames = new Set<string>(current.customTrafficDatasetNames || []);
+    const pfTrafficDatasetMap: Record<string, string> = { ...(current.pfTrafficDatasetMap || {}) };
     newPfs.forEach(({ source, clone }) => {
         const dsName = imported.pfTrafficDatasetMap && imported.pfTrafficDatasetMap[source.id];
         if (!dsName) return;
@@ -332,7 +358,7 @@ export const mergePfFromProject = (current, imported, opts = {}) => {
 
     const pfTabs = [...existing, ...newPfs.map(x => x.clone)];
 
-    const state = {
+    const state: Projet = {
         ...current,
         pfTabs,
         trafficDatasets,
@@ -352,7 +378,7 @@ export const mergePfFromProject = (current, imported, opts = {}) => {
  * @param {import('../types/projet.js').Matrice} m
  * @returns {import('../types/projet.js').Matrice}
  */
-export const deepCopyMatrix = (m) =>
+export const deepCopyMatrix = (m: Matrice): Matrice =>
     Array.isArray(m) ? m.map(row => (Array.isArray(row) ? [...row] : row)) : m;
 
 /**
@@ -375,7 +401,10 @@ export const deepCopyMatrix = (m) =>
  * @param {number} defaut
  * @returns {number}
  */
-export const cycleDuPlanActif = (state, defaut) => {
+export const cycleDuPlanActif = (
+    state: Partial<Projet> | null | undefined,
+    defaut: number
+): number => {
     const plans = Array.isArray(state?.pfTabs) ? state.pfTabs : [];
     const actif = plans.find(pf => pf.id === (state?.activePFId || 1));
     return actif?.cycleLength || state?.cycleLength || defaut;
