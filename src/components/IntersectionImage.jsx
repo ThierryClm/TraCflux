@@ -4,6 +4,7 @@ import { compressImageDataUrl, dataUrlBytes, formatBytes, ALERT_ABOVE_BYTES } fr
 import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
+import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
 import './IntersectionImage.css';
 
 const IntersectionImage = ({
@@ -323,8 +324,7 @@ const IntersectionImage = ({
             x,
             y,
             rotation: 0, // Rotation in degrees (0 = up)
-            ...(courant === 'TàD' || courant === 'TàG' ? { turnLength: 0.5 } : {}),
-            ...(courant === 'Piéton' || courant === 'Cycle' ? { length: 2 } : {})
+            ...getNewIntersectionArrowDefaults(courant)
         };
         onArrowsChange([...arrows, newArrow]);
         setSelectedArrow(newArrow.id);
