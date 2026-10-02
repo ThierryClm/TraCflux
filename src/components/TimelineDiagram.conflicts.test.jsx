@@ -34,7 +34,8 @@ const renderConflict = (isConflict) => render(
             [0, 0]
         ]}
         actionData={[]}
-        hoveredConflict={{ from: 1, to: 2, isConflict }}
+        hoveredConflict={isConflict === null ? null : { from: 1, to: 2, isConflict }}
+        showDependencies={isConflict === null}
         cycleLengthInput="60"
         setCycleLengthInput={() => {}}
         setCycleLength={() => {}}
@@ -59,8 +60,22 @@ describe('Diagramme — survol des conflits', () => {
         expect(arrow).toHaveAttribute('marker-end', 'url(#dep-arrowhead-conflict)');
     });
 
-    it('conserve le style discret pour un conflit potentiel', () => {
+    it('dessine un conflit potentiel en orange, semi-épais et pointillé', () => {
         const { container } = renderConflict(false);
+        const arrow = container.querySelector('.dependency-arrows line');
+
+        expect(arrow).toHaveAttribute('stroke', '#ff9800');
+        expect(arrow).toHaveAttribute('stroke-width', '2');
+        expect(arrow).toHaveAttribute('stroke-dasharray', '6,3');
+        expect(arrow).toHaveAttribute('opacity', '0.9');
+        expect(arrow).toHaveAttribute('marker-end', 'url(#dep-arrowhead-potential)');
+
+        const marker = container.querySelector('#dep-arrowhead-potential polygon');
+        expect(marker).toHaveAttribute('fill', '#ff9800');
+    });
+
+    it('conserve le style gris discret pour une dépendance ordinaire', () => {
+        const { container } = renderConflict(null);
         const arrow = container.querySelector('.dependency-arrows line');
 
         expect(arrow).toHaveAttribute('stroke', '#999');
