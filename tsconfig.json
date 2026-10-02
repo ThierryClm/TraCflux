@@ -1,10 +1,9 @@
 {
-    // Vérification de types SANS TypeScript.
+    // Migration TypeScript progressive.
     //
-    // Le code reste du JavaScript : aucun fichier n'est renommé, aucune étape
-    // de compilation n'est ajoutée — Vite et Vitest ne lisent même pas ce
-    // fichier. Seul `npm run types` s'en sert, pour passer le compilateur
-    // TypeScript en lecture sur les fichiers qui le demandent.
+    // Les modules migrés sont de vrais fichiers `.ts` / `.tsx`. Le reste du
+    // code demeure en JavaScript et continue d'être vérifié fichier par fichier
+    // avec `// @ts-check`, sans conversion globale risquée.
     //
     // `checkJs` est à false : la vérification n'est PAS globale. Un fichier
     // n'est contrôlé que s'il porte `// @ts-check` en tête. On étend donc la

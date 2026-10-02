@@ -1,47 +1,34 @@
-// @ts-check
-/**
- * Les réglages de mise en page qui appartiennent au projet.
- *
- * Six clés — hauteur du diagramme, cadrage et zoom de l'image détachée, options
- * d'affichage, répertoires de travail — qui ne vivent pas dans `useTrafficLight`
- * mais dans `App`. Le fichier `.json` les portait, le cache localStorage non :
- * rouvrir un projet depuis la liste les perdait donc silencieusement.
- *
- * Elles transitent maintenant par `champsProjetRef`, comme les cases du dossier
- * d'impression, ce qui les fait entrer dans `getFullState` — et donc dans les
- * DEUX écrivains à la fois, sans que personne ait à y penser.
- *
- * La lecture et l'écriture vivent ici, en un seul exemplaire. C'est la
- * duplication d'une même logique entre le lecteur « fichier » et le lecteur
- * « cache » qui a produit, une par une, toutes les pertes constatées.
- */
+import type { OptionsMiseEnPage, Projet } from '../types/projet';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from './floatingImageBox';
+
+/** Réglages de mise en page persistants d'un projet. */
+type DirectoryKey = 'open' | 'save' | 'import' | 'image' | 'greenWave';
+
+interface LayoutValues extends OptionsMiseEnPage {
+    diagramHeight?: number | null;
+    floatingCrop?: Record<string, unknown>;
+    floatingZoom?: number;
+    sidebarVisible?: boolean;
+    directoryNames?: Partial<Record<DirectoryKey, string | null>>;
+}
+
+type LayoutSetter = (value?: unknown) => void;
+type LayoutSetters = Record<string, LayoutSetter | undefined>;
 
 /**
  * Les sept drapeaux de détachement, plus les quatre options d'affichage.
- *
- * La liste est liée au type : ajouter un drapeau ici sans l'ajouter à
- * `OptionsMiseEnPage` — ou l'inverse — devient une erreur de vérification.
- * C'est tout l'intérêt, puisque c'est un drapeau oublié d'un côté qui fait
- * perdre un réglage.
- * @type {(keyof import('../types/projet.js').OptionsMiseEnPage)[]}
+ * La liste est liée au type afin qu'une nouvelle option ne puisse pas être
+ * oubliée silencieusement lors de la persistance.
  */
-const DRAPEAUX_MISE_EN_PAGE = [
+const DRAPEAUX_MISE_EN_PAGE: (keyof OptionsMiseEnPage)[] = [
     'showParameters', 'showComments', 'showRemarks', 'showActionDescription',
     'showFloatingForm', 'showFloatingMatrix', 'showFloatingTraffic',
     'showFloatingImage', 'showFloatingConditions', 'showFloatingVariables',
     'showFloatingRemarks'
 ];
 
-/**
- * Compose les six clés à partir de l'état courant de l'application.
- * Le résultat est fusionné dans `getFullState`, donc écrit à l'identique dans
- * le fichier et dans le cache.
- *
- * @param {Record<string, any>} v état courant, tel que l'application le tient
- * @returns {Partial<import('../types/projet.js').Projet>}
- */
-export const lireMiseEnPage = (v) => ({
+/** Compose les réglages persistants depuis l'état courant de l'application. */
+export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
     diagramHeight: v.diagramHeight,
     floatingCrop: v.floatingCrop,
     floatingCropBasis: CROP_BASIS,
@@ -68,37 +55,24 @@ export const lireMiseEnPage = (v) => ({
     }
 });
 
-/**
- * Applique les six clés à l'ouverture d'un projet, quel que soit le chemin.
- *
- * Les valeurs de repli comptent autant que les valeurs lues : un projet
- * enregistré avant l'existence d'une option ne doit pas hériter du réglage du
- * projet précédent. C'est pourquoi l'absence d'une clé remet une valeur neutre
- * plutôt que de ne rien faire.
- *
- * @param {Partial<import('../types/projet.js').Projet>|null|undefined} data projet lu
- * @param {Record<string, ((valeur?: any) => void) | undefined>} s poseurs d'état de l'application
- * @returns {void}
- */
-export const appliquerMiseEnPage = (data, s) => {
+/** Applique les réglages persistants lors de l'ouverture d'un projet. */
+export const appliquerMiseEnPage = (
+    data: Partial<Projet> | null | undefined,
+    s: LayoutSetters
+): void => {
     if (!data || typeof data !== 'object') return;
 
-    // Hauteur du diagramme : absente, on efface aussi la valeur mémorisée par
-    // le navigateur, qui reviendrait sinon au prochain rechargement.
     if (data.diagramHeight !== undefined && data.diagramHeight !== null) {
         s.setDiagramHeight?.(data.diagramHeight);
     } else {
         s.resetDiagramHeight?.();
     }
 
-    // Cadrage et zoom de l'image détachée : hériter de ceux du projet précédent
-    // n'a pas de sens et laissait les curseurs déjà engagés au premier
-    // détachement.
     s.setFloatingCrop?.(data.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
     s.setFloatingZoom?.(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
     s.markLegacyCrop?.(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
 
-    const poseurs = {
+    const poseurs: Partial<Record<keyof OptionsMiseEnPage, LayoutSetter>> = {
         showParameters: s.setSidebarVisible,
         showComments: s.setShowComments,
         showRemarks: s.setShowRemarks,
@@ -114,31 +88,22 @@ export const appliquerMiseEnPage = (data, s) => {
 
     if (data.layoutOptions && typeof data.layoutOptions === 'object') {
         const lo = data.layoutOptions;
-        // Le panneau des paramètres est le seul dont l'absence a une valeur
-        // par défaut affirmative : un projet antérieur à l'option l'affichait.
         s.setSidebarVisible?.(typeof lo.showParameters === 'boolean' ? lo.showParameters : true);
         DRAPEAUX_MISE_EN_PAGE.forEach(nom => {
             if (nom === 'showParameters') return;
             if (typeof lo[nom] === 'boolean') poseurs[nom]?.(lo[nom]);
         });
     } else {
-        // Projet ancien, sans layoutOptions : on devine les commentaires et les
-        // remarques d'après leur contenu, et on repart d'un espace de travail
-        // propre — l'utilisateur détachera ce dont il a besoin.
         const aDesCommentaires = data.groups?.some(g => g.comment && g.comment.trim() !== '')
             || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
         s.setShowComments?.(!!aDesCommentaires);
         s.setShowRemarks?.(!!(data.pfTabs || []).some(pf => pf.remarques && pf.remarques.trim() !== ''));
         s.setSidebarVisible?.(true);
-        // Les sept drapeaux de détachement : tous ceux de la liste sauf les
-        // quatre options d'affichage, traitées juste au-dessus.
         DRAPEAUX_MISE_EN_PAGE
             .filter(nom => nom.startsWith('showFloating'))
             .forEach(nom => poseurs[nom]?.(false));
     }
 
-    // Cases du dossier d'impression : absentes d'un projet antérieur, on garde
-    // celles en place plutôt que de tout décocher.
     if (data.dossierSections && Object.keys(data.dossierSections).length > 0) {
         s.setDossierSections?.(data.dossierSections);
     }
