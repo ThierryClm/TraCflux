@@ -4,6 +4,7 @@ import { compressImageDataUrl, dataUrlBytes, formatBytes, ALERT_ABOVE_BYTES } fr
 import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
+import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
 import './IntersectionImage.css';
 
 const IntersectionImage = ({
@@ -323,8 +324,7 @@ const IntersectionImage = ({
             x,
             y,
             rotation: 0, // Rotation in degrees (0 = up)
-            ...(courant === 'TàD' || courant === 'TàG' ? { turnLength: 0.5 } : {}),
-            ...(courant === 'Piéton' || courant === 'Cycle' ? { length: 2 } : {})
+            ...getNewIntersectionArrowDefaults(courant)
         };
         onArrowsChange([...arrows, newArrow]);
         setSelectedArrow(newArrow.id);
@@ -698,7 +698,8 @@ const IntersectionImage = ({
         [groups, simulationResult, cycleLength, actionData, selectedActions, conflictMatrix]
     );
 
-    // Instant affiché, règle commune avec la fenêtre détachée :
+
+[513 more lines in file. Use offset=701 to continue.]    // Instant affiché, règle commune avec la fenêtre détachée :
     //   1. animation lancée  → le curseur de lecture, et lui seul. Le survol ne
     //      doit pas détourner l'affichage pendant le déroulement.
     //   2. animation à l'arrêt → le point survolé sur le diagramme, à défaut la
