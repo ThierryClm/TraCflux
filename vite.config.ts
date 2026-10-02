@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -93,7 +93,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
-      include: ['src/**/*.{js,jsx}'],
+      include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: ['src/**/*.{test,spec}.*', 'src/tests/**'],
       // Plancher initial : il empêche une régression globale tout en laissant
       // la consolidation progresser par lots sur cette application historique.

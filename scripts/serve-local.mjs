@@ -9,7 +9,7 @@
 // Le second point est le cœur du script. `vite preview` sert dist/ avec sirv
 // en mode `dev: true` : chaque requête relit le disque, donc un serveur déjà
 // lancé sert le nouveau build sans redémarrage. Le relancer serait non
-// seulement inutile mais impossible — `preview.strictPort` (vite.config.js)
+// seulement inutile mais impossible — `preview.strictPort` (vite.config.ts)
 // fait échouer franchement le second serveur sur un port occupé.
 //
 // Le serveur est lancé HORS de l'arbre de processus courant. `detached: true`

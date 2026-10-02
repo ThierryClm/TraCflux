@@ -9,7 +9,7 @@ import { dataUrlBytes } from './imageCompressor';
 import { getSwStatus } from './swStatus';
 
 /**
- * Horodatage du build courant, injecté par vite.config.js. Absent en test et
+ * Horodatage du build courant, injecté par vite.config.ts. Absent en test et
  * dans tout contexte non bundlé — d'où le garde typeof.
  */
 const buildDate = () => {

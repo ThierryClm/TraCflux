@@ -16,7 +16,12 @@ initPrivacyFriendlyAnalytics();
 const urlParams = new URLSearchParams(window.location.search);
 const isGreenWavePage = urlParams.has('greenwave');
 
-createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+    throw new Error("L'élément racine #root est introuvable.");
+}
+
+createRoot(rootElement).render(
     <StrictMode>
         <ConfirmProvider>
             <MicroVariablesProvider>
