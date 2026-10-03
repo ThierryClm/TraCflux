@@ -1,10 +1,18 @@
 import React from 'react';
+import type { Groupe, Matrice } from '../../types/projet';
 import EmptyState from '../EmptyState';
+import type { TimelineSimulationResult } from './timelineTypes';
 
-export const TimelineEmptyState = ({ conflictMatrix, groups, tooltipsEnabled }) => {
+interface TimelineEmptyStateProps {
+    conflictMatrix: Matrice;
+    groups: Array<Pick<Groupe, 'type' | 'durations'>>;
+    tooltipsEnabled: boolean;
+}
+
+export const TimelineEmptyState = ({ conflictMatrix, groups, tooltipsEnabled }: TimelineEmptyStateProps) => {
     if (groups.length === 0 || groups.some((group) => (group.durations?.green || 0) > 0)) return null;
 
-    const formEmpty = groups.every((group) => !group.type || group.type === '');
+    const formEmpty = groups.every((group) => !group.type);
     const matrixEmpty = Array.isArray(conflictMatrix)
         && conflictMatrix.length > 0
         && conflictMatrix.every((row) => row.every((value) => value === '' || value === null || value === undefined));
@@ -24,6 +32,19 @@ export const TimelineEmptyState = ({ conflictMatrix, groups, tooltipsEnabled }) 
     );
 };
 
+interface TimelineGridBackgroundProps {
+    groups: Array<Pick<Groupe, 'type' | 'durations'>>;
+    isPlayingSimulation: boolean;
+    pixelsPerSecond: number;
+    playbackTime: number | null;
+    rowTotalHeight: number;
+    rulerHeight: number;
+    simulationCurrentTime: number | null;
+    simulationResult: TimelineSimulationResult | null;
+    timeWindow: number;
+    tooltipsEnabled: boolean;
+}
+
 const TimelineGridBackground = ({
     groups,
     isPlayingSimulation,
@@ -35,9 +56,9 @@ const TimelineGridBackground = ({
     simulationResult,
     timeWindow,
     tooltipsEnabled
-}) => {
+}: TimelineGridBackgroundProps) => {
     const overlayHeight = rulerHeight + 1 + groups.length * rowTotalHeight + 30;
-    const tip = (text) => tooltipsEnabled ? text : undefined;
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
     return (
         <>
