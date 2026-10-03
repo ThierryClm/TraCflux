@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BOX_W, BOX_H, CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM, fitImageBox, fitContentBox, cropFromBoxToImage } from './floatingImageBox';
+import { BOX_W, BOX_H, CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM, fitImageBox, fitDetachedImageBox, fitContentBox, cropFromBoxToImage } from './floatingImageBox';
 
 describe('fitImageBox', () => {
     it('remplit la boîte quand l\'image est exactement au format de référence', () => {
@@ -61,6 +61,24 @@ describe('cadrage par défaut', () => {
     it('démarre sans rognage ni zoom', () => {
         expect(DEFAULT_CROP).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
         expect(DEFAULT_ZOOM).toBe(1);
+    });
+});
+
+describe('fitDetachedImageBox', () => {
+    it('retire strictement les bandes hautes et basses de la fenêtre détachée', () => {
+        const dimensions = { width: 988, height: 547 };
+        const { dispW, dispH, padX, padY } = fitImageBox(dimensions);
+
+        expect(fitDetachedImageBox(dimensions))
+            .toEqual({ x: padX, y: padY, w: dispW, h: dispH });
+        expect(padY).toBeGreaterThan(0);
+    });
+
+    it('reste strictement limité à l’image', () => {
+        const cadre = fitDetachedImageBox({ width: 988, height: 547 });
+
+        expect(cadre.y).toBeGreaterThan(0);
+        expect(cadre.y + cadre.h).toBeLessThan(BOX_H);
     });
 });
 

@@ -69,6 +69,18 @@ export const fitImageBox = (naturalDims) => {
 };
 
 /**
+ * Cadre strict de l'image dans la boîte de référence.
+ *
+ * La fenêtre détachée doit épouser l'image elle-même : les symboles dessinés
+ * dans les bandes de « contain » ne doivent pas réagrandir son cadre et faire
+ * réapparaître des marges au-dessus ou au-dessous.
+ */
+export const fitDetachedImageBox = (naturalDims) => {
+    const { dispW, dispH, padX, padY } = fitImageBox(naturalDims);
+    return { x: padX, y: padY, w: dispW, h: dispH };
+};
+
+/**
  * Taille de base d'un symbole de flèche dans la boîte de référence, en pixels
  * (cf. `.floating-arrow-marker .arrow-symbol svg` dans IntersectionImage.css).
  * Le symbole est CENTRÉ sur le point de la flèche : il en déborde de moitié

@@ -289,12 +289,14 @@ function installMainListener() {
  *        Quand contentSize est fourni, la fenêtre est réajustée après ouverture
  *        pour que innerWidth/innerHeight tombent juste — sans quoi une fenêtre
  *        pourtant plus grande que son contenu se retrouve avec des ascenseurs.
+ * @param {boolean} [showTitleBanner=true] - Affiche le bandeau d'identification
+ *        interne. L'image du carrefour le masque : le titre système de sa
+ *        fenêtre fournit déjà le contexte et le bandeau créait une marge haute.
  */
-// Hauteur du bandeau d'identification posé en tête de chaque fenêtre détachée.
-// Déclarée ici et nulle part ailleurs : le style la consomme, et `applySize`
-// l'ajoute à la taille demandée par l'appelant. Sans cette seconde prise en
-// compte, le bandeau rognerait le contenu des fenêtres dimensionnées au pixel
-// — celle de l'image du carrefour — et y ferait apparaître un ascenseur.
+// Hauteur du bandeau d'identification posé en tête des fenêtres détachées qui
+// le demandent. Déclarée ici et nulle part ailleurs : le style la consomme, et
+// `applySize` l'ajoute à la taille demandée par l'appelant. L'image du carrefour
+// le masque pour retrouver un contenu jointif avec le haut de sa fenêtre.
 const BANDEAU_HAUTEUR = 28;
 
 // Coupe « Données trafic — VRM_Prio » en deux. Le tiret cadratin sépare le nom
@@ -317,7 +319,17 @@ const ecrireBandeau = (popup, titre) => {
     } catch { /* fenêtre fermée entre-temps */ }
 };
 
-const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = null, geometryKey = null }) => {
+const usePopupWindow = ({
+    isOpen,
+    onClose,
+    title,
+    width,
+    height,
+    contentSize = null,
+    geometryKey = null,
+    showTitleBanner = true
+}) => {
+    const bannerHeight = showTitleBanner ? BANDEAU_HAUTEUR : 0;
     const popupRef = useRef(null);
     const rootRef = useRef(null);
     const intervalRef = useRef(null);
@@ -382,9 +394,9 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
                 if (dw || dh) popup.resizeBy(dw, dh);
             };
 
-            // 1. La cible annoncée. L'appelant décrit son contenu ; le bandeau
-            //    est du chrome ajouté ici, il ne doit pas manger ce contenu.
-            poser(target.width, target.height + BANDEAU_HAUTEUR);
+            // 1. La cible annoncée. L'appelant décrit son contenu ; l'éventuel
+            //    bandeau est du chrome ajouté ici, il ne doit pas le rogner.
+            poser(target.width, target.height + bannerHeight);
 
             // 2. Le résidu réellement mesuré — hauteur exacte de la barre
             //    d'outils, mise à l'échelle qui tombe sur une fraction de pixel.
@@ -393,9 +405,9 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             if (!el) return;
             const extraW = Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth));
             const extraH = Math.max(0, Math.ceil(el.scrollHeight - el.clientHeight));
-            if (extraW || extraH) poser(target.width + extraW, target.height + BANDEAU_HAUTEUR + extraH);
+            if (extraW || extraH) poser(target.width + extraW, target.height + bannerHeight + extraH);
         } catch { /* redimensionnement refusé par le navigateur */ }
-    }, []);
+    }, [bannerHeight]);
 
     // Recentre la fenêtre sur l'écran, une fois sa taille définitive connue.
     //
@@ -617,7 +629,7 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
                     box-shadow: inset 0 0 0 3px #8a8a8a;
                 }
                 #popup-root {
-                    height: calc(100vh - ${BANDEAU_HAUTEUR}px);
+                    height: calc(100vh - ${bannerHeight}px);
                     display: flex;
                     flex-direction: column;
                 }
@@ -628,11 +640,13 @@ const usePopupWindow = ({ isOpen, onClose, title, width, height, contentSize = n
             // window.open (rejeu d'effet en StrictMode, réouverture) : on repart
             // d'un body vide, sinon les racines s'empilent.
             popup.document.body.replaceChildren();
-            const bandeau = popup.document.createElement('div');
-            bandeau.id = 'popup-bandeau';
-            bandeau.innerHTML = '<span class="bandeau-nom"></span><span class="bandeau-contexte"></span>';
-            popup.document.body.appendChild(bandeau);
-            ecrireBandeau(popup, title);
+            if (showTitleBanner) {
+                const bandeau = popup.document.createElement('div');
+                bandeau.id = 'popup-bandeau';
+                bandeau.innerHTML = '<span class="bandeau-nom"></span><span class="bandeau-contexte"></span>';
+                popup.document.body.appendChild(bandeau);
+                ecrireBandeau(popup, title);
+            }
             const container = popup.document.createElement('div');
             container.id = 'popup-root';
             popup.document.body.appendChild(container);

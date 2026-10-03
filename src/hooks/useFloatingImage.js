@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import usePopupWindow from './usePopupWindow';
-import { fitContentBox, cropFromBoxToImage, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
+import { fitDetachedImageBox, cropFromBoxToImage, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
 import { mesurerFondClair } from '../utils/fondImage';
 
 // Barre d'outils zoom/rognage en tête de la fenêtre détachée : 6px de marge
@@ -24,10 +24,10 @@ const CHROME_GUESS_W = 16;
  * @param {string|null} intersectionImage - Data URL de l'image courante
  * @param {string} [intersectionName] - Nom du carrefour, repris dans le titre du popup
  * @param {string} [activePFName] - Nom du PF actif, repris dans le titre du popup
- * @param {Array} [arrows] - Flèches du carrefour : elles font partie du cadre à
- *        afficher, une flèche en lisière débordant du bord de l'image.
+ * @param {Array} [_arrows] - Conservé pour compatibilité ; les flèches ne
+ *        doivent plus agrandir le cadre strict de l'image détachée.
  */
-const useFloatingImage = (intersectionImage, intersectionName = '', activePFName = '', arrows = []) => {
+const useFloatingImage = (intersectionImage, intersectionName = '', activePFName = '', _arrows = []) => {
     const [showFloatingImage, setShowFloatingImage] = useState(() => {
         const saved = localStorage.getItem('floating_image_visible');
         return saved === 'true';
@@ -95,9 +95,30 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     // format de référence — un plan en portrait s'y retrouvait deux fois et
     // demie trop large. On ne dimensionne donc pas tant qu'on ne sait pas.
     const dimsKnown = imageNaturalDims.width > 1 || imageNaturalDims.height > 1;
-    const { w: cadreW, h: cadreH } = fitContentBox(imageNaturalDims, arrows);
+    const { w: cadreW, h: cadreH } = fitDetachedImageBox(imageNaturalDims);
     const contentWidth = Math.ceil(Math.max(1, cadreW - floatingCrop.left - floatingCrop.right) * floatingZoom) + SAFETY_PX;
     const contentHeight = Math.ceil(Math.max(1, cadreH - floatingCrop.top - floatingCrop.bottom) * floatingZoom) + HEADER_HEIGHT + SAFETY_PX;
+
+    // Les dimensions naturelles arrivent après l'ouverture de la popup. Même
+    // si le panneau de rognage a déjà été déployé entre-temps, cette première
+    // mesure réelle doit remplacer le gabarit carré provisoire. Ensuite, tant
+    // que l'utilisateur tire un curseur, on conserve la dernière taille stable
+    // pour ne pas déplacer la fenêtre sous son pointeur ; elle se recale à la
+    // fermeture du panneau.
+    const stableContentSizeRef = useRef(null);
+    const stableImageRef = useRef({ source: null, width: 0, height: 0 });
+    const imageDimensionsChanged = stableImageRef.current.source !== intersectionImage
+        || stableImageRef.current.width !== imageNaturalDims.width
+        || stableImageRef.current.height !== imageNaturalDims.height;
+
+    if (dimsKnown && (imageDimensionsChanged || !showCropControls || !stableContentSizeRef.current)) {
+        stableContentSizeRef.current = { width: contentWidth, height: contentHeight };
+        stableImageRef.current = {
+            source: intersectionImage,
+            width: imageNaturalDims.width,
+            height: imageNaturalDims.height
+        };
+    }
 
     // Popup window for floating image
     const floatingImagePopup = usePopupWindow({
@@ -107,6 +128,10 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
         title: popupTitle,
         width: contentWidth + CHROME_GUESS_W,
         height: contentHeight + CHROME_GUESS_H,
+        // Le titre système reprend déjà le carrefour et le plan de feux. Le
+        // bandeau interne commun aux autres fenêtres ne faisait ici que les
+        // répéter et ajoutait une marge vide au-dessus de l'image.
+        showTitleBanner: false,
         // Le gabarit passé à window.open est une estimation : la hauteur réelle
         // du chrome du navigateur varie. On la corrige à l'ouverture pour que
         // la zone utile tienne pile — c'est ce qui faisait apparaître des
@@ -116,7 +141,7 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
         // la fenêtre ; la voir se redimensionner sous le pointeur pendant qu'on
         // tire un curseur casserait le geste. Elle se recale à la fermeture du
         // panneau de rognage.
-        contentSize: (showCropControls || !dimsKnown) ? null : { width: contentWidth, height: contentHeight }
+        contentSize: dimsKnown ? stableContentSizeRef.current : null
     });
 
     return {

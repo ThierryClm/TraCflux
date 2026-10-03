@@ -5117,12 +5117,12 @@
   "diagramHeight": 557.985710144043,
   "floatingCrop": {
     "top": 0,
-    "bottom": 77,
-    "left": 289,
-    "right": 142
+    "bottom": 0,
+    "left": 0,
+    "right": 0
   },
   "floatingCropBasis": "image",
-  "floatingZoom": 1.3000000000000003,
+  "floatingZoom": 1,
   "layoutOptions": {
     "showParameters": true,
     "showComments": true,
