@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import usePopupWindow from './usePopupWindow';
-import { fitContentBox, cropFromBoxToImage, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
+import { fitDetachedImageBox, cropFromBoxToImage, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
 import { mesurerFondClair } from '../utils/fondImage';
 
 // Barre d'outils zoom/rognage en tête de la fenêtre détachée : 6px de marge
@@ -24,10 +24,10 @@ const CHROME_GUESS_W = 16;
  * @param {string|null} intersectionImage - Data URL de l'image courante
  * @param {string} [intersectionName] - Nom du carrefour, repris dans le titre du popup
  * @param {string} [activePFName] - Nom du PF actif, repris dans le titre du popup
- * @param {Array} [arrows] - Flèches du carrefour : elles font partie du cadre à
- *        afficher, une flèche en lisière débordant du bord de l'image.
+ * @param {Array} [_arrows] - Conservé pour compatibilité ; les flèches ne
+ *        doivent plus agrandir le cadre strict de l'image détachée.
  */
-const useFloatingImage = (intersectionImage, intersectionName = '', activePFName = '', arrows = []) => {
+const useFloatingImage = (intersectionImage, intersectionName = '', activePFName = '', _arrows = []) => {
     const [showFloatingImage, setShowFloatingImage] = useState(() => {
         const saved = localStorage.getItem('floating_image_visible');
         return saved === 'true';
@@ -95,7 +95,7 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     // format de référence — un plan en portrait s'y retrouvait deux fois et
     // demie trop large. On ne dimensionne donc pas tant qu'on ne sait pas.
     const dimsKnown = imageNaturalDims.width > 1 || imageNaturalDims.height > 1;
-    const { w: cadreW, h: cadreH } = fitContentBox(imageNaturalDims, arrows);
+    const { w: cadreW, h: cadreH } = fitDetachedImageBox(imageNaturalDims);
     const contentWidth = Math.ceil(Math.max(1, cadreW - floatingCrop.left - floatingCrop.right) * floatingZoom) + SAFETY_PX;
     const contentHeight = Math.ceil(Math.max(1, cadreH - floatingCrop.top - floatingCrop.bottom) * floatingZoom) + HEADER_HEIGHT + SAFETY_PX;
 
