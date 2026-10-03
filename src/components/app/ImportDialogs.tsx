@@ -1,6 +1,42 @@
+import type { ChangeEvent, CSSProperties } from 'react';
 import Modal from '../Modal';
 
-const fileInputStyle = {
+interface NamedFile {
+    name: string;
+}
+
+interface ImportDialogModel {
+    isOpen: boolean;
+    onClose: () => void;
+    onFileSelect: (event: ChangeEvent<HTMLInputElement>) => void;
+    file: NamedFile | null;
+    error: string | null;
+    onImport: () => void;
+}
+
+interface SpreadsheetImportDialogModel extends ImportDialogModel {
+    hintDirectory?: string | null;
+}
+
+interface RecentImportFile extends NamedFile {
+    timestamp?: string | number;
+}
+
+interface RecentImportsModel {
+    files: RecentImportFile[];
+    directories: string[];
+    formatDate: (value?: string | number) => string;
+    onFileClick: (file: RecentImportFile) => void;
+}
+
+interface ImportDialogsProps {
+    spreadsheet: SpreadsheetImportDialogModel;
+    html: ImportDialogModel;
+    recent: RecentImportsModel;
+    tip: (label: string) => string;
+}
+
+const fileInputStyle: CSSProperties = {
     display: 'block',
     marginTop: '10px',
     padding: '10px',
@@ -12,7 +48,7 @@ const fileInputStyle = {
     width: '100%',
 };
 
-const formatInfoStyle = {
+const formatInfoStyle: CSSProperties = {
     color: '#888',
     fontSize: '0.8em',
     marginTop: '15px',
@@ -21,7 +57,11 @@ const formatInfoStyle = {
     borderRadius: '4px',
 };
 
-function SpreadsheetImportDialog({ dialog, recent, tip }) {
+function SpreadsheetImportDialog({
+    dialog,
+    recent,
+    tip,
+}: { dialog: SpreadsheetImportDialogModel; recent: RecentImportsModel; tip: (label: string) => string }) {
     return (
         <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Importer un fichier')}>
             {dialog.hintDirectory && (
@@ -93,7 +133,10 @@ function SpreadsheetImportDialog({ dialog, recent, tip }) {
     );
 }
 
-function HtmImportDialog({ dialog, tip }) {
+function HtmImportDialog({
+    dialog,
+    tip,
+}: { dialog: ImportDialogModel; tip: (label: string) => string }) {
     return (
         <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Importer un fichier HTM')}>
             <div className="form-row">
@@ -116,7 +159,7 @@ function HtmImportDialog({ dialog, tip }) {
     );
 }
 
-export default function ImportDialogs({ spreadsheet, html, recent, tip }) {
+export default function ImportDialogs({ spreadsheet, html, recent, tip }: ImportDialogsProps) {
     return (
         <>
             <SpreadsheetImportDialog dialog={spreadsheet} recent={recent} tip={tip} />

@@ -1,6 +1,22 @@
 import Modal from '../Modal';
 
-const formatDate = (isoString) => {
+interface SavedProjectSummary {
+    name: string;
+    savedAt?: string | null;
+    size?: number | null;
+}
+
+interface ProjectOpenDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    projects: SavedProjectSummary[];
+    selectedProject: string | null;
+    onSelect: (name: string) => void;
+    onOpen: (name: string | null) => void;
+    tip: (label: string) => string;
+}
+
+const formatDate = (isoString?: string | null) => {
     if (!isoString) return '-';
     const date = new Date(isoString);
     return date.toLocaleDateString('fr-FR', {
@@ -12,7 +28,7 @@ const formatDate = (isoString) => {
     });
 };
 
-const formatSize = (bytes) => {
+const formatSize = (bytes?: number | null) => {
     if (!bytes) return '-';
     return `${(bytes / 1024).toFixed(1)} Ko`;
 };
@@ -25,7 +41,7 @@ export default function ProjectOpenDialog({
     onSelect,
     onOpen,
     tip,
-}) {
+}: ProjectOpenDialogProps) {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={tip('Ouvrir un projet')} overlayClassName="modal-menu-overlay">
             {projects.length > 0 ? (
