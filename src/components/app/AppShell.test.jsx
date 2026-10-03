@@ -261,7 +261,7 @@ describe('PrintPreviewModal', () => {
     });
 
     it.each(['Piéton', 'Cycle'])(
-        'conserve %s dans le même cadre carré que les flèches véhicules',
+        'réduit de moitié le cadre imprimé de %s sans altérer son SVG',
         (courant) => {
             const baseProps = buildPreviewProps();
             const props = buildPreviewProps({
@@ -281,6 +281,7 @@ describe('PrintPreviewModal', () => {
                         groupId: 1,
                         x: 50,
                         y: 50,
+                        scale: 2,
                         length: 2,
                     }],
                     imageBrightness: 100,
@@ -299,11 +300,14 @@ describe('PrintPreviewModal', () => {
             const svg = arrow.querySelector('svg');
 
             expect(arrow).toHaveStyle({
-                width: '12.8%',
+                width: '6.4%',
                 aspectRatio: '1 / 1',
             });
             expect(svg).toHaveAttribute('viewBox', '0 0 32 56');
             expect(svg).toHaveStyle({ width: '100%', height: '100%' });
+            expect(arrow.querySelector('.dossier-plan-arrow-symbol')).toHaveStyle({
+                transform: 'rotate(0deg) scale(2)',
+            });
         },
     );
 

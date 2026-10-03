@@ -38,6 +38,15 @@ function PrintPreviewModal({
     // largeur fixe en pixels divergeait entre portrait/paysage et selon le
     // moteur d'impression de Chrome ou Edge.
     const printedArrowWidthPercent = (ARROW_SIZE / printedImageFrame.w) * 100;
+    // Les traversées piétonnes et cyclables utilisent historiquement un
+    // facteur d'échelle deux fois plus grand que les mouvements véhicules
+    // dans les projets existants. L'éditeur compense ce choix dans son cadre
+    // de travail ; sur le plan imprimé, appliquer ce facteur tel quel doublait
+    // leur emprise. La contre-échelle porte sur le cadre extérieur afin de
+    // conserver le dessin, la longueur et la rotation du SVG.
+    const printedArrowTypeScale = (courant) => (
+        courant === 'Piéton' || courant === 'Cycle' ? 0.5 : 1
+    );
     const printedImageArrows = intersectionArrows
         .map(arrow => ({
             ...arrow,
@@ -438,8 +447,7 @@ function PrintPreviewModal({
                                         {dossierSmallLogos && <div className="dossier-logos-page">{dossierSmallLogos}</div>}
                                         {/* 1. Titre du projet avec logos et informations */}
                                         <div className="print-dossier-section print-dossier-title">
-                                            <div className="dossier-title-logos">
-                                                <div className="dossier-title-logo-left">
+                                            <div className="dossier-title-logos">                                                <div className="dossier-title-logo-left">
                                                     {/* Le logo de l'outil ouvre la rangée ; celui du maître
                                                         d'ouvrage, quand il existe, se place à sa droite. */}
                                                     <img src={LOGO_APP} alt="TraCflux" className="dossier-logo-app" />
@@ -485,7 +493,7 @@ function PrintPreviewModal({
                                                                 style={{
                                                                     left: `${arrow.printX}%`,
                                                                     top: `${arrow.printY}%`,
-                                                                    width: `${printedArrowWidthPercent}%`,
+                                                                    width: `${printedArrowWidthPercent * printedArrowTypeScale(courant)}%`,
                                                                     aspectRatio: '1 / 1',
                                                                 }}
                                                             >
@@ -888,8 +896,7 @@ function PrintPreviewModal({
                                                             <th>Fin</th>
                                                             <th>Abrv</th>
                                                             <th>Action_Micro</th>
-                                                            <th colSpan="2">Plage</th>
-                                                            <th colSpan="4">Action GF</th>
+                                                            <th colSpan="2">Plage</th>                                                            <th colSpan="4">Action GF</th>
                                                         </tr>
                                                         <tr className="print-actions-subheader">
                                                             <th></th><th></th><th></th><th></th><th></th><th></th><th></th>
