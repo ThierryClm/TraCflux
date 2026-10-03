@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { cloneElement, Fragment } from 'react';
 import TimelineDiagram from '../TimelineDiagram';
 import TrafficTable from '../TrafficTable';
 import DiagnosticPanel from '../DiagnosticPanel';
@@ -9,6 +9,8 @@ import { actionsSimulables, conflitsSimules } from '../../utils/simulationCalcul
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
 import { groupesInhibes } from '../../utils/trafficHelpers';
 import { LOGO_APP } from '../../utils/logoApp';
+import renderArrowSVG from '../../utils/renderArrowSVG';
+import { ARROW_SIZE, BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
 
 function PrintPreviewModal({
     isOpen,
@@ -29,6 +31,32 @@ function PrintPreviewModal({
     const { activeTrafficDataset, trafficDatasets, trafficDatasetNames } = traffic;
     const { simulationName, simulationResultImpression, simulationSelectedActions } = simulation;
     const { intersectionImage, intersectionArrows, imageBrightness, imageContrast, imageNaturalDims } = image;
+    const printedImageFrame = fitDetachedImageBox(imageNaturalDims);
+    // Les symboles mesurent 96 px dans la boîte de référence 750 × 530 à
+    // l'écran. Exprimée en pourcentage du cadre visible de l'image, cette même
+    // taille suit ensuite toute réduction appliquée par l'impression. Une
+    // largeur fixe en pixels divergeait entre portrait/paysage et selon le
+    // moteur d'impression de Chrome ou Edge.
+    const printedArrowWidthPercent = (ARROW_SIZE / printedImageFrame.w) * 100;
+    // Les traversées piétonnes et cyclables utilisent historiquement un
+    // facteur d'échelle deux fois plus grand que les mouvements véhicules
+    // dans les projets existants. L'éditeur compense ce choix dans son cadre
+    // de travail ; sur le plan imprimé, appliquer ce facteur tel quel doublait
+    // leur emprise. La contre-échelle porte sur le cadre extérieur afin de
+    // conserver le dessin, la longueur et la rotation du SVG.
+    const printedArrowTypeScale = (courant) => (
+        courant === 'Piéton' || courant === 'Cycle' ? 0.5 : 1
+    );
+    const printedImageArrows = intersectionArrows
+        .map(arrow => ({
+            ...arrow,
+            printX: ((((arrow.x / 100) * BOX_W) - printedImageFrame.x) / printedImageFrame.w) * 100,
+            printY: ((((arrow.y / 100) * BOX_H) - printedImageFrame.y) / printedImageFrame.h) * 100,
+        }))
+        .filter(arrow => (
+            arrow.printX >= 0 && arrow.printX <= 100 &&
+            arrow.printY >= 0 && arrow.printY <= 100
+        ));
     const {
         printType,
         dossierSections,
@@ -455,30 +483,61 @@ function PrintPreviewModal({
                                                         className="dossier-carrefour-img"
                                                         style={{ filter: `brightness(${imageBrightness}%) contrast(${imageContrast}%)` }}
                                                     />
+                                                    {printedImageArrows.map(arrow => {
+                                                        const group = groups.find(g => String(g.id) === String(arrow.groupId));
+                                                        const courant = group?.courant || '';
+
+                                                        return (
+                                                            <div
+                                                                key={`plan-arrow-${arrow.id}`}
+                                                                className="dossier-plan-arrow"
+                                                                style={{
+                                                                    left: `${arrow.printX}%`,
+                                                                    top: `${arrow.printY}%`,
+                                                                    width: `${printedArrowWidthPercent * printedArrowTypeScale(courant)}%`,
+                                                                    aspectRatio: '1 / 1',
+                                                                }}
+                                                            >
+                                                                <div
+                                                                    className="dossier-plan-arrow-symbol"
+                                                                    style={{
+                                                                        transform: `rotate(${arrow.rotation || 0}deg) scale(${arrow.scale || 1})`,
+                                                                    }}
+                                                                >
+                                                                    {cloneElement(
+                                                                        renderArrowSVG(
+                                                                            courant,
+                                                                            '#222222',
+                                                                            arrow.length || 1,
+                                                                            arrow.turnLength || 1,
+                                                                            false,
+                                                                        ),
+                                                                        { style: { width: '100%', height: '100%' } },
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                     {dossierSections.gfNumbers && (() => {
                                                         // Grouper les flèches par groupId (exclure celles hors image)
-                                                        // Estimer la taille rendue de l'image pour le décalage TàD/TàG
-                                                        const imgR = imageNaturalDims.width / imageNaturalDims.height;
-                                                        const estH = Math.min(480, imageNaturalDims.height);
-                                                        const estW = Math.min(estH * imgR, 1000);
                                                         const groupMap = {};
-                                                        intersectionArrows.forEach(arrow => {
+                                                        printedImageArrows.forEach(arrow => {
                                                             if (!arrow.groupId) return;
                                                             if (arrow.x < 0 || arrow.x > 100 || arrow.y < 0 || arrow.y > 100) return;
                                                             const courant = groups.find(g => String(g.id) === String(arrow.groupId))?.courant || '';
-                                                            let px = arrow.x;
-                                                            let py = arrow.y;
+                                                            let px = arrow.printX;
+                                                            let py = arrow.printY;
                                                             // Pour TàD/TàG, décaler vers le corps (ignorer le retour)
                                                             if (courant === 'TàD' || courant === 'TàG') {
                                                                 const sc = arrow.scale || 1;
-                                                                const svgSz = 96 * sc;
+                                                                const svgSz = ARROW_SIZE * sc;
                                                                 const dxSvg = courant === 'TàD' ? -8 : 8;
                                                                 const dySvg = 2;
                                                                 const dxPx = (dxSvg / 32) * svgSz;
                                                                 const dyPx = (dySvg / 32) * svgSz;
                                                                 const rotRad = (arrow.rotation || 0) * Math.PI / 180;
-                                                                px += (dxPx * Math.cos(rotRad) - dyPx * Math.sin(rotRad)) / estW * 100;
-                                                                py += (dxPx * Math.sin(rotRad) + dyPx * Math.cos(rotRad)) / estH * 100;
+                                                                px += (dxPx * Math.cos(rotRad) - dyPx * Math.sin(rotRad)) / printedImageFrame.w * 100;
+                                                                py += (dxPx * Math.sin(rotRad) + dyPx * Math.cos(rotRad)) / printedImageFrame.h * 100;
                                                             }
                                                             if (!groupMap[arrow.groupId]) groupMap[arrow.groupId] = [];
                                                             groupMap[arrow.groupId].push({ x: px, y: py });

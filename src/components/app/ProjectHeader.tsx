@@ -1,8 +1,78 @@
+import type { RefObject } from 'react';
 import { MAX_GROUPS } from '../../utils/pfHelpers';
 import { PERMISSIONS } from '../../hooks/useAuth';
 import { toast } from '../../utils/toast';
 
-function ProjectHeader({ project, groupCount, history, dependencies, plan, account, help, example, readOnly }) {
+type PermissionLevel = keyof typeof PERMISSIONS;
+type PlanId = string | number;
+
+interface ConfirmOptions {
+    title: string;
+    message: string;
+    confirmLabel: string;
+    danger: boolean;
+}
+
+interface ProjectHeaderProps {
+    project: {
+        projectName: string | null;
+        setProjectName: (value: string) => void;
+        isDirty: boolean;
+        projectNameInputRef: RefObject<HTMLInputElement>;
+    };
+    groupCount: {
+        groups: Array<{ id: number }>;
+        groupCountInput: string;
+        setGroupCountInput: (value: string) => void;
+        setGroupCount: (value: number) => void;
+        askConfirm: (options: ConfirmOptions) => Promise<boolean>;
+    };
+    history: {
+        undo: () => unknown;
+        redo: () => unknown;
+        canUndo: boolean;
+        canRedo: boolean;
+    };
+    dependencies: {
+        showDependencies: boolean;
+        setShowDependencies: (value: boolean) => void;
+        dependencyGap: number;
+        setDependencyGap: (value: number) => void;
+        conflicts: unknown[];
+    };
+    plan: {
+        pfTabs: Array<{ id: PlanId; color?: string | null }>;
+        activePFId: PlanId;
+        setPFColor: (id: PlanId, color: string | null) => void;
+    };
+    account: {
+        accountsEnabled: boolean;
+        currentUser: {
+            username: string;
+            permissions: PermissionLevel;
+            isAdmin: boolean;
+        } | null;
+        logout: () => void;
+    };
+    help: {
+        helpZoneRef: { current: string | null };
+        tip: (label: string) => string;
+    };
+    example: boolean;
+    readOnly: boolean;
+}
+
+function ProjectHeader({
+    project,
+    groupCount,
+    history,
+    dependencies,
+    plan,
+    account,
+    help,
+    example,
+    readOnly,
+}: ProjectHeaderProps) {
     const { projectName, setProjectName, isDirty, projectNameInputRef } = project;
     const { groups, groupCountInput, setGroupCountInput, setGroupCount, askConfirm } = groupCount;
     const { undo, redo, canUndo, canRedo } = history;
@@ -13,6 +83,9 @@ function ProjectHeader({ project, groupCount, history, dependencies, plan, accou
     const isExample = example;
     const dossierReadOnly = readOnly;
     const displayActiveConflicts = conflicts;
+    const permissionLabel = currentUser
+        ? PERMISSIONS[currentUser.permissions]?.label
+        : undefined;
 
     return (
         <>
@@ -34,7 +107,7 @@ function ProjectHeader({ project, groupCount, history, dependencies, plan, accou
                         className="input-name"
                         type="text"
                         value={projectName || ''}
-                        onChange={(e) => setProjectName(e.target.value)}
+                        onChange={(e) => setProjectName(e.currentTarget.value)}
                         placeholder="Nom du projet"
                         title={tip("Nom du projet (utilisé pour la sauvegarde)")}
                     />
@@ -51,14 +124,14 @@ function ProjectHeader({ project, groupCount, history, dependencies, plan, accou
                             type="number"
                             min="1" max={MAX_GROUPS}
                             value={groupCountInput}
-                            onChange={(e) => setGroupCountInput(e.target.value)}
+                            onChange={(e) => setGroupCountInput(e.currentTarget.value)}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                    e.target.blur();
+                                    e.currentTarget.blur();
                                 }
                             }}
                             onBlur={async () => {
-                                const newCount = parseInt(groupCountInput);
+                                const newCount = parseInt(groupCountInput, 10);
                                 if (!isNaN(newCount) && newCount >= 1 && newCount <= MAX_GROUPS && newCount !== groups.length) {
                                     const isReduce = newCount < groups.length;
                                     const ok = await askConfirm({
@@ -114,7 +187,7 @@ function ProjectHeader({ project, groupCount, history, dependencies, plan, accou
                             max="99"
                             value={dependencyGap}
                             onChange={(e) => {
-                                const val = parseInt(e.target.value) || 20;
+                                const val = parseInt(e.currentTarget.value, 10) || 20;
                                 setDependencyGap(Math.max(1, Math.min(99, val)));
                             }}
                             className="input-dependency-gap"
@@ -154,7 +227,7 @@ function ProjectHeader({ project, groupCount, history, dependencies, plan, accou
                 </div>
 
                 {accountsEnabled && (<div className="user-info">
-                    <span className="user-name" title={tip(`Permissions: ${PERMISSIONS[currentUser?.permissions]?.label || 'Inconnues'}`)}>
+                    <span className="user-name" title={tip(`Permissions: ${permissionLabel || 'Inconnues'}`)}>
                         {currentUser?.username}
                         {currentUser?.isAdmin && ' (Admin)'}
                     </span>

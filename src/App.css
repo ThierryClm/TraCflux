@@ -2657,6 +2657,29 @@ body.amber-mode .help-back-to-top {
     display: block;
 }
 
+/* Le plan d'ensemble imprimé conserve les symboles directionnels du projet.
+   Les numéros de groupes restent une couche optionnelle indépendante. */
+.dossier-plan-arrow {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.dossier-plan-arrow-symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dossier-plan-arrow-symbol svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
 .dossier-gf-label {
     position: absolute;
     transform: translate(-50%, -50%);
@@ -2994,6 +3017,18 @@ body.print-portrait .dossier-phasage-centered .dossier-phasage-content {
 }
 .dossier-phasage-content .phase-bubble-image {
     background: #fff !important;
+}
+.dossier-phasage-content .phase-arrow-marker,
+.dossier-phasage-content .phase-arrow-symbol,
+.dossier-phasage-content .phase-arrow-symbol svg {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+.dossier-phasage-content .phase-arrow-symbol svg {
+    overflow: visible !important;
 }
 .dossier-phasage-content .ellipse-outline {
     display: none !important;

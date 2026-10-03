@@ -206,4 +206,144 @@ describe('PrintPreviewModal', () => {
         expect(document.body).not.toHaveClass('print-matrix');
         print.mockRestore();
     });
+
+    it('conserve les flèches directionnelles sur le plan du carrefour imprimé', () => {
+        const baseProps = buildPreviewProps();
+        const props = buildPreviewProps({
+            project: {
+                ...baseProps.project,
+                groups: [{
+                    id: 1,
+                    name: 'Nord',
+                    courant: 'TD',
+                    durations: { green: 20, orange: 3, red: 37 },
+                }],
+            },
+            image: {
+                intersectionImage: 'data:image/png;base64,AA==',
+                intersectionArrows: [{
+                    id: 'arrow-1',
+                    groupId: 1,
+                    x: 25,
+                    y: 40,
+                    rotation: 90,
+                    scale: 1.2,
+                    length: 1,
+                    turnLength: 1,
+                }],
+                imageBrightness: 100,
+                imageContrast: 100,
+                imageNaturalDims: { width: 750, height: 530 },
+            },
+            print: {
+                ...baseProps.print,
+                printType: 'dossier',
+                dossierSections: { image: true, gfNumbers: false },
+            },
+        });
+
+        const { container } = render(<PrintPreviewModal {...props} />);
+        const arrow = container.querySelector('.dossier-plan-arrow');
+
+        expect(arrow).toBeInTheDocument();
+        expect(arrow).toHaveStyle({
+            left: '25%',
+            top: '40%',
+            width: '12.8%',
+            aspectRatio: '1 / 1',
+        });
+        const symbol = arrow.querySelector('.dossier-plan-arrow-symbol');
+        expect(symbol).toHaveStyle({
+            transform: 'rotate(90deg) scale(1.2)',
+        });
+        expect(symbol.querySelector('svg')).toBeInTheDocument();
+        expect(container.querySelector('.dossier-gf-label')).not.toBeInTheDocument();
+    });
+
+    it.each(['Piéton', 'Cycle'])(
+        'réduit de moitié le cadre imprimé de %s sans altérer son SVG',
+        (courant) => {
+            const baseProps = buildPreviewProps();
+            const props = buildPreviewProps({
+                project: {
+                    ...baseProps.project,
+                    groups: [{
+                        id: 1,
+                        name: courant,
+                        courant,
+                        durations: { green: 20, orange: 3, red: 37 },
+                    }],
+                },
+                image: {
+                    intersectionImage: 'data:image/png;base64,AA==',
+                    intersectionArrows: [{
+                        id: 'arrow-1',
+                        groupId: 1,
+                        x: 50,
+                        y: 50,
+                        scale: 2,
+                        length: 2,
+                    }],
+                    imageBrightness: 100,
+                    imageContrast: 100,
+                    imageNaturalDims: { width: 750, height: 530 },
+                },
+                print: {
+                    ...baseProps.print,
+                    printType: 'dossier',
+                    dossierSections: { image: true, gfNumbers: false },
+                },
+            });
+
+            const { container } = render(<PrintPreviewModal {...props} />);
+            const arrow = container.querySelector('.dossier-plan-arrow');
+            const svg = arrow.querySelector('svg');
+
+            expect(arrow).toHaveStyle({
+                width: '6.4%',
+                aspectRatio: '1 / 1',
+            });
+            expect(svg).toHaveAttribute('viewBox', '0 0 32 56');
+            expect(svg).toHaveStyle({ width: '100%', height: '100%' });
+            expect(arrow.querySelector('.dossier-plan-arrow-symbol')).toHaveStyle({
+                transform: 'rotate(0deg) scale(2)',
+            });
+        },
+    );
+
+    it.each([false, true])(
+        'conserve la même échelle relative des flèches en impression portrait=%s',
+        (dossierPortrait) => {
+            const baseProps = buildPreviewProps();
+            const props = buildPreviewProps({
+                project: {
+                    ...baseProps.project,
+                    groups: [{
+                        id: 1,
+                        name: 'Nord',
+                        courant: 'TD',
+                        durations: { green: 20, orange: 3, red: 37 },
+                    }],
+                },
+                image: {
+                    intersectionImage: 'data:image/png;base64,AA==',
+                    intersectionArrows: [{ id: 'arrow-1', groupId: 1, x: 50, y: 50 }],
+                    imageBrightness: 100,
+                    imageContrast: 100,
+                    imageNaturalDims: { width: 741, height: 645 },
+                },
+                print: {
+                    ...baseProps.print,
+                    printType: 'dossier',
+                    dossierPortrait,
+                    dossierSections: { image: true, gfNumbers: false },
+                },
+            });
+
+            const { container } = render(<PrintPreviewModal {...props} />);
+            expect(container.querySelector('.dossier-plan-arrow')).toHaveStyle({
+                width: `${(96 / 609) * 100}%`,
+            });
+        },
+    );
 });

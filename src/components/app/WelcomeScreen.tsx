@@ -1,4 +1,9 @@
-function WelcomeScreen({ hasActiveProject, showExampleInvite }) {
+interface WelcomeScreenProps {
+    hasActiveProject: boolean;
+    showExampleInvite: boolean;
+}
+
+function WelcomeScreen({ hasActiveProject, showExampleInvite }: WelcomeScreenProps) {
     return (
         <>
             {!hasActiveProject && (

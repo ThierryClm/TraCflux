@@ -1,7 +1,51 @@
 import CreateGreenWaveDialog from '../CreateGreenWaveDialog';
 import GreenWaveViewer from '../GreenWaveViewer';
 
-function OpenGreenWaveDialog({ dialog, tip }) {
+interface SavedGreenWave {
+    name: string;
+    intersections?: unknown[];
+    speedUp?: number;
+    speed?: number;
+    savedAt?: string | number | null;
+}
+
+interface OpenGreenWaveDialogModel {
+    isOpen: boolean;
+    onClose: () => void;
+    savedGreenWaves: SavedGreenWave[];
+    selectedName: string | null;
+    onSelect: (name: string) => void;
+    onOpen: (name: string | null) => void;
+    onDelete: (name: string) => void;
+    formatDate: (value: string | number) => string;
+}
+
+interface CreateGreenWaveDialogModel {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (intersections: unknown[]) => void;
+    getAllSaves: () => unknown[];
+    loadProjectData: (name: string) => unknown;
+}
+
+interface GreenWaveViewerModel {
+    isOpen: boolean;
+    onClose: () => void;
+    intersections: unknown[];
+    folderName?: string;
+}
+
+interface GreenWaveDialogsProps {
+    openDialog: OpenGreenWaveDialogModel;
+    createDialog: CreateGreenWaveDialogModel;
+    viewer: GreenWaveViewerModel;
+    tip: (label: string) => string;
+}
+
+function OpenGreenWaveDialog({
+    dialog,
+    tip,
+}: Pick<GreenWaveDialogsProps, 'tip'> & { dialog: OpenGreenWaveDialogModel }) {
     if (!dialog.isOpen) return null;
 
     return (
@@ -56,7 +100,7 @@ function OpenGreenWaveDialog({ dialog, tip }) {
     );
 }
 
-export default function GreenWaveDialogs({ openDialog, createDialog, viewer, tip }) {
+export default function GreenWaveDialogs({ openDialog, createDialog, viewer, tip }: GreenWaveDialogsProps) {
     return (
         <>
             <OpenGreenWaveDialog dialog={openDialog} tip={tip} />
@@ -71,6 +115,7 @@ export default function GreenWaveDialogs({ openDialog, createDialog, viewer, tip
                 isOpen={viewer.isOpen}
                 onClose={viewer.onClose}
                 intersections={viewer.intersections}
+                folderName={viewer.folderName}
             />
         </>
     );
