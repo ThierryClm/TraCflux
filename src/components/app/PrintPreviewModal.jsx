@@ -398,7 +398,6 @@ function PrintPreviewModal({
                                         if (denominator === 0) return null;
                                         const redTime = cycleLength - greenTime;
                                         return Math.round((redTime * redTime) / denominator);
-
                                     };
                                     const calcQueue = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
                                         const bandeAction = actionData.find(
@@ -799,7 +798,6 @@ function PrintPreviewModal({
                                             // cinq échelles différentes.
                                             //
                                             // La proportion porte donc sur la TIMELINE seule : à 120 s elle
-
                                             // remplit la largeur restante, en deçà elle en occupe la fraction
                                             // correspondante, et la colonne s'ajoute à côté.
                                             const largeurColonneVisuelle = dossierSidebarReal * combinedScale;
@@ -1200,7 +1198,6 @@ function PrintPreviewModal({
                                                                         <td className="col-coche">{cochee ? '\u2612' : '\u2610'}</td>
                                                                         <td className="col-gf">{action.gf ? `GF${action.gf}` : ''}</td>
                                                                         <td className="col-action">{action.action}</td>
-
                                                                         <td className="col-temps">{temps}</td>
                                                                         {/* Même rendu que le tableau des conditions du plan :
                                                                             largeur et police relevées à l'écran, le navigateur
