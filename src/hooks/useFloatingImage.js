@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import usePopupWindow from './usePopupWindow';
 import { fitDetachedImageBox, cropFromBoxToImage, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
 import { mesurerFondClair } from '../utils/fondImage';
@@ -99,6 +99,27 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     const contentWidth = Math.ceil(Math.max(1, cadreW - floatingCrop.left - floatingCrop.right) * floatingZoom) + SAFETY_PX;
     const contentHeight = Math.ceil(Math.max(1, cadreH - floatingCrop.top - floatingCrop.bottom) * floatingZoom) + HEADER_HEIGHT + SAFETY_PX;
 
+    // Les dimensions naturelles arrivent après l'ouverture de la popup. Même
+    // si le panneau de rognage a déjà été déployé entre-temps, cette première
+    // mesure réelle doit remplacer le gabarit carré provisoire. Ensuite, tant
+    // que l'utilisateur tire un curseur, on conserve la dernière taille stable
+    // pour ne pas déplacer la fenêtre sous son pointeur ; elle se recale à la
+    // fermeture du panneau.
+    const stableContentSizeRef = useRef(null);
+    const stableImageRef = useRef({ source: null, width: 0, height: 0 });
+    const imageDimensionsChanged = stableImageRef.current.source !== intersectionImage
+        || stableImageRef.current.width !== imageNaturalDims.width
+        || stableImageRef.current.height !== imageNaturalDims.height;
+
+    if (dimsKnown && (imageDimensionsChanged || !showCropControls || !stableContentSizeRef.current)) {
+        stableContentSizeRef.current = { width: contentWidth, height: contentHeight };
+        stableImageRef.current = {
+            source: intersectionImage,
+            width: imageNaturalDims.width,
+            height: imageNaturalDims.height
+        };
+    }
+
     // Popup window for floating image
     const floatingImagePopup = usePopupWindow({
         geometryKey: 'image',
@@ -120,7 +141,7 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
         // la fenêtre ; la voir se redimensionner sous le pointeur pendant qu'on
         // tire un curseur casserait le geste. Elle se recale à la fermeture du
         // panneau de rognage.
-        contentSize: (showCropControls || !dimsKnown) ? null : { width: contentWidth, height: contentHeight }
+        contentSize: dimsKnown ? stableContentSizeRef.current : null
     });
 
     return {
