@@ -246,13 +246,48 @@ describe('PrintPreviewModal', () => {
         const arrow = container.querySelector('.dossier-plan-arrow');
 
         expect(arrow).toBeInTheDocument();
-        expect(arrow).toHaveStyle({ left: '25%', top: '40%' });
+        expect(arrow).toHaveStyle({ left: '25%', top: '40%', width: '12.8%' });
         const symbol = arrow.querySelector('.dossier-plan-arrow-symbol');
         expect(symbol).toHaveStyle({
-            width: '32px',
             transform: 'rotate(90deg) scale(1.2)',
         });
         expect(symbol.querySelector('svg')).toBeInTheDocument();
         expect(container.querySelector('.dossier-gf-label')).not.toBeInTheDocument();
     });
+
+    it.each([false, true])(
+        'conserve la même échelle relative des flèches en impression portrait=%s',
+        (dossierPortrait) => {
+            const baseProps = buildPreviewProps();
+            const props = buildPreviewProps({
+                project: {
+                    ...baseProps.project,
+                    groups: [{
+                        id: 1,
+                        name: 'Nord',
+                        courant: 'TD',
+                        durations: { green: 20, orange: 3, red: 37 },
+                    }],
+                },
+                image: {
+                    intersectionImage: 'data:image/png;base64,AA==',
+                    intersectionArrows: [{ id: 'arrow-1', groupId: 1, x: 50, y: 50 }],
+                    imageBrightness: 100,
+                    imageContrast: 100,
+                    imageNaturalDims: { width: 741, height: 645 },
+                },
+                print: {
+                    ...baseProps.print,
+                    printType: 'dossier',
+                    dossierPortrait,
+                    dossierSections: { image: true, gfNumbers: false },
+                },
+            });
+
+            const { container } = render(<PrintPreviewModal {...props} />);
+            expect(container.querySelector('.dossier-plan-arrow')).toHaveStyle({
+                width: `${(96 / 609) * 100}%`,
+            });
+        },
+    );
 });
