@@ -107,6 +107,10 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
         title: popupTitle,
         width: contentWidth + CHROME_GUESS_W,
         height: contentHeight + CHROME_GUESS_H,
+        // Le titre système reprend déjà le carrefour et le plan de feux. Le
+        // bandeau interne commun aux autres fenêtres ne faisait ici que les
+        // répéter et ajoutait une marge vide au-dessus de l'image.
+        showTitleBanner: false,
         // Le gabarit passé à window.open est une estimation : la hauteur réelle
         // du chrome du navigateur varie. On la corrige à l'ouverture pour que
         // la zone utile tienne pile — c'est ce qui faisait apparaître des
