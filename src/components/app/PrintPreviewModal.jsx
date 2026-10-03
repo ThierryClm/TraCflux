@@ -9,6 +9,8 @@ import { actionsSimulables, conflitsSimules } from '../../utils/simulationCalcul
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
 import { groupesInhibes } from '../../utils/trafficHelpers';
 import { LOGO_APP } from '../../utils/logoApp';
+import renderArrowSVG from '../../utils/renderArrowSVG';
+import { BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
 
 function PrintPreviewModal({
     isOpen,
@@ -29,6 +31,17 @@ function PrintPreviewModal({
     const { activeTrafficDataset, trafficDatasets, trafficDatasetNames } = traffic;
     const { simulationName, simulationResultImpression, simulationSelectedActions } = simulation;
     const { intersectionImage, intersectionArrows, imageBrightness, imageContrast, imageNaturalDims } = image;
+    const printedImageFrame = fitDetachedImageBox(imageNaturalDims);
+    const printedImageArrows = intersectionArrows
+        .map(arrow => ({
+            ...arrow,
+            printX: ((((arrow.x / 100) * BOX_W) - printedImageFrame.x) / printedImageFrame.w) * 100,
+            printY: ((((arrow.y / 100) * BOX_H) - printedImageFrame.y) / printedImageFrame.h) * 100,
+        }))
+        .filter(arrow => (
+            arrow.printX >= 0 && arrow.printX <= 100 &&
+            arrow.printY >= 0 && arrow.printY <= 100
+        ));
     const {
         printType,
         dossierSections,
@@ -455,6 +468,31 @@ function PrintPreviewModal({
                                                         className="dossier-carrefour-img"
                                                         style={{ filter: `brightness(${imageBrightness}%) contrast(${imageContrast}%)` }}
                                                     />
+                                                    {printedImageArrows.map(arrow => {
+                                                        const group = groups.find(g => String(g.id) === String(arrow.groupId));
+                                                        const courant = group?.courant || '';
+
+                                                        return (
+                                                            <div
+                                                                key={`plan-arrow-${arrow.id}`}
+                                                                className="dossier-plan-arrow"
+                                                                style={{ left: `${arrow.printX}%`, top: `${arrow.printY}%` }}
+                                                            >
+                                                                <div
+                                                                    className="dossier-plan-arrow-symbol"
+                                                                    style={{ transform: `rotate(${arrow.rotation || 0}deg) scale(${arrow.scale || 1})` }}
+                                                                >
+                                                                    {renderArrowSVG(
+                                                                        courant,
+                                                                        '#222222',
+                                                                        arrow.length || 1,
+                                                                        arrow.turnLength || 1,
+                                                                        false,
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                     {dossierSections.gfNumbers && (() => {
                                                         // Grouper les flèches par groupId (exclure celles hors image)
                                                         // Estimer la taille rendue de l'image pour le décalage TàD/TàG
@@ -462,12 +500,12 @@ function PrintPreviewModal({
                                                         const estH = Math.min(480, imageNaturalDims.height);
                                                         const estW = Math.min(estH * imgR, 1000);
                                                         const groupMap = {};
-                                                        intersectionArrows.forEach(arrow => {
+                                                        printedImageArrows.forEach(arrow => {
                                                             if (!arrow.groupId) return;
                                                             if (arrow.x < 0 || arrow.x > 100 || arrow.y < 0 || arrow.y > 100) return;
                                                             const courant = groups.find(g => String(g.id) === String(arrow.groupId))?.courant || '';
-                                                            let px = arrow.x;
-                                                            let py = arrow.y;
+                                                            let px = arrow.printX;
+                                                            let py = arrow.printY;
                                                             // Pour TàD/TàG, décaler vers le corps (ignorer le retour)
                                                             if (courant === 'TàD' || courant === 'TàG') {
                                                                 const sc = arrow.scale || 1;

@@ -206,4 +206,48 @@ describe('PrintPreviewModal', () => {
         expect(document.body).not.toHaveClass('print-matrix');
         print.mockRestore();
     });
+
+    it('conserve les flèches directionnelles sur le plan du carrefour imprimé', () => {
+        const baseProps = buildPreviewProps();
+        const props = buildPreviewProps({
+            project: {
+                ...baseProps.project,
+                groups: [{
+                    id: 1,
+                    name: 'Nord',
+                    courant: 'TD',
+                    durations: { green: 20, orange: 3, red: 37 },
+                }],
+            },
+            image: {
+                intersectionImage: 'data:image/png;base64,AA==',
+                intersectionArrows: [{
+                    id: 'arrow-1',
+                    groupId: 1,
+                    x: 25,
+                    y: 40,
+                    rotation: 90,
+                    scale: 1.2,
+                    length: 1,
+                    turnLength: 1,
+                }],
+                imageBrightness: 100,
+                imageContrast: 100,
+                imageNaturalDims: { width: 750, height: 530 },
+            },
+            print: {
+                ...baseProps.print,
+                printType: 'dossier',
+                dossierSections: { image: true, gfNumbers: false },
+            },
+        });
+
+        const { container } = render(<PrintPreviewModal {...props} />);
+        const arrow = container.querySelector('.dossier-plan-arrow');
+
+        expect(arrow).toBeInTheDocument();
+        expect(arrow).toHaveStyle({ left: '25%', top: '40%' });
+        expect(arrow.querySelector('svg')).toBeInTheDocument();
+        expect(container.querySelector('.dossier-gf-label')).not.toBeInTheDocument();
+    });
 });
