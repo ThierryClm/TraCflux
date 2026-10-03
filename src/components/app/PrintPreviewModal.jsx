@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { cloneElement, Fragment } from 'react';
 import TimelineDiagram from '../TimelineDiagram';
 import TrafficTable from '../TrafficTable';
 import DiagnosticPanel from '../DiagnosticPanel';
@@ -398,6 +398,7 @@ function PrintPreviewModal({
                                         if (denominator === 0) return null;
                                         const redTime = cycleLength - greenTime;
                                         return Math.round((redTime * redTime) / denominator);
+
                                     };
                                     const calcQueue = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
                                         const bandeAction = actionData.find(
@@ -486,6 +487,7 @@ function PrintPreviewModal({
                                                                     left: `${arrow.printX}%`,
                                                                     top: `${arrow.printY}%`,
                                                                     width: `${printedArrowWidthPercent}%`,
+                                                                    aspectRatio: '1 / 1',
                                                                 }}
                                                             >
                                                                 <div
@@ -494,12 +496,15 @@ function PrintPreviewModal({
                                                                         transform: `rotate(${arrow.rotation || 0}deg) scale(${arrow.scale || 1})`,
                                                                     }}
                                                                 >
-                                                                    {renderArrowSVG(
-                                                                        courant,
-                                                                        '#222222',
-                                                                        arrow.length || 1,
-                                                                        arrow.turnLength || 1,
-                                                                        false,
+                                                                    {cloneElement(
+                                                                        renderArrowSVG(
+                                                                            courant,
+                                                                            '#222222',
+                                                                            arrow.length || 1,
+                                                                            arrow.turnLength || 1,
+                                                                            false,
+                                                                        ),
+                                                                        { style: { width: '100%', height: '100%' } },
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -794,6 +799,7 @@ function PrintPreviewModal({
                                             // cinq échelles différentes.
                                             //
                                             // La proportion porte donc sur la TIMELINE seule : à 120 s elle
+
                                             // remplit la largeur restante, en deçà elle en occupe la fraction
                                             // correspondante, et la colonne s'ajoute à côté.
                                             const largeurColonneVisuelle = dossierSidebarReal * combinedScale;
@@ -1194,6 +1200,7 @@ function PrintPreviewModal({
                                                                         <td className="col-coche">{cochee ? '\u2612' : '\u2610'}</td>
                                                                         <td className="col-gf">{action.gf ? `GF${action.gf}` : ''}</td>
                                                                         <td className="col-action">{action.action}</td>
+
                                                                         <td className="col-temps">{temps}</td>
                                                                         {/* Même rendu que le tableau des conditions du plan :
                                                                             largeur et police relevées à l'écran, le navigateur

@@ -246,7 +246,12 @@ describe('PrintPreviewModal', () => {
         const arrow = container.querySelector('.dossier-plan-arrow');
 
         expect(arrow).toBeInTheDocument();
-        expect(arrow).toHaveStyle({ left: '25%', top: '40%', width: '12.8%' });
+        expect(arrow).toHaveStyle({
+            left: '25%',
+            top: '40%',
+            width: '12.8%',
+            aspectRatio: '1 / 1',
+        });
         const symbol = arrow.querySelector('.dossier-plan-arrow-symbol');
         expect(symbol).toHaveStyle({
             transform: 'rotate(90deg) scale(1.2)',
@@ -254,6 +259,53 @@ describe('PrintPreviewModal', () => {
         expect(symbol.querySelector('svg')).toBeInTheDocument();
         expect(container.querySelector('.dossier-gf-label')).not.toBeInTheDocument();
     });
+
+    it.each(['Piéton', 'Cycle'])(
+        'conserve %s dans le même cadre carré que les flèches véhicules',
+        (courant) => {
+            const baseProps = buildPreviewProps();
+            const props = buildPreviewProps({
+                project: {
+                    ...baseProps.project,
+                    groups: [{
+                        id: 1,
+                        name: courant,
+                        courant,
+                        durations: { green: 20, orange: 3, red: 37 },
+                    }],
+                },
+                image: {
+                    intersectionImage: 'data:image/png;base64,AA==',
+                    intersectionArrows: [{
+                        id: 'arrow-1',
+                        groupId: 1,
+                        x: 50,
+                        y: 50,
+                        length: 2,
+                    }],
+                    imageBrightness: 100,
+                    imageContrast: 100,
+                    imageNaturalDims: { width: 750, height: 530 },
+                },
+                print: {
+                    ...baseProps.print,
+                    printType: 'dossier',
+                    dossierSections: { image: true, gfNumbers: false },
+                },
+            });
+
+            const { container } = render(<PrintPreviewModal {...props} />);
+            const arrow = container.querySelector('.dossier-plan-arrow');
+            const svg = arrow.querySelector('svg');
+
+            expect(arrow).toHaveStyle({
+                width: '12.8%',
+                aspectRatio: '1 / 1',
+            });
+            expect(svg).toHaveAttribute('viewBox', '0 0 32 56');
+            expect(svg).toHaveStyle({ width: '100%', height: '100%' });
+        },
+    );
 
     it.each([false, true])(
         'conserve la même échelle relative des flèches en impression portrait=%s',
