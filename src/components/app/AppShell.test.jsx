@@ -247,7 +247,12 @@ describe('PrintPreviewModal', () => {
 
         expect(arrow).toBeInTheDocument();
         expect(arrow).toHaveStyle({ left: '25%', top: '40%' });
-        expect(arrow.querySelector('svg')).toBeInTheDocument();
+        const symbol = arrow.querySelector('.dossier-plan-arrow-symbol');
+        expect(symbol).toHaveStyle({
+            width: '32px',
+            transform: 'rotate(90deg) scale(1.2)',
+        });
+        expect(symbol.querySelector('svg')).toBeInTheDocument();
         expect(container.querySelector('.dossier-gf-label')).not.toBeInTheDocument();
     });
 });
