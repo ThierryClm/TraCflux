@@ -1,6 +1,27 @@
-import React from 'react';
+import React, { type ChangeEvent } from 'react';
 import CustomTooltip from '../CustomTooltip';
 import NumericInput from '../NumericInput';
+import type { TimelineSimulationResult } from './timelineTypes';
+
+interface TimelineHeaderProps {
+    activePFName?: string;
+    cycleLength: number;
+    cycleLengthInput?: string | number;
+    cycleSimulationSpeed?: (() => void) | null;
+    isPlayingSimulation: boolean;
+    onDetach?: (() => void) | null;
+    planName?: string;
+    readOnly?: boolean;
+    setCycleLength?: (value: number) => void;
+    setCycleLengthInput?: (value: string) => void;
+    setIsPlayingSimulation?: (value: boolean) => void;
+    setSimulationCurrentTime?: (value: number) => void;
+    simulationCurrentTime?: number | null;
+    simulationResult?: TimelineSimulationResult | null;
+    simulationSpeed: number;
+    titreEnBandeau?: boolean;
+    tooltipsEnabled: boolean;
+}
 
 const TimelineHeader = ({
     activePFName,
@@ -20,18 +41,18 @@ const TimelineHeader = ({
     simulationSpeed,
     titreEnBandeau,
     tooltipsEnabled
-}) => {
+}: TimelineHeaderProps) => {
     if (titreEnBandeau) return null;
 
-    const tip = (text) => tooltipsEnabled ? text : undefined;
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const displayedCycleLength = simulationResult?.simulatedCycleLength || cycleLength;
 
-    const commitCycleLength = (value) => {
-        const newCycle = parseInt(value);
-        if (!isNaN(newCycle) && newCycle >= 10 && newCycle !== cycleLength) {
+    const commitCycleLength = (value: string | number) => {
+        const newCycle = parseInt(String(value), 10);
+        if (!isNaN(newCycle) && newCycle >= 10 && newCycle !== cycleLength && setCycleLength) {
             setCycleLength(newCycle);
         } else {
-            setCycleLengthInput(cycleLength.toString());
+            setCycleLengthInput?.(cycleLength.toString());
         }
     };
 
@@ -50,10 +71,15 @@ const TimelineHeader = ({
                             className="input-count"
                             value={cycleLengthInput}
                             min={10}
+                            max={undefined}
+                            maxLength={undefined}
                             allowEmpty={false}
+                            onClick={undefined}
                             selectOnFocus
                             onCommit={commitCycleLength}
+                            style={undefined}
                             title={tip('Durée du cycle (min 10s)')}
+                            wrapAt={undefined}
                         />
                         <span>s</span>
                     </label>
@@ -80,7 +106,7 @@ const TimelineHeader = ({
                     <CustomTooltip text="Réinitialiser">
                         <button
                             className="sim-btn reset-btn"
-                            onClick={() => { setIsPlayingSimulation(false); setSimulationCurrentTime(0); }}
+                            onClick={() => { setIsPlayingSimulation(false); setSimulationCurrentTime?.(0); }}
                             aria-label="Réinitialiser la simulation"
                         >
                             ⏹
@@ -103,7 +129,7 @@ const TimelineHeader = ({
                             min="0"
                             max={displayedCycleLength - 1}
                             value={simulationCurrentTime || 0}
-                            onChange={(event) => setSimulationCurrentTime(parseInt(event.target.value) || 0)}
+                            onChange={(event: ChangeEvent<HTMLInputElement>) => setSimulationCurrentTime?.(parseInt(event.target.value, 10) || 0)}
                             className="time-slider"
                             aria-label="Position courante dans le cycle de simulation"
                         />

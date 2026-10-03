@@ -1,7 +1,14 @@
-import React from 'react';
+import React, { type CSSProperties } from 'react';
+import type { ActionMicro } from '../../types/projet';
 import { tokenizeMicroText } from '../../utils/microVariables';
+import type { TimelineActionTooltip, TimelineDragState } from './timelineTypes';
 
-const floatingValueStyle = (dragState) => ({
+interface FloatingPosition {
+    mouseX: number;
+    mouseY: number;
+}
+
+const floatingValueStyle = (dragState: FloatingPosition): CSSProperties => ({
     position: 'fixed',
     left: dragState.mouseX + 12,
     top: dragState.mouseY - 28,
@@ -18,22 +25,38 @@ const floatingValueStyle = (dragState) => ({
     whiteSpace: 'nowrap'
 });
 
-const FloatingValue = ({ dragState, value }) => (
+interface FloatingValueProps {
+    dragState: FloatingPosition;
+    value: number;
+}
+
+const FloatingValue = ({ dragState, value }: FloatingValueProps) => (
     <div style={floatingValueStyle(dragState)}>{Math.round(value)}s</div>
 );
 
-const joinFrench = (items) => items.length <= 1
+const joinFrench = (items: string[]) => items.length <= 1
     ? (items[0] || '')
     : `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`;
 
-const ActionTooltip = ({ actionData, actionTooltip, microVariableNames }) => {
+interface ActionTooltipProps {
+    actionData: ActionMicro[];
+    actionTooltip: TimelineActionTooltip | null;
+    microVariableNames: string[];
+}
+
+interface MicroToken {
+    text: string;
+    type: 'keyword' | 'bold' | 'text';
+}
+
+const ActionTooltip = ({ actionData, actionTooltip, microVariableNames }: ActionTooltipProps) => {
     if (!actionTooltip) return null;
 
     const action = actionData.find((candidate) => candidate.id === actionTooltip.actionId);
     if (!action) return null;
 
-    const deb = parseInt(action.deb) || 0;
-    const fin = parseInt(action.fin) || 0;
+    const deb = parseInt(String(action.deb ?? ''), 10) || 0;
+    const fin = parseInt(String(action.fin ?? ''), 10) || 0;
     const isPointInTime = action.action === 'Point de repos'
         || action.action === 'Instant Co' || action.action === 'Instant CO';
     const glissementGroups = action.action === 'Fermeture anticipée'
@@ -60,7 +83,7 @@ const ActionTooltip = ({ actionData, actionTooltip, microVariableNames }) => {
             )}
             {hasMicro && (
                 <div className="action-hover-tooltip-micro">
-                    {tokenizeMicroText(action.micro, microVariableNames).map((token, index) =>
+                    {tokenizeMicroText(action.micro ?? '', microVariableNames).map((token: MicroToken, index: number) =>
                         token.type === 'keyword'
                             ? <span key={index} className="micro-keyword">{token.text}</span>
                             : token.type === 'bold'
@@ -73,23 +96,45 @@ const ActionTooltip = ({ actionData, actionTooltip, microVariableNames }) => {
     );
 };
 
-const TimelineFloatingOverlays = ({ actionData, actionTooltip, cycleLength, dragState, microVariableNames }) => {
-    const hasGroupDragValue = dragState
-        && dragState.deltaSeconds !== undefined
-        && dragState.mouseX !== undefined
-        && dragState.groupId !== undefined;
-    const groupDragValue = hasGroupDragValue
-        ? ((dragState.initialValue + dragState.deltaSeconds) % cycleLength + cycleLength) % cycleLength
-        : null;
-    const hasActionDragValue = dragState
+interface TimelineFloatingOverlaysProps {
+    actionData: ActionMicro[];
+    actionTooltip: TimelineActionTooltip | null;
+    cycleLength: number;
+    dragState: TimelineDragState | null;
+    microVariableNames: string[];
+}
+
+const TimelineFloatingOverlays = ({ actionData, actionTooltip, cycleLength, dragState, microVariableNames }: TimelineFloatingOverlaysProps) => {
+    let groupDrag: { position: FloatingPosition; value: number } | null = null;
+    let actionDrag: { position: FloatingPosition; value: number } | null = null;
+
+    if (dragState
+        && typeof dragState.deltaSeconds === 'number'
+        && typeof dragState.initialValue === 'number'
+        && typeof dragState.mouseX === 'number'
+        && typeof dragState.mouseY === 'number'
+        && typeof dragState.groupId === 'number') {
+        groupDrag = {
+            position: { mouseX: dragState.mouseX, mouseY: dragState.mouseY },
+            value: ((dragState.initialValue + dragState.deltaSeconds) % cycleLength + cycleLength) % cycleLength
+        };
+    }
+
+    if (dragState
         && dragState.showTooltip
-        && dragState.mouseX !== undefined
-        && dragState.currentValue !== undefined;
+        && typeof dragState.mouseX === 'number'
+        && typeof dragState.mouseY === 'number'
+        && typeof dragState.currentValue === 'number') {
+        actionDrag = {
+            position: { mouseX: dragState.mouseX, mouseY: dragState.mouseY },
+            value: dragState.currentValue
+        };
+    }
 
     return (
         <>
-            {hasGroupDragValue && <FloatingValue dragState={dragState} value={groupDragValue} />}
-            {hasActionDragValue && <FloatingValue dragState={dragState} value={dragState.currentValue} />}
+            {groupDrag && <FloatingValue dragState={groupDrag.position} value={groupDrag.value} />}
+            {actionDrag && <FloatingValue dragState={actionDrag.position} value={actionDrag.value} />}
             <ActionTooltip actionData={actionData} actionTooltip={actionTooltip} microVariableNames={microVariableNames} />
         </>
     );
