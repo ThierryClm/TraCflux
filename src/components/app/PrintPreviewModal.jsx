@@ -447,7 +447,8 @@ function PrintPreviewModal({
                                         {dossierSmallLogos && <div className="dossier-logos-page">{dossierSmallLogos}</div>}
                                         {/* 1. Titre du projet avec logos et informations */}
                                         <div className="print-dossier-section print-dossier-title">
-                                            <div className="dossier-title-logos">                                                <div className="dossier-title-logo-left">
+                                            <div className="dossier-title-logos">
+                                                <div className="dossier-title-logo-left">
                                                     {/* Le logo de l'outil ouvre la rangée ; celui du maître
                                                         d'ouvrage, quand il existe, se place à sa droite. */}
                                                     <img src={LOGO_APP} alt="TraCflux" className="dossier-logo-app" />
@@ -896,7 +897,8 @@ function PrintPreviewModal({
                                                             <th>Fin</th>
                                                             <th>Abrv</th>
                                                             <th>Action_Micro</th>
-                                                            <th colSpan="2">Plage</th>                                                            <th colSpan="4">Action GF</th>
+                                                            <th colSpan="2">Plage</th>
+                                                            <th colSpan="4">Action GF</th>
                                                         </tr>
                                                         <tr className="print-actions-subheader">
                                                             <th></th><th></th><th></th><th></th><th></th><th></th><th></th>
