@@ -197,7 +197,8 @@ function PrintPreviewModal({
                                         <div className="print-diagram-content">
                                             <TimelineDiagram
                                                 groups={groups}
-                                                globalTime={0}onGroupClick={() => {}}
+                                                globalTime={0}
+onGroupClick={() => {}}
                                                 pixelsPerSecond={optimalPPS}
                                                 conflicts={[]}
                                                 conflictMatrix={conflictMatrix}
@@ -396,7 +397,8 @@ function PrintPreviewModal({
                                         const denominator = 2 * cycleLength * (1 - ratio);
                                         if (denominator === 0) return null;
                                         const redTime = cycleLength - greenTime;
-                                        return Math.round((redTime * redTime) / denominator);};
+                                        return Math.round((redTime * redTime) / denominator);
+};
                                     const calcQueue = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
                                         const bandeAction = actionData.find(
                                             action => action.action === 'Début de bande passante' &&
@@ -595,7 +597,8 @@ function PrintPreviewModal({
                                                         <th>GF</th>
                                                         <th>Nom</th>
                                                         <th>Type</th>
-                                                        <th>Courant</th><th>Mini</th>
+                                                        <th>Courant</th>
+<th>Mini</th>
                                                         <th>Jaune</th>
                                                     </tr>
                                                 </thead>
@@ -794,7 +797,8 @@ function PrintPreviewModal({
                                             // remplit la largeur restante, en deçà elle en occupe la fraction
                                             // correspondante, et la colonne s'ajoute à côté.
                                             const largeurColonneVisuelle = dossierSidebarReal * combinedScale;
-                                            const timelineDispo = dossierUsableWidth - largeurColonneVisuelle;// px par seconde à l'écran de la feuille, avant mise à l'échelle
+                                            const timelineDispo = dossierUsableWidth - largeurColonneVisuelle;
+// px par seconde à l'écran de la feuille, avant mise à l'échelle
                                             const ppsVisuel = pfCycleLength <= refCycle
                                                 ? timelineDispo / refCycle
                                                 : timelineDispo / pfCycleLength; // cycle long : réduit pour tenir
@@ -993,7 +997,8 @@ function PrintPreviewModal({
                                             let arrowXMin = 0, arrowXMax = 100, arrowYMin = 0, arrowYMax = 100;
                                             if (imgRatio > bubbleAspect) {
                                                 const visH = (bubbleAspect / imgRatio) * 100;
-                                                arrowYMin = (100 - visH) / 2;arrowYMax = 100 - arrowYMin;
+                                                arrowYMin = (100 - visH) / 2;
+arrowYMax = 100 - arrowYMin;
                                             } else {
                                                 const visW = (imgRatio / bubbleAspect) * 100;
                                                 arrowXMin = (100 - visW) / 2;
@@ -1192,7 +1197,8 @@ function PrintPreviewModal({
                                                                         <td className="col-temps">{temps}</td>
                                                                         {/* Même rendu que le tableau des conditions du plan :
                                                                             largeur et police relevées à l'écran, le navigateur
-                                                                            replie donc aux mêmes endroits. */}<td className="col-micro print-micro-cell">
+                                                                            replie donc aux mêmes endroits. */}
+<td className="col-micro print-micro-cell">
                                                                             <div className="print-micro-wrap" style={microPrintStyle || undefined}>{action.micro}</div>
                                                                         </td>
                                                                     </tr>
