@@ -3123,6 +3123,16 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     >
                                         <polygon points="0 0, 6 2, 0 4" fill="red" />
                                     </marker>
+                                    <marker
+                                        id="dep-arrowhead-potential"
+                                        markerWidth="6"
+                                        markerHeight="4"
+                                        refX="6"
+                                        refY="2"
+                                        orient="auto"
+                                    >
+                                        <polygon points="0 0, 6 2, 0 4" fill="#ff9800" />
+                                    </marker>
                                 </defs>
                                 {/* Arrows from main green phases */}
                                 {groups.map((fromGroup, fromIndex) => {
@@ -3154,12 +3164,17 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         if (intergreenTime <= 0) return null;
 
                                         // Determine if this arrow is a conflict (from matrix hover)
-                                        const isConflictArrow = showForConflict && hoveredConflict?.isConflict;
-                                        const arrowColor = isConflictArrow ? 'red' : '#999';
-                                        const arrowWidth = isConflictArrow ? 3 : 1;
-                                        const arrowOpacity = isConflictArrow ? 0.9 : 0.6;
-                                        const arrowMarker = isConflictArrow ? 'url(#dep-arrowhead-conflict)' : 'url(#dep-arrowhead)';
-                                        const arrowDash = isConflictArrow ? '6,3' : undefined;
+                                        const isMajorConflictArrow = showForConflict && hoveredConflict?.isConflict === true;
+                                        const isPotentialConflictArrow = showForConflict && hoveredConflict?.isConflict === false;
+                                        const arrowColor = isMajorConflictArrow ? 'red' : isPotentialConflictArrow ? '#ff9800' : '#999';
+                                        const arrowWidth = isMajorConflictArrow ? 3 : isPotentialConflictArrow ? 2 : 1;
+                                        const arrowOpacity = (isMajorConflictArrow || isPotentialConflictArrow) ? 0.9 : 0.6;
+                                        const arrowMarker = isMajorConflictArrow
+                                            ? 'url(#dep-arrowhead-conflict)'
+                                            : isPotentialConflictArrow
+                                                ? 'url(#dep-arrowhead-potential)'
+                                                : 'url(#dep-arrowhead)';
+                                        const arrowDash = (isMajorConflictArrow || isPotentialConflictArrow) ? '6,3' : undefined;
 
                                         // Use simulated offset for target too
                                         const simTo = simulationResult?.simulatedGroups?.find(g => g.id === toId);

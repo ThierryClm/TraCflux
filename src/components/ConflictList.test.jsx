@@ -110,12 +110,29 @@ describe('ConflictList — majeurs vs potentiels', () => {
         expect(screen.queryByRole('heading', { name: /Conflits potentiels/ })).toBeNull();
     });
 
-    it('conserve la liste vide et le survol croisé', () => {
+    it('signale la gravité au diagramme pendant le survol croisé', () => {
         const setHoveredConflict = vi.fn();
-        const { rerender } = renderList([intergreen(1, 2, 3.2, 5)], { setHoveredConflict });
+        const { rerender } = renderList([
+            intergreen(1, 2, 3.2, 5),
+            intergreen(3, 2, 1.0, 4)
+        ], { setHoveredConflict });
 
         fireEvent.mouseEnter(screen.getByText(/GF1 → GF2/));
-        expect(setHoveredConflict).toHaveBeenCalledWith({ from: 1, to: 2 });
+        expect(setHoveredConflict).toHaveBeenLastCalledWith({
+            from: 1,
+            to: 2,
+            isConflict: true
+        });
+
+        fireEvent.mouseEnter(screen.getByText(/GF3 → GF2/));
+        expect(setHoveredConflict).toHaveBeenLastCalledWith({
+            from: 3,
+            to: 2,
+            isConflict: false
+        });
+
+        fireEvent.mouseLeave(screen.getByText(/GF3 → GF2/));
+        expect(setHoveredConflict).toHaveBeenLastCalledWith(null);
 
         rerender(
             <ConflictList conflicts={[]} groups={groups} isConflictGrayed={isConflictGrayed} />

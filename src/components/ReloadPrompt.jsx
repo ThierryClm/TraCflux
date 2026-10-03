@@ -6,7 +6,7 @@ import './ReloadPrompt.css';
 /**
  * Bandeau discret proposant de recharger quand une nouvelle version de
  * l'application a été mise en cache par le service worker (registerType:
- * 'prompt' dans vite.config.js).
+ * 'prompt' dans vite.config.ts).
  *
  * - Ne recharge JAMAIS de lui-même : l'utilisateur clique « Recharger » quand
  *   il est prêt — pas d'interruption d'édition ni de fermeture des fenêtres

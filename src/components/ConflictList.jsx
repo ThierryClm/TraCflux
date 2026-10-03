@@ -62,7 +62,11 @@ const ConflictList = ({
             <li
                 key={i}
                 className={potentiel ? 'conflict-item-potentiel' : 'conflict-item-majeur'}
-                onMouseEnter={() => setHoveredConflict({ from: c.from, to: c.to })}
+                onMouseEnter={() => setHoveredConflict({
+                    from: c.from,
+                    to: c.to,
+                    isConflict: !potentiel
+                })}
                 onMouseLeave={() => setHoveredConflict(null)}
                 style={{ cursor: 'pointer' }}
             >

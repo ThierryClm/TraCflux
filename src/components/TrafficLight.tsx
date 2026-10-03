@@ -1,7 +1,11 @@
 import React from 'react';
 import './TrafficLight.css';
 
-const TrafficLight = ({ currentPhase }) => {
+interface TrafficLightProps {
+    currentPhase: 'red' | 'orange' | 'green';
+}
+
+const TrafficLight = ({ currentPhase }: TrafficLightProps) => {
     return (
         <div className="traffic-light">
             <div className={`light red ${currentPhase === 'red' ? 'active' : ''}`}></div>
