@@ -198,7 +198,7 @@ function PrintPreviewModal({
                                             <TimelineDiagram
                                                 groups={groups}
                                                 globalTime={0}
-onGroupClick={() => {}}
+                                                onGroupClick={() => {}}
                                                 pixelsPerSecond={optimalPPS}
                                                 conflicts={[]}
                                                 conflictMatrix={conflictMatrix}
@@ -398,7 +398,7 @@ onGroupClick={() => {}}
                                         if (denominator === 0) return null;
                                         const redTime = cycleLength - greenTime;
                                         return Math.round((redTime * redTime) / denominator);
-};
+                                    };
                                     const calcQueue = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
                                         const bandeAction = actionData.find(
                                             action => action.action === 'Début de bande passante' &&
@@ -598,7 +598,7 @@ onGroupClick={() => {}}
                                                         <th>Nom</th>
                                                         <th>Type</th>
                                                         <th>Courant</th>
-<th>Mini</th>
+                                                        <th>Mini</th>
                                                         <th>Jaune</th>
                                                     </tr>
                                                 </thead>
@@ -798,7 +798,7 @@ onGroupClick={() => {}}
                                             // correspondante, et la colonne s'ajoute à côté.
                                             const largeurColonneVisuelle = dossierSidebarReal * combinedScale;
                                             const timelineDispo = dossierUsableWidth - largeurColonneVisuelle;
-// px par seconde à l'écran de la feuille, avant mise à l'échelle
+                                            // px par seconde à l'écran de la feuille, avant mise à l'échelle
                                             const ppsVisuel = pfCycleLength <= refCycle
                                                 ? timelineDispo / refCycle
                                                 : timelineDispo / pfCycleLength; // cycle long : réduit pour tenir
@@ -998,7 +998,7 @@ onGroupClick={() => {}}
                                             if (imgRatio > bubbleAspect) {
                                                 const visH = (bubbleAspect / imgRatio) * 100;
                                                 arrowYMin = (100 - visH) / 2;
-arrowYMax = 100 - arrowYMin;
+                                                arrowYMax = 100 - arrowYMin;
                                             } else {
                                                 const visW = (imgRatio / bubbleAspect) * 100;
                                                 arrowXMin = (100 - visW) / 2;
@@ -1198,7 +1198,7 @@ arrowYMax = 100 - arrowYMin;
                                                                         {/* Même rendu que le tableau des conditions du plan :
                                                                             largeur et police relevées à l'écran, le navigateur
                                                                             replie donc aux mêmes endroits. */}
-<td className="col-micro print-micro-cell">
+                                                                        <td className="col-micro print-micro-cell">
                                                                             <div className="print-micro-wrap" style={microPrintStyle || undefined}>{action.micro}</div>
                                                                         </td>
                                                                     </tr>
