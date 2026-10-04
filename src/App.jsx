@@ -155,6 +155,7 @@ function App() {
         getTrafficData,
         trafficDatasets,
         trafficDatasetNames,
+        trafficDatasetSourceNames,
         copyTrafficDataset,
         addCustomTrafficDataset,
         pfTrafficDatasetMap,
@@ -2462,6 +2463,7 @@ function App() {
                     hoveredGroupId={hoveredArrowGroupId}
                     setHoveredGroupSaturated={setHoveredArrowGroupSaturated}
                     trafficDatasetNames={trafficDatasetNames}
+                    trafficDatasetSourceNames={trafficDatasetSourceNames}
                     setHoveredVUtile={setHoveredVUtile}
                     copyTrafficDataset={copyTrafficDataset}
                     addCustomTrafficDataset={addCustomTrafficDataset}
@@ -2476,7 +2478,7 @@ function App() {
     }, [showFloatingTraffic, groups, cycleLength, activeTrafficDataset, actionData,
         simulationSelectedActions, simulationResult, simulationEnabled, hoveredArrowGroupId,
         trafficPopup.renderToPopup, updateTrafficData,
-        getTrafficData, updateGroupParams, trafficDatasetNames, copyTrafficDataset, addCustomTrafficDataset]);
+        getTrafficData, updateGroupParams, trafficDatasetNames, trafficDatasetSourceNames, copyTrafficDataset, addCustomTrafficDataset]);
 
     // Afficher l'écran de connexion si non authentifié
     // Écran de connexion seulement si les comptes sont activés sur ce poste.
@@ -2547,7 +2549,7 @@ function App() {
                         selectAllSimulationActions, deselectAllSimulationActions, cycleLength, conflictMatrix, setMatrixValue, hoveredActionId,
                         setHoveredActionId, setHoveredConflict, simulationName, updateSimulationName, activeTrafficDataset,
                         setActiveTrafficDataset, updateTrafficData, getTrafficData, updateGroupParams, setHoveredArrowGroupId,
-                        hoveredArrowGroupId, setHoveredArrowGroupSaturated, trafficDatasetNames, setHoveredVUtile, copyTrafficDataset,
+                        hoveredArrowGroupId, setHoveredArrowGroupSaturated, trafficDatasetNames, trafficDatasetSourceNames, setHoveredVUtile, copyTrafficDataset,
                         addCustomTrafficDataset, simulationResult, setShowFloatingTraffic, tooltipPrefs, activeTab,
                         setActiveTab, setSidebarWidth, intersectionName, setIntersectionName, projectProperties,
                         updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, setShowFloatingProperties,

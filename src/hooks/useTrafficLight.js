@@ -15,6 +15,7 @@ import { ACTIONS_HORS_SIMULATION, actionsSimulables } from '../utils/simulationC
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
+import { buildTrafficDatasetNames, trafficDatasetHasData } from '../utils/trafficHelpers';
 const MAX_HISTORY_SIZE = 50;
 
 // Safe localStorage helper to prevent QuotaExceededError crashes
@@ -1622,13 +1623,26 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         ));
     }, [activePFId]);
 
-    // Dynamic traffic dataset names based on PF tabs (+ Projection at the end) + custom datasets
+    // Le nom visible d'un PF peut différer de la clé de son jeu de trafic.
+    // Le mapping PF → jeu est la source de vérité ; les jeux historiques qui
+    // contiennent encore des données restent également accessibles.
     const trafficDatasetNames = useMemo(() => {
-        const base = pfTabs && pfTabs.length > 0
-            ? [...pfTabs.map(pf => pf.name), 'Projection']
-            : TRAFFIC_DATASETS;
-        return [...base, ...customTrafficDatasetNames];
-    }, [pfTabs, customTrafficDatasetNames]);
+        if (!pfTabs || pfTabs.length === 0) return TRAFFIC_DATASETS;
+        return buildTrafficDatasetNames(
+            pfTabs,
+            pfTrafficDatasetMap,
+            customTrafficDatasetNames,
+            trafficDatasets,
+            activeTrafficDataset
+        );
+    }, [pfTabs, pfTrafficDatasetMap, customTrafficDatasetNames, trafficDatasets, activeTrafficDataset]);
+
+    const trafficDatasetSourceNames = useMemo(() => {
+        const groupIds = groups.map(group => group.id);
+        return trafficDatasetNames.filter(name =>
+            trafficDatasetHasData(trafficDatasets[name], groupIds)
+        );
+    }, [trafficDatasetNames, trafficDatasets, groups]);
 
     // Computed Conflicts
     const conflicts = useMemo(() => {
@@ -2458,18 +2472,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     // Copy traffic data from one dataset to another
     const copyTrafficDataset = useCallback((sourceDataset, targetDataset) => {
         setTrafficDatasets(prev => {
-            const newDatasets = { ...prev };
-            // Ensure target dataset exists
-            if (!newDatasets[targetDataset]) {
-                newDatasets[targetDataset] = {};
-            }
-            // Copy all data from source to target
-            if (newDatasets[sourceDataset]) {
-                Object.keys(newDatasets[sourceDataset]).forEach(groupId => {
-                    newDatasets[targetDataset][groupId] = { ...newDatasets[sourceDataset][groupId] };
-                });
-            }
-            return newDatasets;
+            const source = prev[sourceDataset];
+            if (!source || sourceDataset === targetDataset) return prev;
+            const target = { ...(prev[targetDataset] || {}) };
+            Object.keys(source).forEach(groupId => {
+                target[groupId] = { ...source[groupId] };
+            });
+            return { ...prev, [targetDataset]: target };
         });
     }, []);
 
@@ -3041,6 +3050,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         updateTrafficData,
         getTrafficData,
         trafficDatasetNames,
+        trafficDatasetSourceNames,
         copyTrafficDataset,
         addCustomTrafficDataset,
         pfTrafficDatasetMap,
