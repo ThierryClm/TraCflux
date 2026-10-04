@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { getTotalGreenTime, parseTrafficVol, isCoordinated } from './trafficHelpers';
+import {
+    buildTrafficDatasetNames,
+    getTotalGreenTime,
+    isCoordinated,
+    parseTrafficVol,
+    trafficDatasetHasData,
+} from './trafficHelpers';
 
 describe('trafficHelpers — parseTrafficVol', () => {
     it('extrait la valeur numérique', () => {
@@ -23,6 +29,29 @@ describe('trafficHelpers — isCoordinated', () => {
         expect(isCoordinated('300')).toBe(false);
         expect(isCoordinated(300)).toBe(false);
         expect(isCoordinated('')).toBe(false);
+    });
+});
+
+describe('trafficHelpers — catalogue des jeux de trafic', () => {
+    it('utilise le jeu associé au PF même si le plan a été renommé', () => {
+        const names = buildTrafficDatasetNames(
+            [{ id: 1, name: 'PF Aiguillage' }],
+            { 1: 'PF3' },
+            [],
+            { PF3: { 1: { trafficVol: 420 } } },
+            'PF3'
+        );
+        expect(names).toContain('PF3');
+        expect(names).not.toContain('PF Aiguillage');
+    });
+
+    it('distingue les jeux réellement renseignés des jeux vides', () => {
+        const datasets = {
+            PF3: { 1: { trafficVol: 0 } },
+            HPM: { 1: { trafficVol: '350c' } },
+        };
+        expect(trafficDatasetHasData(datasets.PF3, [1])).toBe(false);
+        expect(trafficDatasetHasData(datasets.HPM, [1])).toBe(true);
     });
 });
 

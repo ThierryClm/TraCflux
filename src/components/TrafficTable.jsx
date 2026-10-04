@@ -16,6 +16,7 @@ const TrafficTable = ({
     hoveredGroupId,
     setHoveredGroupSaturated,
     trafficDatasetNames,
+    trafficDatasetSourceNames = trafficDatasetNames,
     setHoveredVUtile,
     copyTrafficDataset,
     addCustomTrafficDataset,
@@ -157,10 +158,10 @@ const TrafficTable = ({
         });
     }, [vlGroups, getTrafficData, activeTrafficDataset]);
 
-    // Get other datasets that have data
+    // Seuls les jeux réellement renseignés sont proposés comme sources.
     const otherDatasetsWithData = useMemo(() => {
-        return trafficDatasetNames.filter(ds => ds !== activeTrafficDataset);
-    }, [trafficDatasetNames, activeTrafficDataset]);
+        return trafficDatasetSourceNames.filter(ds => ds !== activeTrafficDataset);
+    }, [trafficDatasetSourceNames, activeTrafficDataset]);
 
     // Handle paste from another dataset
     const handlePasteFrom = (sourceDataset) => {

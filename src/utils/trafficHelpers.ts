@@ -1,4 +1,4 @@
-import type { ActionMicro } from '../types/projet';
+import type { ActionMicro, JeuTrafic, PlanDeFeu } from '../types/projet';
 
 /**
  * Aides trafic partagées entre le tableau Données Trafic et le panneau
@@ -55,3 +55,35 @@ export const groupesInhibes = (actionData: ActionMicro[] = [], selectedActions: 
     });
     return inhibes;
 };
+
+/**
+ * Construit le catalogue réellement utilisable par le sélecteur Trafic.
+ *
+ * Un plan peut avoir été renommé sans que le jeu de trafic qui lui est associé
+ * le soit. Le nom affiché du plan ne doit donc jamais servir directement de clé
+ * dans `trafficDatasets` : `pfTrafficDatasetMap` est la source de vérité.
+ */
+export const buildTrafficDatasetNames = (
+    pfTabs: Pick<PlanDeFeu, 'id' | 'name'>[] = [],
+    pfTrafficDatasetMap: Record<string, string> = {},
+    customNames: string[] = [],
+    trafficDatasets: Record<string, JeuTrafic> = {},
+    activeName = ''
+): string[] => {
+    const names = [
+        ...pfTabs.map(pf => pfTrafficDatasetMap[String(pf.id)] || pf.name),
+        'Projection',
+        ...customNames,
+        activeName,
+        ...Object.keys(trafficDatasets).filter(name =>
+            Object.values(trafficDatasets[name] || {}).some(data => parseTrafficVol(data?.trafficVol) > 0)
+        ),
+    ];
+    return [...new Set(names.filter(Boolean))];
+};
+
+/** Vrai si le jeu contient du trafic pour au moins un groupe affichable. */
+export const trafficDatasetHasData = (
+    dataset: JeuTrafic | undefined,
+    groupIds: Array<number | string>
+): boolean => groupIds.some(id => parseTrafficVol(dataset?.[String(id)]?.trafficVol) > 0);

@@ -42,6 +42,7 @@ export default function WorkspaceSidebar({ model }) {
         hoveredArrowGroupId,
         setHoveredArrowGroupSaturated,
         trafficDatasetNames,
+        trafficDatasetSourceNames,
         setHoveredVUtile,
         copyTrafficDataset,
         addCustomTrafficDataset,
@@ -174,6 +175,7 @@ export default function WorkspaceSidebar({ model }) {
                                     hoveredGroupId={hoveredArrowGroupId}
                                     setHoveredGroupSaturated={setHoveredArrowGroupSaturated}
                                     trafficDatasetNames={trafficDatasetNames}
+                                    trafficDatasetSourceNames={trafficDatasetSourceNames}
                                     setHoveredVUtile={setHoveredVUtile}
                                     copyTrafficDataset={copyTrafficDataset}
                                     addCustomTrafficDataset={addCustomTrafficDataset}
@@ -325,6 +327,7 @@ export default function WorkspaceSidebar({ model }) {
                                     hoveredGroupId={hoveredArrowGroupId}
                                     setHoveredGroupSaturated={setHoveredArrowGroupSaturated}
                                     trafficDatasetNames={trafficDatasetNames}
+                                    trafficDatasetSourceNames={trafficDatasetSourceNames}
                                     setHoveredVUtile={setHoveredVUtile}
                                     copyTrafficDataset={copyTrafficDataset}
                                     addCustomTrafficDataset={addCustomTrafficDataset}
