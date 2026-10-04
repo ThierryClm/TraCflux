@@ -1061,4 +1061,1449 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             // Les remettre ici aussi était un piège à retardement. Trois
             // secondes après l'ouverture, ce rappel réinstallait comme « plan
             // courant » celui qui était actif AU CHARGEMENT. Si l'utilisateur
-            // avaN���-���jםw)ښ'-��kz˥���)ڗ_5�����蠆םn�`z޸�M+z���+a����j�,
+            // avai:��
+V����q�^uܧjh���%��.��+��j_4�M����蠆םn�`z޸�M+z���+a����j�,ay.isArray(state.externalLinks)) {
+                setExternalLinks(state.externalLinks);
+            } else {
+                setExternalLinks([]);
+            }
+
+            return true;
+        } catch (e) {
+            console.error("Load full state failed", e);
+            return false;
+        }
+    };
+
+    // Reset to a new empty project (8 groups, 75s cycle)
+    const resetToNewProject = () => {
+        setDossierReadOnly(false);
+        // Reset project name and intersection name
+        currentProjectNameRef.current = null;
+        setProjectName(null);
+        setIntersectionName("Nouveau Carrefour");
+
+        // Reset to 8 groups with default cycle (type vide pour inviter à la saisie)
+        const newGroups = Array.from({ length: 8 }, (_, i) => ({ ...createGroup(i + 1), type: '' }));
+        setGroups(newGroups);
+        setCycleLength(DEFAULT_CYCLE);
+
+        // Reset conflict matrix (8x8)
+        setConflictMatrix(Array.from({ length: 8 }, () => Array(8).fill('')));
+
+        // Reset to single empty PF tab (all fields guaranteed)
+        setPfTabs([createEmptyPF({ id: 1, name: 'PF1', sourceGroups: newGroups, groupCount: 8 })]);
+        setActivePFIdRaw(1);
+        resetPfSyncRefs(1);
+
+        // Reset traffic datasets
+        setTrafficDatasets({});
+        setActiveTrafficDataset('HPM');
+        setCustomTrafficDatasetNames([]);
+        setPfTrafficDatasetMap({});
+
+        // Reset intersection image and arrows
+        setIntersectionImage(null);
+        setIntersectionArrows([]);
+
+        // Reset dependency gap
+        setDependencyGap(20);
+
+        // Reset bi-carrefour
+        setBiCarrefourSeparator(null);
+
+        // Reset largeurs colonnes micro-régulation aux valeurs par défaut
+        setActionColWidths({ description: 160, micro: 420, abrv: 38 });
+
+        // Reset external links
+        setExternalLinks([]);
+
+        // Reset sélection du comparateur de capacité (tous cochés par défaut)
+        setCapacityCompareSelection(null);
+        setCapacityCompareDataset('__per_pf__');
+
+        // Reset project properties
+        setProjectProperties({ ...DEFAULT_PROJECT_PROPERTIES, dateCreation: new Date().toISOString().split('T')[0] });
+
+        // Reset simulation state
+        setSimulationEnabled(false);
+
+        // Clear history
+        setHistory([]);
+        setRedoHistory([]);
+
+        return true;
+    };
+
+    // Get full state (for saving/duplication)
+    const getFullState = () => ({
+        projectName,
+        intersectionName,
+        groups,
+        cycleLength,
+        conflictMatrix,
+        pfTabs,
+        activePFId,
+        intersectionImage,
+        intersectionArrows,
+        imageBrightness,
+        imageContrast,
+        trafficDatasets,
+        activeTrafficDataset,
+        customTrafficDatasetNames,
+        pfTrafficDatasetMap,
+        dependencyGap,
+        biCarrefourSeparator,
+        matricesLocked,
+        actionColWidths,
+        externalLinks,
+        capacityCompareSelection,
+        capacityCompareDataset,
+        projectProperties,
+        // Champs de projet portés par d'autres modules (cf. champsProjetRef).
+        ...(champsProjetRef?.current?.lire?.() || {})
+        // L'onglet Simulation ouvert ou non ne s'enregistre pas : c'est un état
+        // de session. Le SCÉNARIO, lui — son nom et les actions cochées — voyage
+        // avec son plan de feu, dans pfTabs.
+    });
+
+    // Réf toujours à jour vers le sérialiseur canonique. Source UNIQUE pour
+    // l'autosave et la sauvegarde explicite : évite les fermetures périmées
+    // (certains champs manquaient aux deps) et les divergences de payload qui
+    // faisaient perdre customTrafficDatasetNames / pfTrafficDatasetMap /
+    // externalLinks lors d'un aller-retour par le cache localStorage.
+    const getFullStateRef = useRef(getFullState);
+    getFullStateRef.current = getFullState;
+
+    const deleteSave = (name) => {
+        localStorage.removeItem(`traffic_project_${name}`);
+    };
+
+    // Multiple PF (Plans de Feux) support
+    const [pfTabs, setPfTabs] = useState(() => [{ id: 1, name: 'PF1', data: createEmptyActionData(), remarques: '' }]);
+
+    const [activePFId, setActivePFIdRaw] = useState(1);
+
+    // Lecture seule du PF actif (PF importé « _ext » verrouillé). Met à jour la
+    // réf capturée par les mutateurs + expose la valeur à l'UI (cadenas, bandeau).
+    const activePfReadOnly = pfTabs.find(p => p.id === activePFId)?.readOnly === true;
+    activePfReadOnlyRef.current = activePfReadOnly;
+
+    // Simulation mode state (not persisted - resets on page load)
+    const [simulationEnabled, setSimulationEnabled] = useState(false);
+
+    // Intersection image state (persisted with project)
+    const [intersectionImage, setIntersectionImage] = useState(null);
+    const [intersectionArrows, setIntersectionArrows] = useState([]);
+    const [imageBrightness, setImageBrightness] = useState(100);
+    const [imageContrast, setImageContrast] = useState(100);
+
+    // Traffic datasets state (HPM, HPS, HC, Estimation, Projection)
+    const [activeTrafficDataset, setActiveTrafficDataset] = useState(() => {
+        return safeLocalStorage.getItem('trafficActiveDataset') || 'HPM';
+    });
+    const [customTrafficDatasetNames, setCustomTrafficDatasetNames] = useState(() => {
+        try {
+            const saved = safeLocalStorage.getItem('customTrafficDatasetNames');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+
+    // Mapping PF id → dataset actif (choix conservé par PF)
+    const [pfTrafficDatasetMap, setPfTrafficDatasetMap] = useState(() => {
+        try {
+            const saved = safeLocalStorage.getItem('pfTrafficDatasetMap');
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    });
+
+    // Ref pour accéder au mapping PF→dataset à jour dans le wrapper setActivePFId
+    const pfTrafficDatasetMapRef = useRef(pfTrafficDatasetMap);
+    pfTrafficDatasetMapRef.current = pfTrafficDatasetMap;
+
+    // Wrapper qui restaure le dataset trafic mémorisé pour le PF cible
+    const setActivePFId = useCallback((pfId) => {
+        setActivePFIdRaw(pfId);
+        const savedDataset = pfTrafficDatasetMapRef.current[pfId];
+        if (savedDataset) {
+            setActiveTrafficDataset(savedDataset);
+        }
+    }, []);
+
+    // Initialize traffic datasets with empty data for all groups
+    const createInitialTrafficDatasets = (groupCount) => {
+        const datasets = {};
+        TRAFFIC_DATASETS.forEach(ds => {
+            datasets[ds] = {};
+            for (let i = 1; i <= groupCount; i++) {
+                datasets[ds][i] = createEmptyTrafficData();
+            }
+        });
+        return datasets;
+    };
+
+    const [trafficDatasets, setTrafficDatasets] = useState(() => createInitialTrafficDatasets(5));
+
+    // Applique le résultat de mergePfFromProject : ajoute les PF importés + les
+    // jeux de trafic rapatriés, SANS toucher aux groupes ni au PF actif courant.
+    const applyMergedPf = useCallback((mergedState) => {
+        if (!mergedState || !Array.isArray(mergedState.pfTabs)) return;
+        setPfTabs(mergedState.pfTabs);
+        if (mergedState.trafficDatasets) setTrafficDatasets(mergedState.trafficDatasets);
+        if (Array.isArray(mergedState.customTrafficDatasetNames)) setCustomTrafficDatasetNames(mergedState.customTrafficDatasetNames);
+        if (mergedState.pfTrafficDatasetMap) setPfTrafficDatasetMap(mergedState.pfTrafficDatasetMap);
+    }, []);
+
+    // Get current actionData based on active PF
+    const actionData = useMemo(() => {
+        const activePF = pfTabs.find(pf => pf.id === activePFId);
+        return activePF ? activePF.data : createEmptyActionData();
+    }, [pfTabs, activePFId]);
+
+    // Get current microCustomFields based on active PF (up to 60 fields)
+    const MAX_MICRO_FIELDS = 60;
+    const microCustomFields = useMemo(() => {
+        const activePF = pfTabs.find(pf => pf.id === activePFId);
+        const fields = activePF?.microCustomFields || [];
+        // Ensure array has up to MAX_MICRO_FIELDS slots
+        const padded = [...fields];
+        while (padded.length < MAX_MICRO_FIELDS) padded.push('');
+        return padded.slice(0, MAX_MICRO_FIELDS);
+    }, [pfTabs, activePFId]);
+
+    // Update microCustomFields for the active PF
+    const updateMicroCustomField = useCallback((index, value) => {
+        setPfTabs(prev => prev.map(pf => {
+            if (pf.id !== activePFId) return pf;
+            const current = pf.microCustomFields || [];
+            const padded = [...current];
+            while (padded.length < MAX_MICRO_FIELDS) padded.push('');
+            padded[index] = value;
+            // Trim trailing empty strings to keep storage lean
+            let lastFilled = padded.length - 1;
+            while (lastFilled >= 0 && padded[lastFilled] === '') lastFilled--;
+            return { ...pf, microCustomFields: padded.slice(0, lastFilled + 1) };
+        }));
+    }, [activePFId]);
+
+    // Get phasage bulle count for active PF
+    const phasageBulleCount = useMemo(() => {
+        const activePF = pfTabs.find(pf => pf.id === activePFId);
+        return activePF?.phasageBulleCount ?? 4;
+    }, [pfTabs, activePFId]);
+
+    // Get phasage bulle times for active PF
+    const phasageBulleTimes = useMemo(() => {
+        const activePF = pfTabs.find(pf => pf.id === activePFId);
+        // Tout à zéro par défaut : un plan jamais configuré affiche alors des
+        // bulles identiques, signal qu'il n'est pas renseigné. Des instants
+        // pré-remplis ressemblaient à un réglage plausible sans en être un.
+        return activePF?.phasageBulleTimes || [0, 0, 0, 0, 0, 0];
+    }, [pfTabs, activePFId]);
+
+    // Update phasage bulle count for active PF
+    const setPhasageBulleCount = useCallback((count) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === activePFId
+                ? { ...pf, phasageBulleCount: count }
+                : pf
+        ));
+    }, [activePFId]);
+
+    // Update phasage bulle times for active PF
+    const setPhasageBulleTimes = useCallback((times) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === activePFId
+                ? { ...pf, phasageBulleTimes: times }
+                : pf
+        ));
+    }, [activePFId]);
+
+    // Get phasage bulle scale factors for active PF
+    const phasageBubbleScale = useMemo(() => {
+        const activePF = pfTabs.find(pf => pf.id === activePFId);
+        return activePF?.phasageBubbleScale ?? 100;
+    }, [pfTabs, activePFId]);
+
+    const phasageEllipseScale = useMemo(() => {
+        const activePF = pfTabs.find(pf => pf.id === activePFId);
+        return activePF?.phasageEllipseScale ?? 100;
+    }, [pfTabs, activePFId]);
+
+    // Update phasage bulle scale factors for active PF
+    const setPhasageBubbleScale = useCallback((scale) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === activePFId
+                ? { ...pf, phasageBubbleScale: scale }
+                : pf
+        ));
+    }, [activePFId]);
+
+    const setPhasageEllipseScale = useCallback((scale) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === activePFId
+                ? { ...pf, phasageEllipseScale: scale }
+                : pf
+        ));
+    }, [activePFId]);
+
+    // Get/set phasage bulle ratio for active PF
+    const phasageBubbleRatio = useMemo(() => {
+        const activePF = pfTabs.find(pf => pf.id === activePFId);
+        return activePF?.phasageBubbleRatio ?? 100;
+    }, [pfTabs, activePFId]);
+
+    const setPhasageBubbleRatio = useCallback((ratio) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === activePFId
+                ? { ...pf, phasageBubbleRatio: ratio }
+                : pf
+        ));
+    }, [activePFId]);
+
+    // Le nom visible d'un PF peut différer de la clé de son jeu de trafic.
+    // Le mapping PF → jeu est la source de vérité ; les jeux historiques qui
+    // contiennent encore des données restent également accessibles.
+    const trafficDatasetNames = useMemo(() => {
+        if (!pfTabs || pfTabs.length === 0) return TRAFFIC_DATASETS;
+        return buildTrafficDatasetNames(
+            pfTabs,
+            pfTrafficDatasetMap,
+            customTrafficDatasetNames,
+            trafficDatasets,
+            activeTrafficDataset
+        );
+    }, [pfTabs, pfTrafficDatasetMap, customTrafficDatasetNames, trafficDatasets, activeTrafficDataset]);
+
+    const trafficDatasetSourceNames = useMemo(() => {
+        const groupIds = groups.map(group => group.id);
+        return trafficDatasetNames.filter(name =>
+            trafficDatasetHasData(trafficDatasets[name], groupIds)
+        );
+    }, [trafficDatasetNames, trafficDatasets, groups]);
+
+    // Computed Conflicts
+    const conflicts = useMemo(() => {
+        const list = [];
+        const count = groups.length;
+
+        // Get seconde lucarne actions from current actionData
+        const secondeLucarnes = actionData.filter(action =>
+            action.action === 'Seconde lucarne' &&
+            action.gf !== '' &&
+            action.deb !== '' &&
+            action.fin !== ''
+        ).map(action => ({
+            gf: parseInt(action.gf),
+            deb: parseInt(action.deb),
+            fin: parseInt(action.fin),
+            abrv: action.abrv || 'SL'
+        }));
+
+        // Get escamotage actions (both types) to check for managed overlaps
+        const escamotages = actionData.filter(action =>
+            (action.action === 'Escamotage' || action.action === 'Escamotage de phase') &&
+            action.gf !== '' &&
+            action.actGf1 !== ''
+        ).map(action => ({
+            sourceGf: parseInt(action.gf),
+            targetGf: parseInt(action.actGf1)
+        }));
+
+        // Get flèche d'anticipation actions - these override the green phase timing for conflict calculation
+        const flecheAnticipations = actionData.filter(action =>
+            action.action === "Flèche d'anticipation" &&
+            action.gf !== '' &&
+            action.deb !== '' &&
+            action.fin !== ''
+        ).reduce((acc, action) => {
+            const gf = parseInt(action.gf);
+            // Store the first flèche d'anticipation for each group
+            if (!acc[gf]) {
+                acc[gf] = {
+                    deb: parseInt(action.deb),
+                    fin: parseInt(action.fin)
+                };
+            }
+            return acc;
+        }, {});
+
+        // Helper to check if an escamotage exists between two groups
+        const hasEscamotage = (gfA, gfB) => {
+            return escamotages.some(e =>
+                (e.sourceGf === gfA && e.targetGf === gfB) ||
+                (e.sourceGf === gfB && e.targetGf === gfA)
+            );
+        };
+
+        // Check intergreen time conflicts (existing logic)
+        for (let from = 0; from < count; from++) {
+            // Safety check: skip if row doesn't exist in matrix
+            if (!conflictMatrix[from]) continue;
+            for (let to = 0; to < count; to++) {
+                const minGap = conflictMatrix[from][to];
+                // Skip empty values
+                if ((minGap === '' || minGap === undefined || minGap === null) || from === to) continue;
+
+                const gFrom = groups[from];
+                const gTo = groups[to];
+
+                // Check if groups have flèche d'anticipation - use those timings instead
+                const flecheFrom = flecheAnticipations[gFrom.id];
+                const flecheTo = flecheAnticipations[gTo.id];
+
+                // For "from" group: end of green (or end of flèche d'anticipation)
+                const endGreenA_Absolute = flecheFrom
+                    ? flecheFrom.fin % cycleLength
+                    : (gFrom.offset + gFrom.durations.green) % cycleLength;
+
+                // For "to" group: start of green (or start of flèche d'anticipation)
+                const startGreenB_Absolute = flecheTo
+                    ? flecheTo.deb % cycleLength
+                    : gTo.offset % cycleLength;
+
+                let distance = (startGreenB_Absolute - endGreenA_Absolute + cycleLength) % cycleLength;
+
+                if (distance < minGap) {
+                    list.push({
+                        from: gFrom.id,
+                        to: gTo.id,
+                        required: minGap,
+                        actual: distance,
+                        type: 'intergreen'
+                    });
+                }
+
+                // Check for actual overlap between antagonist groups
+                // Use flèche d'anticipation timings if present
+                const startA = flecheFrom ? flecheFrom.deb : gFrom.offset;
+                const endA = flecheFrom ? flecheFrom.fin : gFrom.offset + gFrom.durations.green;
+                const startB = flecheTo ? flecheTo.deb : gTo.offset;
+                const endB = flecheTo ? flecheTo.fin : gTo.offset + gTo.durations.green;
+
+                if (rangesOverlap(startA, endA, startB, endB, cycleLength)) {
+                    // Skip if there's an escamotage between these groups (overlap is managed)
+                    if (hasEscamotage(gFrom.id, gTo.id)) {
+                        continue;
+                    }
+                    // Only add if not already a more severe intergreen conflict
+                    const existingConflict = list.find(c =>
+                        c.from === gFrom.id && c.to === gTo.id && c.type === 'intergreen'
+                    );
+                    if (!existingConflict) {
+                        list.push({
+                            from: gFrom.id,
+                            to: gTo.id,
+                            type: 'overlap',
+                            message: 'Chevauchement des phases vertes'
+                        });
+                    }
+                }
+
+                // Check seconde lucarne overlaps with antagonist green phases
+                secondeLucarnes.forEach(sl => {
+                    if (sl.gf === gFrom.id) {
+                        // Check SL of gFrom against green of gTo
+                        if (rangesOverlap(sl.deb, sl.fin, startB, endB, cycleLength)) {
+                            list.push({
+                                from: gFrom.id,
+                                to: gTo.id,
+                                type: 'sl-overlap',
+                                message: `Seconde lucarne chevauche vert`
+                            });
+                        }
+                    }
+                    if (sl.gf === gTo.id) {
+                        // Check SL of gTo against green of gFrom
+                        if (rangesOverlap(sl.deb, sl.fin, startA, endA, cycleLength)) {
+                            list.push({
+                                from: gTo.id,
+                                to: gFrom.id,
+                                type: 'sl-overlap',
+                                message: `Seconde lucarne chevauche vert`
+                            });
+                        }
+                    }
+                });
+            }
+        }
+
+        // Check seconde lucarne overlaps between themselves for antagonist groups
+        for (let i = 0; i < secondeLucarnes.length; i++) {
+            for (let j = i + 1; j < secondeLucarnes.length; j++) {
+                const sl1 = secondeLucarnes[i];
+                const sl2 = secondeLucarnes[j];
+
+                // Check if these groups are antagonists
+                const idx1 = sl1.gf - 1;
+                const idx2 = sl2.gf - 1;
+                if (idx1 >= 0 && idx2 >= 0 && idx1 < count && idx2 < count) {
+                    const areAntagonists = conflictMatrix[idx1][idx2] !== '' || conflictMatrix[idx2][idx1] !== '';
+                    if (areAntagonists && rangesOverlap(sl1.deb, sl1.fin, sl2.deb, sl2.fin, cycleLength)) {
+                        list.push({
+                            from: sl1.gf,
+                            to: sl2.gf,
+                            type: 'sl-sl-overlap',
+                            message: `Chevauchement des secondes lucarnes`
+                        });
+                    }
+                }
+            }
+        }
+
+        return list;
+    }, [groups, conflictMatrix, cycleLength, actionData]);
+
+    // Update action data for active PF
+    const setActionData = useCallback((newData) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === activePFId
+                ? { ...pf, data: typeof newData === 'function' ? newData(pf.data) : newData }
+                : pf
+        ));
+    }, [activePFId]);
+
+    // Reorder actions (for sorting)
+    const reorderActions = useCallback((sortedData) => {
+        // Reassign IDs to maintain order
+        const reorderedData = sortedData.map((row, index) => ({
+            ...row,
+            id: index + 1
+        }));
+        setActionData(reorderedData);
+    }, [setActionData]);
+
+    // Duplicate current PF. Renvoie null si la limite MAX_PF est atteinte
+    // (l'appelant affiche le message d'erreur).
+    const duplicatePF = useCallback(() => {
+        if (dossierReadOnlyRef.current) return;
+        if (pfTabs.length >= MAX_PF) return null;
+        const nextId = Math.max(...pfTabs.map(pf => pf.id)) + 1;
+        const newName = `PF${nextId}`;
+        const currentData = JSON.parse(JSON.stringify(actionData));
+        const currentPF = pfTabs.find(pf => pf.id === activePFId);
+        const currentRemarques = currentPF?.remarques || '';
+        const currentDiagram = currentPF?.diagram ? JSON.parse(JSON.stringify(currentPF.diagram)) : [];
+        const currentCycleLength = currentPF?.cycleLength || cycleLength;
+        const currentMicro = currentPF?.microCustomFields ? JSON.parse(JSON.stringify(currentPF.microCustomFields)) : [];
+        setPfTabs(prev => [...prev, {
+            id: nextId,
+            name: newName,
+            data: currentData,
+            remarques: currentRemarques,
+            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
+            diagram: currentDiagram,
+            cycleLength: currentCycleLength,
+            microCustomFields: currentMicro
+        }]);
+        setActivePFId(nextId);
+        return nextId;
+    }, [pfTabs, actionData, activePFId, conflictMatrix, cycleLength]);
+
+    // Delete a PF (cannot delete if only one remains)
+    const deletePF = useCallback((pfId) => {
+        if (dossierReadOnlyRef.current) return;
+        if (pfTabs.length <= 1) return false;
+        setPfTabs(prev => prev.filter(pf => pf.id !== pfId));
+        if (activePFId === pfId) {
+            const remaining = pfTabs.filter(pf => pf.id !== pfId);
+            setActivePFId(remaining[0].id);
+        }
+        return true;
+    }, [pfTabs, activePFId]);
+
+    // Rename a PF
+    const renamePF = useCallback((pfId, newName) => {
+        if (dossierReadOnlyRef.current) return;
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === pfId ? { ...pf, name: newName } : pf
+        ));
+    }, []);
+
+    // Set PF color (for validation)
+    const setPFColor = useCallback((pfId, color) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === pfId ? { ...pf, color: color } : pf
+        ));
+    }, []);
+
+    // Update remarques for active PF
+    const updatePFRemarques = useCallback((remarques) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === activePFId ? { ...pf, remarques: remarques } : pf
+        ));
+    }, [activePFId]);
+
+    // Reorder PF tabs (drag & drop)
+    const reorderPF = useCallback((fromIndex, toIndex) => {
+        if (fromIndex === toIndex) return;
+        setPfTabs(prev => {
+            const newTabs = [...prev];
+            const [movedTab] = newTabs.splice(fromIndex, 1);
+            newTabs.splice(toIndex, 0, movedTab);
+            return newTabs;
+        });
+    }, []);
+
+    // Simulation functions
+    //
+    // Le scénario — son nom et les actions cochées — appartient au PLAN DE FEU,
+    // et non à la session. Il était tenu dans un état local, perdu à chaque
+    // fermeture : on retrouvait un projet avec ses actions de micro-régulation
+    // saisies mais plus aucune trace de la combinaison qu'on avait retenue,
+    // ni de son intitulé.
+    //
+    // Il n'y a délibérément PAS de second état recopié vers l'onglet actif : la
+    // valeur affichée EST celle du plan. Les recopies miroir de ce fichier ont
+    // coûté trois défauts d'intégrité en septembre 2026 — un plan héritant du
+    // cycle d'un autre — et rien ici n'en justifie une de plus.
+    const planActif = useMemo(
+        () => pfTabs.find(pf => pf.id === activePFId) || null,
+        [pfTabs, activePFId]);
+
+    const simulationSelectedActions = useMemo(
+        () => (Array.isArray(planActif?.simulationActions) ? planActif.simulationActions : []),
+        [planActif]);
+
+    const simulationName = planActif?.simulationName || '';
+
+    /** Écrit dans le plan de feu actif, seul dépositaire du scénario. */
+    const ecrireScenario = useCallback((maj) => {
+        setPfTabs(prev => prev.map(pf => {
+            if (pf.id !== activePFId) return pf;
+            const actuelles = Array.isArray(pf.simulationActions) ? pf.simulationActions : [];
+            return { ...pf, ...maj(actuelles, pf) };
+        }));
+    }, [activePFId]);
+
+    const updateSimulationName = useCallback((nom) => {
+        if (isEditLocked()) return;
+        ecrireScenario(() => ({ simulationName: String(nom || '').slice(0, 60) }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ecrireScenario]);
+
+    const toggleSimulationAction = useCallback((actionId) => {
+        ecrireScenario(actuelles => ({
+            simulationActions: actuelles.includes(actionId)
+                ? actuelles.filter(id => id !== actionId)
+                : [...actuelles, actionId]
+        }));
+    }, [ecrireScenario]);
+
+    const selectAllSimulationActions = useCallback(() => {
+        ecrireScenario(() => ({ simulationActions: actionsSimulables(actionData).map(a => a.id) }));
+    }, [ecrireScenario, actionData]);
+
+    const deselectAllSimulationActions = useCallback(() => {
+        // Les familles hors simulation ne sont pas affichées : on ne les décoche
+        // pas, faute de quoi elles disparaîtraient d'un scénario sans que rien
+        // ne l'ait demandé.
+        ecrireScenario(actuelles => ({
+            simulationActions: actuelles.filter(id => {
+                const action = actionData.find(a => a.id === id);
+                return action && ACTIONS_HORS_SIMULATION.includes(action.action);
+            })
+        }));
+    }, [ecrireScenario, actionData]);
+
+    // Save project - defined after all state declarations to capture current values
+    const saveProject = useCallback(async (name) => {
+        if (!name) return false;
+        // Projet exemple : non persistable (filet de sécurité — l'entrée
+        // de menu Sauvegarder est déjà grisée).
+        if (isExampleSession()) return false;
+        // Dossier en lecture seule : non persistable (intégrité du dossier transmis).
+        if (dossierReadOnlyRef.current) return false;
+
+        // Validate data before saving to prevent empty saves
+        if (!groups || groups.length === 0) {
+            console.error("Save aborted: groups is empty or undefined");
+            alertFn({ title: 'Sauvegarde impossible', message: 'Impossible de sauvegarder : les groupes sont vides.' });
+            return false;
+        }
+        if (!pfTabs || pfTabs.length === 0) {
+            console.error("Save aborted: pfTabs is empty or undefined");
+            alertFn({ title: 'Sauvegarde impossible', message: 'Impossible de sauvegarder : les plans de feux sont vides.' });
+            return false;
+        }
+        if (!conflictMatrix || conflictMatrix.length === 0) {
+            console.error("Save aborted: conflictMatrix is empty or undefined");
+            alertFn({ title: 'Sauvegarde impossible', message: 'Impossible de sauvegarder : la matrice de conflits est vide.' });
+            return false;
+        }
+
+        currentProjectNameRef.current = name;
+        setProjectName(name);
+        // Payload canonique (getFullState) + métadonnées de sauvegarde. Une
+        // seule source de vérité, partagée avec l'autosave et l'export fichier :
+        // aucun champ ne peut être oublié ici sans l'être partout.
+        const nowIso = new Date().toISOString();
+        const projectData = {
+            ...getFullStateRef.current(),
+            projectName: name,
+            projectProperties: { ...projectProperties, dateModification: nowIso },
+            savedAt: nowIso
+            // Note: simulation state is NOT saved with project (per user request)
+        };
+        // Mettre à jour la date de modification dans l'état
+        setProjectProperties(prev => ({ ...prev, dateModification: new Date().toISOString() }));
+
+        // Mettre à jour les registres globaux (communes, MOA→logo)
+        const commune = projectProperties.commune?.trim();
+        if (commune) {
+            setAppCommunes(prev => {
+                const updated = prev.includes(commune) ? prev : [...prev, commune].sort((a, b) => a.localeCompare(b, 'fr'));
+                safeLocalStorage.setItem('trafficAppCommunes', JSON.stringify(updated));
+                return updated;
+            });
+        }
+        const moaName = projectProperties.moa?.trim();
+        const moaLogo = projectProperties.logoMoa;
+        if (moaName && moaLogo) {
+            setAppMoaLogos(prev => {
+                const updated = { ...prev, [moaName]: moaLogo };
+                safeLocalStorage.setItem('trafficAppMoaLogos', JSON.stringify(updated));
+                return updated;
+            });
+        }
+        const moeName = projectProperties.moe?.trim();
+        const moeLogo = projectProperties.logoMoe;
+        if (moeName && moeLogo) {
+            setAppMoeLogos(prev => {
+                const updated = { ...prev, [moeName]: moeLogo };
+                safeLocalStorage.setItem('trafficAppMoeLogos', JSON.stringify(updated));
+                return updated;
+            });
+        }
+
+        // Check if resulting JSON is valid and not too small (likely corrupted)
+        const jsonData = JSON.stringify(projectData);
+        if (jsonData.length < 100) {
+            console.error("Save aborted: data appears corrupted (too small)", jsonData.length);
+            alertFn({ title: 'Sauvegarde impossible', message: 'Impossible de sauvegarder : les données semblent corrompues.' });
+            return false;
+        }
+
+        // Vérifier et libérer de l'espace si localStorage est presque plein
+        ensureLocalStorageSpace();
+
+        try {
+            // Create backup of existing save before overwriting
+            const existingSave = localStorage.getItem(`traffic_project_${name}`);
+            if (existingSave && existingSave.length > jsonData.length * 0.5) {
+                // Existing save is significantly larger - warn user
+                const existingSize = existingSave.length;
+                const newSize = jsonData.length;
+                if (newSize < existingSize * 0.3) {
+                    // New save is less than 30% of old save - likely data loss
+                    const ok = askConfirm
+                        ? await askConfirm({
+                            title: 'Perte de données possible',
+                            message: `Attention : la nouvelle sauvegarde (${newSize} car.) est beaucoup plus petite que l'ancienne (${existingSize} car.).\n\nCela pourrait indiquer une perte de données.\n\nVoulez-vous quand même sauvegarder ?`,
+                            confirmLabel: 'Sauvegarder',
+                            danger: true,
+                        })
+                        : window.confirm(`Attention: La nouvelle sauvegarde (${newSize} car.) est beaucoup plus petite que l'ancienne (${existingSize} car.).\n\nCela pourrait indiquer une perte de données.\n\nVoulez-vous quand même sauvegarder?`);
+                    if (!ok) {
+                        return false;
+                    }
+                }
+                // Keep a backup
+                localStorage.setItem(`traffic_project_${name}_backup`, existingSave);
+            }
+
+            localStorage.setItem(`traffic_project_${name}`, jsonData);
+            return true;
+        } catch (e) {
+            console.error("Save failed", e);
+            if (e.name === 'QuotaExceededError') {
+                // Automatically delete the oldest project and retry
+                try {
+                    const orderRaw = localStorage.getItem('traffic_project_order');
+                    if (orderRaw) {
+                        const order = JSON.parse(orderRaw);
+                        // Find the oldest project (last in the list) that is not the current one
+                        const oldestProject = order.filter(n => n !== name).pop();
+                        if (oldestProject) {
+                            localStorage.removeItem(`traffic_project_${oldestProject}`);
+                            localStorage.removeItem(`traffic_project_${oldestProject}_backup`);
+                            // Update order
+                            const newOrder = order.filter(n => n !== oldestProject);
+                            localStorage.setItem('traffic_project_order', JSON.stringify(newOrder));
+                            console.log(`Espace insuffisant: projet "${oldestProject}" supprimé automatiquement`);
+                            // Retry save
+                            localStorage.setItem(`traffic_project_${name}`, jsonData);
+                            return true;
+                        }
+                    }
+                } catch (retryError) {
+                    console.error("Retry save failed", retryError);
+                }
+                alertFn({ title: 'Stockage insuffisant', message: 'Espace de stockage insuffisant même après nettoyage.' });
+            } else {
+                alertFn({ title: 'Erreur de sauvegarde', message: 'Erreur lors de la sauvegarde : ' + e.message });
+            }
+            return false;
+        }
+    }, [intersectionName, groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, externalLinks, projectProperties, askConfirm]);
+
+    // Verrou de synchronisation pendant l'installation des données.
+    //
+    // Tant qu'il est posé, les modifications ne sont PAS recopiées vers l'onglet
+    // actif : une durée de cycle changée dans cet intervalle, suivie d'un
+    // changement d'onglet, était perdue sans avertissement — et en premier lieu
+    // sur le plan de feu affiché à l'ouverture.
+    //
+    // Il se levait au bout de deux secondes fixes, indépendamment de ce que
+    // faisait l'application. Il se lève désormais dès que le rendu suivant a eu
+    // lieu — l'état est alors posé — le délai ne servant plus que de filet si un
+    // chargement de projet était encore en cours à ce moment-là.
+    const isInitialLoadRef = useRef(true);
+    // Le PF actif, lisible depuis une fermeture qui date du montage. L'effet
+    // ci-dessous n'a pas de dépendances : il ne voyait donc que la valeur de
+    // départ — PF1 — et remettait le repère de synchronisation sur ce PF-là,
+    // alors qu'un projet chargé entre-temps en avait désigné un autre. Le PF1
+    // héritait alors du diagramme et du cycle du plan réellement actif.
+    const activePFIdRef = useRef(activePFId);
+    activePFIdRef.current = activePFId;
+    useEffect(() => {
+        const lever = () => {
+            if (!isInitialLoadRef.current) return;
+            isInitialLoadRef.current = false;
+            resetPfSyncRefs(activePFIdRef.current);
+        };
+        // Un tour de boucle suffit dans le cas courant ; le délai couvre le cas
+        // où un projet est encore en cours de chargement.
+        const rapide = setTimeout(() => { if (!isLoadingProjectRef.current) lever(); }, 0);
+        const filet = setTimeout(lever, 2000);
+        return () => { clearTimeout(rapide); clearTimeout(filet); };
+    }, []);
+
+    // Synchronize current conflict matrix with active PF tab
+    // Use a ref to prevent infinite loops
+    const lastSyncedMatrixRef = useRef(null);
+    const prevActivePFIdForMatrixSyncRef = useRef(activePFId);
+    useEffect(() => {
+        // Skip during initial load
+        if (isInitialLoadRef.current) return;
+
+        const matrixKey = JSON.stringify(conflictMatrix);
+
+        // When PF just changed: don't save to the new PF — let the reverse sync
+        // load the new PF's matrix first. Save pending edits to the OLD PF only
+        // if we've been actively syncing (lastSyncedMatrixRef !== null), to avoid
+        // corrupting old PFs on first run after project load.
+        if (prevActivePFIdForMatrixSyncRef.current !== activePFId) {
+            const oldPFId = prevActivePFIdForMatrixSyncRef.current;
+            prevActivePFIdForMatrixSyncRef.current = activePFId;
+
+            // Save current matrix to the OLD PF before switching
+            setPfTabs(prevTabs => {
+                const tabIndex = prevTabs.findIndex(pf => pf.id === oldPFId);
+                if (tabIndex === -1) return prevTabs;
+                const currentPfMatrix = prevTabs[tabIndex].conflictMatrix;
+                if (JSON.stringify(currentPfMatrix) === matrixKey) return prevTabs;
+                const newTabs = [...prevTabs];
+                newTabs[tabIndex] = {
+                    ...newTabs[tabIndex],
+                    conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix))
+                };
+                return newTabs;
+            });
+            // Reset sync ref so that the next render (after reverse sync loads
+            // the new PF's matrix) will pick it up correctly
+            lastSyncedMatrixRef.current = null;
+            return;
+        }
+
+        // Normal case: save matrix to active PF when it changes
+        if (lastSyncedMatrixRef.current === matrixKey) {
+            return; // Already synced this matrix
+        }
+        lastSyncedMatrixRef.current = matrixKey;
+
+        setPfTabs(prevTabs => {
+            const tabIndex = prevTabs.findIndex(pf => pf.id === activePFId);
+            if (tabIndex === -1) return prevTabs;
+
+            // Check if matrix actually changed
+            const currentPfMatrix = prevTabs[tabIndex].conflictMatrix;
+            if (JSON.stringify(currentPfMatrix) === matrixKey) {
+                return prevTabs; // No change needed
+            }
+
+            // Update the PF with the new matrix
+            const newTabs = [...prevTabs];
+            newTabs[tabIndex] = {
+                ...newTabs[tabIndex],
+                conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix))
+            };
+            return newTabs;
+        });
+    }, [conflictMatrix, activePFId]);
+
+    // Synchronize current groups (diagram data) with active PF tab
+    const lastSyncedGroupsRef = useRef(null);
+    const prevActivePFIdForGroupsSyncRef = useRef(activePFId);
+    useEffect(() => {
+        // Skip during initial load
+        if (isInitialLoadRef.current) return;
+
+        // Build diagram data from groups (uses shared helper for consistency)
+        const diagramData = buildDiagramFromGroups(groups);
+        const groupsKey = JSON.stringify(diagramData);
+        // Include cycleLength in sync key so that cycle-only changes are saved
+        const syncKey = groupsKey + '|' + cycleLength;
+
+        // Helper: write diagram + cycleLength to a specific PF, skipping if unchanged
+        const writeDiagramToPF = (pfId) => {
+            setPfTabs(prevTabs => {
+                const tabIndex = prevTabs.findIndex(pf => pf.id === pfId);
+                if (tabIndex === -1) return prevTabs;
+                const currentPfDiagram = prevTabs[tabIndex].diagram;
+                if (JSON.stringify(currentPfDiagram) === groupsKey && prevTabs[tabIndex].cycleLength === cycleLength) return prevTabs;
+                const newTabs = [...prevTabs];
+                newTabs[tabIndex] = {
+                    ...newTabs[tabIndex],
+                    diagram: diagramData,
+                    cycleLength: cycleLength
+                };
+                return newTabs;
+            });
+        };
+
+        // When PF just changed: save pending edits to the OLD PF, then let reverse sync load the new one
+        if (prevActivePFIdForGroupsSyncRef.current !== activePFId) {
+            const oldPFId = prevActivePFIdForGroupsSyncRef.current;
+            prevActivePFIdForGroupsSyncRef.current = activePFId;
+            writeDiagramToPF(oldPFId);
+            lastSyncedGroupsRef.current = null;
+            return;
+        }
+
+        if (lastSyncedGroupsRef.current === syncKey) {
+            return; // Already synced
+        }
+        lastSyncedGroupsRef.current = syncKey;
+
+        writeDiagramToPF(activePFId);
+    }, [groups, cycleLength, activePFId]);
+
+    // Apply diagram data from active PF tab to groups when changing tabs
+    // Use a ref to track the last applied PF to avoid unnecessary re-renders
+    const lastAppliedPFRef = useRef(null);
+
+    // Wire up the centralized reset function now that all sync refs exist
+    pfSyncRefsResetRef.current = (newActivePFId) => {
+        prevActivePFIdForGroupsSyncRef.current = newActivePFId;
+        prevActivePFIdForMatrixSyncRef.current = newActivePFId;
+        lastSyncedGroupsRef.current = null;
+        lastSyncedMatrixRef.current = null;
+        lastAppliedPFRef.current = null;
+    };
+
+    useEffect(() => {
+        const activePF = pfTabs.find(pf => pf.id === activePFId);
+
+        // Only apply if PF changed and has diagram data
+        if (activePF && activePF.diagram && activePF.diagram.length > 0) {
+            // Check if we already applied this PF's diagram
+            const pfKey = `${activePF.id}-${JSON.stringify(activePF.diagram)}`;
+            if (lastAppliedPFRef.current === pfKey) {
+                return; // Already applied, skip
+            }
+            lastAppliedPFRef.current = pfKey;
+
+            // Synchronize lastSyncedGroupsRef so the forward sync knows
+            // it can save to the old PF when we switch away later
+            const diagramData = activePF.diagram.map(d => ({
+                groupId: d.groupId,
+                offset: d.offset,
+                greenDuration: d.greenDuration,
+                da: d.da || '',
+                comment: d.comment || '',
+                commentColor: d.commentColor || '',
+                phaseFlag: d.phaseFlag || ''
+            }));
+            const groupsKey = JSON.stringify(diagramData);
+            const cl = activePF.cycleLength || cycleLength;
+            lastSyncedGroupsRef.current = groupsKey + '|' + cl;
+
+            // Update groups with diagram data from active PF
+            setGroups(prevGroups => {
+                const newGroups = prevGroups.map(group => {
+                    const diagramEntry = activePF.diagram.find(d => d.groupId === group.id);
+                    if (diagramEntry) {
+                        // Safely get values with fallbacks to prevent undefined
+                        const newOffset = diagramEntry.offset !== undefined && !isNaN(diagramEntry.offset)
+                            ? diagramEntry.offset
+                            : group.offset;
+                        const newGreenDuration = diagramEntry.greenDuration !== undefined && !isNaN(diagramEntry.greenDuration)
+                            ? diagramEntry.greenDuration
+                            : group.durations.green;
+                        return {
+                            ...group,
+                            offset: newOffset,
+                            da: diagramEntry.da !== undefined ? diagramEntry.da : group.da,
+                            comment: diagramEntry.comment !== undefined ? diagramEntry.comment : group.comment,
+                            commentColor: diagramEntry.commentColor !== undefined ? diagramEntry.commentColor : group.commentColor,
+                            phaseFlag: diagramEntry.phaseFlag !== undefined ? diagramEntry.phaseFlag : (group.phaseFlag || ''),
+                            durations: {
+                                ...group.durations,
+                                green: newGreenDuration
+                            }
+                        };
+                    }
+                    return group;
+                });
+                return newGroups;
+            });
+            // Also update cycle length if the PF has a specific one
+            if (activePF.cycleLength) {
+                setCycleLength(activePF.cycleLength);
+            }
+            // Also update conflict matrix if the PF has a specific one
+            // Resize matrix to match current group count to prevent errors
+            if (activePF.conflictMatrix && activePF.conflictMatrix.length > 0) {
+                setConflictMatrix(prevMatrix => {
+                    const currentSize = prevMatrix.length;
+                    const pfMatrixSize = activePF.conflictMatrix.length;
+
+                    // Create a new matrix with the current size, filled with empty values
+                    const resizedMatrix = Array.from({ length: currentSize }, (_, r) => {
+                        const row = new Array(currentSize).fill('');
+                        for (let c = 0; c < currentSize; c++) {
+                            // Copy values from PF matrix if they exist
+                            if (r < pfMatrixSize && c < pfMatrixSize && activePF.conflictMatrix[r]) {
+                                let val = activePF.conflictMatrix[r][c];
+                                // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
+                                const fromGroup = groups[r];
+                                const minVal = (fromGroup && (fromGroup.type === 'Piéton' || fromGroup.type === 'P' || fromGroup.type === 'Cycliste' || fromGroup.type === 'CY')) ? 0 : 3;
+                                // Clean the value: keep values in [minVal, 20] range
+                                if (val !== '' && val !== undefined) {
+                                    const numericVal = typeof val === 'number' ? val : parseInt(val);
+                                    if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) val = '';
+                                }
+                                row[c] = val !== undefined ? val : '';
+                            }
+                        }
+                        return row;
+                    });
+                    return resizedMatrix;
+                });
+            }
+        }
+    }, [activePFId, pfTabs]);
+
+    // Save traffic datasets to localStorage
+    useEffect(() => {
+        safeLocalStorage.setItem('trafficActiveDataset', activeTrafficDataset);
+        safeLocalStorage.setItem('customTrafficDatasetNames', JSON.stringify(customTrafficDatasetNames));
+        safeLocalStorage.setItem('pfTrafficDatasetMap', JSON.stringify(pfTrafficDatasetMap));
+    }, [activeTrafficDataset, customTrafficDatasetNames, pfTrafficDatasetMap]);
+
+    // Save project properties to localStorage
+    useEffect(() => {
+        safeLocalStorage.setItem('trafficProjectProperties', JSON.stringify(projectProperties));
+    }, [projectProperties]);
+
+    // Mémoriser le choix du dataset pour le PF courant
+    useEffect(() => {
+        if (activePFId && activeTrafficDataset) {
+            setPfTrafficDatasetMap(prev => {
+                if (prev[activePFId] === activeTrafficDataset) return prev;
+                return { ...prev, [activePFId]: activeTrafficDataset };
+            });
+        }
+    }, [activeTrafficDataset, activePFId]);
+
+    // Auto-save current project to cache (debounced)
+    const autoSaveTimerRef = useRef(null);
+    useEffect(() => {
+        // Skip during initial load o:��
+V����q�^uܧjh���%��.��+��j_4�M����蠆םn�`z޸�M+z���+a����j�,istory();
+        setGroupCountInternal(count);
+    }, [saveToHistory, groups.length]);
+
+    const updateGroupParamsWithHistory = useCallback((id, params) => {
+        if (!isDragging.current) {
+            saveToHistory();
+        }
+
+        // If offset or duration is changing, calculate delta to update linked bande passante actions
+        // Skip this during dragging - TimelineDiagram handles it directly with stored initial values to avoid drift
+        if (!isDragging.current) {
+            const currentGroup = groups.find(g => g.id === id);
+            if (currentGroup) {
+                // Calculate old and new end of green
+                const oldOffset = currentGroup.offset;
+                const oldGreen = currentGroup.durations.green;
+                const oldEnd = (oldOffset + oldGreen) % cycleLength;
+
+                const newOffset = params.offset !== undefined ? params.offset : oldOffset;
+                const newGreen = params.durations?.green !== undefined ? params.durations.green : oldGreen;
+                const newEnd = (newOffset + newGreen) % cycleLength;
+
+                const deltaOffset = newOffset - oldOffset;
+                const deltaEnd = ((newEnd - oldEnd) % cycleLength + cycleLength) % cycleLength;
+                // Normalize deltaEnd to handle wrap-around correctly
+                const normalizedDeltaEnd = deltaEnd > cycleLength / 2 ? deltaEnd - cycleLength : deltaEnd;
+
+                setActionData(currentData => {
+                    return currentData.map(row => {
+                        const rowGf = parseInt(row.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                        if (rowGf !== id) return row;
+
+                        // "Début de bande passante" is linked to START of green (offset)
+                        if (row.action === 'Début de bande passante' && row.deb !== '' && deltaOffset !== 0) {
+                            const newDeb = ((parseInt(row.deb) + deltaOffset) % cycleLength + cycleLength) % cycleLength;
+                            if (row.fin !== '') {
+                                const newFin = ((parseInt(row.fin) + deltaOffset) % cycleLength + cycleLength) % cycleLength;
+                                return { ...row, deb: newDeb.toString(), fin: newFin.toString() };
+                            }
+                            return { ...row, deb: newDeb.toString() };
+                        }
+
+                        // "Fin de bande passante" is linked to END of green (offset + green duration)
+                        if (row.action === 'Fin de bande passante' && row.deb !== '' && normalizedDeltaEnd !== 0) {
+                            const newDeb = ((parseInt(row.deb) + normalizedDeltaEnd) % cycleLength + cycleLength) % cycleLength;
+                            if (row.fin !== '') {
+                                const newFin = ((parseInt(row.fin) + normalizedDeltaEnd) % cycleLength + cycleLength) % cycleLength;
+                                return { ...row, deb: newDeb.toString(), fin: newFin.toString() };
+                            }
+                            return { ...row, deb: newDeb.toString() };
+                        }
+
+                        return row;
+                    });
+                });
+            }
+        }
+
+        setGroups(prev => prev.map(g => {
+            if (g.id !== id) return g;
+
+            let newG = { ...g, ...params };
+
+            if (params.durations || params.offset !== undefined) {
+                const mergedDurations = { ...g.durations, ...(params.durations || {}) };
+                const currentGreen = mergedDurations.green;
+                const currentOrange = mergedDurations.orange;
+                const newRed = Math.max(0, cycleLength - currentGreen - currentOrange);
+
+                newG.durations = {
+                    green: currentGreen,
+                    orange: currentOrange,
+                    red: newRed
+                };
+            }
+            return newG;
+        }));
+    }, [saveToHistory, cycleLength, groups, setActionData]);
+
+    const setMatrixValueWithHistory = useCallback((fromId, toId, value) => {
+        if (!isDragging.current) {
+            saveToHistory();
+        }
+        setConflictMatrix(prev => {
+            const next = prev.map(row => [...row]);
+            if (next[fromId - 1]) {
+                // Empty value is allowed
+                if (value === '') {
+                    next[fromId - 1][toId - 1] = '';
+                } else {
+                    const parsedValue = parseInt(value);
+                    // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
+                    const fromGroup = groups[fromId - 1];
+                    const minValue = (fromGroup && (fromGroup.type === 'Piéton' || fromGroup.type === 'P' || fromGroup.type === 'Cycliste' || fromGroup.type === 'CY')) ? 0 : 3;
+                    if (!isNaN(parsedValue) && parsedValue >= minValue && parsedValue <= 20) {
+                        next[fromId - 1][toId - 1] = parsedValue;
+                    } else if (!isNaN(parsedValue) && parsedValue < minValue) {
+                        // If value is less than minimum, set to empty
+                        next[fromId - 1][toId - 1] = '';
+                    } else if (!isNaN(parsedValue) && parsedValue > 20) {
+                        // If value is greater than 20, cap at 20
+                        next[fromId - 1][toId - 1] = 20;
+                    }
+                }
+            }
+            return next;
+        });
+    }, [saveToHistory, groups]);
+
+    // Copie la matrice d'interverts d'un AUTRE plan de feux dans le PF actif.
+    // Bloquée en lecture seule ; ne copie que si la matrice source a la même
+    // taille que les groupes courants (mêmes groupes -> copie sûre). Le sync
+    // matrice propage ensuite la valeur au PF actif. Renvoie true si copiée.
+    const copyMatrixFromPF = useCallback((sourcePFId) => {
+        if (isEditLocked()) return false;
+        const src = pfTabs.find(p => p.id === sourcePFId);
+        if (!src || !Array.isArray(src.conflictMatrix) || src.conflictMatrix.length === 0) return false;
+        if (src.conflictMatrix.length !== groups.length) return false;
+        saveToHistory();
+        setConflictMatrix(src.conflictMatrix.map(row => [...row]));
+        return true;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pfTabs, groups, saveToHistory]);
+
+    // Slide all groups by a given offset
+    const slideAllGroups = useCallback((delta, fromGroupId = null, toGroupId = null) => {
+        saveToHistory();
+        setGroups(currentGroups => {
+            const fromIdx = fromGroupId != null ? currentGroups.findIndex(g => g.id === fromGroupId) : 0;
+            const toIdx = toGroupId != null ? currentGroups.findIndex(g => g.id === toGroupId) : currentGroups.length - 1;
+
+            return currentGroups.map((g, idx) => {
+                if (idx >= fromIdx && idx <= toIdx) {
+                    return {
+                        ...g,
+                        offset: ((g.offset + delta) % cycleLength + cycleLength) % cycleLength
+                    };
+                }
+                return g;
+            });
+        });
+        // Also slide action data Déb/Fin for groups in range
+        setActionData(currentData => {
+            const fromIdx = fromGroupId != null ? groups.findIndex(g => g.id === fromGroupId) : 0;
+            const toIdx = toGroupId != null ? groups.findIndex(g => g.id === toGroupId) : groups.length - 1;
+
+            return currentData.map(row => {
+                const gf = parseInt(row.gf);
+                if (isNaN(gf) || gf < fromIdx + 1 || gf > toIdx + 1) return row;
+
+                const newRow = { ...row };
+                if (newRow.deb !== '' && newRow.deb !== undefined) {
+                    const newDeb = ((parseInt(newRow.deb) + delta) % cycleLength + cycleLength) % cycleLength;
+                    newRow.deb = newDeb.toString();
+                }
+                if (newRow.fin !== '' && newRow.fin !== undefined) {
+                    const newFin = ((parseInt(newRow.fin) + delta) % cycleLength + cycleLength) % cycleLength;
+                    newRow.fin = newFin.toString();
+                }
+                return newRow;
+            });
+        });
+    }, [saveToHistory, cycleLength, groups]);
+
+    // Insert time at a given position for a given duration
+    const insertTime = useCallback((startSecond, duration) => {
+        saveToHistory();
+        // Increase cycle length first
+        setCycleLength(prev => prev + duration);
+        // Shift group offsets and green ends (extend green if it spans the insertion point)
+        setGroups(currentGroups => {
+            return currentGroups.map(g => {
+                const offset = g.offset;
+                const greenEnd = offset + (g.durations?.green || 0);
+                const shiftOffset = offset > startSecond;
+                const shiftEnd = greenEnd > startSecond;
+                if (shiftOffset && shiftEnd) {
+                    // Both start and end are after insertion: shift offset, green stays same
+                    return { ...g, offset: offset + duration };
+                } else if (!shiftOffset && shiftEnd) {
+                    // Start before, end after: extend green duration
+                    return {
+                        ...g,
+                        durations: { ...g.durations, green: g.durations.green + duration }
+                    };
+                }
+                return g;
+            });
+        });
+        // Shift action data (conditions de micro-régulation) Déb/Fin
+        setActionData(currentData => {
+            return currentData.map(row => {
+                const newRow = { ...row };
+                if (newRow.deb !== '' && newRow.deb !== undefined) {
+                    const deb = parseInt(newRow.deb);
+                    if (!isNaN(deb) && deb > startSecond) {
+                        newRow.deb = (deb + duration).toString();
+                    }
+                }
+                if (newRow.fin !== '' && newRow.fin !== undefined) {
+                    const fin = parseInt(newRow.fin);
+                    if (!isNaN(fin) && fin > startSecond) {
+                        newRow.fin = (fin + duration).toString();
+                    }
+                }
+                return newRow;
+            });
+        });
+    }, [saveToHistory]);
+
+    // Reduce time at a given position for a given duration
+    // Décale toutes les valeurs (groupes et actions) > startSecond de -duration
+    const reduceTime = useCallback((startSecond, duration) => {
+        saveToHistory();
+        // Réduire le cycle en premier
+        setCycleLength(prev => Math.max(1, prev - duration));
+        // Décaler les offsets et/ou durées des groupes
+        setGroups(currentGroups => {
+            return currentGroups.map(g => {
+                const offset = g.offset;
+                const greenEnd = offset + (g.durations?.green || 0);
+                const shiftOffset = offset > startSecond;
+                const shiftEnd = greenEnd > startSecond;
+
+                if (shiftOffset && shiftEnd) {
+                    // Début et fin après le point de réduction : décaler l'offset
+                    return { ...g, offset: Math.max(0, offset - duration) };
+                } else if (!shiftOffset && shiftEnd) {
+                    // Début avant, fin après : réduire la durée de vert
+                    return {
+                        ...g,
+                        durations: { ...g.durations, green: Math.max(0, g.durations.green - duration) }
+                    };
+                }
+                return g;
+            });
+        });
+        // Décaler les Déb/Fin des conditions de micro-régulation
+        setActionData(currentData => {
+            return currentData.map(row => {
+                const newRow = { ...row };
+                if (newRow.deb !== '' && newRow.deb !== undefined) {
+                    const deb = parseInt(newRow.deb);
+                    if (!isNaN(deb) && deb > startSecond) {
+                        newRow.deb = Math.max(0, deb - duration).toString();
+                    }
+                }
+                if (newRow.fin !== '' && newRow.fin !== undefined) {
+                    const fin = parseInt(newRow.fin);
+                    if (!isNaN(fin) && fin > startSecond) {
+                        newRow.fin = Math.max(0, fin - duration).toString();
+                    }
+                }
+                return newRow;
+            });
+        });
+    }, [saveToHistory]);
+
+    return {
+        intersectionName,
+        setIntersectionName,
+        groups,
+        setGroupCount: setGroupCountWithHistory,
+        cycleLength,
+        setCycleLength: setCycleLengthWithHistory,
+        dependencyGap,
+        setDependencyGap,
+        biCarrefourSeparator,
+        setBiCarrefourSeparator,
+        matricesLocked,
+        setMatricesLocked,
+        dossierReadOnly,
+        setDossierReadOnly,
+        activePfReadOnly,
+        applyMergedPf,
+        copyMatrixFromPF,
+        actionColWidths,
+        setActionColWidths,
+        externalLinks,
+        setExternalLinks,
+        capacityCompareSelection,
+        setCapacityCompareSelection,
+        capacityCompareDataset,
+        setCapacityCompareDataset,
+        conflictMatrix,
+        setMatrixValue: setMatrixValueWithHistory,
+        conflicts,
+        globalTime,
+        isPlaying,
+        setIsPlaying,
+        reset,
+        updateGroupParams: updateGroupParamsWithHistory,
+        getGroupState,
+        moveGroup,
+        moveGroupToPosition,
+        // Save/Load
+        saveProject,
+        loadProject,
+        getAllSaves,
+        getProjectData,
+        deleteSave,
+        getFullState,
+        loadFullState,
+        resetToNewProject,
+        // Action Table
+        actionData,
+        updateActionRow: updateActionRowWithHistory,
+        reorderActions,
+        microCustomFields,
+        updateMicroCustomField,
+        // Phasage bulle (per PF)
+        phasageBulleCount,
+        phasageBulleTimes,
+        setPhasageBulleCount,
+        setPhasageBulleTimes,
+        phasageBubbleScale,
+        phasageEllipseScale,
+        setPhasageBubbleScale,
+        setPhasageEllipseScale,
+        phasageBubbleRatio,
+        setPhasageBubbleRatio,
+        // PF (Plans de Feux) management
+        pfTabs,
+        activePFId,
+        setActivePFId,
+        duplicatePF,
+        deletePF,
+        renamePF,
+        setPFColor,
+        updatePFRemarques,
+        reorderPF,
+        currentRemarques: pfTabs.find(pf => pf.id === activePFId)?.remarques || '',
+        // Undo/Redo
+        undo,
+        redo,
+        canUndo: history.length > 0,
+        canRedo: redoHistory.length > 0,
+        // Drag helpers (for saving history only once per drag)
+        startDrag,
+        endDrag,
+        // Diagram operations
+        slideAllGroups,
+        insertTime,
+        reduceTime,
+        // Simulation mode
+        simulationEnabled,
+        setSimulationEnabled,
+        simulationSelectedActions,
+        simulationName,
+        updateSimulationName,
+        toggleSimulationAction,
+        selectAllSimulationActions,
+        deselectAllSimulationActions,
+        // Intersection image
+        intersectionImage,
+        setIntersectionImage,
+        intersectionArrows,
+        setIntersectionArrows,
+        imageBrightness,
+        setImageBrightness,
+        imageContrast,
+        setImageContrast,
+        // Traffic datasets
+        trafficDatasets,
+        activeTrafficDataset,
+        setActiveTrafficDataset,
+        updateTrafficData,
+        getTrafficData,
+        trafficDatasetNames,
+        trafficDatasetSourceNames,
+        copyTrafficDataset,
+        addCustomTrafficDataset,
+        pfTrafficDatasetMap,
+        // Project properties
+        projectProperties,
+        updateProjectProperty,
+        // Project name (save key, displayed in header)
+        projectName,
+        setProjectName,
+        // App-wide registries
+        appCommunes,
+        appMoaLogos,
+        appMoeLogos
+    };
+};
