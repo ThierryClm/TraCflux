@@ -1061,8 +1061,270 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             // Les remettre ici aussi √©tait un pi√®ge √† retardement. Trois
             // secondes apr√®s l'ouverture, ce rappel r√©installait comme ¬´ plan
             // courant ¬ª celui qui √©tait actif AU CHARGEMENT. Si l'utilisateur
-            // avai:óß
-V∞∂ªßq´^u‹ßjhú∂ä%≠Î.ñ⁄+äßj_4”MÖ™Ï¡Ë†Ü◊ùnÁ`zﬁ∏”M+zªß¬+aù™Î£´j∏,ay.isArray(state.externalLinks)) {
+            // avait chang√© d'onglet entre-temps ‚Äî ce qui prend moins de trois
+            // secondes ‚Äî la recopie ¬´ diagramme ‚Üí plan actif ¬ª croyait ensuite
+            // √™tre encore sur l'ancien plan : la premi√®re dur√©e de cycle saisie
+            // partait dans CE plan-l√†, tandis que celui qu'on avait sous les
+            // yeux gardait la sienne. Le plan √©dit√© semblait refuser la valeur,
+            // un autre la recevait en silence, et la r√©ouverture r√©v√©lait les
+            // deux d√©g√¢ts d'un coup.
+            setTimeout(() => {
+                isLoadingProjectRef.current = false;
+            }, 3000);
+
+            return data;
+        } catch (e) {
+            console.error("Load failed", e);
+            isLoadingProjectRef.current = false;
+            return false;
+        }
+    };
+
+    // Nombre max de projets conserv√©s dans le cache localStorage.
+    // C'est un plafond de COMPTAGE, pas la vraie limite : le quota r√©el est en
+    // octets (~5 Mo navigateur), g√©r√© par safeLocalStorage qui absorbe un
+    // √©ventuel QuotaExceededError. Mont√© √† 15 : depuis l'optimisation auto des
+    // images de fond (~250 Ko/projet au lieu de ~800 Ko), bien plus de projets
+    // tiennent dans le quota (15 √ó 250 Ko ‚âà 3,75 Mo, avec marge).
+    // Solution de fond pour lever la contrainte de capacit√© : migration du
+    // stockage des projets vers IndexedDB (gros chantier ‚Äî cf. m√©moire projet).
+    const MAX_CACHED_PROJECTS = 15;
+
+    // Update project order - move project to top and limit to MAX_CACHED_PROJECTS
+    const updateProjectOrder = (name) => {
+        try {
+            const orderRaw = localStorage.getItem('traffic_project_order');
+            let order = orderRaw ? JSON.parse(orderRaw) : [];
+            // Remove if already exists
+            order = order.filter(n => n !== name);
+            // Add to top
+            order.unshift(name);
+
+            // Remove old projects beyond the limit (keep last backup)
+            while (order.length > MAX_CACHED_PROJECTS) {
+                const oldProjectName = order.pop();
+                // Delete the old project from localStorage (but keep its backup if exists)
+                localStorage.removeItem(`traffic_project_${oldProjectName}`);
+                console.log(`Cache nettoy√©: projet "${oldProjectName}" supprim√©`);
+            }
+
+            safeLocalStorage.setItem('traffic_project_order', JSON.stringify(order));
+        } catch (e) {
+            console.error("Update order failed", e);
+        }
+    };
+
+    const getAllSaves = () => {
+        const saves = [];
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                // Skip null/undefined keys
+                if (!key) continue;
+                // Only include main project files (exclude backups and order file)
+                if (key.startsWith('traffic_project_') && !key.endsWith('_backup') && key !== 'traffic_project_order') {
+                    const name = key.replace('traffic_project_', '');
+                    // Skip empty names
+                    if (!name) continue;
+
+                    const raw = localStorage.getItem(key);
+                    let savedAt = null;
+                    let size = 0;
+
+                    if (raw) {
+                        size = raw.length;
+                        try {
+                            const data = JSON.parse(raw);
+                            savedAt = data.savedAt || null;
+                        } catch (e) {
+                            // Ignore parse errors
+                        }
+                    }
+
+                    saves.push({ name, savedAt, size });
+                }
+            }
+
+            // Sort by order (most recently loaded first) and limit to MAX_CACHED_PROJECTS
+            const orderRaw = localStorage.getItem('traffic_project_order');
+            if (orderRaw) {
+                const order = JSON.parse(orderRaw);
+                saves.sort((a, b) => {
+                    const indexA = order.indexOf(a.name);
+                    const indexB = order.indexOf(b.name);
+                    // Projects not in order list go to the end
+                    if (indexA === -1 && indexB === -1) return 0;
+                    if (indexA === -1) return 1;
+                    if (indexB === -1) return -1;
+                    return indexA - indexB;
+                });
+            }
+        } catch (e) {
+            console.error("getAllSaves failed", e);
+        }
+
+        // Return all available projects (no limit for display)
+        return saves;
+    };
+
+    // Get project data without applying to state (for green wave)
+    const getProjectData = (name) => {
+        try {
+            const raw = localStorage.getItem(`traffic_project_${name}`);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch (e) {
+            console.error("Get project data failed", e);
+            return null;
+        }
+    };
+
+    // Load full state (for duplication)
+    const loadFullState = (state) => {
+        try {
+            champsProjetRef?.current?.ecrire?.(state);
+            // Dossier ¬´ lecture seule ¬ª : d√©tect√© depuis le marqueur du fichier.
+            setDossierReadOnly(isReadOnlyStamped(state));
+            // Mettre √† jour le nom du projet (cl√© de sauvegarde / nom du fichier)
+            // Utiliser state.projectName si fourni, sinon null
+            const loadedProjectName = state.projectName || null;
+            currentProjectNameRef.current = loadedProjectName;
+            setProjectName(loadedProjectName);
+            // Restaurer le nom du carrefour (ind√©pendant du nom du projet)
+            setIntersectionName(state.intersectionName || "Nouveau Carrefour");
+
+            // Toujours mettre √† jour les groupes (avec valeur par d√©faut si absent)
+            if (state.groups && Array.isArray(state.groups) && state.groups.length > 0) {
+                setGroups(state.groups);
+            } else {
+                // R√©initialiser avec 5 groupes par d√©faut
+                setGroups(Array.from({ length: 5 }, (_, i) => createGroup(i + 1)));
+            }
+
+            // Toujours mettre √† jour la dur√©e du cycle ‚Äî celle du plan actif,
+            // qui fait foi (cf. cycleDuPlanActif).
+            setCycleLength(cycleDuPlanActif(state, DEFAULT_CYCLE));
+
+            // Mettre √† jour la matrice de conflits
+            if (state.conflictMatrix && Array.isArray(state.conflictMatrix)) {
+                // Minimum is 0 for Pi√©ton/Cycliste from-group, 3 for others
+                const loadedGroups = state.groups || [];
+                const cleanedMatrix = state.conflictMatrix.map((row, r) => row.map(val => {
+                    if (val === undefined || val === null) return '';
+                    const fromGroup = loadedGroups[r];
+                    const minVal = (fromGroup && (fromGroup.type === 'Pi√©ton' || fromGroup.type === 'P' || fromGroup.type === 'Cycliste' || fromGroup.type === 'CY')) ? 0 : 3;
+                    const numericVal = typeof val === 'number' ? val : parseInt(val);
+                    if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) return '';
+                    return numericVal;
+                }));
+                setConflictMatrix(cleanedMatrix);
+            } else {
+                // R√©initialiser la matrice selon le nombre de groupes
+                const groupCount = (state.groups && state.groups.length) || 5;
+                setConflictMatrix(Array.from({ length: groupCount }, () => Array(groupCount).fill('')));
+            }
+
+            // Handle new pfTabs format or old actionData format
+            // All branches produce PFs with guaranteed complete structure
+            if (state.pfTabs && Array.isArray(state.pfTabs) && state.pfTabs.length > 0) {
+                setPfTabs(ensurePFIntegrity(state.pfTabs, state.groups, state.conflictMatrix, state.cycleLength));
+                setActivePFIdRaw(state.activePFId || 1);
+            } else if (state.actionData && Array.isArray(state.actionData)) {
+                setPfTabs([createEmptyPF({
+                    id: 1,
+                    name: 'PF1',
+                    data: state.actionData,
+                    sourceGroups: state.groups,
+                    conflictMatrix: state.conflictMatrix
+                })]);
+                setActivePFIdRaw(1);
+            } else {
+                setPfTabs([createEmptyPF({
+                    id: 1,
+                    name: 'PF1',
+                    sourceGroups: state.groups,
+                    conflictMatrix: state.conflictMatrix
+                })]);
+                setActivePFIdRaw(1);
+            }
+
+            // Load traffic datasets if provided
+            if (state.trafficDatasets) {
+                setTrafficDatasets(state.trafficDatasets);
+            } else {
+                // R√©initialiser les datasets de trafic
+                setTrafficDatasets({});
+            }
+            // Load active traffic dataset
+            if (state.activeTrafficDataset) {
+                setActiveTrafficDataset(state.activeTrafficDataset);
+            }
+            setCustomTrafficDatasetNames(state.customTrafficDatasetNames || []);
+            setPfTrafficDatasetMap(state.pfTrafficDatasetMap || {});
+
+            // S√©lection du comparateur de capacit√© (null/absent = tous par d√©faut)
+            setCapacityCompareSelection(Array.isArray(state.capacityCompareSelection) ? state.capacityCompareSelection : null);
+            setCapacityCompareDataset(state.capacityCompareDataset || '__per_pf__');
+
+            // Load intersection image and arrows
+            if (state.intersectionImage !== undefined) {
+                setIntersectionImage(state.intersectionImage);
+            } else {
+                setIntersectionImage(null);
+            }
+            if (state.intersectionArrows !== undefined) {
+                setIntersectionArrows(state.intersectionArrows);
+            } else {
+                setIntersectionArrows([]);
+            }
+            if (state.imageBrightness !== undefined) {
+                setImageBrightness(state.imageBrightness);
+            } else {
+                setImageBrightness(100);
+            }
+            if (state.imageContrast !== undefined) {
+                setImageContrast(state.imageContrast);
+            } else {
+                setImageContrast(100);
+            }
+
+            setProjectProperties(state.projectProperties ? { ...DEFAULT_PROJECT_PROPERTIES, ...state.projectProperties } : { ...DEFAULT_PROJECT_PROPERTIES });
+
+            // Reset simulation state when loading full state
+            setSimulationEnabled(false);
+
+            // Reset dependency gap if provided
+            if (state.dependencyGap !== undefined) {
+                setDependencyGap(state.dependencyGap);
+            }
+
+            // Load bi-carrefour separator (always reset to null if not present)
+            setBiCarrefourSeparator(state.biCarrefourSeparator !== undefined ? state.biCarrefourSeparator : null);
+
+            // Load matrices locked state (reset to false if not present)
+            setMatricesLocked(state.matricesLocked === true);
+
+            // Largeurs colonnes micro-r√©gulation : valeurs born√©es, defaut
+            // si absent/invalide.
+            {
+                const acw = state.actionColWidths || {};
+                const clamp = (v, lo, hi, def) => {
+                    const n = Number(v);
+                    if (!isFinite(n)) return def;
+                    return Math.min(hi, Math.max(lo, Math.round(n)));
+                };
+                setActionColWidths({
+                    description: clamp(acw.description, 100, 350, 160),
+                    micro: clamp(acw.micro, 300, 700, 420),
+                    abrv: clamp(acw.abrv, 38, 75, 38)
+                });
+            }
+
+            // Reset PF sync refs so forward/reverse sync start fresh
+            resetPfSyncRefs(state.activePFId || 1);
+
+            // Load external links
+            if (state.externalLinks && Array.isArray(state.externalLinks)) {
                 setExternalLinks(state.externalLinks);
             } else {
                 setExternalLinks([]);
@@ -2120,8 +2382,305 @@ V∞∂ªßq´^u‹ßjhú∂ä%≠Î.ñ⁄+äßj_4”MÖ™Ï¡Ë†Ü◊ùnÁ`zﬁ∏”M+zªß¬+aù™Î£´j∏,ay.isArray(stat
     // Auto-save current project to cache (debounced)
     const autoSaveTimerRef = useRef(null);
     useEffect(() => {
-        // Skip during initial load o:óß
-V∞∂ªßq´^u‹ßjhú∂ä%≠Î.ñ⁄+äßj_4”MÖ™Ï¡Ë†Ü◊ùnÁ`zﬁ∏”M+zªß¬+aù™Î£´j∏,istory();
+        // Skip during initial load or project loading
+        if (isInitialLoadRef.current || isLoadingProjectRef.current) return;
+
+        // Skip if no project name
+        if (!currentProjectNameRef.current) return;
+
+        // Dossier en lecture seule : ne jamais mettre en cache (le dossier
+        // transmis ne doit pas devenir une copie de travail √©ditable).
+        if (dossierReadOnlyRef.current) return;
+
+        // Debounce: save after 2 seconds of inactivity
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+        }
+
+        autoSaveTimerRef.current = setTimeout(() => {
+            try {
+                // M√™me payload canonique que la sauvegarde explicite et l'export
+                // fichier (getFullState) : garantit qu'un aller-retour par le
+                // cache ne perd aucun champ.
+                const projectData = {
+                    ...getFullStateRef.current(),
+                    savedAt: new Date().toISOString()
+                };
+                const jsonData = JSON.stringify(projectData);
+
+                // Faire de la place AVANT d'√©crire : la sauvegarde explicite le
+                // faisait d√©j√†, l'autosave √©crivait √† l'aveugle.
+                ensureLocalStorageSpace();
+
+                // Save project
+                const ecrit = safeLocalStorage.setItem(`traffic_project_${currentProjectNameRef.current}`, jsonData);
+
+                // Un √©chec de cache passait jusqu'ici par un simple console.warn :
+                // l'utilisateur croyait son travail √† l'abri alors que rien
+                // n'√©tait √©crit. C'est ainsi que des fl√®ches de carrefour ont √©t√©
+                // perdues. On le dit, une fois, et on rappelle o√π est le recours.
+                if (!ecrit) {
+                    if (!echecCacheSignale) {
+                        echecCacheSignale = true;
+                        toast.error("Cache navigateur satur√© : la sauvegarde automatique n'a pas pu s'effectuer. Enregistrez votre projet dans un fichier .json pour ne rien perdre.");
+                    }
+                    return;
+                }
+                echecCacheSignale = false;
+
+                // Update order and clean up old projects
+                updateProjectOrder(currentProjectNameRef.current);
+            } catch (e) {
+                console.warn('Auto-save failed:', e);
+            }
+        }, 2000);
+
+        return () => {
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
+            }
+        };
+    }, [groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, intersectionName, projectProperties, capacityCompareSelection, capacityCompareDataset, customTrafficDatasetNames, pfTrafficDatasetMap, externalLinks, matricesLocked, actionColWidths]);
+
+    // Update traffic data for a specific group in the active dataset
+    const updateTrafficData = useCallback((groupId, field, value) => {
+        if (isEditLocked()) return;
+        setTrafficDatasets(prev => {
+            const newDatasets = { ...prev };
+            if (!newDatasets[activeTrafficDataset]) {
+                newDatasets[activeTrafficDataset] = {};
+            }
+            if (!newDatasets[activeTrafficDataset][groupId]) {
+                newDatasets[activeTrafficDataset][groupId] = createEmptyTrafficData();
+            }
+            newDatasets[activeTrafficDataset][groupId] = {
+                ...newDatasets[activeTrafficDataset][groupId],
+                [field]: value
+            };
+            return newDatasets;
+        });
+    }, [activeTrafficDataset]);
+
+    // Get traffic data for a specific group in the active dataset
+    const getTrafficData = useCallback((groupId) => {
+        if (!trafficDatasets[activeTrafficDataset]) {
+            return createEmptyTrafficData();
+        }
+        return trafficDatasets[activeTrafficDataset][groupId] || createEmptyTrafficData();
+    }, [trafficDatasets, activeTrafficDataset]);
+
+    // Copy traffic data from one dataset to another
+    const copyTrafficDataset = useCallback((sourceDataset, targetDataset) => {
+        setTrafficDatasets(prev => {
+            const source = prev[sourceDataset];
+            if (!source || sourceDataset === targetDataset) return prev;
+            const target = { ...(prev[targetDataset] || {}) };
+            Object.keys(source).forEach(groupId => {
+                target[groupId] = { ...source[groupId] };
+            });
+            return { ...prev, [targetDataset]: target };
+        });
+    }, []);
+
+    const addCustomTrafficDataset = useCallback((name) => {
+        if (!name || trafficDatasetNames.includes(name)) return;
+        setCustomTrafficDatasetNames(prev => [...prev, name]);
+        // Initialiser les donn√©es vides pour ce nouveau jeu
+        setTrafficDatasets(prev => {
+            const newDatasets = { ...prev };
+            newDatasets[name] = {};
+            groups.forEach(g => {
+                newDatasets[name][g.id] = createEmptyTrafficData();
+            });
+            return newDatasets;
+        });
+    }, [trafficDatasetNames, groups]);
+
+    // Ensure traffic datasets have entries for all groups when group count changes
+    useEffect(() => {
+        setTrafficDatasets(prev => {
+            const newDatasets = { ...prev };
+            let changed = false;
+            TRAFFIC_DATASETS.forEach(ds => {
+                if (!newDatasets[ds]) {
+                    newDatasets[ds] = {};
+                    changed = true;
+                }
+                groups.forEach(g => {
+                    if (!newDatasets[ds][g.id]) {
+                        newDatasets[ds][g.id] = createEmptyTrafficData();
+                        changed = true;
+                    }
+                });
+            });
+            return changed ? newDatasets : prev;
+        });
+    }, [groups]);
+
+    // Note: Simulation state is NOT saved to localStorage (per user request)
+
+    // Save current state to history (for undo)
+    const saveToHistory = useCallback(() => {
+        if (isUndoing.current || isRedoing.current) return; // Don't save during undo/redo
+
+        const currentState = {
+            groups: JSON.parse(JSON.stringify(groups)),
+            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
+            pfTabs: JSON.parse(JSON.stringify(pfTabs)),
+            activePFId,
+            cycleLength,
+            intersectionName
+        };
+
+        setHistory(prev => {
+            const newHistory = [...prev, currentState];
+            // Limit history size
+            if (newHistory.length > MAX_HISTORY_SIZE) {
+                return newHistory.slice(-MAX_HISTORY_SIZE);
+            }
+            return newHistory;
+        });
+
+        // Clear redo history when a new action is performed
+        setRedoHistory([]);
+    }, [groups, conflictMatrix, pfTabs, activePFId, cycleLength, intersectionName]);
+
+    // Start drag - save history once at the beginning
+    const startDrag = useCallback(() => {
+        if (!isDragging.current) {
+            saveToHistory();
+            isDragging.current = true;
+        }
+    }, [saveToHistory]);
+
+    // End drag
+    const endDrag = useCallback(() => {
+        isDragging.current = false;
+    }, []);
+
+    // Undo function
+    const undo = useCallback(() => {
+        if (history.length === 0) return false;
+
+        isUndoing.current = true;
+
+        // Save current state to redo history before restoring
+        const currentState = {
+            groups: JSON.parse(JSON.stringify(groups)),
+            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
+            pfTabs: JSON.parse(JSON.stringify(pfTabs)),
+            activePFId,
+            cycleLength,
+            intersectionName
+        };
+        setRedoHistory(prev => [...prev, currentState]);
+
+        const previousState = history[history.length - 1];
+
+        // Restore previous state
+        setGroups(previousState.groups);
+        setConflictMatrix(previousState.conflictMatrix);
+        if (previousState.pfTabs) {
+            setPfTabs(previousState.pfTabs);
+            setActivePFIdRaw(previousState.activePFId);
+        } else if (previousState.actionData) {
+            // Handle old history format
+            setPfTabs(prev => prev.map(pf =>
+                pf.id === activePFId ? { ...pf, data: previousState.actionData } : pf
+            ));
+        }
+        setCycleLength(previousState.cycleLength);
+        setIntersectionName(previousState.intersectionName);
+
+        // Une annulation r√©installe d'un bloc les groupes, le cycle, les plans
+        // de feu ET le plan actif. Sans cette remise √† z√©ro, la recopie
+        // ¬´ groupes ‚Üí PF actif ¬ª y voyait un changement d'onglet : elle √©crivait
+        // le cycle et le diagramme qu'on venait de restaurer dans le plan de feu
+        // actif AVANT l'annulation, √©crasant ce que l'historique venait de
+        // rendre. Annuler sur un plan revenait ainsi √† ab√Æmer l'autre.
+        resetPfSyncRefs(previousState.activePFId || activePFId);
+
+        // Remove the last history entry
+        setHistory(prev => prev.slice(0, -1));
+
+        // Reset the flag after a short delay
+        setTimeout(() => {
+            isUndoing.current = false;
+        }, 100);
+
+        return true;
+    }, [history, groups, conflictMatrix, pfTabs, activePFId, cycleLength, intersectionName]);
+
+    // Redo function
+    const redo = useCallback(() => {
+        if (redoHistory.length === 0) return false;
+
+        isRedoing.current = true;
+
+        // Save current state to history before restoring
+        const currentState = {
+            groups: JSON.parse(JSON.stringify(groups)),
+            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
+            pfTabs: JSON.parse(JSON.stringify(pfTabs)),
+            activePFId,
+            cycleLength,
+            intersectionName
+        };
+        setHistory(prev => [...prev, currentState]);
+
+        const nextState = redoHistory[redoHistory.length - 1];
+
+        // Restore next state
+        setGroups(nextState.groups);
+        setConflictMatrix(nextState.conflictMatrix);
+        if (nextState.pfTabs) {
+            setPfTabs(nextState.pfTabs);
+            setActivePFIdRaw(nextState.activePFId);
+        }
+        setCycleLength(nextState.cycleLength);
+        setIntersectionName(nextState.intersectionName);
+
+        // M√™me raison que dans undo : le r√©tablissement r√©installe le plan actif
+        // en m√™me temps que l'√©tat, la synchronisation ne doit pas le prendre
+        // pour un changement d'onglet.
+        resetPfSyncRefs(nextState.activePFId || activePFId);
+
+        // Remove the last redo history entry
+        setRedoHistory(prev => prev.slice(0, -1));
+
+        // Reset the flag after a short delay
+        setTimeout(() => {
+            isRedoing.current = false;
+        }, 100);
+
+        return true;
+    }, [redoHistory, groups, conflictMatrix, pfTabs, activePFId, cycleLength, intersectionName]);
+
+    // Wrapped update functions that save to history (skip if dragging)
+    const updateActionRowWithHistory = useCallback((rowId, field, value) => {
+        if (isEditLocked()) return;
+        if (!isDragging.current) {
+            saveToHistory();
+        }
+        setActionData(prev => prev.map(row =>
+            row.id === rowId ? { ...row, [field]: value } : row
+        ));
+    }, [saveToHistory]);
+
+    // Wrapped setCycleLength that saves to history
+    const setCycleLengthWithHistory = useCallback((newCycle) => {
+        if (isEditLocked()) return;
+        if (newCycle === cycleLength) return; // No change
+        saveToHistory();
+        setCycleLength(newCycle);
+    }, [saveToHistory, cycleLength]);
+
+    // Wrapped setGroupCount that saves to history
+    const setGroupCountWithHistory = useCallback((count) => {
+        if (isEditLocked()) return;
+        const newCount = Math.max(1, parseInt(count) || 1);
+        if (newCount === groups.length) return; // No change
+        saveToHistory();
         setGroupCountInternal(count);
     }, [saveToHistory, groups.length]);
 

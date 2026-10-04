@@ -1018,8 +1018,273 @@ function App() {
         moveGroupModal, setMoveGroupModal,
         groupToMove, setGroupToMove,
         moveAfterGroup, setMoveAfterGroup,
- :óß
-V∞∂ªßq´^u‹ßjhú∂ä%≠Î.ñ⁄+äßj_4”MÖ™Ï¡Ë†Ü◊ùnÁ`zﬁ∏”M+zªß¬+aù™Î£´j∏,ge dossier-page {
+        moveGroupTouched, setMoveGroupTouched,
+        importHTMModal, setImportHTMModal,
+        htmFile, setHtmFile,
+        htmImportError, setHtmImportError,
+        importedHTMFiles, setImportedHTMFiles,
+        showExternalLinksModal, setShowExternalLinksModal,
+        printPreviewModal, setPrintPreviewModal,
+        printType, setPrintType,
+        dossierDialog, setDossierDialog,
+        dossierSections, setDossierSections,
+        createGreenWaveModal, setCreateGreenWaveModal,
+        openGreenWaveModal, setOpenGreenWaveModal,
+        greenWaveViewer, setGreenWaveViewer,
+        draggedTabIndex, setDraggedTabIndex
+    } = useDialogState();
+
+    // Les cases √† cocher du dossier appartiennent au projet : on branche leur
+    // lecture et leur √©criture sur la s√©rialisation, plut√¥t que d'en faire une
+    // pr√©f√©rence d'application commune √† tous les carrefours.
+    // File System Access API - handles de r√©pertoires via IndexedDB
+    const {
+        lastOpenDirectoryRef,
+        lastSaveDirectoryRef,
+        lastImportDirectoryRef,
+        lastImageDirectoryRef,
+        lastGreenWaveDirectoryRef,
+        saveDirectoryHandle,
+        loadDirectoryHandle
+    } = useDirectoryHandles();
+
+    // Liste des 5 derniers r√©pertoires par type (pour affichage dans les menus)
+    const {
+        recentOpenDirs,
+        recentImportDirs,
+        recentImageDirs,
+        recentSaveDirs,
+        recentGreenWaveDirs,
+        addRecentDirectory
+    } = useRecentDirectories();
+
+    // Les r√©glages de mise en page appartiennent au projet : cases du dossier
+    // d'impression, hauteur du diagramme, cadrage et zoom de l'image d√©tach√©e,
+    // options d'affichage, r√©pertoires de travail. Ils ne vivent pas dans
+    // useTrafficLight, d'o√π cette r√©f : getFullState la lit au moment
+    // d'enregistrer, si bien que le fichier ET le cache les portent ‚Äî c'est ce
+    // second qui les perdait. Pos√© ici, apr√®s les hooks de r√©pertoires, parce
+    // qu'il lui faut leurs r√©f√©rences.
+    champsProjetRef.current = {
+        lire: () => ({
+            dossierSections,
+            ...lireMiseEnPage({
+                diagramHeight, floatingCrop, floatingZoom,
+                sidebarVisible, showComments, showRemarks, showActionDescription,
+                showFloatingForm, showFloatingMatrix, showFloatingTraffic,
+                showFloatingImage, showFloatingConditions, showFloatingVariables,
+                showFloatingRemarks,
+                directoryNames: {
+                    open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
+                    save: lastSaveDirectoryRef.current?.name || recentSaveDirs[0]?.name || null,
+                    import: lastImportDirectoryRef.current?.name || recentImportDirs[0]?.name || null,
+                    image: lastImageDirectoryRef.current?.name || recentImageDirs[0]?.name || null,
+                    greenWave: lastGreenWaveDirectoryRef.current?.name || recentGreenWaveDirs[0]?.name || null
+                }
+            })
+        }),
+        ecrire: (etat) => appliquerMiseEnPage(etat, {
+            setDiagramHeight, resetDiagramHeight,
+            setFloatingCrop, setFloatingZoom, markLegacyCrop,
+            setSidebarVisible, setShowComments, setShowRemarks, setShowActionDescription,
+            setShowFloatingForm, setShowFloatingMatrix, setShowFloatingTraffic,
+            setShowFloatingImage, setShowFloatingConditions, setShowFloatingVariables,
+            setShowFloatingRemarks, setDossierSections
+        })
+    };
+
+    const {
+        handleOpenFileWithPicker,
+        handleOpenFileFromRecentDir,
+        handleSaveFileWithPicker,
+        handleSaveFileToRecentDir,
+        handleExportPfSubset
+    } = useFileOperations({
+        projectName, diagramHeight, floatingCrop, floatingZoom,
+        setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
+        projectModifiedSkip, hasUnsavedChanges, setHasUnsavedChanges,
+        isDirty,
+        setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
+        setShowComments, setShowRemarks, setIntersectionName,
+        // Layout options sauvegard√©es au niveau projet
+        showComments, showRemarks, showActionDescription, sidebarVisible,
+        setShowActionDescription, setSidebarVisible,
+        // Flags de d√©tachement (niveau projet : dimensions des popups
+        // d√©pendent du nombre de groupes, donc li√©es au projet)
+        showFloatingForm, setShowFloatingForm,
+        showFloatingMatrix, setShowFloatingMatrix,
+        showFloatingTraffic, setShowFloatingTraffic,
+        showFloatingImage, setShowFloatingImage,
+        showFloatingConditions, setShowFloatingConditions,
+        showFloatingVariables, setShowFloatingVariables,
+        showFloatingRemarks, setShowFloatingRemarks,
+        setHasActiveProject,
+        loadFullState, getFullState, saveProject,
+        dossierSections, setDossierSections,
+        lastOpenDirectoryRef, lastSaveDirectoryRef, lastImportDirectoryRef,
+        lastImageDirectoryRef,
+        saveDirectoryHandle, loadDirectoryHandle,
+        recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
+        addRecentDirectory,
+        askConfirm, showAlert
+    });
+
+    // Get all saved green waves (sorted by most recent first)
+    const getSavedGreenWaves = () => {
+        try {
+            const saved = localStorage.getItem('savedGreenWaves');
+            if (saved) {
+                const greenWaves = JSON.parse(saved);
+                return Object.keys(greenWaves)
+                    .map(name => ({
+                        name,
+                        ...greenWaves[name]
+                    }))
+                    .sort((a, b) => {
+                        // Sort by savedAt date, most recent first
+                        const dateA = a.savedAt ? new Date(a.savedAt) : new Date(0);
+                        const dateB = b.savedAt ? new Date(b.savedAt) : new Date(0);
+                        return dateB - dateA;
+                    });
+            }
+        } catch (e) {
+            console.error('Failed to get saved green waves', e);
+        }
+        return [];
+    };
+
+    // Format date for display
+    const formatDate = (isoString) => {
+        if (!isoString) return '';
+        try {
+            const date = new Date(isoString);
+            return date.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return '';
+        }
+    };
+
+    // Delete a saved green wave
+    const deleteGreenWave = async (name) => {
+        const ok = await askConfirm({
+            title: 'Supprimer l\'onde verte',
+            message: `√ätes-vous s√ªr de vouloir supprimer l'onde verte ¬´ ${name} ¬ª ?`,
+            confirmLabel: 'Supprimer',
+            danger: true,
+        });
+        if (!ok) return;
+        try {
+            const saved = localStorage.getItem('savedGreenWaves');
+            if (saved) {
+                const greenWaves = JSON.parse(saved);
+                delete greenWaves[name];
+                localStorage.setItem('savedGreenWaves', JSON.stringify(greenWaves));
+                if (selectedGreenWave === name) {
+                    setSelectedGreenWave(null);
+                }
+                // Force list refresh
+                setGreenWaveListKey(prev => prev + 1);
+            }
+        } catch (e) {
+            console.error('Failed to delete green wave', e);
+        }
+    };
+
+    // Check for duplicated state on load
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const duplicateId = urlParams.get('duplicate');
+        if (duplicateId) {
+            const savedState = sessionStorage.getItem(`duplicate_${duplicateId}`);
+            if (savedState) {
+                try {
+                    const state = JSON.parse(savedState);
+                    loadFullState(state);
+                    // Clean up
+                    sessionStorage.removeItem(`duplicate_${duplicateId}`);
+                    // Remove the URL parameter
+                    window.history.replaceState({}, '', window.location.pathname);
+                } catch (e) {
+                    console.error('Failed to load duplicated state', e);
+                }
+            }
+        }
+    }, []);
+
+    // Chargement du projet exemple fourni (?example=carrefour). Ouvert dans
+    // une fen√™tre neuve (depuis l'√©cran d'accueil ou la FAQ) : pas de projet
+    // courant √† √©craser, donc pas de garde-fou ¬´ modifications non sauv√©es ¬ª.
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('example') !== 'carrefour') return;
+        (async () => {
+            try {
+                const res = await fetch('./Carrefour_Exemple.json');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                // loadFullStateRaw (et non le wrapper) : on RESTE en mode
+                // exemple ‚Äî la sauvegarde et le localStorage restent inhib√©s.
+                loadFullStateRaw({
+                    projectName: data.projectName || data.intersectionName || 'Carrefour exemple',
+                    ...data
+                });
+                setFloatingCrop(data.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
+                setFloatingZoom(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
+                markLegacyCrop(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
+                setHasActiveProject?.(true);
+                // Retire le param√®tre de l'URL (rafra√Æchir ne recharge pas l'exemple).
+                window.history.replaceState({}, '', window.location.pathname);
+                toast.info('Projet exemple charg√© ‚Äî modifiable pour explorer, mais non enregistrable.');
+            } catch (e) {
+                console.error('√âchec du chargement du projet exemple', e);
+                toast.error('Impossible de charger le projet exemple.');
+            }
+        })();
+    }, []);
+
+    // Comptage pour l'auto-effacement de l'invitation ¬´ projet exemple ¬ª.
+    // Vue d'accueil : seulement si aucun projet n'est auto-charg√© (ni
+    // ?example, ni ?duplicate) ‚Äî sinon ce n'est pas une vraie visite d'accueil.
+    useEffect(() => {
+        if (welcomeViewNoted.current) return;
+        const p = new URLSearchParams(window.location.search);
+        if (p.has('example') || p.has('duplicate')) return;
+        welcomeViewNoted.current = true;
+        noteWelcomeView('diagram');
+    }, []);
+
+    // Projet vu : √† la premi√®re activation d'un projet dans ce montage
+    // (ouvrir, nouveau, restaurer, exemple‚Ä¶). L'exemple compte volontairement.
+    useEffect(() => {
+        if (hasActiveProject && !projectSeenNoted.current) {
+            projectSeenNoted.current = true;
+            noteProjectSeen('diagram');
+        }
+    }, [hasActiveProject]);
+
+    // Inject dynamic @page margin box content for dossier footer
+    const injectDossierFooterStyle = () => {
+        // Remove previous if exists
+        const prev = document.getElementById('dossier-print-footer-style');
+        if (prev) prev.remove();
+        // Pied de page : l'outil et sa version, puis le num√©ro de page.
+        //
+        // Il portait le chemin du fichier √† gauche et la date au centre. Or le
+        // navigateur imprime d√©j√†, en t√™te de chaque feuille, la date, l'heure et
+        // le titre du document : c'√©tait redit deux fois. Reste ce que la feuille
+        // seule ne dit pas ‚Äî avec quel outil, et dans quelle version, elle a √©t√©
+        // produite.
+        const signature = `${APP_NAME} ${APP_VERSION}`;
+        const style = document.createElement('style');
+        style.id = 'dossier-print-footer-style';
+        style.textContent = `
+            @page dossier-page {
                 @bottom-left { content: "${signature}"; font-size: 10px; color: #444; }
                 @bottom-right { content: "Page " counter(page); font-size: 10px; color: #444; }
             }
@@ -2036,8 +2301,230 @@ V∞∂ªßq´^u‹ßjhú∂ä%≠Î.ñ⁄+äßj_4”MÖ™Ï¡Ë†Ü◊ùnÁ`zﬁ∏”M+zªß¬+aù™Î£´j∏,ge dossier-page
         diagnosticPopup.renderToPopup(
             <div style={{ padding: '12px', height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
                 <DiagnosticPanel
-           :óß
-V∞∂ªßq´^u‹ßjhú∂ä%≠Î.ñ⁄+äßj_4”MÖ™Ï¡Ë†Ü◊ùnÁ`zﬁ∏”M+zªß¬+aù™Î£´j∏,, setProjectName, isDirty, projectNameInputRef }}
+                    detached
+                    groups={groups}
+                    cycleLength={cycleLength}
+                    getTrafficData={getTrafficData}
+                    actionData={actionData}
+                    activeTrafficDataset={activeTrafficDataset}
+                    tip={tip}
+                />
+            </div>
+        );
+    }, [showFloatingDiagnostic, groups, cycleLength, getTrafficData, actionData, activeTrafficDataset, diagnosticPopup.renderToPopup]);
+
+    // Render remarques (notes du PF actif) into popup window
+    useEffect(() => {
+        if (!showFloatingRemarks) return;
+        remarquesPopup.renderToPopup(
+            <RemarquesEditor
+                remarques={currentRemarques}
+                updateRemarques={updatePFRemarques}
+                groupCount={groups.length}
+                popupMode={true}
+            />
+        );
+    }, [showFloatingRemarks, currentRemarques, updatePFRemarques, groups.length, remarquesPopup.renderToPopup]);
+
+    useEffect(() => {
+        if (!showFloatingLegend) return;
+        legendPopup.renderToPopup(
+            <div className="floating-legend-content">
+                <DiagramLegend />
+            </div>
+        );
+        // Ajuste la fen√™tre √† la taille r√©elle de la l√©gende (nombre de lignes),
+        // une fois le contenu mis en page ‚Äî √©vite l'espace mort sous la derni√®re
+        // ligne comme le rognage quand la fen√™tre est trop courte.
+        const popup = legendPopup.popupWindow.current;
+        if (!popup || popup.closed) return;
+        const raf = popup.requestAnimationFrame(() => {
+            if (popup.closed) return;
+            const el = popup.document.querySelector('.floating-legend-content');
+            if (!el) return;
+            const chromeW = popup.outerWidth - popup.innerWidth;
+            const chromeH = popup.outerHeight - popup.innerHeight;
+            const targetW = Math.min(560, Math.max(360, Math.ceil(el.scrollWidth) + 4));
+            const targetH = Math.ceil(el.scrollHeight) + 4;
+            popup.resizeTo(targetW + chromeW, targetH + chromeH);
+        });
+        return () => { if (!popup.closed) popup.cancelAnimationFrame(raf); };
+    }, [showFloatingLegend, legendPopup.renderToPopup]);
+
+    // Render capacity comparison into its detached popup window
+    useEffect(() => {
+        if (!capacityCompareModal) return;
+        capacityComparisonPopup.renderToPopup(
+            <CapacityComparison
+                pfTabs={pfTabs}
+                groups={groups}
+                trafficDatasets={trafficDatasets}
+                pfTrafficDatasetMap={pfTrafficDatasetMap}
+                activeTrafficDataset={activeTrafficDataset}
+                trafficDatasetNames={trafficDatasetNames}
+                selectedPfIds={capacityCompareSelection}
+                setSelectedPfIds={setCapacityCompareSelection}
+                datasetChoice={capacityCompareDataset}
+                setDatasetChoice={setCapacityCompareDataset}
+                onContentSize={noterTailleComparateur}
+            />
+        );
+    }, [capacityCompareModal, pfTabs, groups, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames, capacityCompareSelection, setCapacityCompareSelection, capacityCompareDataset, setCapacityCompareDataset, noterTailleComparateur, capacityComparisonPopup.renderToPopup]);
+
+    // Render read-only diagram mirror into its detached popup (pr√©sentation).
+    // Refl√®te le diagramme du PF actif en direct (offsets, verts, simulation)
+    // sans permettre l'√©dition (readOnly) : tous les setters sont neutralis√©s.
+    useEffect(() => {
+        if (!showFloatingDiagram) return;
+        const noop = () => {};
+        diagramPopup.renderToPopup(
+            <div style={{ padding: '8px', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+                <TimelineDiagram
+                    titreEnBandeau
+                    scrollable
+                    readOnly
+                    groups={groups}
+                    globalTime={globalTime}
+                    getGroupState={getGroupState}
+                    pixelsPerSecond={pixelsPerSecond}
+                    conflicts={displayConflicts}
+                    conflictMatrix={conflictMatrix}
+                    cycleLength={cycleLength}
+                    actionData={actionData}
+                    simulationFilter={simulationEnabled ? new Set(simulationSelectedActions) : null}
+                    simulationResult={simulationResult}
+                    simulationCurrentTime={simulationEnabled ? simulationCurrentTime : null}
+                    isPlayingSimulation={simulationEnabled && isPlayingSimulation}
+                    playbackTime={isPlayingSimulation ? simulationCurrentTime : null}
+                    hoveredActionId={hoveredActionId}
+                    hoveredArrowGroupId={hoveredArrowGroupId}
+                    hoveredArrowGroupSaturated={hoveredArrowGroupSaturated}
+                    hoveredConflict={hoveredConflict}
+                    hoveredVUtile={hoveredVUtile}
+                    planName={simulationEnabled ? activePFName : ''}
+                    activePFName={activePFName}
+                    biCarrefourSeparator={biCarrefourSeparator}
+                    showComments={false}
+                    showRemarks={false}
+                    showGroupNames={showGroupNamesDiagram}
+                    showMicroOnHover={showMicroOnHover}
+                    showWrapFlash={false}
+                    tooltipsEnabled={tooltipPrefs.diagram}
+                    cycleLengthInput={String(cycleLength)}
+                    setCycleLengthInput={noop}
+                    onGroupClick={noop}
+                    updateGroupParams={noop}
+                    updateActionRow={noop}
+                    startDrag={noop}
+                    endDrag={noop}
+                    setHoveredActionId={setHoveredActionId}
+                    setHoveredGroupId={setHoveredArrowGroupId}
+                    setHoveredDiagramTime={noop}
+                    setIsPlayingSimulation={noop}
+                    setSimulationCurrentTime={noop}
+                    setCycleLength={noop}
+                    onDragConflicts={noop}
+                    updateRemarques={noop}
+                />
+            </div>
+        );
+    }, [showFloatingDiagram, groups, globalTime, getGroupState, pixelsPerSecond, displayConflicts, conflictMatrix, cycleLength, actionData, simulationEnabled, simulationSelectedActions, simulationResult, simulationCurrentTime, isPlayingSimulation, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict, hoveredVUtile, activePFName, biCarrefourSeparator, showGroupNamesDiagram, showMicroOnHover, tooltipPrefs, diagramPopup.renderToPopup]);
+
+    // Render conflicts list into popup window
+    useEffect(() => {
+        if (!showFloatingConflicts) return;
+        conflictsPopup.renderToPopup(
+            <div style={{ padding: '12px', height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
+                <ConflictList
+                    detached
+                    conflicts={displayConflicts}
+                    groups={groups}
+                    isConflictGrayed={isConflictGrayed}
+                    setHoveredConflict={setHoveredConflict}
+                />
+            </div>
+        );
+    }, [showFloatingConflicts, displayConflicts, groups, isConflictGrayed, setHoveredConflict, conflictsPopup.renderToPopup]);
+
+    // Render traffic table into popup window
+    useEffect(() => {
+        if (!showFloatingTraffic) return;
+        trafficPopup.renderToPopup(
+            <div style={{ padding: '12px', height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
+                <TrafficTable
+                    groups={groups}
+                    cycleLength={cycleLength}
+                    activeTrafficDataset={activeTrafficDataset}
+                    setActiveTrafficDataset={setActiveTrafficDataset}
+                    updateTrafficData={updateTrafficData}
+                    getTrafficData={getTrafficData}
+                    updateGroupParams={updateGroupParams}
+                    setHoveredGroupId={setHoveredArrowGroupId}
+                    hoveredGroupId={hoveredArrowGroupId}
+                    setHoveredGroupSaturated={setHoveredArrowGroupSaturated}
+                    trafficDatasetNames={trafficDatasetNames}
+                    trafficDatasetSourceNames={trafficDatasetSourceNames}
+                    setHoveredVUtile={setHoveredVUtile}
+                    copyTrafficDataset={copyTrafficDataset}
+                    addCustomTrafficDataset={addCustomTrafficDataset}
+                    actionData={actionData}
+                    simulationSelectedActions={simulationSelectedActions}
+                    simulationResult={simulationResult}
+                    readOnly={simulationEnabled}
+                tooltipsEnabled={tooltipPrefs.traffic}
+                />
+            </div>
+        );
+    }, [showFloatingTraffic, groups, cycleLength, activeTrafficDataset, actionData,
+        simulationSelectedActions, simulationResult, simulationEnabled, hoveredArrowGroupId,
+        trafficPopup.renderToPopup, updateTrafficData,
+        getTrafficData, updateGroupParams, trafficDatasetNames, trafficDatasetSourceNames, copyTrafficDataset, addCustomTrafficDataset]);
+
+    // Afficher l'√©cran de connexion si non authentifi√©
+    // √âcran de connexion seulement si les comptes sont activ√©s sur ce poste.
+    // Par d√©faut ils ne le sont pas : on entre directement dans l'application.
+    if (accountsEnabled && !isAuthenticated) {
+        return (
+            <LoginModal
+                onLogin={login}
+                onCreateUser={createUser}
+                hasUsers={hasUsers()}
+                isLoading={authLoading}
+            />
+        );
+    }
+
+    return (
+        <div className={`app-container${(dossierReadOnly || activePfReadOnly) ? ' dossier-readonly' : ''}`}>
+            <MenuBar
+                    onAction={handleMenuAction}
+                    arrowStyle={diagramArrowStyle}
+                    onArrowStyleChange={setDiagramArrowStyle}
+                    importedFiles={importedHTMFiles}
+                    recentDirectories={getRecentDirectoriesForMenu()}
+                    recentOpenDirs={recentOpenDirs}
+                    recentImportDirs={recentImportDirs}
+                    recentSaveDirs={recentSaveDirs}
+                    currentUser={currentUser}
+                    hasPermission={hasPermission}
+                    hasActiveProject={hasActiveProject}
+                    onManageUsers={() => setShowUserManager(true)}
+                    accountsEnabled={accountsEnabled}
+                    biCarrefourSeparator={biCarrefourSeparator}
+                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
+                    pixelsPerSecond={pixelsPerSecond}
+                    onPixelsPerSecondChange={setPixelsPerSecond}
+                    showMicroOnHover={showMicroOnHover}
+                    initialOpenMenu={!hasActiveProject ? 'fichier' : null}
+                    pfCount={pfTabs.length}
+                />
+            <WelcomeScreen
+                hasActiveProject={hasActiveProject}
+                showExampleInvite={showExampleInvite}
+            />
+            {hasActiveProject && (<>
+            <ProjectHeader
+                project={{ projectName, setProjectName, isDirty, projectNameInputRef }}
                 groupCount={{ groups, groupCountInput, setGroupCountInput, setGroupCount, askConfirm }}
                 history={{ undo, redo, canUndo, canRedo }}
                 dependencies={{
