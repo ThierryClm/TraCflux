@@ -1,5 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
+export type OngletInterface = 'properties' | 'config' | 'matrix' | 'traffic';
+
+interface EvenementAnnulable {
+    preventDefault: () => void;
+}
+
 /**
  * Gère la mise en page de l'interface :
  * - Sidebar (largeur, visibilité, redimensionnement horizontal)
@@ -8,7 +14,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
  */
 const useUILayout = () => {
     const [pixelsPerSecond, setPixelsPerSecond] = useState(10);
-    const [activeTab, setActiveTab] = useState('config');
+    const [activeTab, setActiveTab] = useState<OngletInterface>('config');
 
     // Sidebar
     const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -16,7 +22,7 @@ const useUILayout = () => {
         return saved ? parseInt(saved) : 450;
     });
     const [isResizing, setIsResizing] = useState(false);
-    const splitViewRef = useRef(null);
+    const splitViewRef = useRef<HTMLDivElement | null>(null);
 
     const [sidebarVisible, setSidebarVisible] = useState(() => {
         const saved = localStorage.getItem('sidebar_visible');
@@ -31,12 +37,12 @@ const useUILayout = () => {
         localStorage.setItem('sidebar_visible', sidebarVisible.toString());
     }, [sidebarVisible]);
 
-    const handleResizeStart = useCallback((e) => {
+    const handleResizeStart = useCallback((e: EvenementAnnulable) => {
         e.preventDefault();
         setIsResizing(true);
     }, []);
 
-    const handleResizeMove = useCallback((e) => {
+    const handleResizeMove = useCallback((e: MouseEvent) => {
         if (!isResizing || !splitViewRef.current) return;
         const containerRect = splitViewRef.current.getBoundingClientRect();
         const newWidth = e.clientX - containerRect.left;
@@ -66,12 +72,12 @@ const useUILayout = () => {
     }, [isResizing, handleResizeMove, handleResizeEnd]);
 
     // Diagram height
-    const [diagramHeight, setDiagramHeight] = useState(() => {
+    const [diagramHeight, setDiagramHeight] = useState<number | null>(() => {
         const saved = localStorage.getItem('diagram_height');
         return saved ? parseInt(saved) : null;
     });
     const [isResizingDiagram, setIsResizingDiagram] = useState(false);
-    const diagramAreaRef = useRef(null);
+    const diagramAreaRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (diagramHeight !== null) {
@@ -79,12 +85,12 @@ const useUILayout = () => {
         }
     }, [diagramHeight]);
 
-    const handleDiagramResizeStart = useCallback((e) => {
+    const handleDiagramResizeStart = useCallback((e: EvenementAnnulable) => {
         e.preventDefault();
         setIsResizingDiagram(true);
     }, []);
 
-    const handleDiagramResizeMove = useCallback((e) => {
+    const handleDiagramResizeMove = useCallback((e: MouseEvent) => {
         if (!isResizingDiagram || !diagramAreaRef.current) return;
         const containerRect = diagramAreaRef.current.getBoundingClientRect();
         const newHeight = e.clientY - containerRect.top - 40;
@@ -98,7 +104,7 @@ const useUILayout = () => {
 
     useEffect(() => {
         if (diagramHeight === null && diagramAreaRef.current) {
-            const panel = diagramAreaRef.current.querySelector('.diagram-panel');
+            const panel = diagramAreaRef.current.querySelector<HTMLElement>('.diagram-panel');
             if (panel) {
                 const h = panel.offsetHeight;
                 if (h > 200) setDiagramHeight(h - 120);
@@ -111,7 +117,7 @@ const useUILayout = () => {
         localStorage.removeItem('diagram_height');
     }, []);
 
-    const handleActionPanelResize = useCallback((deltaY) => {
+    const handleActionPanelResize = useCallback((deltaY: number) => {
         if (!diagramAreaRef.current) return;
         const containerRect = diagramAreaRef.current.getBoundingClientRect();
         const maxHeight = containerRect.height - 150;

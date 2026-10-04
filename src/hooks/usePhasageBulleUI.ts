@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
 
+export interface FlechePhasage {
+    groupId: number;
+}
+
 /**
  * Gère l'état UI du mode Phasage Bulle.
  *
- * @param {Array} intersectionArrows - Flèches de l'image du carrefour
+ * @param intersectionArrows Flèches de l'image du carrefour
  */
-const usePhasageBulleUI = (intersectionArrows) => {
+const usePhasageBulleUI = (intersectionArrows: readonly FlechePhasage[]) => {
     const [phasageBulleEnabled, setPhasageBulleEnabled] = useState(false);
     const [phasageBulleModal, setPhasageBulleModal] = useState(false);
-    const [phasageBulleVisibleGroups, setPhasageBulleVisibleGroups] = useState(new Set());
+    const [phasageBulleVisibleGroups, setPhasageBulleVisibleGroups] = useState<Set<number>>(new Set());
     const [phasageBulleVersion, setPhasageBulleVersion] = useState(0);
-    const [hoveredPhasageGroupId, setHoveredPhasageGroupId] = useState(null);
+    const [hoveredPhasageGroupId, setHoveredPhasageGroupId] = useState<number | null>(null);
 
     // Initialise les groupes visibles quand on entre dans le mode
     useEffect(() => {
@@ -20,7 +24,7 @@ const usePhasageBulleUI = (intersectionArrows) => {
         }
     }, [phasageBulleEnabled, intersectionArrows]);
 
-    const togglePhasageBulleGroup = (groupId) => {
+    const togglePhasageBulleGroup = (groupId: number) => {
         setPhasageBulleVisibleGroups(prev => {
             const newSet = new Set(prev);
             if (newSet.has(groupId)) {

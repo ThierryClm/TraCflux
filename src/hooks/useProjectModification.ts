@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type DependencyList } from 'react';
 
 /**
  * Suit les modifications du projet et avertit avant fermeture si non sauvegardé.
  *
- * @param {Array} deps - Dépendances qui déclenchent le marquage "modifié"
+ * @param deps Dépendances qui déclenchent le marquage "modifié"
  *   (groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName)
  */
-const useProjectModification = (deps) => {
+const useProjectModification = (deps: DependencyList) => {
     const [projectModified, setProjectModified] = useState(false);
     // True when user has modified the project since last save — used to display
     // the "unsaved changes" indicator (asterisk) in the UI. Also drives beforeunload.
@@ -43,7 +43,7 @@ const useProjectModification = (deps) => {
     }, deps); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-        const handleBeforeUnload = (e) => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (hasUnsavedChanges.current) {
                 e.preventDefault();
                 e.returnValue = '';
@@ -71,7 +71,7 @@ const useProjectModification = (deps) => {
     // Wrap the ref setter so external callers (loaders/savers) also clear isDirty.
     // Quand on passe à false (chargement / sauvegarde réussie), on enclenche le
     // bypass pour absorber les effets dérivés qui s'enchaînent.
-    const setHasUnsavedChanges = (val) => {
+    const setHasUnsavedChanges = (val: boolean) => {
         hasUnsavedChanges.current = val;
         setIsDirty(val);
         if (!val) {
