@@ -8,9 +8,72 @@
  * @param {Array} conflictMatrix - The intergreen time matrix
  * @returns {Object} { simulatedGroups, simulatedCycleLength, conflicts }
  */
-export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds, cycleLength, conflictMatrix) => {
+import type { ActionMicro, Groupe, Matrice } from '../types/projet';
+import type { TrafficConflict } from './conflictUtils';
+
+export interface SimulatedGroup extends Groupe {
+    simulatedOffset: number;
+    simulatedGreen: number;
+    isEscamoted: boolean;
+    greenCuts: Array<{ deb: number; fin: number }>;
+}
+
+interface RemovedPeriod {
+    deb: number;
+    fin: number;
+    source: string;
+    actionId: number;
+}
+
+interface TimeShift {
+    from: number;
+    amount: number;
+    source: string;
+    actionId: number;
+    plage1?: number;
+    plage2?: number;
+    isPartial?: boolean;
+}
+
+interface Contraction {
+    deb: number;
+    fin: number;
+    source: string;
+}
+
+export interface SimulationRestPoint {
+    deb: number;
+    originalDeb: number;
+    duration: number;
+    actionId: number;
+}
+
+export interface SimulationConflict extends TrafficConflict {
+    message: string;
+}
+
+export interface SimulationResult {
+    simulatedGroups: SimulatedGroup[];
+    simulatedCycleLength: number;
+    conflicts: SimulationConflict[];
+    timeShifts: TimeShift[];
+    removedPeriods: RemovedPeriod[];
+    contractions: Contraction[];
+    restPoints: SimulationRestPoint[];
+}
+
+const toInt = (value: unknown): number => parseInt(String(value ?? ''));
+const TARGET_GROUP_FIELDS = ['actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'] as const;
+
+export const calculateSimulatedDiagram = (
+    groups: Groupe[],
+    actionData: ActionMicro[],
+    selectedActionIds: number[],
+    cycleLength: number,
+    conflictMatrix: Matrice
+): SimulationResult => {
     // Deep copy groups to avoid mutation
-    let simulatedGroups = groups.map(g => ({
+    let simulatedGroups: SimulatedGroup[] = groups.map(g => ({
         ...g,
         durations: { ...g.durations },
         simulatedOffset: g.offset,
@@ -23,19 +86,19 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
 
     // Track removed periods for filtering actions
     // Each period: { deb, fin, plage1?, plage2? } - periods to remove from the diagram
-    const removedPeriods = [];
+    const removedPeriods: RemovedPeriod[] = [];
 
     // Track time shifts for action overlays
     // Each shift: { from: number, amount: number } - positions >= from are shifted left by amount
-    const timeShifts = [];
+    const timeShifts: TimeShift[] = [];
 
     // Track cumulative contractions to adjust subsequent action deb/fin values
     // Each contraction: { deb, fin } in the ORIGINAL timeline
-    const contractions = [];
+    const contractions: Contraction[] = [];
 
     // Helper: adjust a time position based on all previous contractions
     // Converts an original-timeline position to the current contracted-timeline position
-    const adjustForContractions = (time) => {
+    const adjustForContractions = (time: number) => {
         let adjusted = time;
         for (const c of contractions) {
             if (adjusted >= c.fin) {
@@ -64,11 +127,11 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
     // Process unselected Escamotage first - hide the source group (GF)
     // If deb/fin are specified, only hide the [deb, fin] range (greenCut) instead of the entire group
     unselectedEscamotageActions.forEach(action => {
-        const gfId = parseInt(action.gf);
+        const gfId = toInt(action.gf);
         const groupIndex = simulatedGroups.findIndex(g => g.id === gfId);
         if (groupIndex !== -1) {
-            const deb = action.deb !== '' ? parseInt(action.deb) : null;
-            const fin = action.fin !== '' ? parseInt(action.fin) : null;
+            const deb = action.deb !== '' ? toInt(action.deb) : null;
+            const fin = action.fin !== '' ? toInt(action.fin) : null;
             if (deb !== null && fin !== null && !isNaN(deb) && !isNaN(fin)) {
                 // deb/fin définis → escamotage partiel sur la plage [deb, fin]
                 simulatedGroups[groupIndex].greenCuts.push({ deb, fin });
@@ -81,7 +144,13 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
     });
 
     // Helper to calculate intersection of a green bar with a removed period
-    const getGreenIntersection = (offset, greenDuration, deb, fin, cycle) => {
+    const getGreenIntersection = (
+        offset: number,
+        greenDuration: number,
+        deb: number,
+        fin: number,
+        cycle: number
+    ) => {
         const greenEnd = offset + greenDuration;
 
         // Simple case: no wrap-around for either
@@ -109,7 +178,7 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
 
     // Track rest points (Point de repos) for diagram visualization
     // Each rest point: { deb (in simulated timeline), originalDeb, duration, actionId }
-    const restPoints = [];
+    const restPoints: SimulationRestPoint[] = [];
 
     // Process each action type in order:
     // 0. Point de repos (extends cycle, shifts/stretches groups)
@@ -130,14 +199,14 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
     const REST_DURATION = 10;
     const inhibitionZones = selectedActions
         .filter(a => (a.action === 'Adaptatif vertical' || a.action === 'Escamotage de phase') && a.deb !== '' && a.fin !== '')
-        .map(a => ({ deb: parseInt(a.deb) || 0, fin: parseInt(a.fin) || 0 }));
+        .map(a => ({ deb: toInt(a.deb) || 0, fin: toInt(a.fin) || 0 }));
 
-    const isRestPointInhibited = (rawDeb) =>
+    const isRestPointInhibited = (rawDeb: number) =>
         inhibitionZones.some(z => z.fin > z.deb && rawDeb >= z.deb && rawDeb < z.fin);
 
     const restPointActions = selectedActions
         .filter(a => a.action === 'Point de repos' && a.deb !== '')
-        .map(a => ({ id: a.id, rawDeb: parseInt(a.deb) || 0 }))
+        .map(a => ({ id: a.id, rawDeb: toInt(a.deb) || 0 }))
         .filter(a => !isRestPointInhibited(a.rawDeb))
         .sort((a, b) => a.rawDeb - b.rawDeb);
 
@@ -174,9 +243,9 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
     );
 
     ouvertureActions.forEach(action => {
-        const gfId = parseInt(action.gf);
-        const deb = parseInt(action.deb) || 0;
-        const fin = parseInt(action.fin) || 0;
+        const gfId = toInt(action.gf);
+        const deb = toInt(action.deb) || 0;
+        const fin = toInt(action.fin) || 0;
         const shiftAmount = fin > deb ? fin - deb : (fin + simulatedCycleLength - deb);
 
         const groupIndex = simulatedGroups.findIndex(g => g.id === gfId);
@@ -200,11 +269,11 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
     // Collect AV and EP zones (raw values) for computing effective fermeture durations
     const avEpZones = selectedActions
         .filter(a => (a.action === 'Adaptatif vertical' || a.action === 'Escamotage de phase') && a.deb !== '' && a.fin !== '')
-        .map(a => ({ deb: parseInt(a.deb) || 0, fin: parseInt(a.fin) || 0 }));
+        .map(a => ({ deb: toInt(a.deb) || 0, fin: toInt(a.fin) || 0 }));
 
     fermetureActions.forEach(action => {
-        const deb = parseInt(action.deb) || 0;
-        const fin = parseInt(action.fin) || 0;
+        const deb = toInt(action.deb) || 0;
+        const fin = toInt(action.fin) || 0;
         const shiftAmount = fin > deb ? fin - deb : (fin + simulatedCycleLength - deb);
 
         // Compute effective shift: subtract overlap with selected AV/EP zones
@@ -223,7 +292,7 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
 
         // 1. Reduce green duration for the group in GF field
         if (action.gf && action.gf !== '') {
-            const gfId = parseInt(action.gf);
+            const gfId = toInt(action.gf);
             if (!isNaN(gfId)) {
                 const groupIndex = simulatedGroups.findIndex(g => g.id === gfId);
                 if (groupIndex !== -1 && !simulatedGroups[groupIndex].isEscamoted) {
@@ -235,11 +304,11 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
 
         // 2. Apply effect to target groups in Action GF fields
         // Determine if the action zone points to START or END of each target's green
-        const targetGfIds = [];
-        ['actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'].forEach(field => {
+        const targetGfIds: number[] = [];
+        TARGET_GROUP_FIELDS.forEach(field => {
             if (action[field] && action[field] !== '') {
                 const gfStr = action[field]?.toString().replace(/[Gg]/g, '').trim() || '';
-                const gfId = parseInt(gfStr);
+                const gfId = toInt(gfStr);
                 if (!isNaN(gfId) && !targetGfIds.includes(gfId)) {
                     targetGfIds.push(gfId);
                 }
@@ -247,7 +316,7 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
         });
 
         // Helper: circular distance between two points on the cycle
-        const circDist = (a, b) => {
+        const circDist = (a: number, b: number) => {
             const d = Math.abs(a - b);
             return Math.min(d, simulatedCycleLength - d);
         };
@@ -289,9 +358,9 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
     escamotageActions.forEach(action => {
         // Parse actGf1 - might be "G2", "2", or just a number
         const actGf1Str = action.actGf1?.toString().replace(/[Gg]/g, '').trim() || '';
-        const targetGfId = parseInt(actGf1Str);
-        const deb = parseInt(action.deb) || 0;
-        const fin = parseInt(action.fin) || 0;
+        const targetGfId = toInt(actGf1Str);
+        const deb = toInt(action.deb) || 0;
+        const fin = toInt(action.fin) || 0;
 
         if (!isNaN(targetGfId)) {
             const groupIndex = simulatedGroups.findIndex(g => g.id === targetGfId);
@@ -315,8 +384,8 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
     const totalGroups = groups.length;
 
     adaptatifActions.forEach(action => {
-        const rawDeb = parseInt(action.deb) || 0;
-        const rawFin = parseInt(action.fin) || 0;
+        const rawDeb = toInt(action.deb) || 0;
+        const rawFin = toInt(action.fin) || 0;
 
         // Adjust deb/fin based on previous contractions (so we work on the virtual timeline)
         const deb = adjustForContractions(rawDeb);
@@ -328,8 +397,8 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
         // Determine affected group range
         // If plage1/plage2 not defined, all groups are affected
         const hasPlageRange = action.plage1 !== '' && action.plage2 !== '';
-        const plage1 = hasPlageRange ? (parseInt(action.plage1) || 1) : 1;
-        const plage2 = hasPlageRange ? (parseInt(action.plage2) || totalGroups) : totalGroups;
+        const plage1 = hasPlageRange ? (toInt(action.plage1) || 1) : 1;
+        const plage2 = hasPlageRange ? (toInt(action.plage2) || totalGroups) : totalGroups;
 
         // Record removed period and time shift for action overlays (use adjusted values)
         removedPeriods.push({ deb, fin, source: 'Adaptatif vertical', actionId: action.id });
@@ -438,8 +507,8 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
     );
 
     escamotagePhaseActions.forEach(action => {
-        const rawDeb = parseInt(action.deb) || 0;
-        const rawFin = parseInt(action.fin) || 0;
+        const rawDeb = toInt(action.deb) || 0;
+        const rawFin = toInt(action.fin) || 0;
 
         // Adjust deb/fin based on previous contractions (so we work on the virtual timeline)
         const deb = adjustForContractions(rawDeb);
@@ -450,7 +519,7 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
 
         // If GF is specified, only mark as escamoted if the group's green actually overlaps [deb, fin]
         if (action.gf) {
-            const gfId = parseInt(action.gf);
+            const gfId = toInt(action.gf);
             const groupIndex = simulatedGroups.findIndex(g => g.id === gfId);
             if (groupIndex !== -1) {
                 const g = simulatedGroups[groupIndex];
@@ -556,12 +625,22 @@ export const calculateSimulatedDiagram = (groups, actionData, selectedActionIds,
 /**
  * Calculate conflicts for the simulated diagram
  */
-const calculateSimulatedConflicts = (simulatedGroups, cycleLength, conflictMatrix) => {
-    const conflicts = [];
+const calculateSimulatedConflicts = (
+    simulatedGroups: SimulatedGroup[],
+    cycleLength: number,
+    conflictMatrix: Matrice
+): SimulationConflict[] => {
+    const conflicts: SimulationConflict[] = [];
     const count = simulatedGroups.length;
 
     // Helper to check overlap
-    const rangesOverlap = (start1, end1, start2, end2, cycle) => {
+    const rangesOverlap = (
+        start1: number,
+        end1: number,
+        start2: number,
+        end2: number,
+        cycle: number
+    ) => {
         start1 = ((start1 % cycle) + cycle) % cycle;
         end1 = ((end1 % cycle) + cycle) % cycle;
         start2 = ((start2 % cycle) + cycle) % cycle;
@@ -604,13 +683,14 @@ const calculateSimulatedConflicts = (simulatedGroups, cycleLength, conflictMatri
             const endGreenA = (gFrom.simulatedOffset + gFrom.simulatedGreen) % cycleLength;
             const startGreenB = gTo.simulatedOffset % cycleLength;
 
-            let distance = (startGreenB - endGreenA + cycleLength) % cycleLength;
+            const distance = (startGreenB - endGreenA + cycleLength) % cycleLength;
+            const requiredGap = Number(minGap);
 
-            if (distance < minGap) {
+            if (distance < requiredGap) {
                 conflicts.push({
                     from: gFrom.id,
                     to: gTo.id,
-                    required: minGap,
+                    required: requiredGap,
                     actual: distance,
                     type: 'intergreen',
                     message: `Dégagement insuffisant (${distance.toFixed(1)}s / ${minGap}s requis)`
@@ -659,7 +739,7 @@ export const ACTIONS_HORS_SIMULATION = [
 ];
 
 /** Les actions d'un plan que la simulation prend en compte, dans l'ordre saisi. */
-export const actionsSimulables = (actionData = []) => actionData.filter(a =>
+export const actionsSimulables = (actionData: ActionMicro[] = []): ActionMicro[] => actionData.filter(a =>
     a.action && a.action !== '' && !ACTIONS_HORS_SIMULATION.includes(a.action)
 );
 
@@ -672,14 +752,18 @@ export const actionsSimulables = (actionData = []) => actionData.filter(a =>
  * affiche exactement la liste du panneau, et non une seconde lecture des mêmes
  * règles.
  */
-export const conflitsSimules = (conflitsBruts = [], actionData = [], selectedActions = []) => {
+export const conflitsSimules = (
+    conflitsBruts: TrafficConflict[] = [],
+    actionData: ActionMicro[] = [],
+    selectedActions: number[] = []
+): TrafficConflict[] => {
     const escamotagesCoches = actionData.filter(action =>
         action.action === 'Escamotage' && action.gf && action.actGf1 &&
         selectedActions.includes(action.id)
     );
     if (escamotagesCoches.length === 0) return conflitsBruts;
 
-    const idDe = (v) => parseInt(v?.toString().replace(/[Gg]/g, '').trim()) || 0;
+    const idDe = (v: unknown) => toInt(String(v ?? '').replace(/[Gg]/g, '').trim()) || 0;
     return conflitsBruts.filter(c => !escamotagesCoches.some(action => {
         const source = idDe(action.gf);
         const cible = idDe(action.actGf1);
