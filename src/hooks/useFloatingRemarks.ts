@@ -15,7 +15,7 @@ const useFloatingRemarks = (activePFName = '') => {
         localStorage.setItem('floating_remarques_visible', showFloatingRemarks.toString());
     }, [showFloatingRemarks]);
 
-    const pf = (activePFName || '').trim();
+    const pf = activePFName.trim();
     const popupTitle = pf ? `Remarques du diagramme — ${pf}` : 'Remarques du diagramme';
 
     const remarquesPopup = usePopupWindow({
@@ -27,11 +27,7 @@ const useFloatingRemarks = (activePFName = '') => {
         height: 400
     });
 
-    return {
-        showFloatingRemarks,
-        setShowFloatingRemarks,
-        remarquesPopup
-    };
+    return { showFloatingRemarks, setShowFloatingRemarks, remarquesPopup };
 };
 
 export default useFloatingRemarks;

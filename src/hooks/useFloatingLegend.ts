@@ -1,30 +1,40 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import {
+    useState,
+    useRef,
+    useCallback,
+    useEffect,
+    type MouseEvent as ReactMouseEvent
+} from 'react';
 
-/**
- * Gère l'état et le drag de la légende flottante.
- */
+interface Position {
+    x: number;
+    y: number;
+}
+
+/** Gère l'état et le drag de la légende flottante. */
 const useFloatingLegend = () => {
     const [showFloatingLegend, setShowFloatingLegend] = useState(false);
-    const [floatingLegendPosition, setFloatingLegendPosition] = useState({ x: 200, y: 150 });
+    const [floatingLegendPosition, setFloatingLegendPosition] = useState<Position>({ x: 200, y: 150 });
     const [isLegendDragging, setIsLegendDragging] = useState(false);
-    const legendDragOffset = useRef({ x: 0, y: 0 });
+    const legendDragOffset = useRef<Position>({ x: 0, y: 0 });
 
-    const handleLegendMouseDown = useCallback((e) => {
-        if (e.target.classList.contains('floating-close-btn')) return;
+    const handleLegendMouseDown = useCallback((event: ReactMouseEvent<HTMLElement>) => {
+        const target = event.target as Element;
+        if (target.classList.contains('floating-close-btn')) return;
         setIsLegendDragging(true);
         legendDragOffset.current = {
-            x: e.clientX - floatingLegendPosition.x,
-            y: e.clientY - floatingLegendPosition.y
+            x: event.clientX - floatingLegendPosition.x,
+            y: event.clientY - floatingLegendPosition.y
         };
     }, [floatingLegendPosition]);
 
     useEffect(() => {
         if (!isLegendDragging) return;
 
-        const handleMouseMove = (e) => {
+        const handleMouseMove = (event: MouseEvent) => {
             setFloatingLegendPosition({
-                x: e.clientX - legendDragOffset.current.x,
-                y: e.clientY - legendDragOffset.current.y
+                x: event.clientX - legendDragOffset.current.x,
+                y: event.clientY - legendDragOffset.current.y
             });
         };
 

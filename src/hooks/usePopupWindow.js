@@ -319,6 +319,18 @@ const ecrireBandeau = (popup, titre) => {
     } catch { /* fenêtre fermée entre-temps */ }
 };
 
+/**
+ * @param {{
+ *   isOpen: boolean,
+ *   onClose: () => void,
+ *   title: string | null,
+ *   width: number,
+ *   height: number,
+ *   contentSize?: { width: number, height: number } | null,
+ *   geometryKey?: string | null,
+ *   showTitleBanner?: boolean
+ * }} options
+ */
 const usePopupWindow = ({
     isOpen,
     onClose,

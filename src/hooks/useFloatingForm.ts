@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import usePopupWindow from './usePopupWindow';
 
-/**
- * Gère l'état et la fenêtre popup du formulaire flottant.
- */
-const useFloatingForm = (groupCount, activePFName = '') => {
+/** Gère l'état et la fenêtre popup du formulaire flottant. */
+const useFloatingForm = (groupCount: number, activePFName = '') => {
     const [showFloatingForm, setShowFloatingForm] = useState(() => {
         return localStorage.getItem('floating_form_visible') === 'true';
     });
@@ -13,7 +11,7 @@ const useFloatingForm = (groupCount, activePFName = '') => {
         localStorage.setItem('floating_form_visible', showFloatingForm.toString());
     }, [showFloatingForm]);
 
-    const pf = (activePFName || '').trim();
+    const pf = activePFName.trim();
     const popupTitle = pf ? `Formulaire — ${pf}` : 'Formulaire';
 
     const formPopup = usePopupWindow({
@@ -25,11 +23,7 @@ const useFloatingForm = (groupCount, activePFName = '') => {
         height: Math.min(520, 110 + groupCount * 32)
     });
 
-    return {
-        showFloatingForm,
-        setShowFloatingForm,
-        formPopup
-    };
+    return { showFloatingForm, setShowFloatingForm, formPopup };
 };
 
 export default useFloatingForm;
