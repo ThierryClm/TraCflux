@@ -1,7 +1,29 @@
 /**
  * Vérifie si deux intervalles temporels se chevauchent dans un cycle.
  */
-export function rangesOverlap(startA, endA, startB, endB, cycleLength) {
+import type { ActionMicro, Groupe, Matrice } from '../types/projet';
+
+export interface TrafficConflict {
+    from: number;
+    to: number;
+    type: 'intergreen' | 'overlap' | 'sl-overlap';
+    required?: number;
+    actual?: number;
+    message?: string;
+}
+
+export interface TimingError {
+    type: 'minGreen' | 'overflow';
+    message: string;
+}
+
+export function rangesOverlap(
+    startA: number,
+    endA: number,
+    startB: number,
+    endB: number,
+    cycleLength: number
+) {
     // Normalize to [0, cycleLength)
     const sA = ((startA % cycleLength) + cycleLength) % cycleLength;
     const eA = ((endA % cycleLength) + cycleLength) % cycleLength;
@@ -27,28 +49,37 @@ export function rangesOverlap(startA, endA, startB, endB, cycleLength) {
  * @param {Array} actionData - Données des actions (seconde lucarne, escamotage, etc.)
  * @returns {Array} Liste des conflits détectés
  */
-export function computeConflicts(groups, conflictMatrix, cycleLength, actionData = []) {
-    const list = [];
+export function computeConflicts(
+    groups: Groupe[],
+    conflictMatrix: Matrice,
+    cycleLength: number,
+    actionData: ActionMicro[] = []
+): TrafficConflict[] {
+    const list: TrafficConflict[] = [];
     const count = groups.length;
 
     const secondeLucarnes = actionData.filter(a =>
         a.action === 'Seconde lucarne' && a.gf !== '' && a.deb !== '' && a.fin !== ''
-    ).map(a => ({ gf: parseInt(a.gf), deb: parseInt(a.deb), fin: parseInt(a.fin) }));
+    ).map(a => ({
+        gf: parseInt(String(a.gf)),
+        deb: parseInt(String(a.deb)),
+        fin: parseInt(String(a.fin))
+    }));
 
     const escamotages = actionData.filter(a =>
         (a.action === 'Escamotage' || a.action === 'Escamotage de phase') &&
         a.gf !== '' && a.actGf1 !== ''
-    ).map(a => ({ sourceGf: parseInt(a.gf), targetGf: parseInt(a.actGf1) }));
+    ).map(a => ({ sourceGf: parseInt(String(a.gf)), targetGf: parseInt(String(a.actGf1)) }));
 
     const flecheAnticipations = actionData.filter(a =>
         a.action === "Flèche d'anticipation" && a.gf !== '' && a.deb !== '' && a.fin !== ''
-    ).reduce((acc, a) => {
-        const gf = parseInt(a.gf);
-        if (!acc[gf]) acc[gf] = { deb: parseInt(a.deb), fin: parseInt(a.fin) };
+    ).reduce<Record<number, { deb: number; fin: number }>>((acc, a) => {
+        const gf = parseInt(String(a.gf));
+        if (!acc[gf]) acc[gf] = { deb: parseInt(String(a.deb)), fin: parseInt(String(a.fin)) };
         return acc;
     }, {});
 
-    const hasEscamotage = (gfA, gfB) =>
+    const hasEscamotage = (gfA: number, gfB: number) =>
         escamotages.some(e =>
             (e.sourceGf === gfA && e.targetGf === gfB) ||
             (e.sourceGf === gfB && e.targetGf === gfA)
@@ -76,8 +107,9 @@ export function computeConflicts(groups, conflictMatrix, cycleLength, actionData
 
             const distance = (startGreenB - endGreenA + cycleLength) % cycleLength;
 
-            if (distance < minGap) {
-                list.push({ from: gFrom.id, to: gTo.id, required: minGap, actual: distance, type: 'intergreen' });
+            const requiredGap = Number(minGap);
+            if (distance < requiredGap) {
+                list.push({ from: gFrom.id, to: gTo.id, required: requiredGap, actual: distance, type: 'intergreen' });
             }
 
             const startA = flecheFrom ? flecheFrom.deb : gFrom.offset;
@@ -111,7 +143,7 @@ export function computeConflicts(groups, conflictMatrix, cycleLength, actionData
  * Déplace un groupe de la position `from` à la position `to` dans le tableau.
  * Réassigne les ids séquentiellement après déplacement.
  */
-export function moveGroup(groups, fromIndex, toIndex) {
+export function moveGroup(groups: Groupe[], fromIndex: number, toIndex: number): Groupe[] {
     const newGroups = [...groups];
     const [moved] = newGroups.splice(fromIndex, 1);
     newGroups.splice(toIndex, 0, moved);
@@ -128,7 +160,12 @@ export function moveGroup(groups, fromIndex, toIndex) {
  * @param {number} toIndex - Index destination (0-based)
  * @returns {Array} Nouvelle matrice réorganisée
  */
-export function remapMatrix(matrix, groups, fromIndex, toIndex) {
+export function remapMatrix(
+    matrix: Matrice,
+    groups: Groupe[],
+    fromIndex: number,
+    toIndex: number
+): Matrice {
     if (!matrix || matrix.length === 0) return matrix;
 
     // Calculer le nouvel ordre des groupes
@@ -137,7 +174,7 @@ export function remapMatrix(matrix, groups, fromIndex, toIndex) {
     newGroups.splice(toIndex, 0, moved);
 
     // Construire la correspondance ancienne position → nouvelle position
-    const oldToNew = {};
+    const oldToNew: Record<number, number> = {};
     for (let i = 0; i < groups.length; i++) {
         const group = groups[i];
         const newIndex = newGroups.findIndex(g => g.id === group.id);
@@ -165,8 +202,8 @@ export function remapMatrix(matrix, groups, fromIndex, toIndex) {
  * @param {number} cycleLength - Durée du cycle en secondes
  * @returns {Array} Liste des erreurs détectées (vide si tout est OK)
  */
-export function validateGroupTiming(group, cycleLength) {
-    const errors = [];
+export function validateGroupTiming(group: Groupe, cycleLength: number): TimingError[] {
+    const errors: TimingError[] = [];
     const { offset, durations, minGreen } = group;
     const { green, orange } = durations;
 

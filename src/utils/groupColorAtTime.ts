@@ -10,6 +10,32 @@
  * se fait désormais ici, et les deux fenêtres la reçoivent ensemble.
  */
 
+import type { ActionMicro, Groupe, Matrice } from '../types/projet';
+
+interface ColorGroup extends Groupe {
+    simulatedOffset?: number;
+    simulatedGreen?: number;
+    greenCuts?: Array<{ deb: number | string; fin: number | string }>;
+    isEscamoted?: boolean;
+}
+
+interface ColorSimulationResult {
+    simulatedGroups?: ColorGroup[];
+    simulatedCycleLength?: number;
+}
+
+interface PPLitContext {
+    groups?: ColorGroup[];
+    simulationResult?: ColorSimulationResult | null;
+    cycleLength?: number;
+}
+
+interface GroupColorContext extends PPLitContext {
+    actionData?: ActionMicro[];
+    selectedActions?: number[];
+    conflictMatrix?: Matrice;
+}
+
 /**
  * Numéro de groupe porté par un champ GF d'action.
  *
@@ -22,7 +48,7 @@
  * @param {string|number} champ - Contenu du champ GF
  * @returns {number} Numéro de groupe, ou NaN si le champ est vide
  */
-export const numeroGroupe = (champ) => {
+export const numeroGroupe = (champ: string | number | null | undefined) => {
     if (champ === null || champ === undefined || champ === '') return NaN;
     return parseInt(String(champ).replace(/[Gg]/g, '').trim());
 };
@@ -57,7 +83,7 @@ export const numeroGroupe = (champ) => {
  * @param {Object} context - { groups, simulationResult, cycleLength }
  * @returns {boolean}
  */
-export const isPPLit = (groupId, time, context = {}) => {
+export const isPPLit = (groupId: number, time: number, context: PPLitContext = {}) => {
     const { groups = [], simulationResult = null, cycleLength = 100 } = context;
     const groupsData = simulationResult?.simulatedGroups || groups;
     const group = groupsData.find(g => g.id === groupId);
@@ -78,10 +104,15 @@ export const isPPLit = (groupId, time, context = {}) => {
     return Math.floor(ecoule) % 2 === 0;
 };
 
-export const isTimeInRange = (time, start, end, effectiveCycleLength) => {
+export const isTimeInRange = (
+    time: number,
+    start: string | number | undefined,
+    end: string | number | undefined,
+    effectiveCycleLength: number
+) => {
     const normalizedTime = time % effectiveCycleLength;
-    const normalizedStart = parseInt(start);
-    const normalizedEnd = parseInt(end);
+    const normalizedStart = parseInt(String(start));
+    const normalizedEnd = parseInt(String(end));
 
     if (normalizedEnd > normalizedStart) {
         return normalizedTime >= normalizedStart && normalizedTime < normalizedEnd;
@@ -105,7 +136,11 @@ export const isTimeInRange = (time, start, end, effectiveCycleLength) => {
  * @param {Array} context.conflictMatrix - Matrice des temps interverts
  * @returns {string} Couleur CSS
  */
-export const getGroupColorAtTime = (groupId, time, context = {}) => {
+export const getGroupColorAtTime = (
+    groupId: number,
+    time: number,
+    context: GroupColorContext = {}
+): string => {
     const {
         groups = [],
         simulationResult = null,
@@ -196,13 +231,13 @@ export const getGroupColorAtTime = (groupId, time, context = {}) => {
 
     if (escamotageAction) {
         // Get source group info - use simulated data if available
-        const sourceGfId = parseInt(escamotageAction.gf.toString().replace(/[Gg]/g, '').trim()) || 0;
+        const sourceGfId = parseInt(String(escamotageAction.gf).replace(/[Gg]/g, '').trim()) || 0;
         const sourceGroup = groupsData.find(g => g.id === sourceGfId);
 
         if (sourceGroup && conflictMatrix && conflictMatrix.length > 0) {
             // Get intergreen times from conflict matrix
-            const intergreenSourceToTarget = conflictMatrix[sourceGfId - 1]?.[groupId - 1] || 0;
-            const intergreenTargetToSource = conflictMatrix[groupId - 1]?.[sourceGfId - 1] || 0;
+            const intergreenSourceToTarget = Number(conflictMatrix[sourceGfId - 1]?.[groupId - 1] || 0);
+            const intergreenTargetToSource = Number(conflictMatrix[groupId - 1]?.[sourceGfId - 1] || 0);
 
             // Source group times - use simulated values if available
             const sourceOffset = simulationResult ? (sourceGroup.simulatedOffset ?? sourceGroup.offset) : sourceGroup.offset;

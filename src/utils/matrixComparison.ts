@@ -2,6 +2,19 @@
 // référence (PF1), et de composition de l'infobulle des cases de matrice.
 // Extrait d'IntergreenMatrix.jsx pour permettre les tests unitaires.
 
+import type { CaseMatrice, Groupe, Matrice } from '../types/projet';
+
+interface CellTooltipOptions {
+    fromIdx: number;
+    toIdx: number;
+    conflictMatrix: Matrice;
+    refMatrix: Matrice | null;
+    groups: Groupe[];
+    isDelayInsufficient: (fromIdx: number, toIdx: number) => boolean;
+    hasOverlap: (fromIdx: number, toIdx: number) => boolean;
+    computeActualDelay: (fromIdx: number, toIdx: number) => number | null;
+}
+
 /**
  * Compare la valeur d'une case avec la valeur correspondante du PF de
  * référence (PF1). Renvoie :
@@ -19,13 +32,18 @@
  * @param {Array|null} refMatrix   matrice de référence (PF1) ou null
  * @returns {'higher' | 'lower' | null}
  */
-export function compareWithPF1(fromIdx, toIdx, currentVal, refMatrix) {
+export function compareWithPF1(
+    fromIdx: number,
+    toIdx: number,
+    currentVal: CaseMatrice | null | undefined,
+    refMatrix: Matrice | null
+): 'higher' | 'lower' | null {
     if (!refMatrix || !refMatrix.length) return null;
     if (fromIdx === toIdx) return null;
 
     const refVal = refMatrix[fromIdx]?.[toIdx];
-    const current = (currentVal === '' || currentVal === undefined || currentVal === null) ? 0 : parseInt(currentVal);
-    const ref = (refVal === '' || refVal === undefined || refVal === null) ? 0 : parseInt(refVal);
+    const current = (currentVal === '' || currentVal === undefined || currentVal === null) ? 0 : parseInt(String(currentVal));
+    const ref = (refVal === '' || refVal === undefined || refVal === null) ? 0 : parseInt(String(refVal));
 
     if (current === 0 && ref === 0) return null;
     if (current > ref) return 'higher';
@@ -65,15 +83,15 @@ export function buildCellTooltipLines({
     isDelayInsufficient,
     hasOverlap,
     computeActualDelay
-}) {
+}: CellTooltipOptions): string[] {
     if (fromIdx === toIdx) return [];
-    const lines = [];
+    const lines: string[] = [];
     const val = conflictMatrix[fromIdx][toIdx];
 
     if (refMatrix && refMatrix.length) {
         const refVal = refMatrix[fromIdx]?.[toIdx];
-        const cur = (val === '' || val == null) ? 0 : parseInt(val);
-        const ref = (refVal === '' || refVal == null) ? 0 : parseInt(refVal);
+        const cur = (val === '' || val == null) ? 0 : parseInt(String(val));
+        const ref = (refVal === '' || refVal == null) ? 0 : parseInt(String(refVal));
         if (cur !== ref && !(cur === 0 && ref === 0)) {
             const fromLabel = ref === 0 ? '—' : ref + ' s';
             const toLabel = cur === 0 ? '—' : cur + ' s';

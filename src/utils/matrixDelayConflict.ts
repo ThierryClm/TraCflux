@@ -8,6 +8,17 @@
 //
 // Extrait d'IntergreenMatrix.jsx pour permettre les tests unitaires.
 
+import type { ActionMicro, Groupe, Matrice } from '../types/projet';
+
+export type FlecheAnticipations = Record<number, { deb: number; fin: number }>;
+
+export interface MatrixConflictContext {
+    conflictMatrix: Matrice;
+    groups: Groupe[];
+    cycleLength: number;
+    flecheAnticipations: FlecheAnticipations;
+}
+
 /**
  * Construit l'index { gfId: { deb, fin } } des flèches d'anticipation
  * actives. Une flèche n'est retenue que si son `gf`, son `deb` et sa
@@ -18,19 +29,19 @@
  * @param {Array<Object>|null} actionData
  * @returns {Object<number, {deb:number, fin:number}>}
  */
-export function getFlecheAnticipations(actionData) {
+export function getFlecheAnticipations(actionData: ActionMicro[] | null): FlecheAnticipations {
     if (!actionData) return {};
     return actionData.filter(action =>
         action.action === "Flèche d'anticipation" &&
         action.gf !== '' &&
         action.deb !== '' &&
         action.fin !== ''
-    ).reduce((acc, action) => {
-        const gf = parseInt(action.gf);
+    ).reduce<FlecheAnticipations>((acc, action) => {
+        const gf = parseInt(String(action.gf));
         if (!acc[gf]) {
             acc[gf] = {
-                deb: parseInt(action.deb),
-                fin: parseInt(action.fin)
+                deb: parseInt(String(action.deb)),
+                fin: parseInt(String(action.fin))
             };
         }
         return acc;
@@ -54,7 +65,7 @@ export function getFlecheAnticipations(actionData) {
  * @param {Object}        ctx.flecheAnticipations  (cf. getFlecheAnticipations)
  * @returns {boolean}
  */
-export function hasOverlap(fromIdx, toIdx, ctx) {
+export function hasOverlap(fromIdx: number, toIdx: number, ctx: MatrixConflictContext): boolean {
     const { conflictMatrix, groups, cycleLength, flecheAnticipations } = ctx;
     const matrixVal = conflictMatrix[fromIdx][toIdx];
     if (matrixVal === '' || matrixVal === undefined || matrixVal === null) return false;
@@ -96,7 +107,11 @@ export function hasOverlap(fromIdx, toIdx, ctx) {
  * @returns {number|null} le délai en secondes, ou null si les groupes
  *                        ne sont pas définis.
  */
-export function computeActualDelay(fromIdx, toIdx, ctx) {
+export function computeActualDelay(
+    fromIdx: number,
+    toIdx: number,
+    ctx: MatrixConflictContext
+): number | null {
     const { groups, cycleLength, flecheAnticipations } = ctx;
     if (!groups || !groups[fromIdx] || !groups[toIdx]) return null;
     const cycle = cycleLength || 100;
@@ -120,7 +135,7 @@ export function computeActualDelay(fromIdx, toIdx, ctx) {
  * réel disponible entre les deux groupes (cas du fond rouge). Englobe
  * le recouvrement (qui est lui aussi un conflit).
  */
-export function isDelayInsufficient(fromIdx, toIdx, ctx) {
+export function isDelayInsufficient(fromIdx: number, toIdx: number, ctx: MatrixConflictContext): boolean {
     const { conflictMatrix, groups } = ctx;
     const matrixVal = conflictMatrix[fromIdx][toIdx];
     if (matrixVal === '' || matrixVal === undefined || matrixVal === null) return false;
@@ -129,5 +144,5 @@ export function isDelayInsufficient(fromIdx, toIdx, ctx) {
     if (hasOverlap(fromIdx, toIdx, ctx)) return true;
 
     const actualDelay = computeActualDelay(fromIdx, toIdx, ctx);
-    return matrixVal > actualDelay;
+    return actualDelay !== null && Number(matrixVal) > actualDelay;
 }
