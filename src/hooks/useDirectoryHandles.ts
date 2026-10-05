@@ -1,58 +1,68 @@
 import { useRef, useEffect, useCallback } from 'react';
 
+const DATABASE_NAME = 'DiagrammeFeux_FileHandles';
+const STORE_NAME = 'handles';
+
 /**
  * Gère les handles de répertoires via IndexedDB (File System Access API).
  * Mémorise les 5 derniers répertoires utilisés (ouverture, sauvegarde, import, image, onde verte)
  * et les restaure au démarrage.
  */
 const useDirectoryHandles = () => {
-    const lastOpenDirectoryRef = useRef(null);
-    const lastSaveDirectoryRef = useRef(null);
-    const lastImportDirectoryRef = useRef(null);
-    const lastImageDirectoryRef = useRef(null);
-    const lastGreenWaveDirectoryRef = useRef(null);
+    const lastOpenDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
+    const lastSaveDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
+    const lastImportDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
+    const lastImageDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
+    const lastGreenWaveDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
 
-    const openIndexedDB = useCallback(() => {
+    const openIndexedDB = useCallback((): Promise<IDBDatabase> => {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('DiagrammeFeux_FileHandles', 1);
+            const request = indexedDB.open(DATABASE_NAME, 1);
             request.onerror = () => reject(request.error);
             request.onsuccess = () => resolve(request.result);
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains('handles')) {
-                    db.createObjectStore('handles');
+            request.onupgradeneeded = event => {
+                const db = (event.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
                 }
             };
         });
     }, []);
 
-    const saveDirectoryHandle = useCallback(async (key, handle) => {
+    const saveDirectoryHandle = useCallback(async (
+        key: string,
+        handle: FileSystemDirectoryHandle
+    ): Promise<void> => {
         try {
             const db = await openIndexedDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['handles'], 'readwrite');
-                const store = transaction.objectStore('handles');
+            await new Promise<void>((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
                 const request = store.put(handle, key);
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             });
-        } catch (e) {
-            console.error('Erreur sauvegarde handle:', e);
+        } catch (error) {
+            console.error('Erreur sauvegarde handle:', error);
         }
     }, [openIndexedDB]);
 
-    const loadDirectoryHandle = useCallback(async (key) => {
+    const loadDirectoryHandle = useCallback(async (
+        key: string
+    ): Promise<FileSystemDirectoryHandle | null> => {
         try {
             const db = await openIndexedDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['handles'], 'readonly');
-                const store = transaction.objectStore('handles');
+            return await new Promise<FileSystemDirectoryHandle | null>((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
                 const request = store.get(key);
-                request.onsuccess = () => resolve(request.result);
+                request.onsuccess = () => {
+                    resolve((request.result as FileSystemDirectoryHandle | undefined) ?? null);
+                };
                 request.onerror = () => reject(request.error);
             });
-        } catch (e) {
-            console.error('Erreur chargement handle:', e);
+        } catch (error) {
+            console.error('Erreur chargement handle:', error);
             return null;
         }
     }, [openIndexedDB]);
@@ -71,11 +81,11 @@ const useDirectoryHandles = () => {
                 if (importHandle) lastImportDirectoryRef.current = importHandle;
                 if (imageHandle) lastImageDirectoryRef.current = imageHandle;
                 if (greenWaveHandle) lastGreenWaveDirectoryRef.current = greenWaveHandle;
-            } catch (e) {
-                console.error('Erreur chargement handles:', e);
+            } catch (error) {
+                console.error('Erreur chargement handles:', error);
             }
         };
-        loadHandles();
+        void loadHandles();
     }, [loadDirectoryHandle]);
 
     return {
