@@ -1414,6 +1414,44 @@ body.png-export-clean .matrix-container-inline {
     width: auto !important;
 }
 
+/* Le formulaire est très large. Ses polices compactes d'édition devenaient
+   illisibles une fois le PNG ajusté à la largeur d'une page ou d'un écran. */
+body.png-export-clean .group-table th {
+    height: 64px !important;
+    font-size: 14px !important;
+    color: #000 !important;
+    background: #f0f0f0 !important;
+}
+
+body.png-export-clean .group-table tr,
+body.png-export-clean .group-table td {
+    height: 38px !important;
+}
+
+body.png-export-clean .group-table td,
+body.png-export-clean .group-table .png-export-control-value {
+    color: #000 !important;
+    background: #fff !important;
+    font-size: 14px !important;
+    line-height: 1.25 !important;
+}
+
+/* Valeur statique matérialisée pour html2canvas. Elle reprend les classes du
+   contrôle afin de conserver sa largeur, sans dépendre du rendu natif des
+   input/select/textarea du navigateur. */
+body.png-export-clean .png-export-control-value {
+    display: inline-block !important;
+    box-sizing: border-box !important;
+    min-height: 1.4em !important;
+    padding: 1px 3px !important;
+    color: #000 !important;
+    background: #fff !important;
+    white-space: pre-wrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    opacity: 1 !important;
+}
+
 body.png-export-clean .action-table-scroll {
     overflow: visible !important;
     max-width: none !important;
@@ -1445,6 +1483,15 @@ body.png-export-clean .action-table textarea {
     min-height: 1.5em !important;
     white-space: pre-wrap !important;
     word-wrap: break-word !important;
+}
+
+body.png-export-clean .action-table .png-export-control-value {
+    font-size: 12px !important;
+    font-family: monospace !important;
+}
+
+body.png-export-clean .action-table .input-micro.png-export-control-value {
+    color: #000 !important;
 }
 
 body.png-export-clean .input-action,

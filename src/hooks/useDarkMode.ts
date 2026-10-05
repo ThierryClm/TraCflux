@@ -1,5 +1,22 @@
 import { useState, useEffect } from 'react';
 
+export type ThemeCouleur =
+    | 'dark'
+    | 'light'
+    | 'high-contrast'
+    | 'amber'
+    | 'daltonian'
+    | 'sepia'
+    | 'blue-night';
+
+const THEMES: readonly ThemeCouleur[] = [
+    'dark', 'light', 'high-contrast', 'amber',
+    'daltonian', 'sepia', 'blue-night'
+];
+
+const estThemeCouleur = (valeur: string | null): valeur is ThemeCouleur =>
+    valeur !== null && THEMES.includes(valeur as ThemeCouleur);
+
 /**
  * Gère le thème de couleur et les options d'affichage.
  *
@@ -13,19 +30,20 @@ import { useState, useEffect } from 'react';
  * - 'blue-night' : palette « Solarized Dark », bleu-vert profond
  */
 const useDarkMode = () => {
-    const [colorTheme, setColorTheme] = useState(() => {
-        return localStorage.getItem('colorTheme') || 'dark';
+    const [colorTheme, setColorTheme] = useState<ThemeCouleur>(() => {
+        const sauvegarde = localStorage.getItem('colorTheme');
+        return estThemeCouleur(sauvegarde) ? sauvegarde : 'dark';
     });
     // Backward compatibility: darkMode derived from colorTheme
     const darkMode = colorTheme !== 'light' && colorTheme !== 'sepia';
-    const setDarkMode = (val) => setColorTheme(val ? 'dark' : 'light');
+    const setDarkMode = (val: boolean) => setColorTheme(val ? 'dark' : 'light');
 
     const [showComments, setShowComments] = useState(true);
     const [showRemarks, setShowRemarks] = useState(true);
     // Les noms de GF sont persistés au niveau application (localStorage) :
     // c'est une préférence de lecture qui voyage entre projets, pas une
     // configuration spécifique à un projet précis.
-    const readBoolLS = (key, fallback) => {
+    const readBoolLS = (key: string, fallback: boolean) => {
         try {
             const v = localStorage.getItem(key);
             return v === null ? fallback : v === 'true';

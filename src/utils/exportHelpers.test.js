@@ -8,7 +8,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock('html2canvas', () => ({ default: mocks.html2canvas }));
 vi.mock('jspdf', () => ({ jsPDF: mocks.jsPDF }));
 
-import { exportElementAsPDF, exportElementAsPNG } from './exportHelpers';
+import {
+    exportElementAsPDF,
+    exportElementAsPNG,
+    getTimelineCaptureDimensions,
+    materializeFormControlValues
+} from './exportHelpers';
 
 const element = () => {
     const node = document.createElement('div');
@@ -77,6 +82,40 @@ describe('exportElementAsPNG', () => {
         await expect(exportElementAsPNG(element(), 'diagramme')).resolves.toEqual({ clipboardSuccess: false });
         expect(console.warn).toHaveBeenCalled();
         vi.unstubAllGlobals();
+    });
+});
+
+describe('helpers de capture PNG', () => {
+    it('mesure le cycle complet avec la colonne latérale du diagramme', () => {
+        const root = document.createElement('div');
+        root.innerHTML = '<div class="timeline-sidebar"></div><div class="timeline-scroll-area"><div class="timeline-track-container"></div></div>';
+        Object.defineProperties(root, {
+            scrollHeight: { value: 420 },
+            offsetHeight: { value: 400 }
+        });
+        const sidebar = root.querySelector('.timeline-sidebar');
+        const scrollArea = root.querySelector('.timeline-scroll-area');
+        const track = root.querySelector('.timeline-track-container');
+        Object.defineProperty(sidebar, 'offsetWidth', { value: 325 });
+        Object.defineProperty(scrollArea, 'scrollWidth', { value: 240 });
+        Object.defineProperty(track, 'scrollWidth', { value: 360 });
+
+        expect(getTimelineCaptureDimensions(root)).toEqual({ width: 685, height: 420 });
+    });
+
+    it('matérialise les valeurs React des champs dans le clone', () => {
+        const source = document.createElement('div');
+        source.innerHTML = '<input class="input-gf"><select class="input-action"><option value="a">Action A</option><option value="b">Action B</option></select><textarea class="input-micro micro-has-backdrop"></textarea>';
+        source.querySelector('input').value = '12';
+        source.querySelector('select').value = 'b';
+        source.querySelector('textarea').value = 'GF1 ET GF2';
+
+        const clone = source.cloneNode(true);
+        materializeFormControlValues(source, clone);
+
+        expect([...clone.querySelectorAll('.png-export-control-value')].map(node => node.textContent))
+            .toEqual(['12', 'Action B', 'GF1 ET GF2']);
+        expect(clone.querySelectorAll('input, select, textarea')).toHaveLength(0);
     });
 });
 
