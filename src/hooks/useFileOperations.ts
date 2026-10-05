@@ -1,5 +1,5 @@
-// @ts-check
 import { useCallback } from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { safeShowOpenFilePicker, safeShowSaveFilePicker } from '../utils/filePicker';
 import { toast } from '../utils/toast';
 import { validateProject } from '../utils/projectValidator';
@@ -7,33 +7,88 @@ import { selectPfSubset } from '../utils/pfHelpers';
 import { stampReadOnly } from '../utils/dossierLock';
 import { bringAllPopupsToFront } from './usePopupWindow';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
+import type { OptionsMiseEnPage, Projet } from '../types/projet';
+import type { RecentDirectory, RecentDirectoryType } from './useRecentDirectories';
+
+type StateSetter<T> = Dispatch<SetStateAction<T>>;
+
+interface DialogMessage {
+    title?: string;
+    message: string;
+    confirmLabel?: string;
+    danger?: boolean;
+}
+
+interface UseFileOperationsOptions {
+    projectName: string | null;
+    diagramHeight: number | null;
+    floatingCrop: Record<string, unknown>;
+    floatingZoom: number;
+    setSelectedProject: StateSetter<string | null>;
+    setOpenModal: StateSetter<boolean>;
+    setCurrentProjectPath: StateSetter<string | null>;
+    setProjectModified: StateSetter<boolean>;
+    projectModifiedSkip: MutableRefObject<boolean>;
+    hasUnsavedChanges: boolean;
+    setHasUnsavedChanges: StateSetter<boolean>;
+    isDirty: boolean;
+    setDiagramHeight: StateSetter<number | null>;
+    resetDiagramHeight?: () => void;
+    setFloatingCrop: (crop: unknown) => void;
+    setFloatingZoom: StateSetter<number>;
+    markLegacyCrop?: (legacy: boolean) => void;
+    setShowComments: StateSetter<boolean>;
+    setShowRemarks: StateSetter<boolean>;
+    setIntersectionName: StateSetter<string>;
+    showComments: boolean;
+    showRemarks: boolean;
+    showActionDescription: boolean;
+    sidebarVisible: boolean;
+    setShowActionDescription: StateSetter<boolean>;
+    setSidebarVisible: StateSetter<boolean>;
+    showFloatingForm: boolean;
+    setShowFloatingForm: StateSetter<boolean>;
+    showFloatingMatrix: boolean;
+    setShowFloatingMatrix: StateSetter<boolean>;
+    showFloatingTraffic: boolean;
+    setShowFloatingTraffic: StateSetter<boolean>;
+    showFloatingImage: boolean;
+    setShowFloatingImage: StateSetter<boolean>;
+    showFloatingConditions: boolean;
+    setShowFloatingConditions: StateSetter<boolean>;
+    showFloatingVariables: boolean;
+    setShowFloatingVariables: StateSetter<boolean>;
+    showFloatingRemarks: boolean;
+    setShowFloatingRemarks: StateSetter<boolean>;
+    setHasActiveProject?: StateSetter<boolean>;
+    loadFullState: (state: Partial<Projet> & Record<string, unknown>) => unknown;
+    getFullState: () => Projet;
+    saveProject: (name: string) => unknown;
+    dossierSections: Record<string, unknown>;
+    setDossierSections: (sections: Record<string, unknown>) => void;
+    lastOpenDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    lastSaveDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    lastImportDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    lastImageDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    saveDirectoryHandle: (key: string, handle: FileSystemDirectoryHandleLike) => Promise<void>;
+    loadDirectoryHandle: (key: string) => Promise<FileSystemDirectoryHandleLike | null>;
+    recentOpenDirs: RecentDirectory[];
+    recentSaveDirs: RecentDirectory[];
+    recentImportDirs: RecentDirectory[];
+    recentImageDirs: RecentDirectory[];
+    recentGreenWaveDirs: RecentDirectory[];
+    addRecentDirectory: (
+        type: RecentDirectoryType,
+        name: string,
+        handle?: FileSystemDirectoryHandleLike
+    ) => void;
+    askConfirm?: (message: DialogMessage) => Promise<boolean>;
+    showAlert?: (message: DialogMessage) => Promise<void> | void;
+}
 
 /**
  * Gère les opérations d'ouverture et de sauvegarde de fichiers projet
  * via la File System Access API (avec fallback localStorage).
- */
-/**
- * Les dépendances du crochet.
- *
- * Seules sont nommées celles dont le TYPE porte une information : le
- * sérialiseur canonique et son pendant en lecture. Tout le reste — une
- * soixantaine de poseurs d'état et de références — est laissé libre : les
- * énumérer un par un donnerait soixante lignes de `Function` sans rien
- * apprendre à personne, et il faudrait les tenir à jour.
- *
- * La vérification de types n'est pas encore activée sur ce fichier : elle
- * bute sur l'absence de types pour React et pour l'API d'accès aux fichiers,
- * deux choix d'outillage à faire à part. Le contrat ci-dessous documente
- * néanmoins ce que le crochet attend.
- *
- * @typedef {{
- *   getFullState: () => import('../types/projet.js').Projet,
- *   loadFullState: (etat: Partial<import('../types/projet.js').Projet>) => any
- * } & Record<string, any>} DependancesFichier
- */
-
-/**
- * @param {DependancesFichier} deps
  */
 const useFileOperations = ({
     projectName, diagramHeight, floatingCrop, floatingZoom,
@@ -62,9 +117,9 @@ const useFileOperations = ({
     recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
     addRecentDirectory,
     askConfirm, showAlert
-}) => {
+}: UseFileOperationsOptions) => {
     // Fallback : si showAlert n'est pas fourni, on retombe sur window.alert
-    const alertFn = showAlert || ((/** @type {{ message: string }} */ { message }) => { window.alert(message); return Promise.resolve(); });
+    const alertFn = showAlert || (({ message }: DialogMessage) => { window.alert(message); return Promise.resolve(); });
     // Ouvrir un fichier JSON avec File System Access API
     const handleOpenFileWithPicker = useCallback(async () => {
         if (!window.showOpenFilePicker) {
@@ -75,9 +130,7 @@ const useFileOperations = ({
         }
 
         try {
-            /** @type {FilePickerOptionsLike} */
-            /** @type {FilePickerOptionsLike} */
-        const options = {
+            const options: FilePickerOptionsLike = {
                 types: [{
                     description: 'Fichiers Projet',
                     accept: { 'application/json': ['.json'] }
@@ -100,9 +153,9 @@ const useFileOperations = ({
                 return;
             }
 
-            let data;
+            let data: Partial<Projet> & Record<string, unknown>;
             try {
-                data = JSON.parse(content);
+                data = JSON.parse(content) as Partial<Projet> & Record<string, unknown>;
             } catch (parseError) {
                 console.error('Erreur parsing JSON:', parseError);
                 alertFn({
@@ -209,10 +262,10 @@ const useFileOperations = ({
                 if (typeof lo.showFloatingVariables === 'boolean') setShowFloatingVariables(lo.showFloatingVariables);
                 if (typeof lo.showFloatingRemarks === 'boolean') setShowFloatingRemarks(lo.showFloatingRemarks);
             } else {
-                const hasComments = data.groups?.some((/** @type {any} */ g) => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some((/** @type {any} */ pf) => pf.diagram?.some((/** @type {any} */ d) => d.comment && d.comment.trim() !== ''));
+                const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
                 setShowComments(!!hasComments);
                 const pfList = data.pfTabs || [];
-                const hasRemarks = pfList.some((/** @type {any} */ pf) => pf.remarques && pf.remarques.trim() !== '');
+                const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
                 setShowRemarks(!!hasRemarks);
 
                 // Projet ancien sans layoutOptions : on décoche tous les
@@ -250,7 +303,7 @@ const useFileOperations = ({
     }, [loadFullState, saveDirectoryHandle, addRecentDirectory, setDiagramHeight]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Ouvrir un fichier depuis un répertoire récent
-    const handleOpenFileFromRecentDir = useCallback(async (/** @type {number} */ dirIndex) => {
+    const handleOpenFileFromRecentDir = useCallback(async (dirIndex: number) => {
         if (!window.showOpenFilePicker) {
             alertFn({ title: 'Navigateur non compatible', message: 'API File System non supportée par ce navigateur.' });
             return;
@@ -260,9 +313,7 @@ const useFileOperations = ({
             const dirInfo = recentOpenDirs[dirIndex];
             if (!dirInfo) return;
 
-            /** @type {FilePickerOptionsLike} */
-            /** @type {FilePickerOptionsLike} */
-        const options = {
+            const options: FilePickerOptionsLike = {
                 types: [{
                     description: 'Fichiers Projet',
                     accept: { 'application/json': ['.json'] }
@@ -286,9 +337,9 @@ const useFileOperations = ({
                 return;
             }
 
-            let data;
+            let data: Partial<Projet> & Record<string, unknown>;
             try {
-                data = JSON.parse(content);
+                data = JSON.parse(content) as Partial<Projet> & Record<string, unknown>;
             } catch (parseError) {
                 console.error('Erreur parsing JSON:', parseError);
                 alertFn({
@@ -390,10 +441,10 @@ const useFileOperations = ({
                 if (typeof lo.showFloatingVariables === 'boolean') setShowFloatingVariables(lo.showFloatingVariables);
                 if (typeof lo.showFloatingRemarks === 'boolean') setShowFloatingRemarks(lo.showFloatingRemarks);
             } else {
-                const hasComments = data.groups?.some((/** @type {any} */ g) => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some((/** @type {any} */ pf) => pf.diagram?.some((/** @type {any} */ d) => d.comment && d.comment.trim() !== ''));
+                const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
                 setShowComments(!!hasComments);
                 const pfList = data.pfTabs || [];
-                const hasRemarks = pfList.some((/** @type {any} */ pf) => pf.remarques && pf.remarques.trim() !== '');
+                const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
                 setShowRemarks(!!hasRemarks);
 
                 // Projet ancien sans layoutOptions : on décoche tous les
@@ -442,9 +493,7 @@ const useFileOperations = ({
         }
 
         try {
-            /** @type {FilePickerOptionsLike} */
-            /** @type {FilePickerOptionsLike} */
-        const options = {
+            const options: FilePickerOptionsLike = {
                 suggestedName: `${projectName || 'projet'}.json`,
                 types: [{
                     description: 'Fichier Projet JSON',
@@ -532,7 +581,7 @@ const useFileOperations = ({
         showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Enregistrer un fichier dans un répertoire récent
-    const handleSaveFileToRecentDir = useCallback(async (/** @type {number} */ dirIndex) => {
+    const handleSaveFileToRecentDir = useCallback(async (dirIndex: number) => {
         if (!window.showSaveFilePicker) {
             alertFn({ title: 'Navigateur non compatible', message: 'API File System non supportée par ce navigateur.' });
             return;
@@ -542,9 +591,7 @@ const useFileOperations = ({
             const dirInfo = recentSaveDirs[dirIndex];
             if (!dirInfo) return;
 
-            /** @type {FilePickerOptionsLike} */
-            /** @type {FilePickerOptionsLike} */
-        const options = {
+            const options: FilePickerOptionsLike = {
                 suggestedName: `${projectName || 'projet'}.json`,
                 types: [{
                     description: 'Fichier Projet JSON',
@@ -632,14 +679,13 @@ const useFileOperations = ({
     // Export SÉLECTIF d'un sous-ensemble de plans de feux, dans un fichier à part.
     // Contrairement à « Enregistrer », c'est une copie SORTANTE : on ne touche
     // NI au cache localStorage, NI au nom/chemin du projet courant.
-    const handleExportPfSubset = useCallback(async (/** @type {number[]} */ selectedIds, readOnly = false) => {
+    const handleExportPfSubset = useCallback(async (selectedIds: number[], readOnly = false) => {
         const subset = selectPfSubset(getFullState(), selectedIds);
         if (!subset) {
             alertFn({ title: 'Export impossible', message: 'Sélectionnez au moins un plan de feux à exporter.' });
             return;
         }
-        /** @type {import('../types/projet.js').Projet & Record<string, any>} */
-        let projectData = {
+        let projectData: Projet & Record<string, unknown> = {
             ...subset,
             diagramHeight,
             floatingCrop,
@@ -671,9 +717,7 @@ const useFileOperations = ({
         }
 
         try {
-            /** @type {FilePickerOptionsLike} */
-            /** @type {FilePickerOptionsLike} */
-        const options = {
+            const options: FilePickerOptionsLike = {
                 suggestedName,
                 types: [{ description: 'Fichier Projet JSON', accept: { 'application/json': ['.json'] } }]
             };

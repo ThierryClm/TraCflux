@@ -1,6 +1,65 @@
 import parseHTMFile from '../utils/parseHTMFile';
 import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { toast } from '../utils/toast';
+import type { ChangeEvent, Dispatch, MutableRefObject, SetStateAction } from 'react';
+import type { ActionMicro, Groupe, JeuTrafic, Matrice, PlanDeFeu, Projet } from '../types/projet';
+import type { RecentDirectory, RecentDirectoryType } from './useRecentDirectories';
+
+type StateSetter<T> = Dispatch<SetStateAction<T>>;
+
+interface ImportedExcelData {
+    intersectionName: string;
+    groups: Groupe[];
+    cycleLength: number;
+    conflictMatrix: Matrice;
+    actionData: ActionMicro[];
+    pfTabs: PlanDeFeu[];
+    trafficDatasets?: Record<string, JeuTrafic>;
+    trafficData: Record<string, { courant?: string }>;
+    warnings?: string[];
+}
+
+interface ImportedHTMFile {
+    id: string;
+    name: string;
+    importedAt: string;
+    data: {
+        groups: Groupe[];
+        cycleLength: number;
+    };
+}
+
+interface GroupUpdate {
+    courant?: string;
+}
+
+interface UseImportOperationsOptions {
+    importFile: File | null;
+    setImportFile: StateSetter<File | null>;
+    setImportError: StateSetter<string>;
+    setImportModal: StateSetter<boolean>;
+    setImportHintDir: StateSetter<string>;
+    htmFile: File | null;
+    setHtmFile: StateSetter<File | null>;
+    setHtmImportError: StateSetter<string>;
+    importedHTMFiles: ImportedHTMFile[];
+    setImportedHTMFiles: StateSetter<ImportedHTMFile[]>;
+    setImportHTMModal: StateSetter<boolean>;
+    cycleLength: number;
+    loadFullState: (state: Partial<Projet> & Record<string, unknown>) => unknown;
+    updateGroupParams: (groupId: number, params: GroupUpdate) => unknown;
+    setHasActiveProject?: StateSetter<boolean>;
+    lastImportDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    saveDirectoryHandle: (key: string, handle: FileSystemDirectoryHandleLike) => Promise<void>;
+    loadDirectoryHandle: (key: string) => Promise<FileSystemDirectoryHandleLike | null>;
+    recentImportDirs: RecentDirectory[];
+    addRecentDirectory: (
+        type: RecentDirectoryType,
+        name: string,
+        handle?: FileSystemDirectoryHandleLike
+    ) => void;
+    addToRecentFiles: (path: string, name: string) => void;
+}
 
 /**
  * Gère les opérations d'import de fichiers :
@@ -15,10 +74,10 @@ const useImportOperations = ({
     saveDirectoryHandle, loadDirectoryHandle,
     recentImportDirs, addRecentDirectory,
     addToRecentFiles
-}) => {
+}: UseImportOperationsOptions) => {
     // Handle file selection (fallback modal)
-    const handleFileSelect = (e) => {
-        const file = e.target.files[0];
+    const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (file) {
             setImportFile(file);
             setImportError('');
@@ -41,7 +100,7 @@ const useImportOperations = ({
         }
 
         try {
-            const options = {
+            const options: FilePickerOptionsLike = {
                 types: [{
                     description: 'Fichiers Excel',
                     accept: {
@@ -74,7 +133,7 @@ const useImportOperations = ({
             }
 
             const { importExcelFile } = await import('../utils/excelImporter');
-            const importedData = await importExcelFile(file);
+            const importedData = await importExcelFile(file) as ImportedExcelData;
 
             // Load the imported data
             loadFullState({
@@ -114,7 +173,7 @@ const useImportOperations = ({
     };
 
     // Import Excel depuis un répertoire récent
-    const handleImportExcelFromRecentDir = async (dirIndex) => {
+    const handleImportExcelFromRecentDir = async (dirIndex: number) => {
         if (!window.showOpenFilePicker) {
             toast.error('API File System non supportée par ce navigateur');
             return;
@@ -124,7 +183,7 @@ const useImportOperations = ({
             const dirInfo = recentImportDirs[dirIndex];
             if (!dirInfo) return;
 
-            const options = {
+            const options: FilePickerOptionsLike = {
                 types: [{
                     description: 'Fichiers Excel',
                     accept: {
@@ -157,7 +216,7 @@ const useImportOperations = ({
             }
 
             const { importExcelFile } = await import('../utils/excelImporter');
-            const importedData = await importExcelFile(file);
+            const importedData = await importExcelFile(file) as ImportedExcelData;
 
             loadFullState({
                 projectName: importedData.intersectionName,
@@ -207,7 +266,7 @@ const useImportOperations = ({
             // Handle Excel files
             if (fileExt === 'xlsx' || fileExt === 'xls') {
                 const { importExcelFile } = await import('../utils/excelImporter');
-                const importedData = await importExcelFile(importFile);
+                const importedData = await importExcelFile(importFile) as ImportedExcelData;
 
                 // Load the imported data
                 loadFullState({
@@ -246,9 +305,13 @@ const useImportOperations = ({
             // Handle CSV files
             else if (fileExt === 'csv') {
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = (e: ProgressEvent<FileReader>) => {
                     try {
-                        const content = e.target.result;
+                        const content = e.target?.result;
+                        if (typeof content !== 'string') {
+                            setImportError('Le contenu du fichier CSV est invalide');
+                            return;
+                        }
                         const lines = content.split('\n').filter(line => line.trim());
 
                         if (lines.length < 2) {
@@ -260,12 +323,12 @@ const useImportOperations = ({
                         const header = lines[0].split(';').map(h => h.trim().toLowerCase());
 
                         // Parse data rows
-                        const importedGroups = [];
+                        const importedGroups: Groupe[] = [];
                         for (let i = 1; i < lines.length; i++) {
                             const values = lines[i].split(';');
                             if (values.length < 2) continue;
 
-                            const row = {};
+                            const row: Record<string, string> = {};
                             header.forEach((col, idx) => {
                                 row[col] = values[idx]?.trim() || '';
                             });
@@ -274,7 +337,7 @@ const useImportOperations = ({
                             const group = {
                                 id: importedGroups.length + 1,
                                 name: row['nom'] || row['name'] || `G${importedGroups.length + 1}`,
-                                type: row['type'] || 'VL',
+                                type: (row['type'] || 'VL') as Groupe['type'],
                                 minGreen: parseInt(row['minvert'] || row['mingreen'] || row['min']) || 6,
                                 offset: parseInt(row['debut'] || row['offset'] || row['deb']) || 0,
                                 durations: {
@@ -321,8 +384,8 @@ const useImportOperations = ({
     };
 
     // Handle HTM file selection
-    const handleHTMFileSelect = (e) => {
-        const file = e.target.files[0];
+    const handleHTMFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (file) {
             setHtmFile(file);
             setHtmImportError('');
@@ -337,10 +400,14 @@ const useImportOperations = ({
         }
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = (e: ProgressEvent<FileReader>) => {
             try {
-                const content = e.target.result;
-                const parsedGroups = parseHTMFile(content);
+                const content = e.target?.result;
+                if (typeof content !== 'string') {
+                    setHtmImportError('Le contenu du fichier HTM est invalide');
+                    return;
+                }
+                const parsedGroups = parseHTMFile(content) as Groupe[];
 
                 if (parsedGroups.length === 0) {
                     setHtmImportError('Aucune donnée de groupe de feu trouvée dans le fichier HTM');
@@ -351,7 +418,7 @@ const useImportOperations = ({
                 const fileId = Date.now().toString();
 
                 // Create new imported file entry
-                const newFile = {
+                const newFile: ImportedHTMFile = {
                     id: fileId,
                     name: fileName,
                     importedAt: new Date().toISOString(),

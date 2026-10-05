@@ -2,16 +2,52 @@ import { useState, useCallback, useEffect } from 'react';
 import { safeShowOpenFilePicker, safeShowSaveFilePicker } from '../utils/filePicker';
 import { isExampleSession } from '../utils/exampleMode';
 
+export type PermissionLevel = 'lecture' | 'partiel' | 'total';
+
+export interface AuthUser {
+    username: string;
+    permissions: PermissionLevel;
+    isAdmin: boolean;
+}
+
+interface StoredUser {
+    password: string;
+    permissions: PermissionLevel;
+    isAdmin: boolean;
+    createdAt: number;
+}
+
+type StoredUsers = Record<string, StoredUser>;
+
+interface PermissionSet {
+    label: string;
+    canOpen: boolean;
+    canSave: boolean;
+    canImportExcel: boolean;
+    canPrint: boolean;
+    canClose: boolean;
+    canDuplicate: boolean;
+    canModifyDiagram: boolean;
+    canModifyDuplicate: boolean;
+    canOpenGreenWave: boolean;
+    canManageUsers: boolean;
+}
+
+type PermissionFlag = Exclude<keyof PermissionSet, 'label'>;
+
+const isPermissionLevel = (value: unknown): value is PermissionLevel =>
+    value === 'lecture' || value === 'partiel' || value === 'total';
+
 // Visiteur d'une session « projet exemple » : découvre l'outil sans créer de
 // compte. Permissions de modification totale pour que rien ne soit grisé, mais
 // pas administrateur — la gestion des comptes du poste reste hors de portée.
 // Jamais écrit dans localStorage : la session meurt avec l'onglet.
-export const EXAMPLE_VISITOR = { username: 'Visiteur', permissions: 'total', isAdmin: false };
+export const EXAMPLE_VISITOR = { username: 'Visiteur', permissions: 'total', isAdmin: false } satisfies AuthUser;
 
 // Utilisateur implicite quand les comptes sont désactivés — le cas courant.
 // Administrateur, sans quoi l'entrée « Utilisateurs » du menu serait grisée et
 // l'on ne pourrait plus activer les comptes.
-export const LOCAL_USER = { username: 'Local', permissions: 'total', isAdmin: true };
+export const LOCAL_USER = { username: 'Local', permissions: 'total', isAdmin: true } satisfies AuthUser;
 
 // Les comptes sont un dispositif pour poste partagé, pas une inscription :
 // désactivés par défaut. Un poste qui en a déjà créé les conserve — on ne
@@ -26,7 +62,7 @@ export const comptesActives = () => {
 };
 
 // Niveaux de permissions
-export const PERMISSIONS = {
+export const PERMISSIONS: Record<PermissionLevel, PermissionSet> = {
     'lecture': {
         label: 'Lecture seule',
         // Menu Fichier
@@ -81,7 +117,7 @@ export const PERMISSIONS = {
 };
 
 // Fonction de hachage simple (SHA-256)
-const hashPassword = async (password) => {
+const hashPassword = async (password: string) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(password);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -90,16 +126,16 @@ const hashPassword = async (password) => {
 };
 
 // Vérifier si le hachage correspond
-const verifyPassword = async (password, hash) => {
+const verifyPassword = async (password: string, hash: string) => {
     const passwordHash = await hashPassword(password);
     return passwordHash === hash;
 };
 
 export const useAuth = () => {
     // État d'authentification
-    const [currentUser, setCurrentUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [users, setUsers] = useState({});
+    const [users, setUsers] = useState<StoredUsers>({});
     const [accountsEnabled, setAccountsEnabled] = useState(comptesActives);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -110,7 +146,7 @@ export const useAuth = () => {
                 // Charger les utilisateurs depuis localStorage
                 const savedUsers = localStorage.getItem('auth_users');
                 if (savedUsers) {
-                    setUsers(JSON.parse(savedUsers));
+                    setUsers(JSON.parse(savedUsers) as StoredUsers);
                 }
 
                 // Comptes désactivés : on entre directement, sans écran de
@@ -126,8 +162,8 @@ export const useAuth = () => {
                 let sessionRetablie = false;
                 const savedSession = localStorage.getItem('auth_session');
                 if (savedSession) {
-                    const session = JSON.parse(savedSession);
-                    const usersData = JSON.parse(savedUsers || '{}');
+                    const session = JSON.parse(savedSession) as { username: string };
+                    const usersData = JSON.parse(savedUsers || '{}') as StoredUsers;
 
                     // Vérifier que l'utilisateur existe toujours
                     if (usersData[session.username]) {
@@ -160,7 +196,7 @@ export const useAuth = () => {
     }, []);
 
     // Sauvegarder les utilisateurs dans localStorage
-    const saveUsers = useCallback((usersData) => {
+    const saveUsers = useCallback((usersData: StoredUsers) => {
         localStorage.setItem('auth_users', JSON.stringify(usersData));
         setUsers(usersData);
     }, []);
@@ -185,8 +221,8 @@ export const useAuth = () => {
     }, [users]);
 
     // Connexion
-    const login = useCallback(async (username, password) => {
-        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}');
+    const login = useCallback(async (username: string, password: string) => {
+        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
             return { success: false, error: 'Utilisateur inconnu' };
@@ -223,12 +259,16 @@ export const useAuth = () => {
     }, []);
 
     // Créer un utilisateur
-    const createUser = useCallback(async (username, password, permissions = 'lecture') => {
+    const createUser = useCallback(async (
+        username: string,
+        password: string,
+        permissions: PermissionLevel = 'lecture'
+    ) => {
         if (!username || !password) {
             return { success: false, error: 'Nom d\'utilisateur et mot de passe requis' };
         }
 
-        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}');
+        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (usersData[username]) {
             return { success: false, error: 'Cet utilisateur existe déjà' };
@@ -264,8 +304,8 @@ export const useAuth = () => {
     }, [saveUsers]);
 
     // Mettre à jour les permissions d'un utilisateur
-    const updateUser = useCallback((username, newPermissions) => {
-        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}');
+    const updateUser = useCallback((username: string, newPermissions: PermissionLevel) => {
+        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
             return { success: false, error: 'Utilisateur non trouvé' };
@@ -276,19 +316,19 @@ export const useAuth = () => {
 
         // Si l'utilisateur modifié est l'utilisateur courant, mettre à jour
         if (currentUser && currentUser.username === username) {
-            setCurrentUser(prev => ({ ...prev, permissions: newPermissions }));
+            setCurrentUser(prev => prev ? ({ ...prev, permissions: newPermissions }) : prev);
         }
 
         return { success: true };
     }, [currentUser, saveUsers]);
 
     // Supprimer un utilisateur
-    const deleteUser = useCallback((username) => {
+    const deleteUser = useCallback((username: string) => {
         if (currentUser && currentUser.username === username) {
             return { success: false, error: 'Vous ne pouvez pas supprimer votre propre compte' };
         }
 
-        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}');
+        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
             return { success: false, error: 'Utilisateur non trouvé' };
@@ -309,8 +349,8 @@ export const useAuth = () => {
     }, [currentUser, saveUsers]);
 
     // Changer le mot de passe
-    const changePassword = useCallback(async (username, oldPassword, newPassword) => {
-        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}');
+    const changePassword = useCallback(async (username: string, oldPassword: string, newPassword: string) => {
+        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
             return { success: false, error: 'Utilisateur non trouvé' };
@@ -328,8 +368,8 @@ export const useAuth = () => {
     }, [saveUsers]);
 
     // Réinitialiser le mot de passe (admin)
-    const resetPassword = useCallback(async (username, newPassword) => {
-        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}');
+    const resetPassword = useCallback(async (username: string, newPassword: string) => {
+        const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
             return { success: false, error: 'Utilisateur non trouvé' };
@@ -342,7 +382,7 @@ export const useAuth = () => {
     }, [saveUsers]);
 
     // Vérifier une permission
-    const hasPermission = useCallback((permission) => {
+    const hasPermission = useCallback((permission: PermissionFlag) => {
         if (!currentUser) return false;
         const perms = PERMISSIONS[currentUser.permissions];
         if (!perms) return false;
@@ -409,14 +449,14 @@ export const useAuth = () => {
 
             const file = await fileHandle.getFile();
             const content = await file.text();
-            const importedUsers = JSON.parse(content);
+            const importedUsers = JSON.parse(content) as Record<string, Partial<StoredUser>>;
 
             // Valider la structure
             for (const [username, userData] of Object.entries(importedUsers)) {
                 if (!userData.password || !userData.permissions) {
                     return { success: false, error: `Données invalides pour l'utilisateur ${username}` };
                 }
-                if (!PERMISSIONS[userData.permissions]) {
+                if (!isPermissionLevel(userData.permissions)) {
                     return { success: false, error: `Permission invalide pour ${username}: ${userData.permissions}` };
                 }
             }
@@ -427,7 +467,7 @@ export const useAuth = () => {
                 return { success: false, error: 'Le fichier doit contenir au moins un administrateur' };
             }
 
-            saveUsers(importedUsers);
+            saveUsers(importedUsers as StoredUsers);
 
             // Déconnecter l'utilisateur courant si son compte n'existe plus
             if (currentUser && !importedUsers[currentUser.username]) {
