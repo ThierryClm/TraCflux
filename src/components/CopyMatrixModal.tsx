@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
+import type { PlanDeFeu } from '../types/projet';
 import './ExportPfModal.css';
+
+interface CopyMatrixModalProps {
+    pfTabs?: PlanDeFeu[];
+    activePFId: number;
+    onCopy: (sourceId: number) => void;
+    onClose: () => void;
+}
 
 /**
  * Modale « Copier la matrice depuis… » : choisir le plan de feux SOURCE dont la
@@ -12,7 +20,7 @@ import './ExportPfModal.css';
  * - onCopy(sourceId) : lance la copie.
  * - onClose() : annule.
  */
-const CopyMatrixModal = ({ pfTabs = [], activePFId, onCopy, onClose }) => {
+const CopyMatrixModal = ({ pfTabs = [], activePFId, onCopy, onClose }: CopyMatrixModalProps) => {
     const sources = pfTabs.filter(p => p.id !== activePFId);
     const [sourceId, setSourceId] = useState(sources[0]?.id ?? null);
     const activeName = pfTabs.find(p => p.id === activePFId)?.name || 'actif';

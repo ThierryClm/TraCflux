@@ -1,4 +1,30 @@
 import React from 'react';
+import type { Groupe } from '../types/projet';
+
+export interface ConflictInfo {
+    from: number;
+    to: number;
+    type: string;
+    actual?: number;
+    required?: number | string;
+    message?: string;
+}
+
+export interface HoveredConflict {
+    from: number;
+    to: number;
+    isConflict: boolean;
+}
+
+interface ConflictListProps {
+    conflicts?: ConflictInfo[];
+    groups?: Array<Pick<Groupe, 'id' | 'phaseFlag'>>;
+    isConflictGrayed?: (conflict: ConflictInfo) => boolean;
+    setHoveredConflict?: (conflict: HoveredConflict | null) => void;
+    detached?: boolean;
+    onDetach?: (() => void) | null;
+    tip?: (text: string) => string | undefined;
+}
 
 /**
  * Liste des conflits détectés (dégagements insuffisants, conflits de secondes
@@ -36,7 +62,7 @@ const ConflictList = ({
     detached = false,
     onDetach = null,
     tip = (t) => t
-}) => {
+}: ConflictListProps) => {
     const majeurs = conflicts.filter(c => !isConflictGrayed(c));
     const potentiels = conflicts.filter(c => isConflictGrayed(c));
     const count = conflicts.length;
@@ -55,7 +81,7 @@ const ConflictList = ({
         >Détacher</button>
     ) : null;
 
-    const renderItem = (c, i, potentiel) => {
+    const renderItem = (c: ConflictInfo, i: number, potentiel: boolean) => {
         const fromGroup = groups.find(g => g.id === c.from);
         const flagLabel = fromGroup?.phaseFlag;
         return (
@@ -71,7 +97,7 @@ const ConflictList = ({
                 style={{ cursor: 'pointer' }}
             >
                 {c.type === 'intergreen' ? (
-                    <>GF{c.from} → GF{c.to} : Dégagement insuffisant ({c.actual.toFixed(1)}s / {c.required}s requis)</>
+                    <>GF{c.from} → GF{c.to} : Dégagement insuffisant ({c.actual!.toFixed(1)}s / {c.required}s requis)</>
                 ) : (
                     <>GF{c.from} ↔ GF{c.to} : {c.message}</>
                 )}

@@ -1,8 +1,45 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import EmptyState from './EmptyState';
 import { useAlert } from './ConfirmProvider';
 import { getTotalGreenTime as computeTotalGreenTime, parseTrafficVol, isCoordinated, groupesInhibes } from '../utils/trafficHelpers';
+import type { ActionMicro, Groupe } from '../types/projet';
+import type { SimulationResult } from '../utils/simulationCalculator';
 import './TrafficTable.css';
+
+interface TrafficData {
+    trafficVol?: number | string;
+}
+
+interface HoveredVUtile {
+    groupId: number;
+    vUtile: number;
+    capacityValue: number | null;
+}
+
+interface TrafficTableProps {
+    groups: Groupe[];
+    cycleLength: number;
+    activeTrafficDataset: string;
+    setActiveTrafficDataset: (name: string) => void;
+    updateTrafficData: (groupId: number, field: 'trafficVol', value: number | string) => void;
+    getTrafficData: (groupId: number) => TrafficData;
+    updateGroupParams: (groupId: number, params: Partial<Groupe>) => void;
+    setHoveredGroupId?: (groupId: number | null) => void;
+    hoveredGroupId?: number | null;
+    setHoveredGroupSaturated?: (saturated: boolean) => void;
+    trafficDatasetNames: string[];
+    trafficDatasetSourceNames?: string[];
+    setHoveredVUtile?: (value: HoveredVUtile | null) => void;
+    copyTrafficDataset?: (source: string, target: string) => void;
+    addCustomTrafficDataset: (name: string) => void;
+    actionData?: ActionMicro[];
+    simulationSelectedActions?: number[];
+    simulationResult?: SimulationResult | null;
+    readOnly?: boolean;
+    onDetach?: () => void;
+    tooltipsEnabled?: boolean;
+}
 
 const TrafficTable = ({
     groups,
@@ -27,17 +64,17 @@ const TrafficTable = ({
     readOnly = false,
     onDetach,
     tooltipsEnabled = true
-}) => {
-    const tip = (text) => tooltipsEnabled ? text : undefined;
+}: TrafficTableProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const showAlert = useAlert();
     const [showPasteDropdown, setShowPasteDropdown] = useState(false);
     const [showAllGroups, setShowAllGroups] = useState(false);
-    const [tooltipGroupId, setTooltipGroupId] = useState(null);
-    const tooltipTimerRef = useRef(null);
+    const [tooltipGroupId, setTooltipGroupId] = useState<number | null>(null);
+    const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [datasetTooltip, setDatasetTooltip] = useState(false);
-    const datasetTooltipTimerRef = useRef(null);
+    const datasetTooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const handleTrafficMouseEnter = useCallback((groupId) => {
+    const handleTrafficMouseEnter = useCallback((groupId: number) => {
         tooltipTimerRef.current = setTimeout(() => {
             setTooltipGroupId(groupId);
         }, 5000);
@@ -85,7 +122,7 @@ const TrafficTable = ({
 
     // Écouter la touche "+" globalement, déclencher l'ajout si le sélecteur est survolé
     React.useEffect(() => {
-        const handleKeyDown = (e) => {
+        const handleKeyDown = (e: KeyboardEvent) => {
             if (!readOnly && datasetHoveredRef.current && (e.key === '+' || e.key === '=')) {
                 e.preventDefault();
                 handleAddDataset();
@@ -101,7 +138,7 @@ const TrafficTable = ({
     // suivre les actions cochées — il reçoit alors simulationResult, et les
     // groupes qu'une action inhibe repassent en grisé.
     const inhibitedGroups = useMemo(() => {
-        if (!simulationResult) return new Set();
+        if (!simulationResult) return new Set<number>();
         return groupesInhibes(actionData, simulationSelectedActions);
     }, [simulationResult, actionData, simulationSelectedActions]);
 
@@ -109,18 +146,18 @@ const TrafficTable = ({
     // simulation est active, ceux du plan sinon. Les formules, elles, ne changent
     // pas — c'est le même tableau, nourri d'autres temps.
     const cycleEffectif = simulationResult?.simulatedCycleLength || cycleLength;
-    const groupeSimule = (id) => simulationResult?.simulatedGroups?.find(sg => sg.id === id) || null;
-    const vertDe = (g) => {
+    const groupeSimule = (id: number) => simulationResult?.simulatedGroups?.find(sg => sg.id === id) || null;
+    const vertDe = (g: Groupe): number => {
         const sim = groupeSimule(g.id);
         return sim ? (sim.simulatedGreen ?? g.durations?.green) : g.durations?.green;
     };
-    const decalageDe = (g) => {
+    const decalageDe = (g: Groupe): number => {
         const sim = groupeSimule(g.id);
         return sim ? (sim.simulatedOffset ?? g.offset) : g.offset;
     };
 
     // Update traffic volume (per dataset)
-    const handleTrafficChange = (id, value) => {
+    const handleTrafficChange = (id: number, value: number | string) => {
         // Allow only digits and optional trailing 'c'
         const cleaned = String(value).replace(/[^0-9c]/gi, '');
         // Keep only one 'c' at the end
@@ -131,7 +168,7 @@ const TrafficTable = ({
     };
 
     // Handle keydown on traffic input: toggle 'c' suffix
-    const handleTrafficKeyDown = (e, id, currentVal) => {
+    const handleTrafficKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>, id: number, currentVal: number | string | undefined) => {
         if (e.key === 'c' || e.key === 'C') {
             e.preventDefault();
             const str = String(currentVal || '');
@@ -164,7 +201,7 @@ const TrafficTable = ({
     }, [trafficDatasetSourceNames, activeTrafficDataset]);
 
     // Handle paste from another dataset
-    const handlePasteFrom = (sourceDataset) => {
+    const handlePasteFrom = (sourceDataset: string) => {
         if (copyTrafficDataset) {
             copyTrafficDataset(sourceDataset, activeTrafficDataset);
         }
@@ -172,24 +209,24 @@ const TrafficTable = ({
     };
 
     // Update shared fields (same for all datasets)
-    const handleSharedChange = (id, field, value) => {
+    const handleSharedChange = (id: number, field: 'laneCoef', value: number) => {
         updateGroupParams(id, { [field]: value });
     };
 
     // Vert total (vert principal + secondes lucarnes) — délègue à l'util
     // partagé pour rester cohérent avec le panneau Diagnostic.
-    const getTotalGreenTime = (groupId, mainGreenTime) =>
+    const getTotalGreenTime = (groupId: number, mainGreenTime: number) =>
         computeTotalGreenTime(groupId, mainGreenTime, actionData, cycleEffectif);
 
     // Calculate V.Utile = trafic / (1800 * coef / cycle)
-    const calculateVUtile = (trafficVol, laneCoef) => {
+    const calculateVUtile = (trafficVol: number, laneCoef: number | undefined): number | null => {
         if (!trafficVol || !laneCoef || !cycleEffectif || laneCoef === 0) return null;
         // Valeur exacte : l'arrondi se fait à l'affichage (cf. capacityCalc).
         return trafficVol / (1800 * laneCoef / cycleEffectif);
     };
 
     // Calculate Cap.U = (V.Utile / green time) * 100 (percentage)
-    const calculateCapacity = (greenTime, vUtile) => {
+    const calculateCapacity = (greenTime: number, vUtile: number | null) => {
         if (!greenTime || !vUtile || greenTime === 0) return { value: null, display: '' };
         const result = Math.round((vUtile / greenTime) * 100);
         return { value: result, display: result + '%' };
@@ -198,17 +235,17 @@ const TrafficTable = ({
     // Calculate Retard = (cycle - vert)² / (2 * cycle * (1 - trafic / (1800 * coef)))
     // Si une action "Début de bande passante" a pour actGf1 le groupe, alors :
     // Retard = max(0, début_de_vert - fin_de_l'action)
-    const calculateDelay = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
+    const calculateDelay = (greenTime: number, trafficVol: number, laneCoef: number | undefined, groupId: number, groupOffset: number): number | null => {
         // Vérifier s'il existe une action "Début de bande passante" pour ce groupe
         const bandeAction = actionData.find(
             action => action.action === 'Début de bande passante' &&
-                     parseInt(action.actGf1) === groupId &&
+                     parseInt(String(action.actGf1)) === groupId &&
                      action.fin !== '' && action.fin !== null && action.fin !== undefined
         );
 
         if (bandeAction) {
             // Formule spéciale : max(0, début_de_vert - fin_de_l'action)
-            const finValue = parseFloat(bandeAction.fin);
+            const finValue = parseFloat(String(bandeAction.fin));
             if (!isNaN(finValue) && groupOffset !== undefined && groupOffset !== null) {
                 return Math.max(0, Math.round(groupOffset - finValue));
             }
@@ -230,17 +267,17 @@ const TrafficTable = ({
     // Calculate File d'attente = (Math.floor(Trafic × (Cycle - Vert) / 3600 / Coef) + 1) × 6
     // Si une action "Début de bande passante" a pour actGf1 le groupe, alors :
     // File d'attente = max(0, début_de_vert - fin_de_l'action)
-    const calculateQueue = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
+    const calculateQueue = (greenTime: number, trafficVol: number, laneCoef: number | undefined, groupId: number, groupOffset: number): number | null => {
         // Vérifier s'il existe une action "Début de bande passante" pour ce groupe
         const bandeAction = actionData.find(
             action => action.action === 'Début de bande passante' &&
-                     parseInt(action.actGf1) === groupId &&
+                     parseInt(String(action.actGf1)) === groupId &&
                      action.fin !== '' && action.fin !== null && action.fin !== undefined
         );
 
         if (bandeAction) {
             // Formule spéciale : max(0, début_de_vert - fin_de_l'action)
-            const finValue = parseFloat(bandeAction.fin);
+            const finValue = parseFloat(String(bandeAction.fin));
             if (!isNaN(finValue) && groupOffset !== undefined && groupOffset !== null) {
                 return Math.max(0, Math.round(groupOffset - finValue));
             }
@@ -256,7 +293,7 @@ const TrafficTable = ({
     };
 
     // Get capacity color class based on value
-    const getCapacityColorClass = (value) => {
+    const getCapacityColorClass = (value: number | null) => {
         if (value === null) return '';
         if (value < 76) return 'capacity-green';
         if (value <= 85) return 'capacity-orange';

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { calculateVUtile, calculateCapacity, getCapacityColorClass } from '../utils/capacityCalc';
 import { toast } from '../utils/toast';
+import type { Groupe, JeuTrafic, PlanDeFeu } from '../types/projet';
 import './CapacityComparison.css';
 
 /**
@@ -19,6 +20,32 @@ import './CapacityComparison.css';
  * simulation : c'est le sens d'une comparaison entre programmes.
  */
 const PER_PF = '__per_pf__';
+
+interface ContentSize {
+    width: number;
+    height: number;
+}
+
+interface CapacityComparisonProps {
+    pfTabs?: PlanDeFeu[];
+    groups?: Groupe[];
+    trafficDatasets?: Record<string, JeuTrafic>;
+    pfTrafficDatasetMap?: Record<string, string>;
+    activeTrafficDataset?: string;
+    trafficDatasetNames?: string[];
+    selectedPfIds?: number[] | null;
+    setSelectedPfIds?: (ids: number[]) => void;
+    datasetChoice?: string;
+    setDatasetChoice?: (choice: string) => void;
+    onContentSize?: ((size: ContentSize) => void) | null;
+}
+
+interface CapacityCell {
+    trafficVol: number | string;
+    vUtile: number | null;
+    capacity: ReturnType<typeof calculateCapacity>;
+    greenTime: number;
+}
 
 const CapacityComparison = ({
     pfTabs = [],
@@ -43,10 +70,10 @@ const CapacityComparison = ({
        regardait : selon que le contenu était rendu ou non, elle tombait juste
        ou pas du tout. */
     onContentSize = null
-}) => {
+}: CapacityComparisonProps) => {
     const [exporting, setExporting] = useState(false);
-    const tableRef = useRef(null);
-    const racineRef = useRef(null);
+    const tableRef = useRef<HTMLTableElement>(null);
+    const racineRef = useRef<HTMLDivElement>(null);
 
     // Taille naturelle du contenu : du haut du premier bloc au bas du dernier,
     // rembourrage compris. On ne peut pas prendre la hauteur du conteneur, qui
@@ -64,7 +91,7 @@ const CapacityComparison = ({
         // La largeur ne se lit pas non plus sur le conteneur : il occupe la
         // fenêtre, et rendrait toujours la largeur courante. C'est le plus
         // large de ses blocs qui commande — le tableau, le plus souvent.
-        const largeur = Math.max(...[...racine.children].map(el => el.scrollWidth))
+        const largeur = Math.max(...Array.from(racine.children, el => el.scrollWidth))
             + (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
         if (hauteur > 0) onContentSize({
             width: Math.ceil(largeur),
@@ -87,7 +114,7 @@ const CapacityComparison = ({
         [pfTabs, effectiveSelectedIds]
     );
 
-    const togglePf = (id) => {
+    const togglePf = (id: number) => {
         const base = Array.isArray(selectedPfIds) ? selectedPfIds : allPfIds;
         setSelectedPfIds(base.includes(id) ? base.filter(x => x !== id) : [...base, id]);
     };
@@ -95,17 +122,17 @@ const CapacityComparison = ({
     // Jeu de trafic effectif pour un PF donné selon le mode choisi.
     // En mode « par PF », on réplique la résolution de l'onglet Trafic :
     // mapping explicite, sinon dataset au nom du PF s'il existe, sinon actif.
-    const datasetNameForPf = (pf) =>
+    const datasetNameForPf = (pf: PlanDeFeu) =>
         effectiveDatasetChoice === PER_PF
             ? (pfTrafficDatasetMap[pf.id] || (trafficDatasetNames.includes(pf.name) ? pf.name : activeTrafficDataset))
             : effectiveDatasetChoice;
 
-    const trafficVolFor = (pf, groupId) => {
+    const trafficVolFor = (pf: PlanDeFeu, groupId: number): number | string => {
         const ds = datasetNameForPf(pf);
         return trafficDatasets?.[ds]?.[groupId]?.trafficVol ?? 0;
     };
 
-    const greenFor = (pf, group) => {
+    const greenFor = (pf: PlanDeFeu, group: Groupe): number => {
         const d = pf.diagram?.find(x => x.groupId === group.id);
         const g = (d && d.greenDuration !== undefined && d.greenDuration !== null)
             ? d.greenDuration
@@ -115,15 +142,21 @@ const CapacityComparison = ({
 
     // Pré-calcul de toutes les cellules : cells[pfId][groupId] = { vUtile, capacity }
     const cells = useMemo(() => {
-        const out = {};
+        const out: Record<number, Record<number, CapacityCell>> = {};
         selectedPfs.forEach(pf => {
             const cycle = pf.cycleLength;
             out[pf.id] = {};
             vlGroups.forEach(group => {
                 const trafficVol = trafficVolFor(pf, group.id);
                 const greenTime = greenFor(pf, group);
-                const vUtile = calculateVUtile(trafficVol, group.laneCoef, cycle);
-                const capacity = calculateCapacity(greenTime, vUtile);
+                // Les helpers reproduisent les coercitions numériques historiques
+                // du composant JS ; les suffixes non numériques restent donc NaN.
+                const vUtile = calculateVUtile(
+                    trafficVol as number,
+                    group.laneCoef ?? 0,
+                    cycle ?? 0
+                );
+                const capacity = calculateCapacity(greenTime, vUtile ?? 0);
                 out[pf.id][group.id] = { trafficVol, vUtile, capacity, greenTime };
             });
         });
@@ -131,13 +164,13 @@ const CapacityComparison = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedPfs, vlGroups, effectiveDatasetChoice, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset]);
 
-    const datasetLabelForPf = (pf) => datasetNameForPf(pf) || '—';
+    const datasetLabelForPf = (pf: PlanDeFeu) => datasetNameForPf(pf) || '—';
 
     // Un jeu de données est « vide » si aucun groupe n'a de trafic > 0.
-    const datasetHasData = (name) => {
+    const datasetHasData = (name: string) => {
         const ds = trafficDatasets?.[name];
         if (!ds) return false;
-        return Object.values(ds).some(v => v && Number(v.trafficVol) > 0);
+        return Object.values(ds).some(v => Number(v.trafficVol) > 0);
     };
 
     // Si tous les PF cochés utilisent le MÊME jeu de trafic, le trafic est
@@ -148,7 +181,7 @@ const CapacityComparison = ({
         && effectiveDatasets.every(d => d === effectiveDatasets[0]);
     const uniformDatasetName = uniformDataset ? (effectiveDatasets[0] || '—') : null;
     // Trafic d'un groupe en mode uniforme (pris sur le 1er PF coché).
-    const uniformTrafficFor = (groupId) => cells[selectedPfs[0]?.id]?.[groupId]?.trafficVol;
+    const uniformTrafficFor = (groupId: number) => cells[selectedPfs[0]?.id]?.[groupId]?.trafficVol;
 
     const handleExport = async () => {
         if (!tableRef.current) return;
@@ -164,8 +197,8 @@ const CapacityComparison = ({
                 // Neutralise le sticky des en-têtes dans le clone de capture.
                 // `relative` (et non `static`) pour conserver le bloc englobant
                 // des libellés en diagonale positionnés en absolu dans le coin.
-                onclone: (doc) => {
-                    doc.querySelectorAll('.cc-table th, .cc-col-group').forEach(el => {
+                onclone: (doc: Document) => {
+                    doc.querySelectorAll<HTMLElement>('.cc-table th, .cc-col-group').forEach(el => {
                         el.style.position = 'relative';
                         el.style.top = 'auto';
                         el.style.left = 'auto';
@@ -238,7 +271,7 @@ const CapacityComparison = ({
                     <table className="cc-table" ref={tableRef}>
                         <thead>
                             <tr>
-                                <th rowSpan="2" className="cc-col-group cc-corner">
+                                <th rowSpan={2} className="cc-col-group cc-corner">
                                     <span className="cc-corner-pf">Plan de feu</span>
                                     <span className="cc-corner-gf">Groupe de feu</span>
                                 </th>

@@ -1,5 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import type { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent } from 'react';
 import EmptyState from './EmptyState';
+import type { ActionMicro, CaseMatrice, Groupe, Matrice, PlanDeFeu } from '../types/projet';
+import type { HoveredConflict } from './ConflictList';
 import { compareWithPF1 as compareWithPF1Pure, buildCellTooltipLines as buildCellTooltipLinesPure } from '../utils/matrixComparison';
 import {
     getFlecheAnticipations as getFlecheAnticipationsPure,
@@ -11,11 +14,56 @@ import './IntergreenMatrix.css';
 import './NumericInput.css';
 
 // Input component with local state for intermediate values during typing
-const MatrixInput = ({ value, onChange, className }) => {
+interface MatrixInputProps {
+    value: CaseMatrice | null | undefined;
+    onChange: (value: string) => void;
+    className?: string;
+}
+
+interface SecondeLucarne {
+    gf: number;
+    deb: number;
+    fin: number;
+    id: number;
+}
+
+interface SecondeLucarneConflict {
+    type: 'sl_to_group' | 'group_to_sl' | 'sl_to_sl' | 'sl_overlap_main';
+    slGf: number;
+    otherGf: number;
+    required: CaseMatrice;
+    actual: number;
+}
+
+interface CellTooltip {
+    x: number;
+    y: number;
+    lines: string[];
+}
+
+interface IntergreenMatrixProps {
+    conflictMatrix: Matrice;
+    setMatrixValue: (from: number, to: number, value: string) => void;
+    groups: Groupe[];
+    cycleLength: number;
+    actionData: ActionMicro[] | null;
+    activePFId?: number | null;
+    pfTabs?: PlanDeFeu[];
+    biCarrefourSeparator?: number | null;
+    onCellHover?: (conflict: HoveredConflict | null) => void;
+    showGroupNames?: boolean;
+    locked?: boolean;
+    onDetach?: () => void;
+    hoveredGroupId?: number | null;
+    tooltipsEnabled?: boolean;
+    titreEnBandeau?: boolean;
+}
+
+const MatrixInput = ({ value, onChange, className }: MatrixInputProps) => {
     const [localValue, setLocalValue] = useState(value === '' ? '' : String(value));
     const [isEditing, setIsEditing] = useState(false);
     const [rejected, setRejected] = useState(false);
-    const rejectTimerRef = React.useRef(null);
+    const rejectTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Sync local value with prop when not editing
     React.useEffect(() => {
@@ -24,7 +72,7 @@ const MatrixInput = ({ value, onChange, className }) => {
         }
     }, [value, isEditing]);
 
-    const handleChange = (e) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         // Only allow digits
         const raw = e.target.value;
         const filtered = raw.replace(/[^0-9]/g, '');
@@ -40,7 +88,7 @@ const MatrixInput = ({ value, onChange, className }) => {
         setLocalValue(filtered);
     };
 
-    const handleFocus = (e) => {
+    const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
         setIsEditing(true);
         // Select all text on focus for easy replacement
         e.target.select();
@@ -52,11 +100,11 @@ const MatrixInput = ({ value, onChange, className }) => {
         onChange(localValue);
     };
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             setIsEditing(false);
             onChange(localValue);
-            e.target.blur();
+            e.currentTarget.blur();
         }
     };
 
@@ -75,30 +123,30 @@ const MatrixInput = ({ value, onChange, className }) => {
     );
 };
 
-const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength, actionData, activePFId, pfTabs, biCarrefourSeparator, onCellHover, showGroupNames = true, locked = false, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }) => {
-    const tip = (text) => tooltipsEnabled ? text : undefined;
+const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength, actionData, activePFId, pfTabs, biCarrefourSeparator, onCellHover, showGroupNames = true, locked = false, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }: IntergreenMatrixProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
     // Bi-carrefour separator index
     const separatorIdx = biCarrefourSeparator != null ? groups.findIndex(g => g.id === biCarrefourSeparator) : -1;
 
     // Get the reference matrix from PF1 for comparison
     const pf1Matrix = pfTabs?.find(pf => pf.id === 1)?.conflictMatrix || null;
-    const isComparingWithPF1 = activePFId && activePFId !== 1 && pf1Matrix && pf1Matrix.length > 0;
+    const isComparingWithPF1 = Boolean(activePFId && activePFId !== 1 && pf1Matrix && pf1Matrix.length > 0);
 
     // Compare current value with PF1 value (logique pure dans utils/matrixComparison).
     // Returns: 'higher' (red), 'lower' (green), or null (equal or no comparison).
-    const compareWithPF1 = (fromIdx, toIdx, currentVal) =>
+    const compareWithPF1 = (fromIdx: number, toIdx: number, currentVal: CaseMatrice | null | undefined) =>
         compareWithPF1Pure(fromIdx, toIdx, currentVal, isComparingWithPF1 ? pf1Matrix : null);
 
     // Get all "Seconde lucarne" actions
-    const getSecondesLucarnes = () => {
+    const getSecondesLucarnes = (): SecondeLucarne[] => {
         if (!actionData) return [];
         return actionData
             .filter(row => row.action === 'Seconde lucarne' && row.gf && row.deb !== '' && row.fin !== '')
             .map(row => ({
-                gf: parseInt(row.gf),
-                deb: parseInt(row.deb),
-                fin: parseInt(row.fin),
+                gf: parseInt(String(row.gf)),
+                deb: parseInt(String(row.deb)),
+                fin: parseInt(String(row.fin)),
                 id: row.id
             }));
     };
@@ -107,7 +155,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
 
     // Check if a seconde lucarne conflicts with a group's green time
     const checkSecondeLucarneConflicts = () => {
-        const conflicts = [];
+        const conflicts: SecondeLucarneConflict[] = [];
         const cycle = cycleLength || 100;
 
         secondesLucarnes.forEach(sl => {
@@ -137,7 +185,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
                 if (intergreen1 && intergreen1 !== '') {
                     let delay = otherStart - slEnd;
                     if (delay < 0) delay += cycle;
-                    if (delay < intergreen1) {
+                    if (delay < Number(intergreen1)) {
                         conflicts.push({
                             type: 'sl_to_group',
                             slGf: sl.gf,
@@ -152,7 +200,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
                 if (intergreen2 && intergreen2 !== '') {
                     let delay = slStart - otherEnd;
                     if (delay < 0) delay += cycle;
-                    if (delay < intergreen2) {
+                    if (delay < Number(intergreen2)) {
                         conflicts.push({
                             type: 'group_to_sl',
                             slGf: sl.gf,
@@ -180,7 +228,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
                 if (intergreen1 && intergreen1 !== '') {
                     let delay = otherSl.deb - slEnd;
                     if (delay < 0) delay += cycle;
-                    if (delay < intergreen1) {
+                    if (delay < Number(intergreen1)) {
                         conflicts.push({
                             type: 'sl_to_sl',
                             slGf: sl.gf,
@@ -226,7 +274,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
         });
 
         // Remove duplicates
-        const seen = new Set();
+        const seen = new Set<string>();
         return conflicts.filter(c => {
             const key = `${c.type}-${c.slGf}-${c.otherGf}`;
             if (seen.has(key)) return false;
@@ -238,7 +286,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
     const slConflicts = secondesLucarnes.length > 0 ? checkSecondeLucarneConflicts() : [];
 
     // Check if cell is 'asymmetric' (missing value where mirror has one)
-    const isAsymmetric = (row, col) => {
+    const isAsymmetric = (row: number, col: number) => {
         const val = conflictMatrix[row][col];
         const mirrorVal = conflictMatrix[col][row];
         // If mirror has a value (number) and current is empty, it's asymmetric
@@ -251,7 +299,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
 
     // Count asymmetric cells and get pairs
     const getAsymmetricPairs = () => {
-        const pairs = [];
+        const pairs: Array<{ from: number; to: number }> = [];
         for (let i = 0; i < conflictMatrix.length; i++) {
             for (let j = 0; j < conflictMatrix.length; j++) {
                 if (i !== j && isAsymmetric(i, j)) {
@@ -270,14 +318,14 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
     // closures pour conserver la signature (fromIdx, toIdx) aux points d'appel.
     const flecheAnticipations = getFlecheAnticipationsPure(actionData);
     const conflictCtx = { conflictMatrix, groups, cycleLength, flecheAnticipations };
-    const hasOverlap = (fromIdx, toIdx) => hasOverlapPure(fromIdx, toIdx, conflictCtx);
-    const computeActualDelay = (fromIdx, toIdx) => computeActualDelayPure(fromIdx, toIdx, conflictCtx);
-    const isDelayInsufficient = (fromIdx, toIdx) => isDelayInsufficientPure(fromIdx, toIdx, conflictCtx);
+    const hasOverlap = (fromIdx: number, toIdx: number) => hasOverlapPure(fromIdx, toIdx, conflictCtx);
+    const computeActualDelay = (fromIdx: number, toIdx: number) => computeActualDelayPure(fromIdx, toIdx, conflictCtx);
+    const isDelayInsufficient = (fromIdx: number, toIdx: number) => isDelayInsufficientPure(fromIdx, toIdx, conflictCtx);
 
     // Lignes d'infobulle de cellule (logique pure dans utils/matrixComparison) :
     //  - écart vs PF1 (seulement quand on consulte un autre PF) ;
     //  - description du conflit pour les cases en fond rouge.
-    const buildCellTooltipLines = (fromIdx, toIdx) =>
+    const buildCellTooltipLines = (fromIdx: number, toIdx: number) =>
         buildCellTooltipLinesPure({
             fromIdx, toIdx,
             conflictMatrix,
@@ -292,9 +340,9 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
     // la sortie de la case). title natif limite a ~500 ms non configurable
     // -> implementation custom pour respecter le delai et eviter l'effet
     // "sapin de Noel" lors du survol rapide de la grille.
-    const [cellTooltip, setCellTooltip] = useState(null); // { x, y, lines }
-    const tooltipTimerRef = useRef(null);
-    const scheduleCellTooltip = (e, fromIdx, toIdx) => {
+    const [cellTooltip, setCellTooltip] = useState<CellTooltip | null>(null);
+    const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const scheduleCellTooltip = (e: MouseEvent<HTMLTableCellElement>, fromIdx: number, toIdx: number) => {
         if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
         if (!tooltipsEnabled) return;   // section Matrice desactivee
         const lines = buildCellTooltipLines(fromIdx, toIdx);
