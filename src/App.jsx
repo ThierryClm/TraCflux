@@ -1384,7 +1384,15 @@ function App() {
             const pfName = pfTabs.find(pf => pf.id === activePFId)?.name || '';
             const filename = buildExportFilename(intersectionName, `${pfName}_${suffix}`);
             toast.info('Export PNG en cours...');
-            const { exportElementAsPNG } = await import('./utils/exportHelpers');
+            const {
+                exportElementAsPNG,
+                getTimelineCaptureDimensions,
+                materializeFormControlValues
+            } = await import('./utils/exportHelpers');
+
+            const captureOptions = opts.fullTimeline
+                ? getTimelineCaptureDimensions(el)
+                : {};
 
             const onclone = (clonedDoc) => {
                 const themeClasses = ['high-contrast-mode', 'amber-mode',
@@ -1392,12 +1400,36 @@ function App() {
                 themeClasses.forEach(c => clonedDoc.body.classList.remove(c));
                 clonedDoc.body.classList.add('light-mode');
                 clonedDoc.body.classList.add('png-export-clean');
+                const clonedEl = clonedDoc.querySelector(selector);
+                materializeFormControlValues(el, clonedEl);
+
+                if (opts.fullTimeline && clonedEl && captureOptions.width > 0) {
+                    clonedEl.style.width = `${captureOptions.width}px`;
+                    clonedEl.style.maxWidth = 'none';
+                    const layout = clonedEl.querySelector('.timeline-layout');
+                    if (layout) {
+                        layout.style.width = `${captureOptions.width}px`;
+                        layout.style.maxWidth = 'none';
+                        layout.style.overflow = 'visible';
+                    }
+                }
                 // Hook personnalisé fourni par l'appelant : permet par exemple
                 // de remplacer un en-tête par un titre formaté avant capture.
-                if (opts.onCloneExtra) opts.onCloneExtra(clonedDoc);
+                if (opts.onCloneExtra) opts.onCloneExtra(clonedDoc, clonedEl);
             };
 
-            const result = await exportElementAsPNG(el, filename, { onclone, backgroundColor: '#ffffff' });
+            const result = await exportElementAsPNG(el, filename, {
+                onclone,
+                backgroundColor: '#ffffff',
+                ...(captureOptions.width > 0 ? {
+                    width: captureOptions.width,
+                    windowWidth: captureOptions.width
+                } : {}),
+                ...(captureOptions.height > 0 ? {
+                    height: captureOptions.height,
+                    windowHeight: captureOptions.height
+                } : {})
+            });
             if (result?.clipboardSuccess) {
                 toast.success(`📥 Téléchargé : ${filename}.png  •  📋 Copié dans le presse-papiers (Ctrl+V)`);
             } else {
@@ -1487,7 +1519,7 @@ function App() {
                 exportSectionAsPng('.group-table-container', 'Formulaire', 'Formulaire des groupes');
                 break;
             case 'exportPngDiagramme':
-                exportSectionAsPng('.timeline-container', 'Diagramme', 'Diagramme');
+                exportSectionAsPng('.timeline-container', 'Diagramme', 'Diagramme', { fullTimeline: true });
                 break;
             case 'exportPngMatrice':
                 exportSectionAsPng('.matrix-container-inline', 'Matrice', 'Matrice interverts');

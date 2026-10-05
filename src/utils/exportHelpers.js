@@ -8,6 +8,72 @@ import { jsPDF } from 'jspdf';
 
 export { buildExportFilename } from './exportFilename';
 
+const measuredSize = (element, axis) => {
+    if (!element) return 0;
+    const rect = element.getBoundingClientRect?.();
+    const rectSize = axis === 'width' ? rect?.width : rect?.height;
+    const scrollSize = axis === 'width' ? element.scrollWidth : element.scrollHeight;
+    const offsetSize = axis === 'width' ? element.offsetWidth : element.offsetHeight;
+    return Math.max(Number(rectSize) || 0, Number(scrollSize) || 0, Number(offsetSize) || 0);
+};
+
+/**
+ * Calcule la surface complète du diagramme, y compris la partie de la piste
+ * située hors du viewport courant.
+ */
+export const getTimelineCaptureDimensions = (element) => {
+    if (!element) return { width: 0, height: 0 };
+    const sidebar = element.querySelector('.timeline-sidebar');
+    const scrollArea = element.querySelector('.timeline-scroll-area');
+    const track = element.querySelector('.timeline-track-container');
+    const width = Math.ceil(
+        measuredSize(sidebar, 'width')
+        + Math.max(measuredSize(scrollArea, 'width'), measuredSize(track, 'width'))
+    );
+    const height = Math.ceil(measuredSize(element, 'height'));
+    return { width, height };
+};
+
+const controlText = (control) => {
+    if (control instanceof HTMLSelectElement) {
+        return control.selectedOptions[0]?.textContent || '';
+    }
+    if (control instanceof HTMLInputElement && (control.type === 'checkbox' || control.type === 'radio')) {
+        return control.checked ? '✓' : '';
+    }
+    return control.value || '';
+};
+
+/**
+ * Remplace, dans le DOM cloné par html2canvas, les champs éditables par du
+ * texte statique. Les valeurs React courantes ne sont pas toujours recopiées
+ * dans les attributs HTML du clone.
+ */
+export const materializeFormControlValues = (sourceRoot, clonedRoot) => {
+    if (!sourceRoot || !clonedRoot) return;
+    const sourceControls = sourceRoot.querySelectorAll('input, select, textarea');
+    const clonedControls = clonedRoot.querySelectorAll('input, select, textarea');
+
+    sourceControls.forEach((sourceControl, index) => {
+        const clonedControl = clonedControls[index];
+        if (!clonedControl) return;
+
+        const value = controlText(sourceControl);
+        const replacement = clonedControl.ownerDocument.createElement('span');
+        replacement.className = `${clonedControl.className || ''} png-export-control-value`.trim();
+        replacement.textContent = value || '\u00a0';
+        replacement.setAttribute('data-export-value', value);
+
+        if (clonedControl.classList.contains('input-micro')) {
+            const backdrop = clonedControl.closest('.micro-highlight-container')
+                ?.querySelector('.micro-highlight-backdrop');
+            if (backdrop) backdrop.style.display = 'none';
+        }
+
+        clonedControl.replaceWith(replacement);
+    });
+};
+
 /**
  * Render the given element onto a canvas with high resolution.
  * Extra options are passed through to html2canvas (e.g. onclone for DOM
