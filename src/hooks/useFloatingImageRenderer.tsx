@@ -1,7 +1,53 @@
 import { useEffect } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
 import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
+import type { ActionMicro, Groupe, Matrice } from '../types/projet';
+import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
+
+interface IntersectionArrow {
+    id: number | string;
+    groupId?: number | null;
+    x: number;
+    y: number;
+    scale?: number;
+    rotation?: number;
+    length?: number;
+    turnLength?: number;
+}
+
+interface FloatingImagePopup {
+    renderToPopup: (content: ReactNode) => void;
+}
+
+interface FloatingImageRendererOptions {
+    showFloatingImage: boolean;
+    intersectionImage: string | null | undefined;
+    floatingCrop: FloatingCrop;
+    setFloatingCrop: Dispatch<SetStateAction<FloatingCrop>>;
+    floatingZoom: number;
+    setFloatingZoom: Dispatch<SetStateAction<number>>;
+    showCropControls: boolean;
+    setShowCropControls: Dispatch<SetStateAction<boolean>>;
+    intersectionArrows: IntersectionArrow[];
+    groups: Groupe[];
+    imageNaturalDims: ImageDimensions;
+    imageFondClair?: boolean;
+    selectedActions: number[];
+    conflictMatrix: Matrice;
+    hoveredArrowGroupId: number | null;
+    setHoveredArrowGroupId?: Dispatch<SetStateAction<number | null>>;
+    hoveredDiagramTime?: number | null;
+    isPlayingSimulation: boolean;
+    simulationCurrentTime?: number | null;
+    simulationResult?: object | null;
+    actionData: ActionMicro[];
+    cycleLength: number;
+    imageBrightness: number;
+    imageContrast: number;
+    floatingImagePopup: FloatingImagePopup;
+}
 
 /**
  * Gère le rendu du contenu de la popup "Image du carrefour" :
@@ -24,13 +70,13 @@ const useFloatingImageRenderer = ({
     hoveredDiagramTime,
     isPlayingSimulation,
     simulationCurrentTime,
-    simulationResult,
+    simulationResult = null,
     actionData,
     cycleLength,
     imageBrightness,
     imageContrast,
     floatingImagePopup
-}) => {
+}: FloatingImageRendererOptions) => {
     useEffect(() => {
         if (!showFloatingImage || !intersectionImage) return;
 
@@ -38,7 +84,7 @@ const useFloatingImageRenderer = ({
         const showNames = JSON.parse(localStorage.getItem('intersection_showGroupNames') ?? 'true');
 
         // Compute group number centroids
-        const groupMap = {};
+        const groupMap: Record<number, Array<{ x: number; y: number }>> = {};
         intersectionArrows.forEach(arrow => {
             if (!arrow.groupId) return;
             const group = groups.find(g => g.id === arrow.groupId);
@@ -176,20 +222,21 @@ const useFloatingImageRenderer = ({
                                 );
                             })}
                             {intersectionArrows.map(arrow => {
-                                const group = groups.find(g => g.id === arrow.groupId);
+                                const groupId = arrow.groupId ?? 0;
+                                const group = groups.find(g => g.id === groupId);
                                 const courant = group?.courant || '';
                                 const rotation = arrow.rotation || 0;
                                 const scale = arrow.scale || 1;
                                 const arrowLength = arrow.length || 1;
                                 const turnLength = arrow.turnLength || 1;
-                                const isHovered = hoveredArrowGroupId === arrow.groupId;
+                                const isHovered = hoveredArrowGroupId === groupId;
 
                                 // Même moteur de couleur que le panneau intégré.
                                 // La copie réduite qui vivait ici ignorait les
                                 // verts découpés, les groupes escamotés et la
                                 // zone de coupure d'un escamotage, et n'employait
                                 // les temps simulés que pendant la lecture.
-                                const arrowColor = getGroupColorAtTime(arrow.groupId, activeTime, colorContext);
+                                const arrowColor = getGroupColorAtTime(groupId, activeTime, colorContext);
 
                                 const isPedestrianOrCycle = courant === 'Piéton' || courant === 'Cycle';
 
@@ -198,11 +245,11 @@ const useFloatingImageRenderer = ({
                                         key={arrow.id}
                                         className={`floating-arrow-marker ${isHovered ? 'hovered' : ''} ${isPedestrianOrCycle ? 'side-label' : ''}`}
                                         style={{ left: `${arrow.x}%`, top: `${arrow.y}%` }}
-                                        onMouseEnter={() => setHoveredArrowGroupId && setHoveredArrowGroupId(arrow.groupId)}
+                                        onMouseEnter={() => setHoveredArrowGroupId && setHoveredArrowGroupId(groupId || null)}
                                         onMouseLeave={() => setHoveredArrowGroupId && setHoveredArrowGroupId(null)}
                                     >
                                         <div className="arrow-symbol" style={{ transform: `rotate(${rotation}deg) scale(${scale})` }}>
-                                            {renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, isPPLit(arrow.groupId, activeTime, colorContext))}
+                                            {renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, isPPLit(groupId, activeTime, colorContext))}
                                         </div>
                                         {showNames && group?.name && (
                                             // Contre-échelle : l'étiquette garde sa taille à l'écran quel que

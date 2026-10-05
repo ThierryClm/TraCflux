@@ -1,5 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { createRoot } from 'react-dom/client';
+import type { Root } from 'react-dom/client';
 import { isFilePickerActive } from '../utils/filePicker';
 import { toast } from '../utils/toast';
 import { placerSansEscamotage } from '../utils/popupPlacement';
@@ -14,19 +16,63 @@ import { placerSansEscamotage } from '../utils/popupPlacement';
 // sur un poste d'une autre résolution.
 const GEOMETRY_KEY = 'popup_geometry';
 
-const readPopupPosition = (key) => {
+interface PopupPosition {
+    left: number;
+    top: number;
+}
+
+interface PopupRect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+interface PopupScreenBounds {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
+
+interface PopupContentSize {
+    width: number;
+    height: number;
+}
+
+interface PopupDocument extends Document {
+    __tcfluxEditingListeners?: boolean;
+}
+
+interface PopupWindowOptions {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    width: number;
+    height: number;
+    contentSize?: PopupContentSize | null;
+    geometryKey?: string | null;
+    showTitleBanner?: boolean;
+}
+
+export interface PopupWindowHandle {
+    renderToPopup: (content: ReactNode) => void;
+    popupWindow: RefObject<Window | null>;
+}
+
+const readPopupPosition = (key: string | null): PopupPosition | null => {
     if (!key) return null;
     try {
-        const all = JSON.parse(localStorage.getItem(GEOMETRY_KEY) || '{}');
+        const all = JSON.parse(localStorage.getItem(GEOMETRY_KEY) || '{}') as Record<string, PopupPosition>;
         const g = all[key];
         return (g && Number.isFinite(g.left) && Number.isFinite(g.top)) ? g : null;
     } catch { return null; }
 };
 
-const writePopupPosition = (key, left, top) => {
+const writePopupPosition = (key: string | null, left: number, top: number) => {
     if (!key) return;
     try {
-        const all = JSON.parse(localStorage.getItem(GEOMETRY_KEY) || '{}');
+        const all = JSON.parse(localStorage.getItem(GEOMETRY_KEY) || '{}') as Record<string, PopupPosition>;
         all[key] = { left, top };
         localStorage.setItem(GEOMETRY_KEY, JSON.stringify(all));
     } catch { /* quota, navigation privée */ }
@@ -39,7 +85,7 @@ const writePopupPosition = (key, left, top) => {
  * fenêtre parente, ou servie par une autre origine, auquel cas cssRules lève
  * une SecurityError. L'appelant s'en tient alors au <link> cloné.
  */
-const cssTextOf = (link) => {
+const cssTextOf = (link: HTMLLinkElement) => {
     try {
         const sheet = link.sheet;
         if (!sheet) return null;
@@ -53,8 +99,8 @@ const cssTextOf = (link) => {
 // mémorisée soit jugée encore bonne.
 const VISIBLE_RATIO = 0.6;
 
-const screenBounds = (popup) => {
-    const scr = popup.screen;
+const screenBounds = (popup: Window): PopupScreenBounds | null => {
+    const scr = popup.screen as Screen & { availLeft?: number; availTop?: number };
     if (!scr || !scr.availWidth || !scr.availHeight) return null;
     return {
         left: typeof scr.availLeft === 'number' ? scr.availLeft : 0,
@@ -64,7 +110,7 @@ const screenBounds = (popup) => {
     };
 };
 
-const isSufficientlyVisible = (popup) => {
+const isSufficientlyVisible = (popup: Window) => {
     const b = screenBounds(popup);
     if (!b) return true; // aucune information : ne pas déplacer à l'aveugle
     const w = popup.outerWidth || popup.innerWidth || 0;
@@ -79,11 +125,11 @@ const isSufficientlyVisible = (popup) => {
 // fier au seul screenX des autres fenêtres : après un moveTo, le système met un
 // temps à répercuter la nouvelle position, et deux fenêtres placées coup sur
 // coup se croiraient toutes deux seules au centre.
-const placesAttribuees = new WeakMap();
+const placesAttribuees = new WeakMap<Window, PopupRect>();
 
 // Rectangles des fenêtres déjà placées, hors celle qu'on est en train de poser.
-const placesOccupees = (popup) => {
-    const rects = [];
+const placesOccupees = (popup: Window): PopupRect[] => {
+    const rects: PopupRect[] = [];
     for (const autre of openPopups) {
         if (autre === popup) continue;
         try {
@@ -98,7 +144,7 @@ const placesOccupees = (popup) => {
     return rects;
 };
 
-const openPopups = new Set();
+const openPopups = new Set<Window>();
 let isBringingToFront = false;
 let lastBringTime = 0;
 
@@ -114,7 +160,7 @@ let popupBlockedNotified = false;
 // la popup OS. Ce flag suspend temporairement ce comportement.
 let mainModalActive = false;
 
-export function setMainModalActive(active) {
+export function setMainModalActive(active: boolean) {
     mainModalActive = !!active;
     if (mainModalActive) {
         // Ramène la fenêtre principale au premier plan pour que la modale soit visible.
@@ -132,9 +178,9 @@ export function isMainModalActive() {
 // déployé, on suspend la remontée automatique des popups — sinon le menu se
 // retrouvait masqué une seconde après son ouverture, sans que l'utilisateur
 // ait rien fait.
-const openMainOverlays = new Set();
+const openMainOverlays = new Set<string>();
 
-export function setMainOverlayOpen(key, open) {
+export function setMainOverlayOpen(key: string, open: boolean) {
     if (open) openMainOverlays.add(key);
     else openMainOverlays.delete(key);
 }
@@ -147,16 +193,16 @@ const isMainOverlayOpen = () => openMainOverlays.size > 0;
 // champ de CETTE popup a le focus (popup.document.activeElement). Si oui, on
 // DIFFÈRE (on mémorise le contenu) ; on l'applique quand le champ perd le focus
 // (événement focusout → flush).
-const popupFlushers = new Set(); // fn() par popup : applique le contenu en attente si plus en édition
+const popupFlushers = new Set<() => void>(); // fn() par popup : applique le contenu en attente si plus en édition
 
 // Champ de SAISIE texte/nombre où le focus et le curseur doivent être préservés.
 // On exclut range (curseurs de recadrage), checkbox/radio, boutons, color, file…
 // qui n'ont pas de curseur de texte et gagnent à se mettre à jour en direct.
-const isFieldEl = (el) => {
-    if (!el) return false;
+const isFieldEl = (el: Element | null): boolean => {
+    if (!(el instanceof HTMLElement)) return false;
     if (el.isContentEditable) return true;
-    if (el.tagName === 'TEXTAREA') return true;
-    if (el.tagName === 'INPUT') {
+    if (el instanceof HTMLTextAreaElement) return true;
+    if (el instanceof HTMLInputElement) {
         const t = (el.type || 'text').toLowerCase();
         return !['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file'].includes(t);
     }
@@ -184,13 +230,13 @@ const isEditingAnyField = () => {
 const onFieldFocusOut = () => { setTimeout(flushAllPopups, 0); };
 
 // Attache l'écouteur de fin d'édition à un document (principal ou popup).
-const installEditingListeners = (doc) => {
+const installEditingListeners = (doc: PopupDocument) => {
     if (!doc || doc.__tcfluxEditingListeners) return;
     doc.__tcfluxEditingListeners = true;
     doc.addEventListener('focusout', onFieldFocusOut);
 };
 
-export function bringAllPopupsToFront(except) {
+export function bringAllPopupsToFront(except: Window | null) {
     if (isBringingToFront || openPopups.size === 0 || isFilePickerActive() || mainModalActive || isEditingAnyField()) return;
     // Un clic DANS une popup reste prioritaire (multi-écrans) ; seule la
     // remontée initiée par la fenêtre principale cède le pas à ses menus.
@@ -206,18 +252,24 @@ export function bringAllPopupsToFront(except) {
     // actif (et sa sélection) AVANT de remonter les popups, pour le restituer
     // ensuite. Le but du mécanisme est seulement le z-order (popups visibles
     // sur un 2e écran), pas la prise de focus.
-    let savedActive = null;
+    let savedActive: {
+        el: HTMLElement;
+        start?: number | null;
+        end?: number | null;
+    } | null = null;
     if (except === null) {
         const el = document.activeElement;
-        if (el && el !== document.body && typeof el.focus === 'function') {
-            const sel = {};
+        if (el instanceof HTMLElement && el !== document.body) {
+            let start: number | null | undefined;
+            let end: number | null | undefined;
             try {
-                if (typeof el.selectionStart === 'number') {
-                    sel.start = el.selectionStart;
-                    sel.end = el.selectionEnd;
+                if ((el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
+                    && typeof el.selectionStart === 'number') {
+                    start = el.selectionStart;
+                    end = el.selectionEnd;
                 }
             } catch { /* champs sans sélection (number, etc.) */ }
-            savedActive = { el, sel };
+            savedActive = { el, start, end };
         }
     }
 
@@ -231,8 +283,9 @@ export function bringAllPopupsToFront(except) {
         try {
             window.focus();
             savedActive.el.focus({ preventScroll: true });
-            if (savedActive.sel.start !== undefined && typeof savedActive.el.setSelectionRange === 'function') {
-                savedActive.el.setSelectionRange(savedActive.sel.start, savedActive.sel.end);
+            if (savedActive.start !== undefined
+                && (savedActive.el instanceof HTMLInputElement || savedActive.el instanceof HTMLTextAreaElement)) {
+                savedActive.el.setSelectionRange(savedActive.start, savedActive.end ?? savedActive.start);
             }
         } catch { /* ignore */ }
     }
@@ -242,7 +295,7 @@ export function bringAllPopupsToFront(except) {
 
 // Install shared listeners on the main window (once)
 let mainListenerInstalled = false;
-let bringPopupsTimer = null;
+let bringPopupsTimer: ReturnType<typeof setTimeout> | null = null;
 function installMainListener() {
     if (mainListenerInstalled) return;
     mainListenerInstalled = true;
@@ -302,20 +355,22 @@ const BANDEAU_HAUTEUR = 28;
 // Coupe « Données trafic — VRM_Prio » en deux. Le tiret cadratin sépare le nom
 // de la fenêtre du contexte (plan de feu, carrefour) ; sans lui, tout le titre
 // reste à gauche.
-const couperTitre = (t) => {
+const couperTitre = (t: string) => {
     const [gauche, ...reste] = String(t || '').split('—');
     return { gauche: gauche.trim(), droite: reste.join('—').trim() };
 };
 
 // Reporte le titre dans le bandeau. Tolérant : une fenêtre en cours de
 // fermeture, ou rouverte sans bandeau, ne doit pas faire échouer l'appelant.
-const ecrireBandeau = (popup, titre) => {
+const ecrireBandeau = (popup: Window, titre: string) => {
     try {
         const bandeau = popup?.document?.getElementById('popup-bandeau');
         if (!bandeau) return;
         const { gauche, droite } = couperTitre(titre);
-        bandeau.querySelector('.bandeau-nom').textContent = gauche;
-        bandeau.querySelector('.bandeau-contexte').textContent = droite;
+        const nom = bandeau.querySelector('.bandeau-nom');
+        const contexte = bandeau.querySelector('.bandeau-contexte');
+        if (nom) nom.textContent = gauche;
+        if (contexte) contexte.textContent = droite;
     } catch { /* fenêtre fermée entre-temps */ }
 };
 
@@ -340,11 +395,11 @@ const usePopupWindow = ({
     contentSize = null,
     geometryKey = null,
     showTitleBanner = true
-}) => {
+}: PopupWindowOptions): PopupWindowHandle => {
     const bannerHeight = showTitleBanner ? BANDEAU_HAUTEUR : 0;
-    const popupRef = useRef(null);
-    const rootRef = useRef(null);
-    const intervalRef = useRef(null);
+    const popupRef = useRef<Window | null>(null);
+    const rootRef = useRef<Root | null>(null);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const contentSizeRef = useRef(contentSize);
     contentSizeRef.current = contentSize;
     // Identité stable pour la mémoire de position. Le titre ne peut pas servir
@@ -354,9 +409,9 @@ const usePopupWindow = ({
     // Tant que le placement initial n'a pas eu lieu, la position courante est
     // celle qu'a choisie le navigateur : la mémoriser écraserait la bonne.
     const placedRef = useRef(false);
-    const lastPosRef = useRef({ x: null, y: null });
+    const lastPosRef = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
     // Dernier contenu à afficher, mis en attente pendant l'édition d'un champ.
-    const pendingContentRef = useRef(null);
+    const pendingContentRef = useRef<ReactNode>(null);
 
     // Applique le contenu en attente, mais seulement si cette popup n'a plus de
     // champ en cours d'édition (sinon on préserve encore le focus — cas du Tab
@@ -400,7 +455,7 @@ const usePopupWindow = ({
             const maxW = b ? Math.max(200, b.width - 40 - chromeW) : Infinity;
             const maxH = b ? Math.max(200, b.height - 60 - chromeH) : Infinity;
 
-            const poser = (w, h) => {
+            const poser = (w: number, h: number) => {
                 const dw = Math.min(Math.round(w), maxW) - popup.innerWidth;
                 const dh = Math.min(Math.round(h), maxH) - popup.innerHeight;
                 if (dw || dh) popup.resizeBy(dw, dh);
@@ -536,7 +591,7 @@ const usePopupWindow = ({
             const parentStyles = document.querySelectorAll('style, link[rel="stylesheet"]');
             parentStyles.forEach(node => {
                 if (node.tagName === 'LINK') {
-                    const texte = cssTextOf(node);
+                    const texte = cssTextOf(node as HTMLLinkElement);
                     if (texte) {
                         const inline = popup.document.createElement('style');
                         inline.textContent = texte;
@@ -705,7 +760,7 @@ const usePopupWindow = ({
                     } catch { /* fenêtre en cours de fermeture */ }
                 }
                 if (popup.closed) {
-                    clearInterval(intervalRef.current);
+                    if (intervalRef.current !== null) clearInterval(intervalRef.current);
                     intervalRef.current = null;
                     rootRef.current = null;
                     popupRef.current = null;
@@ -747,7 +802,7 @@ const usePopupWindow = ({
     // PAS au DOM de la popup : on mémorise le dernier contenu, appliqué à la
     // fin de l'édition via flushPending (enregistré dans popupFlushers). Le
     // champ actif et son curseur ne sont ainsi jamais perturbés.
-    const renderToPopup = useCallback((content) => {
+    const renderToPopup = useCallback((content: ReactNode) => {
         const popup = popupRef.current;
         if (!rootRef.current || !popup || popup.closed) return;
         // Défère si un champ de CETTE popup est en cours d'édition.

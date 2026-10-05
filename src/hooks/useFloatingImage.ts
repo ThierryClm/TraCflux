@@ -17,6 +17,27 @@ const SAFETY_PX = 6;
 const CHROME_GUESS_H = 80;
 const CHROME_GUESS_W = 16;
 
+export interface FloatingCrop {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+}
+
+export interface ImageDimensions {
+    width: number;
+    height: number;
+}
+
+interface ContentSize {
+    width: number;
+    height: number;
+}
+
+interface StableImage extends ImageDimensions {
+    source: string | null;
+}
+
 /**
  * Gère l'état de l'image du carrefour flottante :
  * visibilité, recadrage, zoom, dimensions naturelles et popup détachée.
@@ -27,7 +48,12 @@ const CHROME_GUESS_W = 16;
  * @param {Array} [_arrows] - Conservé pour compatibilité ; les flèches ne
  *        doivent plus agrandir le cadre strict de l'image détachée.
  */
-const useFloatingImage = (intersectionImage, intersectionName = '', activePFName = '', _arrows = []) => {
+const useFloatingImage = (
+    intersectionImage: string | null | undefined,
+    intersectionName = '',
+    activePFName = '',
+    _arrows: readonly unknown[] = []
+) => {
     const [showFloatingImage, setShowFloatingImage] = useState(() => {
         const saved = localStorage.getItem('floating_image_visible');
         return saved === 'true';
@@ -38,13 +64,13 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     // Les lire dans localStorage faisait hériter un nouveau projet du cadrage
     // du précédent : les curseurs n'étaient jamais à zéro au premier
     // détachement. Le rognage redevient une action volontaire, par projet.
-    const [floatingCrop, setFloatingCrop] = useState({ ...DEFAULT_CROP });
+    const [floatingCrop, setFloatingCrop] = useState<FloatingCrop>({ ...DEFAULT_CROP });
 
     const [showCropControls, setShowCropControls] = useState(false);
 
     const [floatingZoom, setFloatingZoom] = useState(DEFAULT_ZOOM);
 
-    const [imageNaturalDims, setImageNaturalDims] = useState({ width: 1, height: 1 });
+    const [imageNaturalDims, setImageNaturalDims] = useState<ImageDimensions>({ width: 1, height: 1 });
     const [imageFondClair, setImageFondClair] = useState(true);
 
     // Rognage hérité d'un projet antérieur au retrait automatique des bandes :
@@ -105,8 +131,8 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     // que l'utilisateur tire un curseur, on conserve la dernière taille stable
     // pour ne pas déplacer la fenêtre sous son pointeur ; elle se recale à la
     // fermeture du panneau.
-    const stableContentSizeRef = useRef(null);
-    const stableImageRef = useRef({ source: null, width: 0, height: 0 });
+    const stableContentSizeRef = useRef<ContentSize | null>(null);
+    const stableImageRef = useRef<StableImage>({ source: null, width: 0, height: 0 });
     const imageDimensionsChanged = stableImageRef.current.source !== intersectionImage
         || stableImageRef.current.width !== imageNaturalDims.width
         || stableImageRef.current.height !== imageNaturalDims.height;
@@ -114,7 +140,7 @@ const useFloatingImage = (intersectionImage, intersectionName = '', activePFName
     if (dimsKnown && (imageDimensionsChanged || !showCropControls || !stableContentSizeRef.current)) {
         stableContentSizeRef.current = { width: contentWidth, height: contentHeight };
         stableImageRef.current = {
-            source: intersectionImage,
+            source: intersectionImage ?? null,
             width: imageNaturalDims.width,
             height: imageNaturalDims.height
         };

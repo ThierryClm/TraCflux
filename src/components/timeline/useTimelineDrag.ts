@@ -1,10 +1,79 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { ActionMicro, Groupe } from '../../types/projet';
 
-const normalizeToCycle = (value, cycleLength) => ((value % cycleLength) + cycleLength) % cycleLength;
+type DragHandleType = 'start' | 'end';
+type ActionTimeField = 'deb' | 'fin';
+type ConflictCell = number | '' | null | undefined;
 
-const parseGroupId = (value) => parseInt(value?.toString().replace(/[Gg]/g, '').trim()) || 0;
+interface LinkedBandwidthAction {
+    id: ActionMicro['id'];
+    initialDeb: number;
+    initialFin: number | null;
+}
 
-const collectLinkedBandwidthActions = (actionData, groupId, actionType) => actionData
+interface TimelineDragState {
+    groupId?: number;
+    type?: DragHandleType;
+    actionId?: ActionMicro['id'];
+    field?: ActionTimeField;
+    initialMouseX: number;
+    initialValue: number;
+    initialFinValue?: number | null;
+    linkedDebutBandeActions?: LinkedBandwidthAction[];
+    linkedFinBandeActions?: LinkedBandwidthAction[];
+    deltaSeconds?: number;
+    mouseX?: number;
+    mouseY?: number;
+    currentValue?: number;
+    showTooltip?: boolean;
+}
+
+export interface TimelineConflict {
+    from: number;
+    to: number;
+    required: number;
+    actual: number;
+    type: 'intergreen';
+}
+
+type UpdateActionRow = (
+    actionId: ActionMicro['id'],
+    field: ActionTimeField,
+    value: string
+) => void;
+
+type GroupParams = Omit<Partial<Groupe>, 'durations'> & {
+    durations?: Partial<Groupe['durations']>;
+};
+
+interface CalculateDragConflictsOptions {
+    dragState: TimelineDragState | null;
+    groups: Groupe[];
+    conflictMatrix: ConflictCell[][];
+    cycleLength: number;
+}
+
+interface UseTimelineDragOptions {
+    actionData: ActionMicro[];
+    conflictMatrix: ConflictCell[][];
+    conflicts: TimelineConflict[];
+    cycleLength: number;
+    endDrag?: () => void;
+    groups: Groupe[];
+    onDragConflicts?: (conflicts: TimelineConflict[] | null) => void;
+    pixelsPerSecond: number;
+    readOnly: boolean;
+    startDrag?: () => void;
+    updateActionRow?: UpdateActionRow;
+    updateGroupParams: (groupId: number, params: GroupParams) => void;
+}
+
+const normalizeToCycle = (value: number, cycleLength: number) => ((value % cycleLength) + cycleLength) % cycleLength;
+
+const parseGroupId = (value: unknown) => parseInt(value?.toString().replace(/[Gg]/g, '').trim() ?? '') || 0;
+
+const collectLinkedBandwidthActions = (actionData: ActionMicro[], groupId: number, actionType: string): LinkedBandwidthAction[] => actionData
     .filter(action =>
         parseGroupId(action.gf) === groupId &&
         action.action === actionType &&
@@ -12,11 +81,16 @@ const collectLinkedBandwidthActions = (actionData, groupId, actionType) => actio
     )
     .map(action => ({
         id: action.id,
-        initialDeb: parseInt(action.deb) || 0,
-        initialFin: action.fin !== '' ? parseInt(action.fin) || 0 : null
+        initialDeb: parseInt(String(action.deb ?? '')) || 0,
+        initialFin: action.fin !== '' ? parseInt(String(action.fin ?? '')) || 0 : null
     }));
 
-const updateLinkedActions = (linkedActions, deltaSeconds, cycleLength, updateActionRow) => {
+const updateLinkedActions = (
+    linkedActions: LinkedBandwidthAction[] | undefined,
+    deltaSeconds: number,
+    cycleLength: number,
+    updateActionRow?: UpdateActionRow
+) => {
     if (!linkedActions?.length || !updateActionRow) return;
 
     linkedActions.forEach(action => {
@@ -27,19 +101,24 @@ const updateLinkedActions = (linkedActions, deltaSeconds, cycleLength, updateAct
     });
 };
 
-export const calculateDragConflicts = ({ dragState, groups, conflictMatrix, cycleLength }) => {
+export const calculateDragConflicts = ({
+    dragState,
+    groups,
+    conflictMatrix,
+    cycleLength
+}: CalculateDragConflictsOptions): TimelineConflict[] | null => {
     if (!dragState || dragState.deltaSeconds === undefined || dragState.deltaSeconds === 0) return null;
     if (!dragState.groupId) return null;
 
     const deltaSeconds = dragState.deltaSeconds;
     const draggedGroupId = dragState.groupId;
 
-    const getVirtualOffset = (group) => {
+    const getVirtualOffset = (group: Groupe) => {
         if (group.id !== draggedGroupId || dragState.type !== 'start') return group.offset % cycleLength;
         return normalizeToCycle(dragState.initialValue + deltaSeconds, cycleLength);
     };
 
-    const getVirtualGreen = (group) => {
+    const getVirtualGreen = (group: Groupe) => {
         if (group.id !== draggedGroupId) return group.durations.green;
 
         if (dragState.type === 'start') {
@@ -61,7 +140,7 @@ export const calculateDragConflicts = ({ dragState, groups, conflictMatrix, cycl
         return group.durations.green;
     };
 
-    const conflicts = [];
+    const conflicts: TimelineConflict[] = [];
     for (let from = 0; from < groups.length; from++) {
         if (!conflictMatrix[from]) continue;
 
@@ -75,7 +154,7 @@ export const calculateDragConflicts = ({ dragState, groups, conflictMatrix, cycl
             const start = getVirtualOffset(toGroup);
             const distance = (start - end + cycleLength) % cycleLength;
 
-            if (distance < minGap) {
+            if (typeof minGap === 'number' && distance < minGap) {
                 conflicts.push({
                     from: fromGroup.id,
                     to: toGroup.id,
@@ -103,10 +182,10 @@ export const useTimelineDrag = ({
     startDrag,
     updateActionRow,
     updateGroupParams
-}) => {
-    const [dragState, setDragState] = useState(null);
+}: UseTimelineDragOptions) => {
+    const [dragState, setDragState] = useState<TimelineDragState | null>(null);
 
-    const handleStartChange = useCallback((id, value) => {
+    const handleStartChange = useCallback((id: number, value: string) => {
         const group = groups.find(candidate => candidate.id === id);
         if (!group) return;
 
@@ -122,13 +201,18 @@ export const useTimelineDrag = ({
         });
     }, [cycleLength, groups, updateGroupParams]);
 
-    const handleEndChange = useCallback((id, endValue, startValue) => {
+    const handleEndChange = useCallback((id: number, endValue: string, startValue: number) => {
         let duration = (parseInt(endValue) || 0) - startValue;
         if (duration < 0) duration += cycleLength;
         updateGroupParams(id, { durations: { green: Math.max(0, duration) } });
     }, [cycleLength, updateGroupParams]);
 
-    const handleDragStart = useCallback((event, groupId, type, currentValue) => {
+    const handleDragStart = useCallback((
+        event: ReactMouseEvent,
+        groupId: number,
+        type: DragHandleType,
+        currentValue: number
+    ) => {
         if (readOnly) return;
         event.stopPropagation();
         event.preventDefault();
@@ -148,7 +232,12 @@ export const useTimelineDrag = ({
         });
     }, [actionData, readOnly, startDrag]);
 
-    const handleActionDragStart = useCallback((event, actionId, field, currentValue) => {
+    const handleActionDragStart = useCallback((
+        event: ReactMouseEvent,
+        actionId: ActionMicro['id'],
+        field: ActionTimeField,
+        currentValue: string | number
+    ) => {
         if (readOnly) return;
         event.stopPropagation();
         event.preventDefault();
@@ -165,13 +254,15 @@ export const useTimelineDrag = ({
             actionId,
             field,
             initialMouseX: event.clientX,
-            initialValue: parseInt(currentValue) || 0,
-            initialFinValue: dragsWholeBandwidth ? parseInt(action.fin) || 0 : null,
+            initialValue: parseInt(String(currentValue)) || 0,
+            initialFinValue: dragsWholeBandwidth && action
+                ? parseInt(String(action.fin ?? '')) || 0
+                : null,
             showTooltip: Boolean(action && tooltipActions.includes(action.action))
         });
     }, [actionData, readOnly, startDrag]);
 
-    const handleDragMove = useCallback((event) => {
+    const handleDragMove = useCallback((event: MouseEvent) => {
         if (!dragState) return;
         const deltaSeconds = Math.round((event.clientX - dragState.initialMouseX) / pixelsPerSecond);
 
@@ -183,7 +274,9 @@ export const useTimelineDrag = ({
                 updateActionRow(dragState.actionId, 'deb', newValue.toString());
                 updateActionRow(dragState.actionId, 'fin', newFin.toString());
             } else {
-                updateActionRow(dragState.actionId, dragState.field, newValue.toString());
+                if (dragState.field) {
+                    updateActionRow(dragState.actionId, dragState.field, newValue.toString());
+                }
             }
 
             setDragState(previous => previous ? {
@@ -218,7 +311,7 @@ export const useTimelineDrag = ({
                     if (newDuration <= 0) newDuration += cycleLength;
 
                     if (newDuration > 0 && newDuration <= cycleLength) {
-                        updateGroupParams(dragState.groupId, {
+                        updateGroupParams(dragState.groupId!, {
                             offset: newOffset,
                             durations: { green: newDuration }
                         });
@@ -240,7 +333,7 @@ export const useTimelineDrag = ({
                     if (newDuration <= 0) newDuration += cycleLength;
 
                     if (newDuration > 0 && newDuration <= cycleLength) {
-                        updateGroupParams(dragState.groupId, { durations: { green: newDuration } });
+                        updateGroupParams(dragState.groupId!, { durations: { green: newDuration } });
                         updateLinkedActions(
                             dragState.linkedFinBandeActions,
                             deltaSeconds,
@@ -259,7 +352,7 @@ export const useTimelineDrag = ({
     useEffect(() => {
         if (!dragState) return undefined;
 
-        const handleMouseMove = event => handleDragMove(event);
+        const handleMouseMove = (event: MouseEvent) => handleDragMove(event);
         const handleMouseUp = () => handleDragEnd();
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
@@ -290,4 +383,3 @@ export const useTimelineDrag = ({
         handleStartChange
     };
 };
-
