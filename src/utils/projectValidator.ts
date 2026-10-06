@@ -1,8 +1,6 @@
-export interface ProjectValidationResult {
-    ok: boolean;
-    error?: string;
-    warnings: string[];
-}
+export type ProjectValidationResult =
+    | { ok: true; warnings: string[] }
+    | { ok: false; error: string; warnings: string[] };
 
 /**
  * Validates that a parsed JSON object looks like a Diagramme de Feux project.

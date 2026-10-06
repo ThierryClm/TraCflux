@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       // 'prompt' (et non 'autoUpdate') : la nouvelle version reste en attente
-      // et l'app affiche un bandeau « Recharger » (cf. ReloadPrompt.jsx) au
+      // et l'app affiche un bandeau « Recharger » (cf. ReloadPrompt.tsx) au
       // lieu de recharger silencieusement — on ne coupe jamais une édition en
       // cours ni ne ferme les fenêtres détachées.
       registerType: 'prompt',
@@ -29,7 +29,7 @@ export default defineConfig({
         background_color: '#1e1e1e',
         // 'minimal-ui' (au lieu de 'standalone') : conserve une barre URL
         // minimale en mode PWA installé. Indispensable pour que window.open()
-        // des fenêtres détachées (usePopupWindow.js) respecte les paramètres
+        // des fenêtres détachées (usePopupWindow.tsx) respecte les paramètres
         // de taille/position — en 'standalone' les popups héritent du mode
         // app et s'ouvrent plein écran ou sont bloquées (cf. memory
         // vbs-app-mode-breaks-popups : même classe de problème).

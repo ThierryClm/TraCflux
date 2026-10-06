@@ -65,7 +65,7 @@ squatting the port — it exits 1 and says so. A green run is therefore
 trustworthy; do not pipe its output through `tail -1`, which hides the verdict.
 
 The « Recharger » banner appears when the service worker re-checks for a new
-version — on page load, or once an hour ([ReloadPrompt.jsx](src/components/ReloadPrompt.jsx)).
+version — on page load, or once an hour ([ReloadPrompt.tsx](src/components/ReloadPrompt.tsx)).
 Leaving the window open is therefore not enough: Ctrl+R is what triggers it.
 The diagnostic report's build date is the only reliable check for a stale bundle.
 

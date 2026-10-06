@@ -1,0 +1,750 @@
+import { useCallback } from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+import { safeShowOpenFilePicker, safeShowSaveFilePicker } from '../utils/filePicker';
+import { toast } from '../utils/toast';
+import { validateProject } from '../utils/projectValidator';
+import { selectPfSubset } from '../utils/pfHelpers';
+import { stampReadOnly } from '../utils/dossierLock';
+import { bringAllPopupsToFront } from './usePopupWindow';
+import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
+import type { OptionsMiseEnPage, Projet } from '../types/projet';
+import type { RecentDirectory, RecentDirectoryType } from './useRecentDirectories';
+
+type StateSetter<T> = Dispatch<SetStateAction<T>>;
+
+interface DialogMessage {
+    title?: string;
+    message: string;
+    confirmLabel?: string;
+    danger?: boolean;
+}
+
+interface UseFileOperationsOptions {
+    projectName: string | null;
+    diagramHeight: number | null;
+    floatingCrop: Record<string, unknown>;
+    floatingZoom: number;
+    setSelectedProject: StateSetter<string | null>;
+    setOpenModal: StateSetter<boolean>;
+    setCurrentProjectPath: StateSetter<string | null>;
+    setProjectModified: StateSetter<boolean>;
+    projectModifiedSkip: MutableRefObject<boolean>;
+    hasUnsavedChanges: boolean;
+    setHasUnsavedChanges: StateSetter<boolean>;
+    isDirty: boolean;
+    setDiagramHeight: StateSetter<number | null>;
+    resetDiagramHeight?: () => void;
+    setFloatingCrop: (crop: unknown) => void;
+    setFloatingZoom: StateSetter<number>;
+    markLegacyCrop?: (legacy: boolean) => void;
+    setShowComments: StateSetter<boolean>;
+    setShowRemarks: StateSetter<boolean>;
+    setIntersectionName: StateSetter<string>;
+    showComments: boolean;
+    showRemarks: boolean;
+    showActionDescription: boolean;
+    sidebarVisible: boolean;
+    setShowActionDescription: StateSetter<boolean>;
+    setSidebarVisible: StateSetter<boolean>;
+    showFloatingForm: boolean;
+    setShowFloatingForm: StateSetter<boolean>;
+    showFloatingMatrix: boolean;
+    setShowFloatingMatrix: StateSetter<boolean>;
+    showFloatingTraffic: boolean;
+    setShowFloatingTraffic: StateSetter<boolean>;
+    showFloatingImage: boolean;
+    setShowFloatingImage: StateSetter<boolean>;
+    showFloatingConditions: boolean;
+    setShowFloatingConditions: StateSetter<boolean>;
+    showFloatingVariables: boolean;
+    setShowFloatingVariables: StateSetter<boolean>;
+    showFloatingRemarks: boolean;
+    setShowFloatingRemarks: StateSetter<boolean>;
+    setHasActiveProject?: StateSetter<boolean>;
+    loadFullState: (state: Partial<Projet> & Record<string, unknown>) => unknown;
+    getFullState: () => Projet;
+    saveProject: (name: string) => unknown;
+    dossierSections: Record<string, unknown>;
+    setDossierSections: (sections: Record<string, unknown>) => void;
+    lastOpenDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    lastSaveDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    lastImportDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    lastImageDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    saveDirectoryHandle: (key: string, handle: FileSystemDirectoryHandleLike) => Promise<void>;
+    loadDirectoryHandle: (key: string) => Promise<FileSystemDirectoryHandleLike | null>;
+    recentOpenDirs: RecentDirectory[];
+    recentSaveDirs: RecentDirectory[];
+    recentImportDirs: RecentDirectory[];
+    recentImageDirs: RecentDirectory[];
+    recentGreenWaveDirs: RecentDirectory[];
+    addRecentDirectory: (
+        type: RecentDirectoryType,
+        name: string,
+        handle?: FileSystemDirectoryHandleLike
+    ) => void;
+    askConfirm?: (message: DialogMessage) => Promise<boolean>;
+    showAlert?: (message: DialogMessage) => Promise<void> | void;
+}
+
+/**
+ * Gère les opérations d'ouverture et de sauvegarde de fichiers projet
+ * via la File System Access API (avec fallback localStorage).
+ */
+const useFileOperations = ({
+    projectName, diagramHeight, floatingCrop, floatingZoom,
+    setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
+    projectModifiedSkip, hasUnsavedChanges, setHasUnsavedChanges,
+    isDirty,
+    setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
+    setShowComments, setShowRemarks, setIntersectionName,
+    // Options de mise en page sauvegardées dans le projet
+    showComments, showRemarks, showActionDescription, sidebarVisible,
+    setShowActionDescription, setSidebarVisible,
+    // Flags de détachement de fenêtres (niveau projet)
+    showFloatingForm, setShowFloatingForm,
+    showFloatingMatrix, setShowFloatingMatrix,
+    showFloatingTraffic, setShowFloatingTraffic,
+    showFloatingImage, setShowFloatingImage,
+    showFloatingConditions, setShowFloatingConditions,
+    showFloatingVariables, setShowFloatingVariables,
+    showFloatingRemarks, setShowFloatingRemarks,
+    setHasActiveProject,
+    loadFullState, getFullState, saveProject,
+    dossierSections, setDossierSections,
+    lastOpenDirectoryRef, lastSaveDirectoryRef, lastImportDirectoryRef,
+    lastImageDirectoryRef,
+    saveDirectoryHandle, loadDirectoryHandle,
+    recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
+    addRecentDirectory,
+    askConfirm, showAlert
+}: UseFileOperationsOptions) => {
+    // Fallback : si showAlert n'est pas fourni, on retombe sur window.alert
+    const alertFn = showAlert || (({ message }: DialogMessage) => { window.alert(message); return Promise.resolve(); });
+    // Ouvrir un fichier JSON avec File System Access API
+    const handleOpenFileWithPicker = useCallback(async () => {
+        if (!window.showOpenFilePicker) {
+            // Fallback pour navigateurs sans File System Access API
+            setSelectedProject(null);
+            setOpenModal(true);
+            return;
+        }
+
+        try {
+            const options: FilePickerOptionsLike = {
+                types: [{
+                    description: 'Fichiers Projet',
+                    accept: { 'application/json': ['.json'] }
+                }],
+                multiple: false
+            };
+
+            // Utiliser le dernier répertoire si disponible
+            if (lastOpenDirectoryRef.current) {
+                options.startIn = lastOpenDirectoryRef.current;
+            }
+
+            const [fileHandle] = await safeShowOpenFilePicker(options);
+            const file = await fileHandle.getFile();
+            const content = await file.text();
+
+            // Validation du contenu avant parsing
+            if (!content || content.trim() === '') {
+                alertFn({ title: 'Fichier vide', message: 'Le fichier est vide.' });
+                return;
+            }
+
+            let data: Partial<Projet> & Record<string, unknown>;
+            try {
+                data = JSON.parse(content) as Partial<Projet> & Record<string, unknown>;
+            } catch (parseError) {
+                console.error('Erreur parsing JSON:', parseError);
+                alertFn({
+                    title: 'Fichier JSON invalide',
+                    message: 'Le fichier JSON est invalide ou corrompu.\n\nDétails : ' + parseError.message + '\n\nEssayez d\'ouvrir le fichier dans un éditeur de texte pour vérifier sa structure.'
+                });
+                return;
+            }
+
+            const validation = validateProject(data);
+            if (!validation.ok) {
+                alertFn({ title: 'Fichier incompatible', message: validation.error });
+                return;
+            }
+            if (validation.warnings.length > 0) {
+                console.warn('Avertissements validation projet :', validation.warnings);
+                toast.info(`Projet chargé avec ${validation.warnings.length} avertissement(s) — voir console`);
+            }
+
+            // Garde-fou : si le projet courant a des modifications non
+            // sauvegardées, demander confirmation avant de l'écraser.
+            // (Validation OK passée d'abord pour éviter une question inutile
+            // si le fichier choisi n'est pas exploitable.)
+            if (isDirty && askConfirm) {
+                const ok = await askConfirm({
+                    title: 'Modifications non enregistrées',
+                    message: 'Le projet courant a des modifications non enregistrées qui seront perdues.\n\nContinuer et ouvrir le nouveau projet ?',
+                    confirmLabel: 'Continuer',
+                    danger: true,
+                });
+                if (!ok) return;
+            }
+
+            // Mémoriser le répertoire parent
+            try {
+                const dirHandle = await fileHandle.getParent?.();
+                if (dirHandle) {
+                    lastOpenDirectoryRef.current = dirHandle;
+                    await saveDirectoryHandle('lastOpenDirectory', dirHandle);
+                    // Ajouter aux répertoires récents
+                    addRecentDirectory('open', dirHandle.name, dirHandle);
+                }
+            } catch (e) {
+                // getParent n'est pas toujours disponible
+            }
+
+            // Charger les données du projet
+            const projName = file.name.replace(/\.json$/i, '');
+            loadFullState({
+                projectName: projName,
+                ...data
+            });
+
+            // Active l'interface principale (sortie de l'écran d'accueil).
+            setHasActiveProject?.(true);
+
+            // Mémoriser le chemin du projet
+            setCurrentProjectPath(file.name);
+            setProjectModified(true); // active "Nouveau projet" dans le menu
+            projectModifiedSkip.current = true; // absorbe le prochain changement de deps
+            setHasUnsavedChanges(false); // pas de modifications non sauvegardées
+
+            // Hauteur du diagramme : donnée de projet. Absente du fichier, on
+            // repart de la hauteur automatique — sans quoi le projet héritait de
+            // celle du précédent. resetDiagramHeight et non setDiagramHeight(null) :
+            // il efface aussi la valeur mémorisée par le navigateur, qui sinon
+            // reviendrait au prochain rechargement.
+            if (data.diagramHeight !== undefined && data.diagramHeight !== null) {
+                setDiagramHeight(data.diagramHeight);
+            } else {
+                resetDiagramHeight?.();
+            }
+
+            // Rognage et zoom de l'image détachée : données du projet. Absents
+            // du fichier (projet antérieur, ou jamais rogné), on repart du
+            // cadrage neutre — hériter de celui du projet précédent n'a pas de
+            // sens et laissait les curseurs déjà engagés au premier détachement.
+            setFloatingCrop(data.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
+            setFloatingZoom(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
+            markLegacyCrop?.(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
+
+            // Restaurer les options de mise en page sauvegardées dans le projet :
+            // - Format moderne : data.layoutOptions = { showParameters, showComments, showRemarks, showActionDescription, showFloating* }
+            // - Format ancien (rétrocompatibilité) : auto-détection des coches
+            //   commentaires/remarques selon la présence de contenu
+            if (data.layoutOptions && typeof data.layoutOptions === 'object') {
+                const lo = data.layoutOptions;
+                // Absent d'un projet enregistré avant que l'option n'existe :
+                // panneau affiché, comme pour un projet neuf.
+                setSidebarVisible(typeof lo.showParameters === 'boolean' ? lo.showParameters : true);
+                if (typeof lo.showComments === 'boolean') setShowComments(lo.showComments);
+                if (typeof lo.showRemarks === 'boolean') setShowRemarks(lo.showRemarks);
+                if (typeof lo.showActionDescription === 'boolean') setShowActionDescription(lo.showActionDescription);
+
+                // Détachements de fenêtres : on applique directement les
+                // valeurs du projet. Pas de close-then-reopen : le setTimeout
+                // casserait la chaîne « geste utilisateur » du clic d'origine
+                // et déclencherait le bloqueur de popups du navigateur.
+                if (typeof lo.showFloatingForm === 'boolean') setShowFloatingForm(lo.showFloatingForm);
+                if (typeof lo.showFloatingMatrix === 'boolean') setShowFloatingMatrix(lo.showFloatingMatrix);
+                if (typeof lo.showFloatingTraffic === 'boolean') setShowFloatingTraffic(lo.showFloatingTraffic);
+                if (typeof lo.showFloatingImage === 'boolean') setShowFloatingImage(lo.showFloatingImage);
+                if (typeof lo.showFloatingConditions === 'boolean') setShowFloatingConditions(lo.showFloatingConditions);
+                if (typeof lo.showFloatingVariables === 'boolean') setShowFloatingVariables(lo.showFloatingVariables);
+                if (typeof lo.showFloatingRemarks === 'boolean') setShowFloatingRemarks(lo.showFloatingRemarks);
+            } else {
+                const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
+                setShowComments(!!hasComments);
+                const pfList = data.pfTabs || [];
+                const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
+                setShowRemarks(!!hasRemarks);
+
+                // Projet ancien sans layoutOptions : on décoche tous les
+                // détachements pour repartir d'un espace de travail propre.
+                // L'utilisateur détachera ce dont il a besoin pour ce projet.
+                setSidebarVisible(true);
+                setShowFloatingForm(false);
+                setShowFloatingMatrix(false);
+                setShowFloatingTraffic(false);
+                setShowFloatingImage(false);
+                setShowFloatingConditions(false);
+                setShowFloatingVariables(false);
+                setShowFloatingRemarks(false);
+            }
+
+            // Restaurer les options du dossier d'impression
+            if (data.dossierSections && Object.keys(data.dossierSections).length > 0) {
+                setDossierSections(data.dossierSections);
+            }
+
+            // Ramène les popups détachées au premier plan : après l'ouverture
+            // d'un projet, le focus est revenu sur la fenêtre principale et
+            // les popups peuvent passer derrière. Sans ça, l'utilisateur doit
+            // cliquer sur la fenêtre principale pour les voir réapparaître.
+            setTimeout(() => bringAllPopupsToFront(null), 100);
+
+            toast.success(`Projet ouvert : ${projName}`);
+
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.error('Erreur ouverture fichier:', e);
+                toast.error('Échec de l\'ouverture : ' + e.message);
+            }
+        }
+    }, [loadFullState, saveDirectoryHandle, addRecentDirectory, setDiagramHeight]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Ouvrir un fichier depuis un répertoire récent
+    const handleOpenFileFromRecentDir = useCallback(async (dirIndex: number) => {
+        if (!window.showOpenFilePicker) {
+            alertFn({ title: 'Navigateur non compatible', message: 'API File System non supportée par ce navigateur.' });
+            return;
+        }
+
+        try {
+            const dirInfo = recentOpenDirs[dirIndex];
+            if (!dirInfo) return;
+
+            const options: FilePickerOptionsLike = {
+                types: [{
+                    description: 'Fichiers Projet',
+                    accept: { 'application/json': ['.json'] }
+                }],
+                multiple: false
+            };
+
+            // Essayer de récupérer le handle du répertoire depuis IndexedDB
+            const savedHandle = await loadDirectoryHandle(`recentOpenDir_${dirIndex}`);
+            if (savedHandle) {
+                options.startIn = savedHandle;
+            }
+
+            const [fileHandle] = await safeShowOpenFilePicker(options);
+            const file = await fileHandle.getFile();
+            const content = await file.text();
+
+            // Validation du contenu avant parsing
+            if (!content || content.trim() === '') {
+                alertFn({ title: 'Fichier vide', message: 'Le fichier est vide.' });
+                return;
+            }
+
+            let data: Partial<Projet> & Record<string, unknown>;
+            try {
+                data = JSON.parse(content) as Partial<Projet> & Record<string, unknown>;
+            } catch (parseError) {
+                console.error('Erreur parsing JSON:', parseError);
+                alertFn({
+                    title: 'Fichier JSON invalide',
+                    message: 'Le fichier JSON est invalide ou corrompu.\n\nDétails : ' + parseError.message + '\n\nEssayez d\'ouvrir le fichier dans un éditeur de texte pour vérifier sa structure.'
+                });
+                return;
+            }
+
+            const validation = validateProject(data);
+            if (!validation.ok) {
+                alertFn({ title: 'Fichier incompatible', message: validation.error });
+                return;
+            }
+            if (validation.warnings.length > 0) {
+                console.warn('Avertissements validation projet :', validation.warnings);
+                toast.info(`Projet chargé avec ${validation.warnings.length} avertissement(s) — voir console`);
+            }
+
+            // Garde-fou : si le projet courant a des modifications non
+            // sauvegardées, demander confirmation avant de l'écraser.
+            // (Validation OK passée d'abord pour éviter une question inutile
+            // si le fichier choisi n'est pas exploitable.)
+            if (isDirty && askConfirm) {
+                const ok = await askConfirm({
+                    title: 'Modifications non enregistrées',
+                    message: 'Le projet courant a des modifications non enregistrées qui seront perdues.\n\nContinuer et ouvrir le nouveau projet ?',
+                    confirmLabel: 'Continuer',
+                    danger: true,
+                });
+                if (!ok) return;
+            }
+
+            // Mémoriser le répertoire parent
+            try {
+                const dirHandle = await fileHandle.getParent?.();
+                if (dirHandle) {
+                    lastOpenDirectoryRef.current = dirHandle;
+                    await saveDirectoryHandle('lastOpenDirectory', dirHandle);
+                    addRecentDirectory('open', dirHandle.name, dirHandle);
+                }
+            } catch (e) {
+                // getParent n'est pas toujours disponible
+            }
+
+            const projName = file.name.replace(/\.json$/i, '');
+            loadFullState({
+                projectName: projName,
+                ...data
+            });
+
+            // Mémoriser le chemin du projet
+            setCurrentProjectPath(file.name);
+            setProjectModified(true); // active "Nouveau projet" dans le menu
+            projectModifiedSkip.current = true; // absorbe le prochain changement de deps
+            setHasUnsavedChanges(false); // pas de modifications non sauvegardées
+
+            // Hauteur du diagramme : donnée de projet. Absente du fichier, on
+            // repart de la hauteur automatique — sans quoi le projet héritait de
+            // celle du précédent. resetDiagramHeight et non setDiagramHeight(null) :
+            // il efface aussi la valeur mémorisée par le navigateur, qui sinon
+            // reviendrait au prochain rechargement.
+            if (data.diagramHeight !== undefined && data.diagramHeight !== null) {
+                setDiagramHeight(data.diagramHeight);
+            } else {
+                resetDiagramHeight?.();
+            }
+
+            // Rognage et zoom de l'image détachée : données du projet. Absents
+            // du fichier (projet antérieur, ou jamais rogné), on repart du
+            // cadrage neutre — hériter de celui du projet précédent n'a pas de
+            // sens et laissait les curseurs déjà engagés au premier détachement.
+            setFloatingCrop(data.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
+            setFloatingZoom(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
+            markLegacyCrop?.(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
+
+            // Restaurer les options de mise en page sauvegardées dans le projet :
+            // - Format moderne : data.layoutOptions = { showParameters, showComments, showRemarks, showActionDescription, showFloating* }
+            // - Format ancien (rétrocompatibilité) : auto-détection des coches
+            //   commentaires/remarques selon la présence de contenu
+            if (data.layoutOptions && typeof data.layoutOptions === 'object') {
+                const lo = data.layoutOptions;
+                // Absent d'un projet enregistré avant que l'option n'existe :
+                // panneau affiché, comme pour un projet neuf.
+                setSidebarVisible(typeof lo.showParameters === 'boolean' ? lo.showParameters : true);
+                if (typeof lo.showComments === 'boolean') setShowComments(lo.showComments);
+                if (typeof lo.showRemarks === 'boolean') setShowRemarks(lo.showRemarks);
+                if (typeof lo.showActionDescription === 'boolean') setShowActionDescription(lo.showActionDescription);
+
+                // Détachements de fenêtres : on applique directement les
+                // valeurs du projet. Pas de close-then-reopen : le setTimeout
+                // casserait la chaîne « geste utilisateur » du clic d'origine
+                // et déclencherait le bloqueur de popups du navigateur.
+                if (typeof lo.showFloatingForm === 'boolean') setShowFloatingForm(lo.showFloatingForm);
+                if (typeof lo.showFloatingMatrix === 'boolean') setShowFloatingMatrix(lo.showFloatingMatrix);
+                if (typeof lo.showFloatingTraffic === 'boolean') setShowFloatingTraffic(lo.showFloatingTraffic);
+                if (typeof lo.showFloatingImage === 'boolean') setShowFloatingImage(lo.showFloatingImage);
+                if (typeof lo.showFloatingConditions === 'boolean') setShowFloatingConditions(lo.showFloatingConditions);
+                if (typeof lo.showFloatingVariables === 'boolean') setShowFloatingVariables(lo.showFloatingVariables);
+                if (typeof lo.showFloatingRemarks === 'boolean') setShowFloatingRemarks(lo.showFloatingRemarks);
+            } else {
+                const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
+                setShowComments(!!hasComments);
+                const pfList = data.pfTabs || [];
+                const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
+                setShowRemarks(!!hasRemarks);
+
+                // Projet ancien sans layoutOptions : on décoche tous les
+                // détachements pour repartir d'un espace de travail propre.
+                // L'utilisateur détachera ce dont il a besoin pour ce projet.
+                setSidebarVisible(true);
+                setShowFloatingForm(false);
+                setShowFloatingMatrix(false);
+                setShowFloatingTraffic(false);
+                setShowFloatingImage(false);
+                setShowFloatingConditions(false);
+                setShowFloatingVariables(false);
+                setShowFloatingRemarks(false);
+            }
+
+            // Restaurer les options du dossier d'impression
+            if (data.dossierSections && Object.keys(data.dossierSections).length > 0) {
+                setDossierSections(data.dossierSections);
+            }
+
+            // Ramène les popups détachées au premier plan : après l'ouverture
+            // d'un projet, le focus est revenu sur la fenêtre principale et
+            // les popups peuvent passer derrière. Sans ça, l'utilisateur doit
+            // cliquer sur la fenêtre principale pour les voir réapparaître.
+            setTimeout(() => bringAllPopupsToFront(null), 100);
+
+            toast.success(`Projet ouvert : ${projName}`);
+
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.error('Erreur ouverture fichier:', e);
+                toast.error('Échec de l\'ouverture : ' + e.message);
+            }
+        }
+    }, [recentOpenDirs, loadDirectoryHandle, saveDirectoryHandle, addRecentDirectory, loadFullState, setDiagramHeight]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Enregistrer un fichier JSON avec File System Access API
+    const handleSaveFileWithPicker = useCallback(async () => {
+        if (!window.showSaveFilePicker) {
+            // Fallback pour navigateurs sans File System Access API
+            const name = prompt('Nom du projet:', projectName || 'Mon projet');
+            if (name) {
+                saveProject(name);
+            }
+            return;
+        }
+
+        try {
+            const options: FilePickerOptionsLike = {
+                suggestedName: `${projectName || 'projet'}.json`,
+                types: [{
+                    description: 'Fichier Projet JSON',
+                    accept: { 'application/json': ['.json'] }
+                }]
+            };
+
+            // Utiliser le dernier répertoire si disponible
+            if (lastSaveDirectoryRef.current) {
+                options.startIn = lastSaveDirectoryRef.current;
+            }
+
+            const fileHandle = await safeShowSaveFilePicker(options);
+
+            // Préparer les données du projet
+            const fullState = getFullState();
+            // Le paquet EST l'état canonique, sans ajout : hauteur du diagramme,
+            // cadrage et zoom de l'image, options de mise en page, cases du dossier
+            // et répertoires y entrent par getFullState, donc aussi dans le cache.
+            // Ces sept clés étaient recopiées ici, dans les deux chemins
+            // d'enregistrement : c'est cette duplication qui faisait diverger le
+            // fichier et le cache dès qu'un réglage n'était ajouté qu'à un endroit.
+            const projectData = { ...fullState };
+
+            // Écrire le fichier
+            const jsonContent = JSON.stringify(projectData, null, 2);
+            const writable = await fileHandle.createWritable();
+            await writable.write(jsonContent);
+            await writable.close();
+
+            // Vérifier que le fichier n'est pas vide après sauvegarde
+            try {
+                const savedFile = await fileHandle.getFile();
+                const savedContent = await savedFile.text();
+                if (!savedContent || savedContent.trim() === '') {
+                    alertFn({
+                        title: 'Sauvegarde vide',
+                        message: 'Attention : le fichier semble vide après la sauvegarde.\n\nVeuillez réessayer ou utiliser « Enregistrer » pour sauvegarder dans le cache navigateur.'
+                    });
+                    return;
+                }
+            } catch (verifyError) {
+                console.warn('Impossible de vérifier le fichier sauvegardé:', verifyError);
+            }
+
+            // Mémoriser le répertoire parent
+            try {
+                const dirHandle = await fileHandle.getParent?.();
+                if (dirHandle) {
+                    lastSaveDirectoryRef.current = dirHandle;
+                    await saveDirectoryHandle('lastSaveDirectory', dirHandle);
+                    // Ajouter aux répertoires récents d'enregistrement
+                    addRecentDirectory('save', dirHandle.name, dirHandle);
+                }
+            } catch (e) {
+                // getParent n'est pas toujours disponible
+            }
+
+            // Mettre à jour le nom du projet
+            const savedName = fileHandle.name.replace(/\.json$/i, '');
+            setIntersectionName(savedName);
+
+            // Mémoriser le chemin du projet
+            setCurrentProjectPath(fileHandle.name);
+            setProjectModified(true); // active "Nouveau projet" dans le menu
+            projectModifiedSkip.current = true; // absorbe setIntersectionName(savedName)
+            setHasUnsavedChanges(false); // projet sauvegardé, pas de modifications
+
+            // Sauvegarder aussi dans localStorage pour cohérence
+            saveProject(savedName);
+
+            toast.success(`Projet sauvegardé : ${savedName}`);
+
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.error('Erreur sauvegarde fichier:', e);
+                toast.error('Échec de la sauvegarde : ' + e.message);
+            }
+        }
+    }, [projectName, getFullState, setIntersectionName, saveProject, saveDirectoryHandle, addRecentDirectory, recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
+        // Layout options sauvegardées dans le projet — sans ces deps, le
+        // callback memoisé garde les valeurs périmées du premier rendu.
+        sidebarVisible, showComments, showRemarks, showActionDescription,
+        showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
+        showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Enregistrer un fichier dans un répertoire récent
+    const handleSaveFileToRecentDir = useCallback(async (dirIndex: number) => {
+        if (!window.showSaveFilePicker) {
+            alertFn({ title: 'Navigateur non compatible', message: 'API File System non supportée par ce navigateur.' });
+            return;
+        }
+
+        try {
+            const dirInfo = recentSaveDirs[dirIndex];
+            if (!dirInfo) return;
+
+            const options: FilePickerOptionsLike = {
+                suggestedName: `${projectName || 'projet'}.json`,
+                types: [{
+                    description: 'Fichier Projet JSON',
+                    accept: { 'application/json': ['.json'] }
+                }]
+            };
+
+            // Essayer de récupérer le handle du répertoire depuis IndexedDB
+            const savedHandle = await loadDirectoryHandle(`recentSaveDir_${dirIndex}`);
+            if (savedHandle) {
+                options.startIn = savedHandle;
+            }
+
+            const fileHandle = await safeShowSaveFilePicker(options);
+
+            // Préparer les données du projet
+            const fullState = getFullState();
+            // Le paquet EST l'état canonique, sans ajout : hauteur du diagramme,
+            // cadrage et zoom de l'image, options de mise en page, cases du dossier
+            // et répertoires y entrent par getFullState, donc aussi dans le cache.
+            // Ces sept clés étaient recopiées ici, dans les deux chemins
+            // d'enregistrement : c'est cette duplication qui faisait diverger le
+            // fichier et le cache dès qu'un réglage n'était ajouté qu'à un endroit.
+            const projectData = { ...fullState };
+
+            // Écrire le fichier
+            const jsonContent = JSON.stringify(projectData, null, 2);
+            const writable = await fileHandle.createWritable();
+            await writable.write(jsonContent);
+            await writable.close();
+
+            // Vérifier que le fichier n'est pas vide après sauvegarde
+            try {
+                const savedFile = await fileHandle.getFile();
+                const savedContent = await savedFile.text();
+                if (!savedContent || savedContent.trim() === '') {
+                    alertFn({
+                        title: 'Sauvegarde vide',
+                        message: 'Attention : le fichier semble vide après la sauvegarde.\n\nVeuillez réessayer ou utiliser « Enregistrer » pour sauvegarder dans le cache navigateur.'
+                    });
+                    return;
+                }
+            } catch (verifyError) {
+                console.warn('Impossible de vérifier le fichier sauvegardé:', verifyError);
+            }
+
+            // Mémoriser le répertoire parent
+            try {
+                const dirHandle = await fileHandle.getParent?.();
+                if (dirHandle) {
+                    lastSaveDirectoryRef.current = dirHandle;
+                    await saveDirectoryHandle('lastSaveDirectory', dirHandle);
+                    addRecentDirectory('save', dirHandle.name, dirHandle);
+                }
+            } catch (e) {
+                // getParent n'est pas toujours disponible
+            }
+
+            // Mettre à jour le nom du projet
+            const savedName = fileHandle.name.replace(/\.json$/i, '');
+            setIntersectionName(savedName);
+
+            // Mémoriser le chemin du projet
+            setCurrentProjectPath(fileHandle.name);
+            setProjectModified(true); // active "Nouveau projet" dans le menu
+            projectModifiedSkip.current = true; // absorbe setIntersectionName(savedName)
+            setHasUnsavedChanges(false); // projet sauvegardé, pas de modifications
+
+            // Sauvegarder aussi dans localStorage pour cohérence
+            saveProject(savedName);
+
+            toast.success(`Projet sauvegardé : ${savedName}`);
+
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.error('Erreur sauvegarde fichier:', e);
+                toast.error('Échec de la sauvegarde : ' + e.message);
+            }
+        }
+    }, [recentSaveDirs, projectName, loadDirectoryHandle, saveDirectoryHandle, addRecentDirectory, getFullState, setIntersectionName, saveProject, recentOpenDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
+        sidebarVisible, showComments, showRemarks, showActionDescription,
+        showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
+        showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Export SÉLECTIF d'un sous-ensemble de plans de feux, dans un fichier à part.
+    // Contrairement à « Enregistrer », c'est une copie SORTANTE : on ne touche
+    // NI au cache localStorage, NI au nom/chemin du projet courant.
+    const handleExportPfSubset = useCallback(async (selectedIds: number[], readOnly = false) => {
+        const subset = selectPfSubset(getFullState(), selectedIds);
+        if (!subset) {
+            alertFn({ title: 'Export impossible', message: 'Sélectionnez au moins un plan de feux à exporter.' });
+            return;
+        }
+        let projectData: Projet & Record<string, unknown> = {
+            ...subset,
+            diagramHeight,
+            floatingCrop,
+            floatingCropBasis: CROP_BASIS,
+            floatingZoom,
+            dossierSections,
+            layoutOptions: {
+                showParameters: sidebarVisible,
+                showComments, showRemarks, showActionDescription,
+                showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
+                showFloatingConditions, showFloatingVariables, showFloatingRemarks
+            }
+        };
+        if (readOnly) projectData = stampReadOnly(projectData);
+        const jsonContent = JSON.stringify(projectData, null, 2);
+        const nb = subset.pfTabs.length;
+        const roSuffix = readOnly ? ' — lecture seule' : '';
+        const suggestedName = `${projectName || 'projet'} (extrait ${nb} PF${readOnly ? ' LS' : ''}).json`;
+
+        // Fallback sans File System Access API : téléchargement direct.
+        if (!window.showSaveFilePicker) {
+            const blob = new Blob([jsonContent], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = suggestedName; a.click();
+            URL.revokeObjectURL(url);
+            toast.success(`Extrait exporté (${nb} plan${nb > 1 ? 's' : ''} de feux)${roSuffix}`);
+            return;
+        }
+
+        try {
+            const options: FilePickerOptionsLike = {
+                suggestedName,
+                types: [{ description: 'Fichier Projet JSON', accept: { 'application/json': ['.json'] } }]
+            };
+            if (lastSaveDirectoryRef.current) options.startIn = lastSaveDirectoryRef.current;
+            const fileHandle = await safeShowSaveFilePicker(options);
+            const writable = await fileHandle.createWritable();
+            await writable.write(jsonContent);
+            await writable.close();
+            toast.success(`Extrait exporté : ${nb} plan${nb > 1 ? 's' : ''} de feux${roSuffix}`);
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                toast.error('Échec de l\'export : ' + e.message);
+            }
+        }
+    }, [getFullState, projectName, diagramHeight, floatingCrop, floatingZoom, dossierSections,
+        sidebarVisible, showComments, showRemarks, showActionDescription,
+        showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
+        showFloatingConditions, showFloatingVariables, showFloatingRemarks,
+        lastSaveDirectoryRef, alertFn]);
+
+    return {
+        handleOpenFileWithPicker,
+        handleOpenFileFromRecentDir,
+        handleSaveFileWithPicker,
+        handleSaveFileToRecentDir,
+        handleExportPfSubset
+    };
+};
+
+export default useFileOperations;
