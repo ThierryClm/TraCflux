@@ -1,5 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type {
+    CSSProperties,
+    ChangeEvent,
+    FocusEvent,
+    KeyboardEvent,
+    MouseEventHandler,
+} from 'react';
 import './NumericInput.css';
+
+interface NumericInputProps {
+    value?: string | number | null;
+    onCommit: (value: string) => void;
+    min?: number;
+    max?: number;
+    wrapAt?: number;
+    showWrapFlash?: boolean;
+    allowEmpty?: boolean;
+    className?: string;
+    style?: CSSProperties;
+    title?: string;
+    placeholder?: string;
+    selectOnFocus?: boolean;
+    disabled?: boolean;
+    readOnly?: boolean;
+    maxLength?: number;
+    onClick?: MouseEventHandler<HTMLInputElement>;
+}
 
 /**
  * Numeric input with:
@@ -32,14 +58,14 @@ const NumericInput = ({
     readOnly = false,
     maxLength,
     onClick
-}) => {
+}: NumericInputProps) => {
     const [localValue, setLocalValue] = useState(value === undefined || value === null ? '' : String(value));
     const [isEditing, setIsEditing] = useState(false);
     const [rejected, setRejected] = useState(false);
     const [wrapped, setWrapped] = useState(false);
-    const rejectTimerRef = useRef(null);
-    const wrapTimerRef = useRef(null);
-    const inputRef = useRef(null);
+    const rejectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wrapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!isEditing) {
@@ -47,7 +73,7 @@ const NumericInput = ({
         }
     }, [value, isEditing]);
 
-    const handleChange = (e) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (readOnly) return;
         // Filter: keep only digits
         const raw = e.target.value;
@@ -66,7 +92,7 @@ const NumericInput = ({
         setLocalValue(filtered);
     };
 
-    const handleFocus = (e) => {
+    const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
         setIsEditing(true);
         if (selectOnFocus) e.target.select();
     };
@@ -94,7 +120,7 @@ const NumericInput = ({
     };
 
     const handleBlur = () => commit();
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             commit();
             inputRef.current?.blur();
@@ -106,7 +132,7 @@ const NumericInput = ({
     const isEmpty = trimmed === '';
     const numValue = isEmpty ? null : parseInt(trimmed);
     let errorMsg = null;
-    if (!isEmpty && !isNaN(numValue)) {
+    if (numValue !== null && !Number.isNaN(numValue)) {
         if (min !== undefined && numValue < min) errorMsg = `Valeur minimum : ${min}`;
         else if (max !== undefined && numValue > max) errorMsg = `Valeur maximum : ${max}`;
     } else if (isEmpty && !allowEmpty) {

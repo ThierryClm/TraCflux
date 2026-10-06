@@ -1,5 +1,13 @@
-import React from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import './EmptyState.css';
+
+export type EmptyStateIcon = 'diagram' | 'matrix' | 'traffic' | 'list';
+
+interface EmptyStateProps {
+    icon: EmptyStateIcon;
+    title: ReactNode;
+    hint?: ReactNode;
+}
 
 /**
  * Didactic empty-state overlay with a pictogram and a guiding message.
@@ -9,7 +17,7 @@ import './EmptyState.css';
  *   - title: main message (bold)
  *   - hint: secondary guiding message (optional)
  */
-const ICONS = {
+const ICONS: Record<EmptyStateIcon, ReactElement> = {
     diagram: (
         <svg viewBox="0 0 64 64" width="56" height="56" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="4" y1="12" x2="60" y2="12" strokeDasharray="2 3" opacity="0.4" />
@@ -58,10 +66,10 @@ const ICONS = {
     )
 };
 
-const EmptyState = ({ icon, title, hint }) => {
+const EmptyState = ({ icon, title, hint }: EmptyStateProps) => {
     return (
         <div className="empty-state">
-            <div className="empty-state-icon">{ICONS[icon] || null}</div>
+            <div className="empty-state-icon">{ICONS[icon]}</div>
             <div className="empty-state-title">{title}</div>
             {hint && <div className="empty-state-hint">{hint}</div>}
         </div>

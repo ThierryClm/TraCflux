@@ -1,5 +1,5 @@
 /**
- * Petit registre de l'état du service worker, alimenté par ReloadPrompt.jsx
+ * Petit registre de l'état du service worker, alimenté par ReloadPrompt.tsx
  * (seul détenteur du hook useRegisterSW) et lu par le rapport de diagnostic.
  *
  * Raison d'être : le mode de panne le plus fréquent de l'app est un bundle

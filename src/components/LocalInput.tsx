@@ -1,14 +1,37 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type {
+    CSSProperties,
+    ChangeEvent,
+    FocusEvent,
+    HTMLInputTypeAttribute,
+    KeyboardEvent,
+    MouseEventHandler,
+} from 'react';
+
+interface LocalInputProps {
+    value?: string | number | null;
+    onCommit: (value: string) => void;
+    type?: HTMLInputTypeAttribute;
+    className?: string;
+    style?: CSSProperties;
+    readOnly?: boolean;
+    disabled?: boolean;
+    onClick?: MouseEventHandler<HTMLInputElement>;
+    placeholder?: string;
+    maxLength?: number;
+    title?: string;
+    selectOnFocus?: boolean;
+}
 
 /**
  * Input with local state during editing.
  * Commits value to parent only on blur or Enter.
  * This prevents undo from capturing every keystroke.
  */
-const LocalInput = ({ value, onCommit, type = 'text', className, style, readOnly, disabled, onClick, placeholder, maxLength, title, selectOnFocus = false }) => {
+const LocalInput = ({ value, onCommit, type = 'text', className, style, readOnly, disabled, onClick, placeholder, maxLength, title, selectOnFocus = false }: LocalInputProps) => {
     const [localValue, setLocalValue] = useState(value === undefined || value === null ? '' : String(value));
     const [isEditing, setIsEditing] = useState(false);
-    const inputRef = useRef(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     // Sync local value with prop when not editing
     useEffect(() => {
@@ -17,12 +40,12 @@ const LocalInput = ({ value, onCommit, type = 'text', className, style, readOnly
         }
     }, [value, isEditing]);
 
-    const handleChange = (e) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (readOnly || disabled) return;
         setLocalValue(e.target.value);
     };
 
-    const handleFocus = (e) => {
+    const handleFocus = (e: FocusEvent<HTMLInputElement>) => {
         setIsEditing(true);
         if (selectOnFocus) {
             e.target.select();
@@ -40,7 +63,7 @@ const LocalInput = ({ value, onCommit, type = 'text', className, style, readOnly
         commit();
     };
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             commit();
             inputRef.current?.blur();

@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Légende du diagramme (actions de micro-régulation). Markup statique extrait de
  * la fenêtre flottante « Légende du diagramme » pour être réutilisé aussi dans

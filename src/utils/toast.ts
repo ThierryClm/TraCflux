@@ -10,18 +10,30 @@
  * Mount <ToastContainer /> once in the root to display toasts.
  */
 
-const listeners = new Set();
+export type ToastType = 'success' | 'error' | 'info';
+
+export interface ToastMessage {
+    id: number;
+    type: ToastType;
+    message: string;
+    createdAt: number;
+}
+
+export type ToastPreferences = Record<ToastType, boolean>;
+type ToastListener = (toast: ToastMessage) => void;
+
+const listeners = new Set<ToastListener>();
 let nextId = 1;
 
 // Per-type enable/disable flags (persisted to localStorage)
 const STORAGE_KEY = 'toastPreferences';
-const defaultPrefs = { success: true, error: true, info: true };
+const defaultPrefs: ToastPreferences = { success: true, error: true, info: true };
 
-function loadPrefs() {
+function loadPrefs(): ToastPreferences {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return { ...defaultPrefs };
-        const parsed = JSON.parse(raw);
+        const parsed = JSON.parse(raw) as Partial<ToastPreferences>;
         return { ...defaultPrefs, ...parsed };
     } catch {
         return { ...defaultPrefs };
@@ -34,13 +46,13 @@ export function getToastPrefs() {
     return { ...prefs };
 }
 
-export function setToastPref(type, enabled) {
+export function setToastPref(type: ToastType, enabled: boolean) {
     if (!(type in prefs)) return;
     prefs = { ...prefs, [type]: !!enabled };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch {}
 }
 
-function emit(type, message) {
+function emit(type: ToastType, message: string): number | null {
     if (!prefs[type]) return null; // silenced by user preference
     const t = { id: nextId++, type, message, createdAt: Date.now() };
     listeners.forEach(l => l(t));
@@ -48,12 +60,14 @@ function emit(type, message) {
 }
 
 export const toast = {
-    success: (message) => emit('success', message),
-    error: (message) => emit('error', message),
-    info: (message) => emit('info', message)
+    success: (message: string) => emit('success', message),
+    error: (message: string) => emit('error', message),
+    info: (message: string) => emit('info', message)
 };
 
-export function subscribeToasts(listener) {
+export function subscribeToasts(listener: ToastListener): () => void {
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    return () => {
+        listeners.delete(listener);
+    };
 }

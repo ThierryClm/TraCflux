@@ -1,6 +1,19 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import type { MouseEvent, MouseEventHandler, ReactElement } from 'react';
 import { createPortal } from 'react-dom';
 import './CustomTooltip.css';
+
+interface TooltipChildProps {
+    onMouseEnter?: MouseEventHandler<HTMLElement>;
+    onMouseLeave?: MouseEventHandler<HTMLElement>;
+    onMouseMove?: MouseEventHandler<HTMLElement>;
+}
+
+interface CustomTooltipProps {
+    text?: string | null;
+    delay?: number;
+    children: ReactElement<TooltipChildProps>;
+}
 
 /**
  * Wrapper component that shows a custom tooltip (instead of the native `title`)
@@ -18,20 +31,20 @@ import './CustomTooltip.css';
  *   - delay: number (ms) — how long to wait before showing (default: 400ms)
  *   - children: single React element — the element to attach the tooltip to
  */
-const CustomTooltip = ({ text, delay = 400, children }) => {
+const CustomTooltip = ({ text, delay = 400, children }: CustomTooltipProps) => {
     const [visible, setVisible] = useState(false);
     const [pos, setPos] = useState({ x: 0, y: 0 });
-    const timerRef = useRef(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     // Document propriétaire de l'élément survolé : permet de porter l'infobulle
     // dans le bon document (fenêtre détachée ou principale).
-    const docRef = useRef(null);
+    const docRef = useRef<Document | null>(null);
 
     if (!text) {
         // No tooltip text: render children directly
         return children;
     }
 
-    const handleMouseEnter = (e) => {
+    const handleMouseEnter = (e: MouseEvent<HTMLElement>) => {
         const x = e.clientX;
         const y = e.clientY;
         docRef.current = e.currentTarget?.ownerDocument || document;
@@ -47,22 +60,22 @@ const CustomTooltip = ({ text, delay = 400, children }) => {
         setVisible(false);
     };
 
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: MouseEvent<HTMLElement>) => {
         if (visible) setPos({ x: e.clientX, y: e.clientY });
     };
 
     // Clone the child to attach the mouse handlers
     const child = React.Children.only(children);
     const wrappedChild = React.cloneElement(child, {
-        onMouseEnter: (e) => {
+        onMouseEnter: (e: MouseEvent<HTMLElement>) => {
             handleMouseEnter(e);
             if (child.props.onMouseEnter) child.props.onMouseEnter(e);
         },
-        onMouseLeave: (e) => {
+        onMouseLeave: (e: MouseEvent<HTMLElement>) => {
             handleMouseLeave();
             if (child.props.onMouseLeave) child.props.onMouseLeave(e);
         },
-        onMouseMove: (e) => {
+        onMouseMove: (e: MouseEvent<HTMLElement>) => {
             handleMouseMove(e);
             if (child.props.onMouseMove) child.props.onMouseMove(e);
         }

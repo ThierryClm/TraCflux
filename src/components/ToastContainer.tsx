@@ -1,14 +1,15 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { subscribeToasts } from '../utils/toast';
+import type { ToastMessage, ToastType } from '../utils/toast';
 import './ToastContainer.css';
 
-const DURATIONS = {
+const DURATIONS: Record<ToastType, number> = {
     success: 2500,
     error: 4000,
     info: 3000
 };
 
-const ICONS = {
+const ICONS: Record<ToastType, string> = {
     success: '✓',
     error: '✗',
     info: 'i'
@@ -16,16 +17,27 @@ const ICONS = {
 
 const EXIT_DURATION = 250;
 
-const ToastContainer = () => {
-    const [toasts, setToasts] = useState([]);
-    const timersRef = useRef(new Map());
+interface DisplayedToast extends ToastMessage {
+    leaving?: boolean;
+}
 
-    const removeToast = useCallback((id) => {
+interface ToastTimer {
+    phase: 'visible' | 'leaving' | 'paused';
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    remaining: number;
+    startedAt: number;
+}
+
+const ToastContainer = () => {
+    const [toasts, setToasts] = useState<DisplayedToast[]>([]);
+    const timersRef = useRef(new Map<number, ToastTimer>());
+
+    const removeToast = useCallback((id: number) => {
         setToasts(prev => prev.filter(t => t.id !== id));
         timersRef.current.delete(id);
     }, []);
 
-    const beginLeaving = useCallback((id) => {
+    const beginLeaving = useCallback((id: number) => {
         setToasts(prev => prev.map(t => t.id === id ? { ...t, leaving: true } : t));
 
         const timeoutId = setTimeout(() => removeToast(id), EXIT_DURATION);
@@ -37,7 +49,7 @@ const ToastContainer = () => {
         });
     }, [removeToast]);
 
-    const scheduleDismissal = useCallback((id, delay) => {
+    const scheduleDismissal = useCallback((id: number, delay: number) => {
         const remaining = Math.max(0, delay);
         const timeoutId = setTimeout(() => beginLeaving(id), remaining);
 
@@ -49,11 +61,11 @@ const ToastContainer = () => {
         });
     }, [beginLeaving]);
 
-    const pauseToast = useCallback((id) => {
+    const pauseToast = useCallback((id: number) => {
         const timer = timersRef.current.get(id);
         if (!timer || timer.phase === 'paused') return;
 
-        clearTimeout(timer.timeoutId);
+        if (timer.timeoutId !== null) clearTimeout(timer.timeoutId);
         const remaining = timer.phase === 'leaving'
             ? 0
             : Math.max(0, timer.remaining - (Date.now() - timer.startedAt));
@@ -70,7 +82,7 @@ const ToastContainer = () => {
         });
     }, []);
 
-    const resumeToast = useCallback((id) => {
+    const resumeToast = useCallback((id: number) => {
         const timer = timersRef.current.get(id);
         if (!timer || timer.phase !== 'paused') return;
         scheduleDismissal(id, timer.remaining);
@@ -79,13 +91,15 @@ const ToastContainer = () => {
     useEffect(() => {
         const unsubscribe = subscribeToasts(t => {
             setToasts(prev => [...prev, t]);
-            const duration = DURATIONS[t.type] || 3000;
+            const duration = DURATIONS[t.type];
             scheduleDismissal(t.id, duration);
         });
 
         return () => {
             unsubscribe();
-            timersRef.current.forEach(timer => clearTimeout(timer.timeoutId));
+            timersRef.current.forEach(timer => {
+                if (timer.timeoutId !== null) clearTimeout(timer.timeoutId);
+            });
             timersRef.current.clear();
         };
     }, [scheduleDismissal]);

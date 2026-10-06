@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { setSwUpdatePending, setSwRegisteredUrl } from '../utils/swStatus';
 import './ReloadPrompt.css';
