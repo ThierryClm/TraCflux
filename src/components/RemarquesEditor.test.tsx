@@ -14,6 +14,19 @@ const ControlledEditor = () => {
     );
 };
 
+const FormattedControlledEditor = () => {
+    const [remarques, setRemarques] = useState(
+        '<span style="color: rgb(244, 67, 54); font-size: 22px">Texte</span><br>Suite'
+    );
+    return (
+        <RemarquesEditor
+            remarques={remarques}
+            updateRemarques={setRemarques}
+            groupCount={8}
+        />
+    );
+};
+
 const selectFirstWord = (editable: HTMLElement) => {
     const text = editable.firstChild;
     const selection = window.getSelection();
@@ -64,5 +77,18 @@ describe('RemarquesEditor', () => {
         expect(formatted?.style.color).toBe('rgb(76, 175, 80)');
         expect(formatted?.style.fontSize).toBe('16px');
         expect(formatted?.textContent).toBe('Texte');
+    });
+
+    it('réinitialise couleur et taille sans effacer le texte ni les retours à la ligne', () => {
+        const { container } = render(<FormattedControlledEditor />);
+        const editable = getEditable(container);
+
+        fireEvent.mouseDown(screen.getByRole('button', {
+            name: 'Réinitialiser la couleur et la taille des remarques'
+        }));
+
+        expect(editable.innerHTML).toBe('Texte<br>Suite');
+        expect(editable.textContent).toBe('TexteSuite');
+        expect(editable.querySelector('[style]')).toBeNull();
     });
 });

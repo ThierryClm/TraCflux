@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { SyntheticEvent } from 'react';
 import CustomTooltip from './CustomTooltip';
+import { resetTextFormatting } from '../utils/resetTextFormatting';
 
 interface RangeBookmark {
     startPath: number[];
@@ -255,6 +256,17 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
         }
     };
 
+    const resetFormatting = (e: SyntheticEvent<HTMLElement>) => {
+        e.preventDefault();
+        const editable = editableRef.current;
+        if (!editable) return;
+
+        remarquesSelectionRef.current = null;
+        const html = resetTextFormatting(editable);
+        editable.focus({ preventScroll: true });
+        updateRemarques?.(html);
+    };
+
     return (
         <div className={`timeline-remarques no-print${popupMode ? ' remarques-popup-mode' : ''}`}>
             <div className="remarques-header">
@@ -283,6 +295,12 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
                     aria-label="Réduire la taille du texte sélectionné"
                     onMouseDown={applyResize(-2)}
                 >▼</span></CustomTooltip>
+                <CustomTooltip text="Réinitialiser la couleur et la taille"><span
+                    className="comment-reset-btn"
+                    role="button"
+                    aria-label="Réinitialiser la couleur et la taille des remarques"
+                    onMouseDown={resetFormatting}
+                >Réinit.</span></CustomTooltip>
             </div>
             <div
                 ref={editableRef}
