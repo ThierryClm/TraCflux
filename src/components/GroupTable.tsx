@@ -1,28 +1,43 @@
-import React from 'react';
 import LocalInput from './LocalInput';
 import NumericInput from './NumericInput';
 import EmptyState from './EmptyState';
+import type { Groupe, TypeGroupe } from '../types/projet';
 import './GroupTable.css';
 
-const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }) => {
-    const tip = (text) => tooltipsEnabled ? text : undefined;
+type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
+    durations?: Partial<Groupe['durations']>;
+};
 
-    const handleStartChange = (id, value) => {
+interface GroupTableProps {
+    groups: Groupe[];
+    updateGroupParams: (id: number, updates: GroupUpdates) => void;
+    cycleLength: number;
+    showGroupNames?: boolean;
+    onDetach?: () => void;
+    hoveredGroupId?: number | null;
+    tooltipsEnabled?: boolean;
+    titreEnBandeau?: boolean;
+}
+
+const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }: GroupTableProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
+
+    const handleStartChange = (id: number, value: string) => {
         updateGroupParams(id, { offset: parseInt(value) || 0 });
     };
 
-    const handleDurationChange = (id, value) => {
+    const handleDurationChange = (id: number, value: string) => {
         updateGroupParams(id, { durations: { green: parseInt(value) || 0 } });
     };
 
-    const handleEndChange = (id, endValue, startValue) => {
+    const handleEndChange = (id: number, endValue: string, startValue: number) => {
         let duration = (parseInt(endValue) || 0) - startValue;
         if (duration < 0) duration += cycleLength;
         updateGroupParams(id, { durations: { green: Math.max(0, duration) } });
     };
 
-    const handleTypeChange = (id, value) => {
-        const updates = { type: value };
+    const handleTypeChange = (id: number, value: TypeGroupe) => {
+        const updates: GroupUpdates = { type: value };
         if (value === 'P') {
             updates.courant = 'Piéton';
         } else if (value === 'CY') {
@@ -31,11 +46,11 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
         updateGroupParams(id, updates);
     };
 
-    const handleMinGreenChange = (id, value) => {
+    const handleMinGreenChange = (id: number, value: string) => {
         updateGroupParams(id, { minGreen: parseInt(value) || 0 });
     };
 
-    const handleYellowChange = (id, value) => {
+    const handleYellowChange = (id: number, value: string) => {
         updateGroupParams(id, { durations: { orange: parseInt(value) || 0 } });
     };
 
@@ -57,7 +72,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                 </h3>
             )}
             <div style={{ position: 'relative' }}>
-            {groups.length > 0 && groups.every(g => !g.type || g.type === '') && (
+            {groups.length > 0 && groups.every(g => !g.type) && (
                 <div className="empty-state-overlay">
                     <EmptyState
                         icon="list"
@@ -101,7 +116,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                 <td>
                                     <select
                                         value={g.type}
-                                        onChange={(e) => handleTypeChange(g.id, e.target.value)}
+                                        onChange={(e) => handleTypeChange(g.id, e.target.value as TypeGroupe)}
                                         className="input-type"
                                     >
                                         <option value=""></option>

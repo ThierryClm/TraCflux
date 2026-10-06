@@ -1,6 +1,29 @@
 import { useMemo } from 'react';
 import { calculateSimulatedDiagram, actionsSimulables, conflitsSimules } from '../utils/simulationCalculator';
+import type { ActionMicro, Groupe, Matrice } from '../types/projet';
 import './SimulationPanel.css';
+
+interface HoveredConflict {
+    from: number;
+    to: number;
+    isConflict: boolean;
+}
+
+interface SimulationPanelProps {
+    actionData: ActionMicro[];
+    selectedActions: number[];
+    onToggle: (actionId: number) => void;
+    onSelectAll: () => void;
+    onDeselectAll: () => void;
+    groups: Groupe[];
+    cycleLength: number;
+    conflictMatrix: Matrice;
+    hoveredActionId: number | null;
+    setHoveredActionId: (actionId: number | null) => void;
+    setHoveredConflict?: (conflict: HoveredConflict | null) => void;
+    scenarioName?: string;
+    onScenarioNameChange?: ((name: string) => void) | null;
+}
 
 const SimulationPanel = ({
     actionData,
@@ -16,7 +39,7 @@ const SimulationPanel = ({
     setHoveredConflict,
     scenarioName = '',
     onScenarioNameChange = null
-}) => {
+}: SimulationPanelProps) => {
     // Les actions retenues par la simulation (liste partagée, cf. en-tête).
     const activeActions = actionsSimulables(actionData);
 
@@ -37,7 +60,7 @@ const SimulationPanel = ({
 
     // Helper: adjust a time position based on AV contractions only
     // EP removedPeriods are in the post-AV timeline, so we only apply AV contractions
-    const adjustForAVContractions = (time) => {
+    const adjustForAVContractions = (time: number) => {
         if (!contractions || contractions.length === 0) return time;
         let adjusted = time;
         for (const c of contractions) {
@@ -53,15 +76,15 @@ const SimulationPanel = ({
 
     // Determine which actions are "erased" (their adjusted deb or [deb,fin] is inside a removed period)
     const erasedActionIds = useMemo(() => {
-        if (!removedPeriods || removedPeriods.length === 0) return new Set();
-        const erased = new Set();
+        if (!removedPeriods || removedPeriods.length === 0) return new Set<number>();
+        const erased = new Set<number>();
         activeActions.forEach(action => {
             if (action.deb === '') return;
             // Escamotage de phase never grayed (it's the contracting action)
             if (action.action === 'Escamotage de phase') return;
-            const rawDeb = parseInt(action.deb) || 0;
+            const rawDeb = parseInt(String(action.deb ?? '')) || 0;
             const hasFin = action.fin !== '';
-            const rawFin = hasFin ? (parseInt(action.fin) || 0) : rawDeb;
+            const rawFin = hasFin ? (parseInt(String(action.fin ?? '')) || 0) : rawDeb;
             // Adaptatif vertical can only be grayed by Escamotage de phase zones (not its own)
             const isAV = action.action === 'Adaptatif vertical';
             for (const period of removedPeriods) {

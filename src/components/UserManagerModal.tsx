@@ -1,8 +1,32 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import Modal from './Modal';
 import { PERMISSIONS } from '../hooks/useAuth';
+import type { AuthUser, PermissionLevel } from '../hooks/useAuth';
 import { useConfirm } from './ConfirmProvider';
 import './UserManagerModal.css';
+
+interface ManagedUser extends AuthUser {
+    createdAt: number;
+}
+
+type FailureResult = { success: false; error: string };
+type BasicResult = { success: true } | FailureResult;
+type CreateResult = { success: true; isFirstUser?: boolean } | FailureResult;
+type ImportResult = { success: true; count: number } | FailureResult;
+
+interface UserManagerModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    currentUser: AuthUser | null;
+    getUsersList: () => ManagedUser[];
+    createUser: (username: string, password: string, permissions: PermissionLevel) => Promise<CreateResult>;
+    updateUser: (username: string, permissions: PermissionLevel) => BasicResult;
+    deleteUser: (username: string) => BasicResult;
+    resetPassword: (username: string, password: string) => Promise<BasicResult>;
+    exportUsersToFile: () => Promise<BasicResult>;
+    importUsersFromFile: () => Promise<ImportResult>;
+}
 
 const UserManagerModal = ({
     isOpen,
@@ -15,22 +39,22 @@ const UserManagerModal = ({
     resetPassword,
     exportUsersToFile,
     importUsersFromFile
-}) => {
+}: UserManagerModalProps) => {
     const askConfirm = useConfirm();
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
-    const [newPermissions, setNewPermissions] = useState('lecture');
+    const [newPermissions, setNewPermissions] = useState<PermissionLevel>('lecture');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Password reset state
-    const [resetPasswordUser, setResetPasswordUser] = useState(null);
+    const [resetPasswordUser, setResetPasswordUser] = useState<string | null>(null);
     const [newResetPassword, setNewResetPassword] = useState('');
 
     const users = getUsersList();
 
-    const handleCreateUser = async (e) => {
+    const handleCreateUser = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
         setSuccess('');
@@ -50,7 +74,7 @@ const UserManagerModal = ({
         setIsSubmitting(false);
     };
 
-    const handleDeleteUser = async (username) => {
+    const handleDeleteUser = async (username: string) => {
         const ok = await askConfirm({
             title: 'Supprimer l\'utilisateur',
             message: `Êtes-vous sûr de vouloir supprimer l'utilisateur « ${username} » ?`,
@@ -67,7 +91,7 @@ const UserManagerModal = ({
         }
     };
 
-    const handleUpdatePermissions = (username, newPerms) => {
+    const handleUpdatePermissions = (username: string, newPerms: PermissionLevel) => {
         const result = updateUser(username, newPerms);
         if (!result.success) {
             setError(result.error);
@@ -75,6 +99,7 @@ const UserManagerModal = ({
     };
 
     const handleResetPassword = async () => {
+        if (!resetPasswordUser) return;
         if (!newResetPassword || newResetPassword.length < 4) {
             setError('Le mot de passe doit contenir au moins 4 caractères');
             return;
@@ -138,7 +163,7 @@ const UserManagerModal = ({
                                     <td>
                                         <select
                                             value={user.permissions}
-                                            onChange={(e) => handleUpdatePermissions(user.username, e.target.value)}
+                                            onChange={(e) => handleUpdatePermissions(user.username, e.target.value as PermissionLevel)}
                                             disabled={user.username === currentUser?.username}
                                         >
                                             <option value="lecture">{PERMISSIONS.lecture.label}</option>
@@ -209,7 +234,7 @@ const UserManagerModal = ({
                         />
                         <select
                             value={newPermissions}
-                            onChange={(e) => setNewPermissions(e.target.value)}
+                            onChange={(e) => setNewPermissions(e.target.value as PermissionLevel)}
                         >
                             <option value="lecture">{PERMISSIONS.lecture.label}</option>
                             <option value="partiel">{PERMISSIONS.partiel.label}</option>

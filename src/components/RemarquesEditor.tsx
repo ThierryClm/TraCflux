@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
+import type { SyntheticEvent } from 'react';
 import CustomTooltip from './CustomTooltip';
 
 /**
@@ -22,8 +23,15 @@ import CustomTooltip from './CustomTooltip';
  *   la limite de caractères est virtuellement levée — le popup est
  *   redimensionnable, plus de contrainte d'alignement avec le diagramme.
  */
-const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = false }) => {
-    const remarquesSelectionRef = useRef(null);
+interface RemarquesEditorProps {
+    remarques?: string;
+    updateRemarques?: (html: string) => void;
+    groupCount: number;
+    popupMode?: boolean;
+}
+
+const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = false }: RemarquesEditorProps) => {
+    const remarquesSelectionRef = useRef<Range | null>(null);
 
     const linesAvailable = popupMode ? 9999 : Math.max(1, Math.floor((groupCount * 30 - 16) / 17));
     const charsPerLine = 35;
@@ -32,10 +40,10 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
         ? 'Remarques générales — Sélectionnez du texte puis + (vert), − (rouge), ▲ (agrandir), ▼ (réduire)'
         : `Remarques générales (${charsPerLine} car. x ${linesAvailable} lignes max) - Sélectionnez du texte puis + (vert), − (rouge), ▲ (agrandir), ▼ (réduire)`;
 
-    const docOf = (node) => (node && node.ownerDocument) || document;
-    const winOf = (node) => docOf(node).defaultView || window;
+    const docOf = (node: Node | null) => node?.ownerDocument || document;
+    const winOf = (node: Node | null) => docOf(node).defaultView || window;
 
-    const saveSelectionFrom = (editable) => {
+    const saveSelectionFrom = (editable: HTMLElement) => {
         const sel = winOf(editable).getSelection();
         if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
             remarquesSelectionRef.current = sel.getRangeAt(0).cloneRange();
@@ -45,7 +53,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
     // Résout une Range utilisable : sélection LIVE en priorité, repli sur la
     // dernière sauvegardée. Utilise la bonne window selon le contexte (popup
     // ou principal).
-    const resolveActiveRange = (anchorNode) => {
+    const resolveActiveRange = (anchorNode: Node): Range | null => {
         const sel = winOf(anchorNode).getSelection();
         if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
             return sel.getRangeAt(0).cloneRange();
@@ -55,11 +63,12 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
         return null;
     };
 
-    const findEditableFromRange = (range) => {
+    const findEditableFromRange = (range: Range): HTMLElement | null => {
         const container = range.commonAncestorContainer;
-        return container.nodeType === 1
-            ? container.closest('.input-remarques')
+        const editable = container.nodeType === Node.ELEMENT_NODE
+            ? (container as Element).closest('.input-remarques')
             : container.parentElement?.closest('.input-remarques');
+        return editable as HTMLElement | null;
     };
 
     // Mémorise un range couvrant le span fraîchement inséré, et tente une
@@ -68,7 +77,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
     // accepte cette limite : l'utilisateur peut ré-sélectionner si besoin.
     // Le range sauvegardé permet quand même d'enchaîner les actions sur le
     // même texte via le fallback de resolveActiveRange.
-    const restoreSelectionOver = (editable, span) => {
+    const restoreSelectionOver = (editable: HTMLElement, span: HTMLSpanElement) => {
         const doc = docOf(editable);
         const newRange = doc.createRange();
         newRange.selectNodeContents(span);
@@ -76,13 +85,13 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
         try {
             editable.focus({ preventScroll: true });
             const sel = winOf(editable).getSelection();
-            sel.removeAllRanges();
-            sel.addRange(newRange);
+            sel?.removeAllRanges();
+            sel?.addRange(newRange);
         } catch { /* ignore */ }
     };
 
     // delta = +2 (Agrandir) ou -2 (Réduire). Renvoie un handler React.
-    const applyResize = (delta) => (e) => {
+    const applyResize = (delta: number) => (e: SyntheticEvent<HTMLElement>) => {
         e.preventDefault();
         const range = resolveActiveRange(e.currentTarget);
         if (!range) return;
@@ -91,7 +100,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
         const doc = docOf(editable);
         const win = winOf(editable);
         const container = range.commonAncestorContainer;
-        const parentEl = container.nodeType === 1 ? container : container.parentElement;
+        const parentEl = container.nodeType === Node.ELEMENT_NODE ? container as Element : container.parentElement;
         const current = parentEl ? parseFloat(win.getComputedStyle(parentEl).fontSize) : 14;
         const newSize = Math.max(8, current + delta);
         const span = doc.createElement('span');
@@ -107,7 +116,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
 
     // Couleur : '#4CAF50' (vert) ou '#F44336' (rouge). Si la sélection est
     // déjà colorée, on bascule sur blanc (retour visuel à la couleur du fond).
-    const applyColor = (color) => (e) => {
+    const applyColor = (color: string) => (e: SyntheticEvent<HTMLElement>) => {
         e.preventDefault();
         const range = resolveActiveRange(e.currentTarget);
         if (!range) return;

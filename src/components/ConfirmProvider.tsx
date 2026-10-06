@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import Modal from './Modal';
 
 /**
@@ -28,16 +29,48 @@ import Modal from './Modal';
  * mais permet d'attendre la fermeture si besoin.
  */
 
-const DialogContext = createContext(null);
+interface DialogOptions {
+    title?: string;
+    message?: string;
+    confirmLabel?: string;
+    danger?: boolean;
+}
 
-export const ConfirmProvider = ({ children }) => {
-    const [state, setState] = useState(null);
+interface ConfirmDialogOptions extends DialogOptions {
+    cancelLabel?: string;
+}
+
+interface DialogState {
+    kind: 'confirm' | 'alert';
+    title: string;
+    message: string;
+    confirmLabel: string;
+    cancelLabel?: string;
+    danger: boolean;
+}
+
+export type ConfirmFunction = (options: ConfirmDialogOptions) => Promise<boolean>;
+export type AlertFunction = (options: DialogOptions) => Promise<void>;
+
+interface DialogContextValue {
+    confirm: ConfirmFunction;
+    alert: AlertFunction;
+}
+
+interface ConfirmProviderProps {
+    children: ReactNode;
+}
+
+const DialogContext = createContext<DialogContextValue | null>(null);
+
+export const ConfirmProvider = ({ children }: ConfirmProviderProps) => {
+    const [state, setState] = useState<DialogState | null>(null);
     // Ref pour résoudre la promesse même si le composant est démonté entre temps
-    const resolverRef = useRef(null);
+    const resolverRef = useRef<((value: boolean | undefined) => void) | null>(null);
 
-    const confirm = useCallback((options) => {
-        return new Promise((resolve) => {
-            resolverRef.current = resolve;
+    const confirm = useCallback<ConfirmFunction>((options) => {
+        return new Promise<boolean>((resolve) => {
+            resolverRef.current = (value) => resolve(value === true);
             setState({
                 kind: 'confirm',
                 title: options.title || 'Confirmation',
@@ -49,9 +82,9 @@ export const ConfirmProvider = ({ children }) => {
         });
     }, []);
 
-    const alert = useCallback((options) => {
-        return new Promise((resolve) => {
-            resolverRef.current = resolve;
+    const alert = useCallback<AlertFunction>((options) => {
+        return new Promise<void>((resolve) => {
+            resolverRef.current = () => resolve();
             setState({
                 kind: 'alert',
                 title: options.title || 'Information',
@@ -83,7 +116,7 @@ export const ConfirmProvider = ({ children }) => {
     // Touche Échap = Annuler/Fermer, touche Entrée = Confirmer/OK
     useEffect(() => {
         if (!state) return;
-        const handleKey = (e) => {
+        const handleKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
                 handleCancel();
@@ -152,7 +185,8 @@ export const useConfirm = () => {
         // Fallback : si le composant n'est pas dans un ConfirmProvider, on retombe
         // sur window.confirm() pour ne rien casser. Devrait jamais arriver en prod.
         console.warn('useConfirm called outside ConfirmProvider, falling back to window.confirm');
-        return ({ message }) => Promise.resolve(window.confirm(message));
+        const fallback: ConfirmFunction = ({ message = '' }) => Promise.resolve(window.confirm(message));
+        return fallback;
     }
     return ctx.confirm;
 };
@@ -161,7 +195,8 @@ export const useAlert = () => {
     const ctx = useContext(DialogContext);
     if (!ctx) {
         console.warn('useAlert called outside ConfirmProvider, falling back to window.alert');
-        return ({ message }) => { window.alert(message); return Promise.resolve(); };
+        const fallback: AlertFunction = ({ message = '' }) => { window.alert(message); return Promise.resolve(); };
+        return fallback;
     }
     return ctx.alert;
 };

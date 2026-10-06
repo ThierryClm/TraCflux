@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
     calculateOfferedCapacity,
     calculateDegreeOfSaturation,
@@ -8,7 +8,39 @@ import {
     getCapacityColorClass
 } from '../utils/capacityCalc';
 import { getTotalGreenTime, parseTrafficVol, isCoordinated } from '../utils/trafficHelpers';
+import type { ActionMicro, Groupe } from '../types/projet';
 import './DiagnosticPanel.css';
+
+interface DiagnosticPanelProps {
+    groups?: Groupe[];
+    cycleLength: number;
+    getTrafficData?: (groupId: number) => { trafficVol?: number | string };
+    actionData?: ActionMicro[];
+    activeTrafficDataset: string;
+    onDetach?: (() => void) | null;
+    detached?: boolean;
+    hideTitle?: boolean;
+    inhibitedGroups?: Set<number> | null;
+    tip?: (text: string) => string | undefined;
+}
+
+interface DiagnosticRow {
+    g: Groupe;
+    trafic: number;
+    coord: boolean;
+    inhibe: boolean;
+    capacity: number | null;
+    x: number | null;
+    reserve: { veh: number; ratio: number | null } | null;
+    delay: number | null;
+    queue: number | null;
+    capU: number | null;
+}
+
+interface DimensioningRow extends DiagnosticRow {
+    x: number;
+    capU: number;
+}
 
 /**
  * Panneau « Diagnostic » : indicateurs de dimensionnement par courant
@@ -33,8 +65,8 @@ const DiagnosticPanel = ({
        juste au-dessus ne veut rien dire. Absent hors simulation. */
     inhibitedGroups = null,
     tip = (t) => t
-}) => {
-    const rows = useMemo(() => {
+}: DiagnosticPanelProps) => {
+    const rows = useMemo<DiagnosticRow[]>(() => {
         return groups
             .filter(g => g.type === 'VL' || g.type === 'V')
             .map(g => {
@@ -43,7 +75,7 @@ const DiagnosticPanel = ({
                 const raw = getTrafficData ? getTrafficData(g.id).trafficVol : 0;
                 const trafic = parseTrafficVol(raw);
                 const coord = isCoordinated(raw);
-                const coef = g.laneCoef;
+                const coef = g.laneCoef ?? 0;
                 if (inhibe) {
                     return { g, trafic, coord, inhibe: true, capacity: null, x: null, reserve: null, delay: null, queue: null, capU: null };
                 }
@@ -59,13 +91,17 @@ const DiagnosticPanel = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [groups, cycleLength, getTrafficData, actionData, activeTrafficDataset, inhibitedGroups]);
 
-    const dim = useMemo(() => {
-        let best = null;
-        rows.forEach(r => { if (r.capU !== null && (!best || r.capU > best.capU)) best = r; });
+    const dim = useMemo<DimensioningRow | null>(() => {
+        let best: DimensioningRow | null = null;
+        rows.forEach(r => {
+            if (r.capU !== null && r.x !== null && (!best || r.capU > best.capU)) {
+                best = r as DimensioningRow;
+            }
+        });
         return best;
     }, [rows]);
 
-    const fmt = (v, suffix = '') => (v === null || v === undefined) ? '—' : `${v}${suffix}`;
+    const fmt = (v: number | null | undefined, suffix = '') => (v === null || v === undefined) ? '—' : `${v}${suffix}`;
 
     return (
         <div className={`diagnostic-panel${detached ? ' diagnostic-panel-detached' : ''}`}>

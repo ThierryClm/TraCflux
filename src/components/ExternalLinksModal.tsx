@@ -1,17 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { useConfirm, useAlert } from './ConfirmProvider';
 import { toast } from '../utils/toast';
 import Modal from './Modal';
 import './ExternalLinksModal.css';
 
-const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }) => {
+export interface ExternalLink {
+    id: number;
+    name: string;
+    path: string;
+}
+
+interface ExternalLinksModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    links?: ExternalLink[];
+    onLinksChange?: (links: ExternalLink[]) => void;
+}
+
+const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }: ExternalLinksModalProps) => {
     const askConfirm = useConfirm();
     const showAlert = useAlert();
-    const [localLinks, setLocalLinks] = useState([]);
+    const [localLinks, setLocalLinks] = useState<ExternalLink[]>([]);
     const [newLinkName, setNewLinkName] = useState('');
     const [newLinkPath, setNewLinkPath] = useState('');
-    const [editingId, setEditingId] = useState(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
 
     // Sync local state with props when modal opens
     useEffect(() => {
@@ -21,7 +34,7 @@ const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }) => {
     }, [isOpen, links]);
 
     // Save links via callback
-    const saveLinks = (newLinks) => {
+    const saveLinks = (newLinks: ExternalLink[]) => {
         setLocalLinks(newLinks);
         if (onLinksChange) {
             onLinksChange(newLinks);
@@ -47,7 +60,7 @@ const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }) => {
     };
 
     // Delete a link
-    const handleDeleteLink = async (id) => {
+    const handleDeleteLink = async (id: number) => {
         const ok = await askConfirm({
             title: 'Supprimer le lien',
             message: 'Supprimer ce lien ?',
@@ -60,7 +73,7 @@ const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }) => {
     };
 
     // Start editing a link
-    const handleEditLink = (link) => {
+    const handleEditLink = (link: ExternalLink) => {
         setEditingId(link.id);
         setNewLinkName(link.name);
         setNewLinkPath(link.path);
@@ -91,7 +104,7 @@ const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }) => {
     };
 
     // Open a link (file or URL)
-    const handleOpenLink = (link) => {
+    const handleOpenLink = (link: ExternalLink) => {
         try {
             // Try to open as URL or file path
             const path = link.path;
