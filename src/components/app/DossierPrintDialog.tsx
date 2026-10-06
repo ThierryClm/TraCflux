@@ -1,3 +1,30 @@
+import type { Dispatch, SetStateAction } from 'react';
+
+type PlanId = string | number;
+type DossierSections = Record<string, boolean | undefined>;
+
+interface DossierPlan {
+    id: PlanId;
+    name: string;
+    color?: string | null;
+}
+
+interface DossierPrintDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    portrait: boolean;
+    setPortrait: (value: boolean) => void;
+    sections: DossierSections;
+    setSections: Dispatch<SetStateAction<DossierSections>>;
+    plans: DossierPlan[];
+    simulationResult: unknown;
+    intersectionImage: string | null;
+    intersectionArrows: unknown[];
+    onExportPdf: () => void;
+    onPrint: () => void;
+    tip: (label: string) => string | undefined;
+}
+
 function DossierPrintDialog({
     isOpen,
     onClose,
@@ -12,9 +39,9 @@ function DossierPrintDialog({
     onExportPdf,
     onPrint,
     tip,
-}) {
+}: DossierPrintDialogProps) {
     const dossierDialog = isOpen;
-    const setDossierDialog = (visible) => { if (!visible) onClose(); };
+    const setDossierDialog = (visible: boolean) => { if (!visible) onClose(); };
     const dossierPortrait = portrait;
     const setDossierPortrait = setPortrait;
     const dossierSections = sections;

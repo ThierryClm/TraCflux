@@ -1,10 +1,165 @@
-import TimelineDiagram from '../TimelineDiagram';
-import PhasageBulle from '../PhasageBulle';
-import IntersectionImage from '../IntersectionImage';
-import ActionTable from '../ActionTable';
+import TimelineDiagramImplementation from '../TimelineDiagram';
+import PhasageBulleImplementation from '../PhasageBulle';
+import IntersectionImageImplementation from '../IntersectionImage';
+import ActionTableImplementation from '../ActionTable';
 import { toast } from '../../utils/toast';
+import type {
+    ComponentType,
+    CSSProperties,
+    Dispatch,
+    MutableRefObject,
+    RefObject,
+    SetStateAction,
+} from 'react';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { SimulationResult } from '../../utils/simulationCalculator';
 
-export default function WorkspaceMain({ model }) {
+type LooseComponent = ComponentType<Record<string, unknown>>;
+type Callback = (...args: unknown[]) => void;
+
+interface IntersectionArrow {
+    groupId: number;
+    x: number;
+    y: number;
+    [key: string]: unknown;
+}
+
+interface PhasageDraft {
+    count: number;
+    times: number[];
+}
+
+interface WorkspaceMainModel {
+    actionColWidths: Record<string, number>;
+    actionData: ActionMicro[];
+    activePFId: number;
+    activePfReadOnly: boolean;
+    addRecentDirectory: Callback;
+    biCarrefourSeparator: number | null;
+    brouillonPhasage: PhasageDraft | null;
+    conflictMatrix: Matrice;
+    currentRemarques: string;
+    cycleLength: number;
+    cycleLengthInput: string;
+    cycleSimulationSpeed: number;
+    dependencyGap: number;
+    diagramAreaRef: RefObject<HTMLElement>;
+    diagramHeight: number | null;
+    displayConflicts: unknown[];
+    dossierReadOnly: boolean;
+    draggedTabIndex: number | null;
+    endDrag: Callback;
+    getGroupState: (...args: unknown[]) => unknown;
+    globalTime: number;
+    groups: Groupe[];
+    handleActionPanelResize: Callback;
+    handleDiagramResizeStart: Callback;
+    handleResizeStart: Callback;
+    helpZoneRef: MutableRefObject<string | null>;
+    hoveredActionId: number | null;
+    hoveredArrowGroupId: number | null;
+    hoveredArrowGroupSaturated: boolean;
+    hoveredConflict: unknown;
+    hoveredDiagramTime: number | null;
+    hoveredPhasageGroupId: number | null;
+    hoveredVUtile: unknown;
+    imageBrightness: number;
+    imageContrast: number;
+    imageFondClair: boolean;
+    intersectionArrows: IntersectionArrow[];
+    intersectionImage: string | null;
+    intersectionName: string;
+    isPlayingSimulation: boolean;
+    isResizing: boolean;
+    isResizingDiagram: boolean;
+    lastImageDirectoryRef: MutableRefObject<unknown>;
+    microCustomFields: string[];
+    pfTabs: PlanDeFeu[];
+    phasageBubbleRatio: number;
+    phasageBubbleScale: number;
+    phasageBulleCount: number;
+    phasageBulleEnabled: boolean;
+    phasageBulleModal: boolean;
+    phasageBulleTimes: number[];
+    phasageBulleVersion: number;
+    phasageBulleVisibleGroups: Set<number>;
+    phasageEllipseScale: number;
+    phasageModifie: boolean;
+    pixelsPerSecond: number;
+    recentImageDirs: unknown[];
+    renamePF: (id: number, name: string) => void;
+    reorderActions: Callback;
+    reorderPF: (fromIndex: number, toIndex: number) => void;
+    resetDiagramHeight: Callback;
+    saveDirectoryHandle: Callback;
+    setActionColWidths: Callback;
+    setActivePFId: (id: number) => void;
+    setBrouillonPhasage: Dispatch<SetStateAction<PhasageDraft | null>>;
+    setCycleLength: Callback;
+    setCycleLengthInput: Callback;
+    setDragConflictsFromDiagram: Callback;
+    setDraggedTabIndex: (index: number | null) => void;
+    setHoveredActionId: Callback;
+    setHoveredArrowGroupId: Callback;
+    setHoveredDiagramTime: Callback;
+    setHoveredPhasageGroupId: Callback;
+    setImageBrightness: Callback;
+    setImageContrast: Callback;
+    setIntersectionArrows: Callback;
+    setIntersectionImage: Callback;
+    setIsPlayingSimulation: Callback;
+    setPhasageBubbleRatio: Callback;
+    setPhasageBubbleScale: Callback;
+    setPhasageBulleCount: (value: number) => void;
+    setPhasageBulleEnabled: (value: boolean) => void;
+    setPhasageBulleModal: (value: boolean) => void;
+    setPhasageBulleTimes: (value: number[]) => void;
+    setPhasageBulleVersion: Dispatch<SetStateAction<number>>;
+    setPhasageEllipseScale: Callback;
+    setSelectedGroupId: (id: number) => void;
+    setShowFloatingConditions: Callback;
+    setShowFloatingDiagram: (value: boolean) => void;
+    setShowFloatingImage: (value: boolean) => void;
+    setShowFloatingVariables: Callback;
+    setSidebarWidth: (value: number) => void;
+    setSimulationCurrentTime: Callback;
+    setSimulationEnabled: (value: boolean) => void;
+    showActionDescription: boolean;
+    showComments: boolean;
+    showDependencies: boolean;
+    showFloatingConditions: boolean;
+    showFloatingDiagram: boolean;
+    showFloatingRemarks: boolean;
+    showFloatingVariables: boolean;
+    showGroupNamesDiagram: boolean;
+    showMicroOnHover: boolean;
+    showRemarks: boolean;
+    showWrapFlash: boolean;
+    sidebarVisible: boolean;
+    simulationCurrentTime: number;
+    simulationEnabled: boolean;
+    simulationResult: SimulationResult | null;
+    simulationSelectedActions: number[];
+    simulationSpeed: number;
+    startDrag: Callback;
+    tip: (label: string) => string | undefined;
+    tooltipPrefs: { diagram?: boolean; micro?: boolean };
+    updateActionRow: Callback;
+    updateGroupParams: Callback;
+    updateMicroCustomField: Callback;
+    updatePFRemarques: Callback;
+}
+
+interface WorkspaceMainProps {
+    model: WorkspaceMainModel;
+}
+
+const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
+const PhasageBulle = PhasageBulleImplementation as unknown as LooseComponent;
+const IntersectionImage = IntersectionImageImplementation as unknown as LooseComponent;
+const ActionTable = ActionTableImplementation as unknown as LooseComponent;
+
+export default function WorkspaceMain({ model }: WorkspaceMainProps) {
     const {
         actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
         biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
@@ -143,7 +298,7 @@ export default function WorkspaceMain({ model }) {
                                 // diagramme à la place disponible : il défile chez lui au lieu de
                                 // faire défiler toute la zone centrale, en-têtes compris.
                                 '--timeline-max-height': diagramHeight !== null ? undefined : 'calc(100vh - 320px)'
-                            }}
+                            } as CSSProperties}
                         >
                             <TimelineDiagram
                                 scrollable
@@ -151,7 +306,7 @@ export default function WorkspaceMain({ model }) {
                                 groups={groups}
                                 globalTime={globalTime}
                                 getGroupState={getGroupState}
-                                onGroupClick={(g) => setSelectedGroupId(g.id)}
+                                onGroupClick={(g: Groupe) => setSelectedGroupId(g.id)}
                                 pixelsPerSecond={pixelsPerSecond}
                                 conflicts={displayConflicts}
                                 onDragConflicts={setDragConflictsFromDiagram}
@@ -252,7 +407,10 @@ export default function WorkspaceMain({ model }) {
                                             Phases :
                                             <select
                                                 value={brouillonPhasage?.count ?? phasageBulleCount}
-                                                onChange={(e) => setBrouillonPhasage(b => ({ ...b, count: parseInt(e.target.value) }))}
+                                                onChange={(e) => setBrouillonPhasage(b => ({
+                                                    count: parseInt(e.target.value),
+                                                    times: b?.times ?? phasageBulleTimes,
+                                                }))}
                                                 style={{ padding: '3px' }}
                                             >
                                                 {[2, 3, 4, 5, 6].map(n => (

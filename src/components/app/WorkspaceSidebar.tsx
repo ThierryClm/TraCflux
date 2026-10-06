@@ -5,8 +5,115 @@ import GroupTable from '../GroupTable';
 import IntergreenMatrix from '../IntergreenMatrix';
 import DiagnosticPanel from '../DiagnosticPanel';
 import ConflictList from '../ConflictList';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { SimulationResult } from '../../utils/simulationCalculator';
+import type { ConflictInfo, HoveredConflict } from '../ConflictList';
+import type { ProjectProperties } from '../PropertiesPanel';
 
-export default function WorkspaceSidebar({ model }) {
+type ActiveTab = 'properties' | 'config' | 'matrix' | 'traffic';
+type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
+    durations?: Partial<Groupe['durations']>;
+};
+
+interface IntersectionArrow {
+    groupId: number;
+}
+
+interface DirectoryReference {
+    name: string;
+}
+
+interface TrafficData {
+    trafficVol?: number | string;
+}
+
+interface WorkspaceSidebarModel {
+    sidebarVisible: boolean;
+    phasageBulleEnabled: boolean;
+    sidebarWidth: number;
+    groups: Groupe[];
+    intersectionArrows: IntersectionArrow[];
+    phasageBulleVisibleGroups: Set<number>;
+    hoveredPhasageGroupId: number | null;
+    setHoveredPhasageGroupId: (id: number | null) => void;
+    togglePhasageBulleGroup: (id: number) => void;
+    setPhasageBulleVisibleGroups: (ids: Set<number>) => void;
+    tip: (label: string) => string | undefined;
+    simulationEnabled: boolean;
+    actionData: ActionMicro[];
+    simulationSelectedActions: number[];
+    toggleSimulationAction: (id: number) => void;
+    selectAllSimulationActions: () => void;
+    deselectAllSimulationActions: () => void;
+    cycleLength: number;
+    conflictMatrix: Matrice;
+    setMatrixValue: (from: number, to: number, value: string) => void;
+    hoveredActionId: number | null;
+    setHoveredActionId: (id: number | null) => void;
+    setHoveredConflict: (conflict: HoveredConflict | null) => void;
+    simulationName: string;
+    updateSimulationName: (name: string) => void;
+    activeTrafficDataset: string;
+    setActiveTrafficDataset: (name: string) => void;
+    updateTrafficData: (groupId: number, field: 'trafficVol', value: number | string) => void;
+    getTrafficData: (groupId: number) => TrafficData;
+    updateGroupParams: (groupId: number, updates: GroupUpdates) => void;
+    setHoveredArrowGroupId: (id: number | null) => void;
+    hoveredArrowGroupId: number | null;
+    setHoveredArrowGroupSaturated: (saturated: boolean) => void;
+    trafficDatasetNames: string[];
+    trafficDatasetSourceNames: string[];
+    setHoveredVUtile: (value: unknown) => void;
+    copyTrafficDataset: (source: string, target: string) => void;
+    addCustomTrafficDataset: (name: string) => void;
+    simulationResult: SimulationResult | null;
+    setShowFloatingTraffic: Dispatch<SetStateAction<boolean>>;
+    tooltipPrefs: {
+        traffic?: boolean;
+        config?: boolean;
+        matrix?: boolean;
+    };
+    activeTab: ActiveTab;
+    setActiveTab: (tab: ActiveTab) => void;
+    setSidebarWidth: (width: number) => void;
+    intersectionName: string;
+    setIntersectionName: (name: string) => void;
+    projectProperties: ProjectProperties;
+    updateProjectProperty: <K extends keyof ProjectProperties>(
+        field: K,
+        value: ProjectProperties[K],
+    ) => void;
+    appCommunes: string[];
+    appMoaLogos: Record<string, string>;
+    appMoeLogos: Record<string, string>;
+    setShowFloatingProperties: Dispatch<SetStateAction<boolean>>;
+    showGroupNamesForm: boolean;
+    setShowFloatingForm: Dispatch<SetStateAction<boolean>>;
+    activePFId: number;
+    pfTabs: PlanDeFeu[];
+    biCarrefourSeparator: number | null;
+    showGroupNamesMatrix: boolean;
+    matricesLocked: boolean;
+    setShowFloatingMatrix: Dispatch<SetStateAction<boolean>>;
+    showCapacityReserve: boolean;
+    showFloatingDiagnostic: boolean;
+    setShowFloatingDiagnostic: (value: boolean) => void;
+    displayConflicts: ConflictInfo[];
+    isConflictGrayed: (conflict: ConflictInfo) => boolean;
+    showFloatingConflicts: boolean;
+    setShowFloatingConflicts: (value: boolean) => void;
+    recentOpenDirs: DirectoryReference[];
+    recentSaveDirs: DirectoryReference[];
+    recentImportDirs: DirectoryReference[];
+    helpZoneRef: MutableRefObject<string | null>;
+}
+
+interface WorkspaceSidebarProps {
+    model: WorkspaceSidebarModel;
+}
+
+export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
     const {
         sidebarVisible,
         phasageBulleEnabled,
@@ -62,8 +169,6 @@ export default function WorkspaceSidebar({ model }) {
         setShowFloatingProperties,
         showGroupNamesForm,
         setShowFloatingForm,
-        startDrag,
-        endDrag,
         activePFId,
         pfTabs,
         biCarrefourSeparator,
@@ -208,7 +313,7 @@ export default function WorkspaceSidebar({ model }) {
                                     }}
                                 >
                                     Configuration
-                                    {groups.length > 0 && groups.every(g => !g.type || g.type === '') && (
+                                    {groups.length > 0 && groups.every(g => !g.type) && (
                                         <span className="tab-warning-icon" title={tip("Formulaire non renseigné")} role="img" aria-label="Formulaire non renseigné"> ⚠</span>
                                     )}
                                 </button>
@@ -266,8 +371,6 @@ export default function WorkspaceSidebar({ model }) {
                                         showGroupNames={showGroupNamesForm}
                                         onDetach={() => setShowFloatingForm(v => !v)}
                                         hoveredGroupId={hoveredArrowGroupId}
-                                        startDrag={startDrag}
-                                        endDrag={endDrag}
                                     tooltipsEnabled={tooltipPrefs.config}
                                     />
                                     </div>
