@@ -1,6 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useConfirm } from './ConfirmProvider';
 import './ProjectManager.css';
+
+interface SavedProject {
+    name: string;
+    savedAt?: string;
+    size?: number;
+}
+
+interface RecentDirectory {
+    name: string;
+}
+
+interface ProjectManagerProps {
+    loadProject: (name: string) => boolean;
+    getAllSaves: () => SavedProject[];
+    deleteSave: (name: string) => void;
+    currentName: string | null;
+    recentOpenDirs?: RecentDirectory[];
+    recentSaveDirs?: RecentDirectory[];
+}
 
 const ProjectManager = ({
     loadProject,
@@ -9,9 +28,9 @@ const ProjectManager = ({
     currentName,
     recentOpenDirs = [],
     recentSaveDirs = []
-}) => {
+}: ProjectManagerProps) => {
     const askConfirm = useConfirm();
-    const [savedProjects, setSavedProjects] = useState([]);
+    const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
     const [message, setMessage] = useState('');
 
     const refreshList = () => {
@@ -22,7 +41,7 @@ const ProjectManager = ({
         refreshList();
     }, []);
 
-    const handleLoad = async (name) => {
+    const handleLoad = async (name: string) => {
         const ok = await askConfirm({
             title: 'Charger le projet',
             message: `Charger « ${name} » ? La configuration actuelle sera perdue.`,
@@ -40,7 +59,7 @@ const ProjectManager = ({
         }
     };
 
-    const handleDelete = async (name) => {
+    const handleDelete = async (name: string) => {
         const ok = await askConfirm({
             title: 'Supprimer du cache',
             message: `Supprimer « ${name} » du cache local ?`,
@@ -53,7 +72,7 @@ const ProjectManager = ({
         }
     };
 
-    const formatDate = (isoString) => {
+    const formatDate = (isoString?: string) => {
         if (!isoString) return '-';
         const date = new Date(isoString);
         return date.toLocaleDateString('fr-FR', {
@@ -65,7 +84,7 @@ const ProjectManager = ({
         });
     };
 
-    const formatSize = (bytes) => {
+    const formatSize = (bytes?: number) => {
         if (!bytes) return '-';
         const kb = bytes / 1024;
         return `${kb.toFixed(1)} Ko`;

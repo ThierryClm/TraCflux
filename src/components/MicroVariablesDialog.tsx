@@ -1,8 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Modal from './Modal';
 import { useMicroVariables } from './MicroVariablesProvider';
 import { DEFAULT_MICRO_VARIABLES } from '../utils/microVariables';
+import type { MicroVariable } from '../utils/microVariables';
 import './MicroVariablesDialog.css';
+
+interface MicroVariablesDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    tooltipsEnabled?: boolean;
+}
 
 /**
  * Fenêtre de référence évolutive des variables prédéfinies de micro-régulation
@@ -10,20 +17,20 @@ import './MicroVariablesDialog.css';
  * conditions micro. L'édition se fait sur un brouillon local, validé par
  * « Enregistrer » (persistance dans les réglages de l'application).
  */
-const MicroVariablesDialog = ({ isOpen, onClose, tooltipsEnabled = true }) => {
-    const tip = (text) => (tooltipsEnabled ? text : undefined);
+const MicroVariablesDialog = ({ isOpen, onClose, tooltipsEnabled = true }: MicroVariablesDialogProps) => {
+    const tip = (text: string) => (tooltipsEnabled ? text : undefined);
     const { variables, setVariables } = useMicroVariables();
-    const [rows, setRows] = useState([]);
+    const [rows, setRows] = useState<MicroVariable[]>([]);
 
     // Recharge le brouillon depuis la liste courante à chaque ouverture.
     useEffect(() => {
         if (isOpen) setRows(variables.map(v => ({ ...v })));
     }, [isOpen, variables]);
 
-    const updateRow = (index, field, value) =>
+    const updateRow = (index: number, field: keyof MicroVariable, value: string) =>
         setRows(rs => rs.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
 
-    const removeRow = (index) => setRows(rs => rs.filter((_, i) => i !== index));
+    const removeRow = (index: number) => setRows(rs => rs.filter((_, i) => i !== index));
 
     const addRow = () => setRows(rs => [...rs, { name: '', description: '' }]);
 

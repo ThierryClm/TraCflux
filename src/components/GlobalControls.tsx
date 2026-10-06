@@ -1,7 +1,18 @@
-import React from 'react';
+import type { Dispatch, SetStateAction } from 'react';
+import type { Durees, Groupe } from '../types/projet';
 import './Controls.css';
 
-const GlobalControls = ({ isPlaying, setIsPlaying, reset, onEditGroup, selectedGroup, updateGroupDuration, updateGroupOffset }) => {
+interface GlobalControlsProps {
+    isPlaying: boolean;
+    setIsPlaying: Dispatch<SetStateAction<boolean>>;
+    reset: () => void;
+    onEditGroup?: (group: Groupe) => void;
+    selectedGroup: Groupe | null;
+    updateGroupDuration: (groupId: number, phase: keyof Durees, value: string) => void;
+    updateGroupOffset: (groupId: number, value: string) => void;
+}
+
+const GlobalControls = ({ isPlaying, setIsPlaying, reset, onEditGroup, selectedGroup, updateGroupDuration, updateGroupOffset }: GlobalControlsProps) => {
     return (
         <div className="controls-panel">
 
