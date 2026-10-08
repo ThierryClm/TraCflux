@@ -119,7 +119,7 @@ interface WorkspaceMainModel {
     setSelectedGroupId: (id: number) => void;
     setShowFloatingConditions: Callback;
     setShowFloatingDiagram: (value: boolean) => void;
-    setShowFloatingImage: (value: boolean) => void;
+    openFloatingImage: () => void;
     setShowFloatingVariables: Callback;
     setSidebarWidth: (value: number) => void;
     setSimulationCurrentTime: Callback;
@@ -178,7 +178,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         setHoveredArrowGroupId, setHoveredDiagramTime, setHoveredPhasageGroupId, setImageBrightness, setImageContrast,
         setIntersectionArrows, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
         setPhasageBulleCount, setPhasageBulleEnabled, setPhasageBulleModal, setPhasageBulleTimes, setPhasageBulleVersion,
-        setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, setShowFloatingImage,
+        setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
         setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
         showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
         showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,
@@ -519,7 +519,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 saveDirectoryHandle={saveDirectoryHandle}
                                 recentImageDirs={recentImageDirs}
                                 addRecentDirectory={addRecentDirectory}
-                                onShowFloatingImage={() => setShowFloatingImage(true)}
+                                onShowFloatingImage={openFloatingImage}
                                 intersectionName={intersectionName}
                                 imageBrightness={imageBrightness}
                                 setImageBrightness={setImageBrightness}

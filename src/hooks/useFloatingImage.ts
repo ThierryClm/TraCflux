@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import usePopupWindow from './usePopupWindow';
 import { fitDetachedImageBox, cropFromBoxToImage, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
 import { mesurerFondClair } from '../utils/fondImage';
@@ -170,8 +170,13 @@ const useFloatingImage = (
         contentSize: dimsKnown ? stableContentSizeRef.current : null
     });
 
+    const openFloatingImage = useCallback(() => {
+        setShowFloatingImage(true);
+        floatingImagePopup.retryOpen();
+    }, [floatingImagePopup.retryOpen]);
+
     return {
-        showFloatingImage, setShowFloatingImage,
+        showFloatingImage, setShowFloatingImage, openFloatingImage,
         floatingCrop, setFloatingCrop,
         markLegacyCrop: setLegacyCropPending,
         showCropControls, setShowCropControls,

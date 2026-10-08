@@ -4,8 +4,15 @@ import { act } from '@testing-library/react';
 import usePopupWindow from './usePopupWindow';
 import useFloatingImage from './useFloatingImage';
 
+const { retryOpen } = vi.hoisted(() => ({ retryOpen: vi.fn() }));
+
 vi.mock('./usePopupWindow', () => ({
-    default: vi.fn(() => ({ renderToPopup: vi.fn(), popupWindow: { current: null } }))
+    default: vi.fn(() => ({
+        renderToPopup: vi.fn(),
+        popupWindow: { current: null },
+        popupOpen: false,
+        retryOpen
+    }))
 }));
 
 describe('useFloatingImage', () => {
@@ -22,6 +29,16 @@ describe('useFloatingImage', () => {
             title: 'Carrefour témoin — PF 1',
             showTitleBanner: false
         }));
+    });
+
+    it("retente l'ouverture au clic même si le détachement était déjà mémorisé", () => {
+        localStorage.setItem('floating_image_visible', 'true');
+        const { result } = renderHook(() => useFloatingImage('data:image/png;base64,abc'));
+
+        act(() => result.current.openFloatingImage());
+
+        expect(result.current.showFloatingImage).toBe(true);
+        expect(retryOpen).toHaveBeenCalledTimes(1);
     });
 
     it("recalcule la fenêtre quand les dimensions réelles arrivent même si les curseurs sont ouverts", () => {

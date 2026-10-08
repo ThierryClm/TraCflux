@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
@@ -58,6 +58,8 @@ interface PopupWindowOptions {
 export interface PopupWindowHandle {
     renderToPopup: (content: ReactNode) => void;
     popupWindow: RefObject<Window | null>;
+    popupOpen: boolean;
+    retryOpen: () => void;
 }
 
 const readPopupPosition = (key: string | null): PopupPosition | null => {
@@ -398,6 +400,8 @@ const usePopupWindow = ({
 }: PopupWindowOptions): PopupWindowHandle => {
     const bannerHeight = showTitleBanner ? BANDEAU_HAUTEUR : 0;
     const popupRef = useRef<Window | null>(null);
+    const [popupOpen, setPopupOpen] = useState(false);
+    const [openAttempt, setOpenAttempt] = useState(0);
     const rootRef = useRef<Root | null>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const contentSizeRef = useRef(contentSize);
@@ -545,6 +549,7 @@ const usePopupWindow = ({
             );
 
             if (!popup) {
+                setPopupOpen(false);
                 if (!popupBlockedNotified) {
                     popupBlockedNotified = true;
                     toast.error("Fenêtre détachée bloquée par le navigateur. Cliquez sur l'icône popup bloqué dans la barre d'adresse et choisissez « Toujours autoriser » pour ce site, puis rouvrez la fenêtre (voir le menu Aide).");
@@ -560,6 +565,7 @@ const usePopupWindow = ({
             }
 
             popupRef.current = popup;
+            setPopupOpen(true);
             openPopups.add(popup);
             installMainListener();
             // Suivi de l'édition de champ dans cette popup (suspension des re-rendus).
@@ -767,6 +773,7 @@ const usePopupWindow = ({
                     pendingContentRef.current = null;
                     openPopups.delete(popup);
                     placesAttribuees.delete(popup);
+                    setPopupOpen(false);
                     onClose();
                 }
             }, 300);
@@ -787,6 +794,7 @@ const usePopupWindow = ({
                 rootRef.current = null;
             }
             popupRef.current = null;
+            setPopupOpen(false);
         }
 
         return () => {
@@ -795,7 +803,20 @@ const usePopupWindow = ({
                 intervalRef.current = null;
             }
         };
-    }, [isOpen]);
+    }, [isOpen, openAttempt]);
+
+    // Un détachement demandé au chargement peut être refusé par le bloqueur
+    // de popups. L'intention reste mémorisée (`isOpen` demeure vrai), mais un
+    // nouveau clic utilisateur doit pouvoir retenter réellement window.open().
+    const retryOpen = useCallback(() => {
+        const popup = popupRef.current;
+        if (popup && !popup.closed) {
+            try { popup.focus(); } catch { /* fenêtre en cours de fermeture */ }
+            setPopupOpen(true);
+            return;
+        }
+        setOpenAttempt(attempt => attempt + 1);
+    }, []);
 
     // Render content to popup.
     // Pendant l'édition d'un champ (fenêtre principale ou popup), on NE touche
@@ -872,7 +893,7 @@ const usePopupWindow = ({
         };
     }, []);
 
-    return { renderToPopup, popupWindow: popupRef };
+    return { renderToPopup, popupWindow: popupRef, popupOpen, retryOpen };
 };
 
 export default usePopupWindow;
