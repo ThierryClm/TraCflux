@@ -1,17 +1,109 @@
 import * as XLSX from 'xlsx';
+import type { Matrice } from '../types/projet';
+
+/** Valeur brute d'une cellule, telle que la renvoie SheetJS. */
+type Cell = unknown;
+type SheetRow = Cell[];
+/** Feuille lue sous forme de tableau de lignes. */
+type SheetData = SheetRow[];
+
+/** Groupe de feu lu dans la feuille « Formulaire » (complété par « Trafic »). */
+export interface ImportedGroup {
+    id: number;
+    name: string;
+    type: string;
+    minGreen: number;
+    offset: number;
+    trafficStream: string;
+    durations: { green: number; orange: number; red: number };
+    da?: string;
+    courant?: string;
+    laneCoef?: number;
+}
+
+/** Ligne du diagramme d'un plan de feux (DA, début de vert, durée). */
+export interface ImportedDiagramLine {
+    groupId: number;
+    da: string;
+    offset: number;
+    greenDuration: number;
+}
+
+/** Action de micro-régulation lue sous le diagramme d'une feuille PF. */
+export interface ImportedAction {
+    id: number;
+    gf: number | '';
+    action: string;
+    description: string;
+    deb: number | '';
+    fin: number | '';
+    abrv: string;
+    micro: string;
+    plage1: number | '';
+    plage2: number | '';
+    actGf1: number | '';
+    actGf1Gf2: number | '';
+    actGf1Gf3: number | '';
+    actGf1Gf4: number | '';
+}
+
+/** Action lue par en-têtes de colonnes (ancien format de feuille). */
+interface LegacyImportedAction {
+    id: number;
+    gf: number | '';
+    action: string;
+    description: string;
+    deb: number | '';
+    fin: number | '';
+    abrv: string;
+    action_Micro: string;
+    plage1: number | '';
+    plage2: number | '';
+    actionGf1: number | '';
+    actionGf2: number | '';
+    actionGf3: number | '';
+    actionGf4: number | '';
+}
+
+/** Plan de feux importé : une feuille PF du classeur. */
+export interface ImportedPfTab {
+    id: number;
+    name: string;
+    color?: string | null;
+    cycleLength?: number;
+    diagram?: ImportedDiagramLine[];
+    conflictMatrix?: Matrice;
+    data: Array<ImportedAction | LegacyImportedAction>;
+}
+
+/** Débits par jeu de trafic, puis par numéro de groupe. */
+type ImportedTrafficDatasets = Record<string, Record<number, { trafficVol: number }>>;
+
+/** Projet reconstitué à partir du classeur Excel. */
+export interface ExcelImportResult {
+    intersectionName: string;
+    groups: ImportedGroup[];
+    cycleLength: number;
+    conflictMatrix: Matrice | null;
+    actionData: Array<ImportedAction | LegacyImportedAction>;
+    trafficData: Record<string, never>;
+    trafficDatasets?: ImportedTrafficDatasets;
+    pfTabs: ImportedPfTab[];
+    warnings: string[];
+}
 
 /**
  * Normalize action names from Excel to match the application's action options
  * Maps various Excel naming conventions to the standard names
  */
-function normalizeActionName(actionName) {
+function normalizeActionName(actionName: Cell): string {
     if (!actionName) return '';
 
     const normalized = String(actionName).trim();
     const lower = normalized.toLowerCase();
 
     // Map Excel variations to standard names
-    const mappings = {
+    const mappings: Record<string, string> = {
         // Bande passante variations
         'bande passante début de vert': 'Début de bande passante',
         'bande passante debut de vert': 'Début de bande passante',
@@ -68,8 +160,8 @@ function normalizeActionName(actionName) {
  * @param {Object} result - Result object to add warnings to
  * @returns {Array} - 2D array of cell values
  */
-function parseSheetManually(sheet, sheetName, result) {
-    const sheetData = [];
+function parseSheetManually(sheet: XLSX.WorkSheet, sheetName: string, result: ExcelImportResult): SheetData {
+    const sheetData: SheetData = [];
 
     // Get sheet range
     const range = sheet['!ref'];
@@ -92,10 +184,10 @@ function parseSheetManually(sheet, sheetName, result) {
 
     console.log(`Parsing sheet "${sheetName}" manually: rows ${startRow + 1}-${endRow + 1}, cols ${rangeMatch[1]}-${rangeMatch[3]}`);
 
-    const problematicCells = [];
+    const problematicCells: string[] = [];
 
     for (let r = startRow; r <= endRow; r++) {
-        const rowData = [];
+        const rowData: SheetRow = [];
         for (let c = startCol; c <= endCol; c++) {
             try {
                 const cellAddress = XLSX.utils.encode_cell({ r, c });
@@ -142,7 +234,7 @@ function parseSheetManually(sheet, sheetName, result) {
  * @param {Object} sheet - The worksheet object
  * @returns {number} - 0 if data starts at B, 1 if data starts at A
  */
-function getColOffset(sheet) {
+function getColOffset(sheet: XLSX.WorkSheet | null | undefined): number {
     const ref = sheet ? sheet['!ref'] : '';
     if (ref && /^A\d/.test(ref)) {
         return 1;
@@ -153,7 +245,7 @@ function getColOffset(sheet) {
 /**
  * Convert column name (A, B, ..., Z, AA, AB, ...) to 0-based index
  */
-function colNameToIndex(colName) {
+function colNameToIndex(colName: string): number {
     let index = 0;
     for (let i = 0; i < colName.length; i++) {
         index = index * 26 + (colName.charCodeAt(i) - 64);
@@ -168,7 +260,7 @@ function colNameToIndex(colName) {
  * @param {number} col - 0-based column index
  * @returns {any} - The cell value or empty string
  */
-function getCellValue(sheet, row, col) {
+function getCellValue(sheet: XLSX.WorkSheet, row: number, col: number): Cell {
     try {
         // Convert to Excel cell address (e.g., A1, B2, etc.)
         const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
@@ -212,19 +304,19 @@ function getCellValue(sheet, row, col) {
  * @param {File} file - Excel file to import
  * @returns {Promise<Object>} - Parsed project data
  */
-export async function importExcelFile(file) {
+export async function importExcelFile(file: File): Promise<ExcelImportResult> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
 
         reader.onload = (e) => {
             try {
-                const data = new Uint8Array(e.target.result);
+                const data = new Uint8Array((e.target as FileReader).result as ArrayBuffer);
 
-                let workbook;
-                let readWarnings = [];
+                let workbook!: XLSX.WorkBook;
+                let readWarnings: string[] = [];
 
                 // Essayer plusieurs stratégies de lecture
-                const readStrategies = [
+                const readStrategies: XLSX.ParsingOptions[] = [
                     { type: 'array' },  // Stratégie par défaut
                     { type: 'array', cellStyles: false },  // Sans les styles
                     { type: 'array', cellStyles: false, cellNF: false },  // Sans styles ni formats
@@ -256,7 +348,7 @@ export async function importExcelFile(file) {
 
                 console.log('Workbook loaded successfully, processing sheets...');
 
-                const result = {
+                const result: ExcelImportResult = {
                     intersectionName: file.name.replace(/\.(xlsx?|xls)$/i, ''),
                     groups: [],
                     cycleLength: 90,
@@ -288,10 +380,10 @@ export async function importExcelFile(file) {
 
                         console.log(`Sheet "${sheetName}" ref:`, sheet['!ref']);
 
-                        let sheetData;
+                        let sheetData: SheetData;
                         try {
                             console.log(`Trying sheet_to_json for "${sheetName}"...`);
-                            sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
+                            sheetData = XLSX.utils.sheet_to_json<SheetRow>(sheet, { header: 1, defval: '', raw: true });
                             console.log(`sheet_to_json succeeded for "${sheetName}", rows:`, sheetData.length);
                         } catch (sheetErr) {
                             console.error(`Error parsing sheet "${sheetName}" with sheet_to_json:`, sheetErr);
@@ -384,7 +476,7 @@ export async function importExcelFile(file) {
  * Valid types: V (VL), B (TC/Bus), P (Piéton), CY (Cycliste), FL (Flèche), PP (Priorité Piéton)
  * Returns empty string if not recognized or empty
  */
-function normalizeGroupType(typeValue) {
+function normalizeGroupType(typeValue: Cell): string {
     if (!typeValue) return '';
 
     const normalized = String(typeValue).trim();
@@ -393,7 +485,7 @@ function normalizeGroupType(typeValue) {
     const upper = normalized.toUpperCase();
 
     // Map Excel codes to GroupTable select options (V, B, P, CY, FL, PP)
-    const mappings = {
+    const mappings: Record<string, string> = {
         'V': 'V',
         'VL': 'V',
         'B': 'B',
@@ -432,7 +524,7 @@ function normalizeGroupType(typeValue) {
  * Valid values: TD, TàD, TàG, TD-TàD, TD-TàG, TD_G_D, Piéton, Cycle
  * Returns the value as-is if it matches, or tries to normalize common variations
  */
-function normalizeCourant(courantValue) {
+function normalizeCourant(courantValue: Cell): string {
     if (!courantValue) return '';
 
     const normalized = String(courantValue).trim();
@@ -446,7 +538,7 @@ function normalizeCourant(courantValue) {
 
     // Case-insensitive and accent-insensitive mappings
     const lower = normalized.toLowerCase();
-    const mappings = {
+    const mappings: Record<string, string> = {
         'td': 'TD',
         'tad': 'TàD',
         'tag': 'TàG',
@@ -493,7 +585,7 @@ function normalizeCourant(courantValue) {
  *   - Column F (idx 4): Jaune/Orange
  * Note: Cycle duration is read from PF sheets (AL3), not from Formulaire
  */
-function parseGroupsSheet(sheetData, result, sheetName, colOffset) {
+function parseGroupsSheet(sheetData: SheetData, result: ExcelImportResult, sheetName: string, colOffset: number): void {
     colOffset = colOffset || 0;
     console.log('parseGroupsSheet called, sheetData length:', sheetData.length, 'colOffset:', colOffset);
     console.log('First few rows:', sheetData.slice(0, 10));
@@ -512,7 +604,7 @@ function parseGroupsSheet(sheetData, result, sheetName, colOffset) {
     const COL_H = 6 + colOffset;       // H (for group count in H2)
 
     // Extract number of groups from H2 (row 1, column H = index 6)
-    let expectedGroupCount = null;
+    let expectedGroupCount: number | null = null;
     if (sheetData[1] && sheetData[1][COL_H]) {
         expectedGroupCount = parseNumber(sheetData[1][COL_H], null);
         console.log('Expected group count from H2:', expectedGroupCount);
@@ -520,7 +612,7 @@ function parseGroupsSheet(sheetData, result, sheetName, colOffset) {
 
     // Parse groups starting at row 6 (index 5)
     // Groups are at rows 6, 8, 10... (every 2 rows, with blank line between)
-    const groups = [];
+    const groups: ImportedGroup[] = [];
     let currentRow = 5; // Start at row 6 (index 5)
     let groupId = 1; // Compteur de groupe de feu
 
@@ -558,7 +650,7 @@ function parseGroupsSheet(sheetData, result, sheetName, colOffset) {
             }
 
             // Groupe vide : aucune valeur par défaut, juste l'ID
-            const group = {
+            const group: ImportedGroup = {
                 id: gfNumber,
                 name: groupName,
                 type: type,
@@ -603,7 +695,7 @@ function parseGroupsSheet(sheetData, result, sheetName, colOffset) {
                 console.log(`Row ${currentRow + 1}, Parsed: GF=${gfNumber}, Name="${groupName}", TypeRaw="${typeRaw}", Type="${type}", MinGreen=${minGreen}, Orange=${orange}`);
 
                 // Groupe vide : aucune valeur par défaut
-                const group = {
+                const group: ImportedGroup = {
                     id: gfNumber,
                     name: groupName,
                     type: type,
@@ -652,12 +744,12 @@ function parseGroupsSheet(sheetData, result, sheetName, colOffset) {
  *   - AK6, AK8, AK10... = Déb (début de phase verte)
  *   - AL6, AL8, AL10... = Fin (fin de phase verte)
  */
-function parseMatrixSheet(sheetData, result, sheet, sheetName, colOffset) {
+function parseMatrixSheet(sheetData: SheetData, result: ExcelImportResult, sheet: XLSX.WorkSheet, sheetName: string, colOffset: number): void {
     if (sheetData.length < 6) return;
     colOffset = colOffset || 0;
 
     // Get tab color from Excel sheet properties
-    let tabColor = null;
+    let tabColor: string | null = null;
     if (sheet['!tabColor']) {
         // tabColor can be { rgb: 'RRGGBB' } or { theme: X, tint: Y }
         if (sheet['!tabColor'].rgb) {
@@ -688,14 +780,14 @@ function parseMatrixSheet(sheetData, result, sheet, sheetName, colOffset) {
     }
 
     const size = result.groups.length;
-    const matrix = Array(size).fill(null).map(() => Array(size).fill(''));
+    const matrix: Matrice = Array(size).fill(null).map(() => Array(size).fill(''));
 
     // Matrix starts at D6
     const MATRIX_COL_START = 2 + colOffset;  // D
     const MATRIX_ROW_START = 5;  // Row 6 in Excel → index 5
 
     // Store diagram data for PF1 (same format as additional PF tabs)
-    const pf1Diagram = [];
+    const pf1Diagram: ImportedDiagramLine[] = [];
 
     let rowIndex = 0;
     let excelRow = MATRIX_ROW_START;
@@ -799,7 +891,7 @@ function parseMatrixSheet(sheetData, result, sheet, sheetName, colOffset) {
     console.log('Row 110 (index 109) first 5 cols:', sheetData[109] ? sheetData[109].slice(0, 5) : 'N/A');
     console.log('Row 111 (index 110) first 5 cols:', sheetData[110] ? sheetData[110].slice(0, 5) : 'N/A');
 
-    const actions = [];
+    const actions: ImportedAction[] = [];
     let actionRow = ACTION_ROW_START;
 
     while (actionRow < sheetData.length) {
@@ -835,7 +927,7 @@ function parseMatrixSheet(sheetData, result, sheet, sheetName, colOffset) {
 
         // If we have at least some data, create an action entry
         if (gfValue !== '' || actionValue !== '' || descValue !== '') {
-            const action = {
+            const action: ImportedAction = {
                 id: actions.length + 1,
                 gf: parseNumber(gfValue, ''),
                 action: normalizeActionName(actionValue),
@@ -867,7 +959,7 @@ function parseMatrixSheet(sheetData, result, sheet, sheetName, colOffset) {
     console.log(`Total actions parsed: ${actions.length}`);
 
     // Helper function to create empty action row (matching useTrafficLight format)
-    const createEmptyActionRow = (id) => ({
+    const createEmptyActionRow = (id: number): ImportedAction => ({
         id,
         gf: '',
         action: '',
@@ -918,7 +1010,7 @@ function parseMatrixSheet(sheetData, result, sheet, sheetName, colOffset) {
  * @param {string} sheetName - Original sheet name from Excel
  * @param {Object} sheet - Excel sheet object (for tab color)
  */
-function parseAdditionalPFSheet(sheetData, result, pfNumber, sheetName, sheet, colOffset) {
+function parseAdditionalPFSheet(sheetData: SheetData, result: ExcelImportResult, pfNumber: number, sheetName: string, sheet: XLSX.WorkSheet, colOffset: number): void {
     console.log(`parseAdditionalPFSheet called for PF${pfNumber}, sheetData length:`, sheetData.length);
     colOffset = colOffset || 0;
 
@@ -928,7 +1020,7 @@ function parseAdditionalPFSheet(sheetData, result, pfNumber, sheetName, sheet, c
     }
 
     // Get tab color from Excel sheet properties
-    let tabColor = null;
+    let tabColor: string | null = null;
     if (sheet && sheet['!tabColor']) {
         if (sheet['!tabColor'].rgb) {
             tabColor = '#' + sheet['!tabColor'].rgb;
@@ -955,11 +1047,11 @@ function parseAdditionalPFSheet(sheetData, result, pfNumber, sheetName, sheet, c
 
     // Extract diagram data for each group (DA, Déb, Fin) and conflict matrix
     // Store as pfDiagram array with group timing info
-    const pfDiagram = [];
+    const pfDiagram: ImportedDiagramLine[] = [];
     const size = result.groups.length;
 
     // Initialize conflict matrix for this PF tab
-    const pfMatrix = Array(size).fill(null).map(() => Array(size).fill(''));
+    const pfMatrix: Matrice = Array(size).fill(null).map(() => Array(size).fill(''));
     const MATRIX_COL_START = 2 + colOffset;  // D
 
     let excelRow = 5; // Start at row 6 (index 5)
@@ -1031,7 +1123,7 @@ function parseAdditionalPFSheet(sheetData, result, pfNumber, sheetName, sheet, c
     const COL_PLAGE1 = 100 + colOffset;
     const COL_PLAGE2 = 103 + colOffset;
 
-    const actions = [];
+    const actions: ImportedAction[] = [];
     let actionRow = ACTION_ROW_START;
 
     while (actionRow < sheetData.length) {
@@ -1067,7 +1159,7 @@ function parseAdditionalPFSheet(sheetData, result, pfNumber, sheetName, sheet, c
 
         // If we have at least some data, create an action entry
         if (gfValue !== '' || actionValue !== '' || descValue !== '') {
-            const action = {
+            const action: ImportedAction = {
                 id: actions.length + 1,
                 gf: parseNumber(gfValue, ''),
                 action: normalizeActionName(actionValue),
@@ -1099,7 +1191,7 @@ function parseAdditionalPFSheet(sheetData, result, pfNumber, sheetName, sheet, c
     console.log(`PF${pfNumber}: ${actions.length} actions parsed`);
 
     // Helper function to create empty action row
-    const createEmptyActionRow = (id) => ({
+    const createEmptyActionRow = (id: number): ImportedAction => ({
         id,
         gf: '',
         action: '',
@@ -1142,7 +1234,7 @@ function parseAdditionalPFSheet(sheetData, result, pfNumber, sheetName, sheet, c
  * - Rows 6-15: Diagram with merged cells (green/orange phases)
  * - Below diagram: Action table
  */
-function parsePFSheet(sheetData, result, pfNumber) {
+function parsePFSheet(sheetData: SheetData, result: ExcelImportResult, pfNumber: number): void {
     console.log(`Parsing PF${pfNumber} sheet, sheetData length:`, sheetData.length);
 
     if (sheetData.length < 2) return;
@@ -1204,7 +1296,7 @@ function parsePFSheet(sheetData, result, pfNumber) {
     };
 
     // Parse actions
-    const actions = [];
+    const actions: LegacyImportedAction[] = [];
     for (let i = actionTableStartRow + 1; i < sheetData.length; i++) {
         const row = sheetData[i];
         if (!row || row.length === 0) continue;
@@ -1213,7 +1305,7 @@ function parsePFSheet(sheetData, result, pfNumber) {
         const hasData = row.some(cell => cell !== '' && cell !== null && cell !== undefined);
         if (!hasData) continue;
 
-        const action = {
+        const action: LegacyImportedAction = {
             id: actions.length + 1,
             gf: parseNumber(row[colIdx.gf], ''),
             action: String(row[colIdx.action] || '').trim(),
@@ -1244,7 +1336,7 @@ function parsePFSheet(sheetData, result, pfNumber) {
 /**
  * Parse actions sheet (standalone - not used with new structure but kept for compatibility)
  */
-function parseActionsSheet(sheetData, result) {
+function parseActionsSheet(sheetData: SheetData, result: ExcelImportResult): void {
     if (sheetData.length < 2) return;
 
     // Find header row
@@ -1277,12 +1369,12 @@ function parseActionsSheet(sheetData, result) {
     };
 
     // Parse actions
-    const actions = [];
+    const actions: LegacyImportedAction[] = [];
     for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
         const row = sheetData[i];
         if (!row || row.length === 0) continue;
 
-        const action = {
+        const action: LegacyImportedAction = {
             id: actions.length + 1,
             gf: parseNumber(row[colIdx.gf], ''),
             action: String(row[colIdx.action] || '').trim(),
@@ -1314,7 +1406,7 @@ function parseActionsSheet(sheetData, result) {
  * - J3: First dataset name, J6, J8, J10... (every 2 rows): First dataset traffic volume - index 8
  * - O3: Second dataset name, O6, O8, O10... (every 2 rows): Second dataset traffic volume - index 13
  */
-function parseTrafficSheet(sheetData, result, colOffset) {
+function parseTrafficSheet(sheetData: SheetData, result: ExcelImportResult, colOffset: number): void {
     if (sheetData.length < 6) return;
     colOffset = colOffset || 0;
 
@@ -1331,8 +1423,9 @@ function parseTrafficSheet(sheetData, result, colOffset) {
     const COL_PF_NAME_2 = 13 + colOffset;  // O3 contains the second PF name
 
     // Read PF names from J3 and O3 (row 3 = index 2)
-    const pfName1 = sheetData[2]?.[COL_PF_NAME_1] || null;
-    const pfName2 = sheetData[2]?.[COL_PF_NAME_2] || null;
+    // Noms lus tels quels : un nombre sert aussi de clé de jeu de trafic.
+    const pfName1 = (sheetData[2]?.[COL_PF_NAME_1] || null) as string | null;
+    const pfName2 = (sheetData[2]?.[COL_PF_NAME_2] || null) as string | null;
     console.log('PF name from J3:', pfName1);
     console.log('PF name from O3:', pfName2);
 
@@ -1412,7 +1505,7 @@ function parseTrafficSheet(sheetData, result, colOffset) {
 /**
  * Find column index by possible names
  */
-function findColumnIndex(headerRow, possibleNames) {
+function findColumnIndex(headerRow: string[], possibleNames: string[]): number {
     for (let i = 0; i < headerRow.length; i++) {
         const cellValue = headerRow[i].toLowerCase().trim();
         for (const name of possibleNames) {
@@ -1427,11 +1520,12 @@ function findColumnIndex(headerRow, possibleNames) {
 /**
  * Parse number from cell value
  */
-function parseNumber(value, defaultValue) {
+function parseNumber<D>(value: Cell, defaultValue: D): number | D {
     if (value === null || value === undefined || value === '') {
         return defaultValue;
     }
-    const num = parseFloat(value);
+    // parseFloat convertit lui-même nombres et dates en texte.
+    const num = parseFloat(value as string);
     return isNaN(num) ? defaultValue : num;
 }
 

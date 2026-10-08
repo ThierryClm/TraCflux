@@ -20,6 +20,41 @@ export const ARROW_OUTER_OFFSET = 14;
 /** Décalage minimal : en deçà, les arcs se confondent avec les bulles. */
 export const MIN_ARROW_OFFSET = 4;
 
+/** Rayons de l'ellipse de placement (en % du conteneur) et angle de départ. */
+export interface EllipseConfig {
+    radiusX: number;
+    radiusY: number;
+    startAngle: number;
+}
+
+/** Taille d'une bulle et de son masque elliptique, en pixels. */
+export interface BubbleBox {
+    bubbleWidth: number;
+    bubbleHeight: number;
+    clipWidth: number;
+    clipHeight: number;
+}
+
+/** Encombrement de la composition, en pixels. */
+export interface CompositionBox {
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    width: number;
+    height: number;
+    centerX: number;
+    centerY: number;
+}
+
+/** Réglages communs d'une composition de bulles. */
+interface CompositionSettings {
+    count: number;
+    bubbleScale?: number;
+    ratio?: number;
+    ellipseScale?: number;
+}
+
 /** Taille de référence d'une bulle, avant échelle (px). */
 /**
  * Cadre de référence des flèches : l'image du carrefour.
@@ -49,7 +84,7 @@ export const REF_ARROW_SIZE = 96;
  * rapport au plan, quel que soit le format de l'image. À l'impression, où la
  * composition est agrandie pour occuper la page, le facteur grandit avec elle.
  */
-export const planFrameForBubble = (bubbleWidth, bubbleHeight) => {
+export const planFrameForBubble = (bubbleWidth: number, bubbleHeight: number): { facteur: number; frameWidth: number; frameHeight: number; arrowSize: number } => {
     const facteur = Math.min(bubbleWidth / REF_IMAGE_BOX_WIDTH, bubbleHeight / REF_IMAGE_BOX_HEIGHT);
     return {
         facteur,
@@ -75,7 +110,7 @@ export const BASE_BUBBLE_HEIGHT = Math.round(BASE_BUBBLE_WIDTH * REF_IMAGE_BOX_H
  * Phase 1 part toujours de la gauche ; les rayons horizontaux sont resserrés
  * pour une répartition moins étalée.
  */
-export const getEllipseConfig = (count) => {
+export const getEllipseConfig = (count: number): EllipseConfig => {
     switch (count) {
         case 2:  return { radiusX: 22, radiusY: 25, startAngle: Math.PI };
         case 3:  return { radiusX: 23, radiusY: 30, startAngle: Math.PI };
@@ -89,13 +124,13 @@ export const getEllipseConfig = (count) => {
  * Étalement horizontal maximal : au-delà, les arcs de liaison sortent du
  * viewBox et sont tronqués. Deux points de marge sont gardés.
  */
-export const maxEllipseScaleX = (count) => {
+export const maxEllipseScaleX = (count: number): number => {
     const { radiusX } = getEllipseConfig(count);
     return ((50 - MIN_ARROW_OFFSET - 2) / radiusX) * 100;
 };
 
 /** Correctif de taille selon le nombre de phases : plus il y en a, plus elles sont petites. */
-export const getScaleFactor = (count) => {
+export const getScaleFactor = (count: number): number => {
     switch (count) {
         case 2:  return 1.2;
         case 5:  return 0.9;
@@ -108,7 +143,7 @@ export const getScaleFactor = (count) => {
  * Boîte d'une bulle : l'image garde sa taille, le masque elliptique s'étire
  * selon le rapport H/L choisi.
  */
-export const computeBubbleBox = ({ count, bubbleScale = 100, ratio = 100 }) => {
+export const computeBubbleBox = ({ count, bubbleScale = 100, ratio = 100 }: Omit<CompositionSettings, 'ellipseScale'>): BubbleBox => {
     const scale = getScaleFactor(count) * (bubbleScale / 100);
     const ratioFactor = ratio / 100;
     const bubbleWidth = Math.round(BASE_BUBBLE_WIDTH * scale);
@@ -129,7 +164,7 @@ export const computeBubbleBox = ({ count, bubbleScale = 100, ratio = 100 }) => {
  * carrée. Écarter les bulles latéralement remplit la page sans déformer les
  * plans qu'elles contiennent — ce qu'une mise à l'échelle non uniforme ferait.
  */
-export const getPhaseCenter = (index, count, ellipseScale = 100, ellipseScaleX = null) => {
+export const getPhaseCenter = (index: number, count: number, ellipseScale = 100, ellipseScaleX: number | null = null): { x: number; y: number } => {
     const { radiusX, radiusY, startAngle } = getEllipseConfig(count);
     const fy = ellipseScale / 100;
     const fx = (ellipseScaleX ?? ellipseScale) / 100;
@@ -146,7 +181,11 @@ export const getPhaseCenter = (index, count, ellipseScale = 100, ellipseScaleX =
  * Renvoie un pourcentage d'ellipse à appliquer sur l'axe X, jamais inférieur au
  * réglage de l'utilisateur : on écarte les bulles, on ne les rapproche pas.
  */
-export const fitEllipseScaleX = ({ count, bubbleScale = 100, ellipseScale = 100, ratio = 100, containerWidth, containerHeight, targetAspect }) => {
+export const fitEllipseScaleX = ({ count, bubbleScale = 100, ellipseScale = 100, ratio = 100, containerWidth, containerHeight, targetAspect }: CompositionSettings & {
+    containerWidth: number;
+    containerHeight: number;
+    targetAspect: number;
+}): number => {
     const { radiusX } = getEllipseConfig(count);
     const { clipWidth } = computeBubbleBox({ count, bubbleScale, ratio });
     const boxY = computeCompositionBox({ count, bubbleScale, ellipseScale, ratio, containerWidth, containerHeight });
@@ -170,9 +209,14 @@ export const fitEllipseScaleX = ({ count, bubbleScale = 100, ellipseScale = 100,
  * n'est pas celui du conteneur pour un nombre impair de phases, où la
  * répartition n'est pas symétrique horizontalement.
  *
- * @returns {{left, right, top, bottom, width, height, centerX, centerY}} px
+ * @returns Encombrement en pixels
  */
-export const computeCompositionBox = ({ count, bubbleScale = 100, ellipseScale = 100, ellipseScaleX = null, ratio = 100, containerWidth, containerHeight, arrowOffset = null }) => {
+export const computeCompositionBox = ({ count, bubbleScale = 100, ellipseScale = 100, ellipseScaleX = null, ratio = 100, containerWidth, containerHeight, arrowOffset = null }: CompositionSettings & {
+    ellipseScaleX?: number | null;
+    containerWidth: number;
+    containerHeight: number;
+    arrowOffset?: number | null;
+}): CompositionBox => {
     const { clipWidth, clipHeight } = computeBubbleBox({ count, bubbleScale, ratio });
     let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
     for (let i = 0; i < count; i++) {
@@ -215,10 +259,17 @@ export const computeCompositionBox = ({ count, bubbleScale = 100, ellipseScale =
  * MIN_ARROW_OFFSET, où ils colleraient aux bulles, jamais plus que le décalage
  * nominal, où ils s'en éloigneraient sans raison.
  *
- * @param {Object} p - Composition, cadre de page (px de canevas) et centre visé
- * @returns {number} Décalage en % du conteneur
+ * @param p - Composition, cadre de page (px de canevas) et centre visé
+ * @returns Décalage en % du conteneur
  */
-export const fitArrowOffset = ({ count, bubbleScale = 100, ratio = 100, ellipseScale = 100, ellipseScaleX = null, containerWidth, containerHeight, pageWidth, pageHeight, center }) => {
+export const fitArrowOffset = ({ count, bubbleScale = 100, ratio = 100, ellipseScale = 100, ellipseScaleX = null, containerWidth, containerHeight, pageWidth, pageHeight, center }: CompositionSettings & {
+    ellipseScaleX?: number | null;
+    containerWidth: number;
+    containerHeight: number;
+    pageWidth: number;
+    pageHeight: number;
+    center: { x: number; y: number };
+}): number => {
     const { radiusX, radiusY } = getEllipseConfig(count);
     const rx = radiusX * ((ellipseScaleX ?? ellipseScale) / 100);
     const ry = radiusY * (ellipseScale / 100);
@@ -269,10 +320,14 @@ export const fitArrowOffset = ({ count, bubbleScale = 100, ratio = 100, ellipseS
  * quand k = 1 / sin(π/N). Les écarts sont alors égaux par construction, pour
  * n'importe quel nombre de phases.
  *
- * @param {number} jeu - 1 = tangent, 1,05 = un léger jour entre les bulles
- * @returns {{ellipseScale: number, ellipseScaleX: number}} à passer au composant
+ * @param jeu - 1 = tangent, 1,05 = un léger jour entre les bulles
+ * @returns Rayons à passer au composant
  */
-export const fitTangentEllipse = ({ count, bubbleScale = 100, ratio = 100, ellipseScale = 100, containerWidth, containerHeight, jeu = 1 }) => {
+export const fitTangentEllipse = ({ count, bubbleScale = 100, ratio = 100, ellipseScale = 100, containerWidth, containerHeight, jeu = 1 }: CompositionSettings & {
+    containerWidth: number;
+    containerHeight: number;
+    jeu?: number;
+}): { ellipseScale: number; ellipseScaleX: number } => {
     const { clipWidth, clipHeight } = computeBubbleBox({ count, bubbleScale, ratio });
     const config = getEllipseConfig(count);
     const k = (jeu / Math.sin(Math.PI / Math.max(2, count))) * (ellipseScale / 100);
@@ -287,6 +342,15 @@ export const fitTangentEllipse = ({ count, bubbleScale = 100, ratio = 100, ellip
     };
 };
 
+/** Réglages du phasage bulle ajustés à la page, en % comme le composant les attend. */
+export interface BubblesPageFit {
+    bubbleScale: number;
+    ellipseScale: number;
+    ellipseScaleX: number;
+    arrowOffsetX: number;
+    arrowOffsetY: number;
+}
+
 /**
  * Composition dessinée DIRECTEMENT à la taille de la page.
  *
@@ -299,12 +363,19 @@ export const fitTangentEllipse = ({ count, bubbleScale = 100, ratio = 100, ellip
  * arcs, encombrement total. On résout donc directement pour que le dessin
  * remplisse la page, sans plus rien mettre à l'échelle ensuite.
  *
- * @param {number} jeu - 1 = bulles tangentes, 1,02 = un cheveu de jour
- * @param {number} degagement - marge des arcs autour des bulles, en demi-bulles
- * @returns {{bubbleScale, ellipseScale, ellipseScaleX, arrowOffsetX, arrowOffsetY}}
- *          les réglages à passer au composant, en % comme il les attend
+ * @param jeu - 1 = bulles tangentes, 1,02 = un cheveu de jour
+ * @param degagement - marge des arcs autour des bulles, en demi-bulles
+ * @returns les réglages à passer au composant, en % comme il les attend
  */
-export const fitBubblesToPage = ({ count, ratio = 100, ellipseScale = 100, pageWidth, pageHeight, jeu = 1.02, degagement = 0.15 }) => {
+export const fitBubblesToPage = ({ count, ratio = 100, ellipseScale = 100, pageWidth, pageHeight, jeu = 1.02, degagement = 0.15 }: {
+    count: number;
+    ratio?: number;
+    ellipseScale?: number;
+    pageWidth: number;
+    pageHeight: number;
+    jeu?: number;
+    degagement?: number;
+}): BubblesPageFit => {
     const config = getEllipseConfig(count);
     const base = computeBubbleBox({ count, bubbleScale: 100, ratio });
     const forme = base.clipWidth / base.clipHeight; // largeur / hauteur d'une bulle

@@ -6,13 +6,95 @@
 import { APP_VERSION, APP_NAME } from '../version';
 import { getInterceptedEntries } from './errorInterceptor';
 import { dataUrlBytes } from './imageCompressor';
-import { getSwStatus } from './swStatus';
+import { getSwStatus, type SwStatus } from './swStatus';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../types/projet';
+
+/** État de l'application résumé par le rapport de diagnostic. */
+export interface DiagnosticContext {
+    intersectionName?: string | null;
+    projectName?: string | null;
+    groups?: Groupe[] | null;
+    pfTabs?: PlanDeFeu[] | null;
+    activePFId?: number | null;
+    cycleLength?: number;
+    actionData?: ActionMicro[] | null;
+    conflictMatrix?: Matrice | null;
+    intersectionImage?: string | null;
+    imageNaturalDims?: { width: number; height: number } | null;
+    dossierReadOnly?: boolean;
+    activePfReadOnly?: boolean;
+    matricesLocked?: boolean;
+    includeProject?: boolean;
+    maskNames?: boolean;
+}
+
+/** Copie du projet jointe au rapport sur demande. */
+interface ProjectDump {
+    intersectionName?: string | null;
+    projectName?: string | null;
+    groups?: Groupe[] | null;
+    cycleLength?: number;
+    conflictMatrix?: Matrice | null;
+    pfTabs?: PlanDeFeu[] | null;
+    activePFId?: number | null;
+}
+
+/** Rapport de diagnostic structuré (JSON). */
+export interface DiagnosticJSON {
+    meta: { format: string; generatedAt: string };
+    app: { name: string; version: string; buildDate: string | null; theme: string };
+    serviceWorker: SwStatus;
+    environment: {
+        userAgent: string;
+        platform: string | null;
+        language: string | null;
+        viewport: { width: number; height: number };
+        screen: { width: number; height: number };
+        devicePixelRatio: number;
+    };
+    preferences: Record<string, boolean>;
+    project: {
+        name: string | null;
+        intersectionName: string | null;
+        cycleLength: number | undefined;
+        groupCount: number;
+        pfCount: number;
+        activePFId: number | null;
+        activePFName: string | null;
+        filledActions: number;
+        totalActions: number;
+        matrixSize: number;
+        matrixFilled: number;
+        hasImage: boolean;
+        imageBytes: number;
+        imageWidth: number | null;
+        imageHeight: number | null;
+        projectBytes: number;
+    };
+    locks: {
+        dossierReadOnly: boolean;
+        activePfReadOnly: boolean;
+        matricesLocked: boolean;
+        readOnlyPfCount: number;
+    };
+    pfDetails: Array<{
+        id: number;
+        name: string | null;
+        greensConfigured: number;
+        actionsFilled: number;
+        readOnly: boolean;
+        validated: string | null;
+    }>;
+    storage: { origin: string | null; usageKb: number | null; quotaKbEstimate: number; quotaWarning: boolean };
+    errorJournal: { count: number; entries: Array<{ ts: string; type: string; message: string }> };
+    projectDump?: ProjectDump | { error: string };
+}
 
 /**
  * Horodatage du build courant, injecté par vite.config.ts. Absent en test et
  * dans tout contexte non bundlé — d'où le garde typeof.
  */
-const buildDate = () => {
+const buildDate = (): string | null => {
     try {
         if (typeof __BUILD_DATE__ === 'undefined') return null;
         return new Date(__BUILD_DATE__).toLocaleString('fr-FR');
@@ -22,7 +104,7 @@ const buildDate = () => {
 };
 
 /** Origine courante — le stockage local y est cloisonné (cf. section Stockage). */
-const currentOrigin = () => {
+const currentOrigin = (): string | null => {
     try {
         return window.location.origin || null;
     } catch {
@@ -30,17 +112,17 @@ const currentOrigin = () => {
     }
 };
 
-const yesNo = (v) => (v ? 'oui' : 'non');
+const yesNo = (v: unknown): string => (v ? 'oui' : 'non');
 
 // Petits formatages locaux au rapport — gardés ici pour rester lisibles dans
 // le texte plain (pas de "1,2 Mo" mais des Ko entiers, cohérent avec la ligne
 // « Taille utilisée » du localStorage).
-const formatKb = (bytes) => (bytes > 0 ? `${Math.round(bytes / 1024)} Ko` : null);
+const formatKb = (bytes: number): string | null => (bytes > 0 ? `${Math.round(bytes / 1024)} Ko` : null);
 
 // Estime la taille en octets du projet une fois sérialisé (ce que ferait un
 // Enregistrer sous). Image comprise. Approche caractères ≈ octets (base64 +
 // ASCII : précision largement suffisante pour un diagnostic).
-const estimateProjectBytes = (ctx) => {
+const estimateProjectBytes = (ctx: DiagnosticContext): number => {
     try {
         const dump = JSON.stringify({
             intersectionName: ctx.intersectionName,
@@ -61,11 +143,11 @@ const estimateProjectBytes = (ctx) => {
 /**
  * Estimate the size (in KB) currently used in localStorage.
  */
-const estimateLocalStorageUsage = () => {
+const estimateLocalStorageUsage = (): number | null => {
     try {
         let total = 0;
         for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
+            const key = localStorage.key(i) as string;
             const value = localStorage.getItem(key);
             total += (key.length + (value ? value.length : 0)) * 2; // UTF-16
         }
@@ -78,7 +160,7 @@ const estimateLocalStorageUsage = () => {
 /**
  * Detect the active theme from body class list.
  */
-const detectTheme = () => {
+const detectTheme = (): string => {
     const c = document.body.classList;
     if (c.contains('high-contrast-mode')) return 'Haut contraste';
     if (c.contains('amber-mode')) return 'Ambre';
@@ -92,7 +174,7 @@ const detectTheme = () => {
 /**
  * Read a localStorage boolean with fallback.
  */
-const lsBool = (key, fallback = true) => {
+const lsBool = (key: string, fallback = true): boolean => {
     const v = localStorage.getItem(key);
     if (v === null) return fallback;
     return v === 'true';
@@ -101,7 +183,7 @@ const lsBool = (key, fallback = true) => {
 /**
  * Short label for an intercepted entry type.
  */
-const entryLabel = (type) => {
+const entryLabel = (type: string): string => {
     if (type === 'error') return 'ERR';
     if (type === 'warn') return 'WARN';
     if (type === 'runtime') return 'RUN';
@@ -113,9 +195,9 @@ const entryLabel = (type) => {
  * Build the error journal as a standalone plain-text block.
  * Used both inside the full report and by the dedicated "Copier journal" button.
  */
-export const buildErrorJournal = () => {
+export const buildErrorJournal = (): string => {
     const entries = getInterceptedEntries();
-    const lines = [];
+    const lines: string[] = [];
     lines.push(`Journal d'erreurs — ${APP_NAME} v${APP_VERSION}`);
     lines.push(`Généré le ${new Date().toLocaleString('fr-FR')}`);
     lines.push('');
@@ -134,7 +216,7 @@ export const buildErrorJournal = () => {
 /**
  * Build the full diagnostic report as a plain-text string.
  */
-export const buildDiagnosticReport = (ctx) => {
+export const buildDiagnosticReport = (ctx: DiagnosticContext): string => {
     const {
         intersectionName,
         projectName,
@@ -179,7 +261,7 @@ export const buildDiagnosticReport = (ctx) => {
 
     const activePF = (pfTabs || []).find(p => p.id === activePFId);
 
-    const lines = [];
+    const lines: string[] = [];
     lines.push('═══════════════════════════════════════════════════════');
     lines.push(`  Rapport de diagnostic — ${APP_NAME}`);
     lines.push(`  Généré le ${dateStr}`);
@@ -264,7 +346,7 @@ export const buildDiagnosticReport = (ctx) => {
     (pfTabs || []).forEach(pf => {
         const nbGreens = Array.isArray(pf.diagram) ? pf.diagram.filter(d => d.greenDuration > 0).length : 0;
         const nbActions = Array.isArray(pf.data) ? pf.data.filter(a => a && a.action && a.action.trim() !== '').length : 0;
-        const flags = [];
+        const flags: string[] = [];
         if (pf.readOnly) flags.push('lecture seule');
         if (pf.color) flags.push(`validé (${pf.color})`);
         lines.push(`  • ${maskNames ? '(masqué)' : pf.name} (id=${pf.id}) — verts configurés: ${nbGreens}, actions: ${nbActions}${flags.length ? `, ${flags.join(', ')}` : ''}`);
@@ -309,7 +391,7 @@ export const buildDiagnosticReport = (ctx) => {
             }, null, 2);
             lines.push(dump);
         } catch (e) {
-            lines.push(`(échec sérialisation : ${e.message})`);
+            lines.push(`(échec sérialisation : ${(e as Error).message})`);
         }
         lines.push('');
     }
@@ -325,7 +407,7 @@ export const buildDiagnosticReport = (ctx) => {
  * Build a structured JSON diagnostic object — machine-readable equivalent
  * of buildDiagnosticReport. Easier to parse / forward automatically.
  */
-export const buildDiagnosticJSON = (ctx) => {
+export const buildDiagnosticJSON = (ctx: DiagnosticContext): DiagnosticJSON => {
     const {
         intersectionName,
         projectName,
@@ -367,7 +449,7 @@ export const buildDiagnosticJSON = (ctx) => {
     const lsKb = estimateLocalStorageUsage();
     const entries = getInterceptedEntries();
 
-    const out = {
+    const out: DiagnosticJSON = {
         meta: {
             format: 'diagram-feux-diagnostic-v1',
             generatedAt: new Date().toISOString()
@@ -451,7 +533,7 @@ export const buildDiagnosticJSON = (ctx) => {
                 activePFId
             };
         } catch (e) {
-            out.projectDump = { error: e.message };
+            out.projectDump = { error: (e as Error).message };
         }
     }
 
@@ -461,7 +543,7 @@ export const buildDiagnosticJSON = (ctx) => {
 /**
  * Build a datestamped filename part — yyyy-mm-dd_hh-mm.
  */
-const datePart = () => {
+const datePart = (): string => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}-${String(d.getMinutes()).padStart(2, '0')}`;
 };
@@ -469,7 +551,7 @@ const datePart = () => {
 /**
  * Trigger download of a Blob with the given filename.
  */
-const triggerDownload = (blob, filename) => {
+const triggerDownload = (blob: Blob, filename: string): void => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -483,7 +565,7 @@ const triggerDownload = (blob, filename) => {
 /**
  * Trigger download of the report as a .txt file.
  */
-export const downloadDiagnosticReport = (content, filename = 'diagnostic') => {
+export const downloadDiagnosticReport = (content: string, filename = 'diagnostic'): void => {
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     triggerDownload(blob, `${filename}_${datePart()}.txt`);
 };
@@ -491,7 +573,7 @@ export const downloadDiagnosticReport = (content, filename = 'diagnostic') => {
 /**
  * Trigger download of the structured diagnostic as a .json file.
  */
-export const downloadDiagnosticJSON = (obj, filename = 'diagnostic') => {
+export const downloadDiagnosticJSON = (obj: DiagnosticJSON, filename = 'diagnostic'): void => {
     const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8' });
     triggerDownload(blob, `${filename}_${datePart()}.json`);
 };

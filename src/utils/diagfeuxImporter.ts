@@ -27,32 +27,52 @@
  * trafic O-D vers les groupes — signalés dans `warnings`.
  */
 
+import type { Groupe, Matrice, Projet } from '../types/projet';
+
+/** État TraCflux partiel produit par l'import, compatible avec loadFullState. */
+export interface DiagfeuxState {
+    projectName: string;
+    intersectionName: string;
+    groups: Groupe[];
+    cycleLength: number;
+    conflictMatrix: Matrice;
+    projectProperties: NonNullable<Projet['projectProperties']>;
+}
+
+export interface DiagfeuxResult {
+    state: DiagfeuxState | null;
+    warnings: string[];
+    error?: string;
+}
+
+type Parent = Element | null | undefined;
+
 // --- Aides DOM indépendantes du namespace (comparaison par localName) ---
-const lname = (el) => el.localName || el.nodeName.replace(/^.*:/, '');
-const kids = (parent, name) =>
+const lname = (el: Element): string => el.localName || el.nodeName.replace(/^.*:/, '');
+const kids = (parent: Parent, name: string): Element[] =>
     parent ? Array.from(parent.children).filter(c => lname(c) === name) : [];
-const kid = (parent, name) => kids(parent, name)[0] || null;
-const txt = (parent, name) => {
+const kid = (parent: Parent, name: string): Element | null => kids(parent, name)[0] || null;
+const txt = (parent: Parent, name: string): string => {
     const c = kid(parent, name);
     return c ? (c.textContent || '').trim() : '';
 };
-const numOf = (parent, name, def = 0) => {
+const numOf = (parent: Parent, name: string, def = 0): number => {
     const v = parseFloat(txt(parent, name));
     return isNaN(v) ? def : v;
 };
-const boolOf = (parent, name) => /^(true|1)$/i.test(txt(parent, name));
+const boolOf = (parent: Parent, name: string): boolean => /^(true|1)$/i.test(txt(parent, name));
 
 /** Guide : « Px » = passage piéton, « Fx » = ligne de feux véhicules. */
-const isPieton = (id) => /^p/i.test(String(id || ''));
+const isPieton = (id: string | null | undefined): boolean => /^p/i.test(String(id || ''));
 
 /**
  * Parse un fichier DiagFeux (.dfe / XML) et renvoie un état TraCflux partiel
  * (compatible loadFullState) plus une liste d'avertissements.
  *
- * @returns {{ state: object|null, warnings: string[], error?: string }}
+ * @returns État partiel, avertissements, et message d'erreur si l'import échoue
  */
-export const parseDiagfeux = (xmlText) => {
-    const warnings = [];
+export const parseDiagfeux = (xmlText: unknown): DiagfeuxResult => {
+    const warnings: string[] = [];
     if (!xmlText || typeof xmlText !== 'string') {
         return { state: null, warnings, error: 'Fichier vide ou illisible.' };
     }
@@ -91,7 +111,7 @@ export const parseDiagfeux = (xmlText) => {
     const nom = txt(props, 'Nom') || 'Carrefour importé';
     const enAgglo = props ? boolOf(props, 'EnAgglo') : true;
     /** Jaune d'une ligne : 3 s agglo / 5 s hors agglo ; 0 pour les feux piétons. */
-    const jauneFor = (id) => isPieton(id) ? 0 : (enAgglo ? 3 : 5);
+    const jauneFor = (id: string): number => isPieton(id) ? 0 : (enAgglo ? 3 : 5);
 
     // Mapping vers le schéma RÉEL de projectProperties (cf. DEFAULT_PROJECT_PROPERTIES
     // dans useTrafficLight.js) : toute autre clé serait silencieusement ignorée.
@@ -118,7 +138,7 @@ export const parseDiagfeux = (xmlText) => {
         return { state: null, warnings, error: 'La variante ne contient aucune LigneDeFeux.' };
     }
     const ids = lignes.map((lf, i) => txt(lf, 'ID') || String(i + 1));
-    const idToIndex = new Map();
+    const idToIndex = new Map<string, number>();
     ids.forEach((id, i) => idToIndex.set(id, i));
 
     // Verts minimaux du projet (guide : vert mini véhicules / piétons).
@@ -127,8 +147,8 @@ export const parseDiagfeux = (xmlText) => {
 
     // --- Matrice des INTERVERTS = rouge de dégagement + jaune (cf. guide) ---
     const n = lignes.length;
-    const conflictMatrix = Array.from({ length: n }, () => Array(n).fill(''));
-    const intervert = Array.from({ length: n }, () => Array(n).fill(null));
+    const conflictMatrix: Matrice = Array.from({ length: n }, () => Array(n).fill(''));
+    const intervert: (number | null)[][] = Array.from({ length: n }, () => Array(n).fill(null));
     let matrixFound = 0;
     lignes.forEach((lf, i) => {
         const jaune = jauneFor(ids[i]);
@@ -136,7 +156,7 @@ export const parseDiagfeux = (xmlText) => {
             const adverse = rd.getAttribute('IDAdverse');
             const rouge = parseFloat((rd.textContent || '').trim());
             if (adverse && idToIndex.has(adverse) && !isNaN(rouge)) {
-                const j = idToIndex.get(adverse);
+                const j = idToIndex.get(adverse) as number;
                 const iv = Math.round(rouge + jaune);
                 conflictMatrix[i][j] = iv;
                 intervert[i][j] = iv;
@@ -150,7 +170,7 @@ export const parseDiagfeux = (xmlText) => {
 
     // --- Plan de feux courant ---
     const plans = kids(variante, 'PlanFeux');
-    let plan = null;
+    let plan: Element | null = null;
     if (plans.length > 0) {
         const currentId = variante.getAttribute('PlanFeuxCourant');
         plan = (currentId && plans.find(p => p.getAttribute('ID') === currentId))
@@ -171,29 +191,29 @@ export const parseDiagfeux = (xmlText) => {
     if (plan) {
         const phases = kids(plan, 'Phase');
         const durs = phases.map(ph => Math.max(0, numOf(ph, 'Durée', 60)));
-        const starts = [];
+        const starts: number[] = [];
         let acc = 0;
         durs.forEach(d => { starts.push(acc); acc += d; });
         cycleLength = acc || 60;
 
         // Phases où chaque ligne est au vert (+ décalages ouverture/fermeture)
-        const perLine = new Map();
+        const perLine = new Map<string, Array<{ pi: number; dOuvre: number; dFerme: number }>>();
         phases.forEach((ph, pi) => {
             kids(ph, 'IDLigneFeux').forEach(ref => {
                 const id = (ref.textContent || '').trim();
                 if (!id || !idToIndex.has(id)) return;
-                const dOuvre = parseFloat(ref.getAttribute('DécalageOuvre')) || 0;
-                const dFerme = parseFloat(ref.getAttribute('DécalageFerme')) || 0;
+                const dOuvre = parseFloat(ref.getAttribute('DécalageOuvre') ?? '') || 0;
+                const dFerme = parseFloat(ref.getAttribute('DécalageFerme') ?? '') || 0;
                 if (!perLine.has(id)) perLine.set(id, []);
-                perLine.get(id).push({ pi, dOuvre, dFerme });
+                perLine.get(id)!.push({ pi, dOuvre, dFerme });
             });
         });
 
         // 1) Début de vert (avance d'ouverture) et fin « naturelle » (fin de phase
         //    + retard de fermeture), avant contraintes de sécurité.
-        const naturalEnd = new Array(n).fill(null);
+        const naturalEnd: (number | null)[] = new Array(n).fill(null);
         perLine.forEach((entries, id) => {
-            const i = idToIndex.get(id);
+            const i = idToIndex.get(id) as number;
             entries.sort((a, b) => a.pi - b.pi);
             const first = entries[0];
             const last = entries[entries.length - 1];
@@ -210,20 +230,20 @@ export const parseDiagfeux = (xmlText) => {
         //    contraintes de sécurité »).
         for (let i = 0; i < n; i++) {
             if (naturalEnd[i] === null) continue;
-            let end = naturalEnd[i];
+            let end: number = naturalEnd[i] as number;
             for (let j = 0; j < n; j++) {
                 if (i === j || intervert[i][j] === null || naturalEnd[j] === null) continue;
                 // Ouverture de j, ramenée après le début de vert de i (cyclique).
                 let openJ = start[j];
                 while (openJ <= start[i]) openJ += cycleLength;
-                end = Math.min(end, openJ - intervert[i][j]);
+                end = Math.min(end, openJ - (intervert[i][j] as number));
             }
             green[i] = Math.max(0, Math.round(end - start[i]));
         }
     }
 
     // --- Groupes TraCflux ---
-    const groups = lignes.map((lf, i) => {
+    const groups: Groupe[] = lignes.map((lf, i) => {
         const id = ids[i];
         const pieton = isPieton(id);
         const orange = jauneFor(id);
@@ -247,7 +267,7 @@ export const parseDiagfeux = (xmlText) => {
     warnings.push('Géométrie (branches, voies, passages, fond DXF) non reprise : TraCflux utilise une image de fond et des flèches.');
     warnings.push('Trafics non repris dans ce jet (matrices origine-destination à agréger par groupe).');
 
-    const state = {
+    const state: DiagfeuxState = {
         projectName: nom,
         intersectionName: nom,
         groups,
