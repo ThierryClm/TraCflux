@@ -9,6 +9,7 @@ import { useConfirm, useAlert } from './components/ConfirmProvider';
 import { toast } from './utils/toast';
 import { buildExportFilename } from './utils/exportFilename';
 import { buildGreenWavePrintClone } from './utils/greenWavePrint';
+import { computeLeftPadding, truncateName } from './utils/greenWaveLayout';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
 import { APP_NAME, APP_VERSION, APP_DESCRIPTION } from './version';
@@ -1194,7 +1195,19 @@ const GreenWavePage = () => {
     const speedUpMps = (speedUp * 1000) / 3600; // Convert km/h to m/s - ascending
     const speedDownMps = (speedDown * 1000) / 3600; // Convert km/h to m/s - descending
 
-    const PADDING_LEFT = 260;
+    // Marge gauche élargie au besoin pour que les noms de carrefours et de
+    // groupes, alignés à droite sur l'axe, ne soient pas tronqués au début.
+    const PADDING_LEFT = useMemo(() => {
+        const labels = [];
+        intersections?.forEach(intersection => {
+            labels.push(truncateName(intersection.projectName));
+            [intersection.selectedGroup1, intersection.selectedGroup2].forEach(groupId => {
+                const group = intersection.groups?.find(g => g.id === groupId);
+                if (group) labels.push(`G${group.id} - ${truncateName(group.name) || 'Sans nom'}`);
+            });
+        });
+        return computeLeftPadding(labels);
+    }, [intersections]);
     const PADDING_BOTTOM = 50;
     const PADDING_TOP = 20;
     const PADDING_RIGHT = 20;
@@ -2498,12 +2511,6 @@ const GreenWavePage = () => {
                                 }
                             });
                         }
-
-                        // Helper to truncate names to 40 characters
-                        const truncateName = (name, maxLen = 40) => {
-                            if (!name) return '';
-                            return name.length > maxLen ? name.substring(0, maxLen) + '…' : name;
-                        };
 
                         return (
                             <g key={`intersection-${idx}`}>
