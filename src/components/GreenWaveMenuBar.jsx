@@ -63,7 +63,8 @@ const GreenWaveMenuBar = ({
                     disabled: !hasActiveProject || isExampleProject,
                     title: isExampleProject ? 'Onde verte exemple : non enregistrable' : (!hasActiveProject ? 'Aucune onde verte ouverte' : 'Sauvegarder l\'onde verte dans un fichier (le cache navigateur est mis à jour automatiquement à chaque modification).')
                 },
-                { label: 'Imprimer (PDF)', action: 'print', disabled: !hasActiveProject, title: !hasActiveProject ? 'Aucune onde verte ouverte' : '' },
+                { label: 'Imprimer...', action: 'print', disabled: !hasActiveProject, title: !hasActiveProject ? 'Aucune onde verte ouverte' : 'Imprimer le diagramme de l\'onde verte sur fond blanc' },
+                { label: 'Exporter PDF...', action: 'exportPdf', disabled: !hasActiveProject, title: !hasActiveProject ? 'Aucune onde verte ouverte' : 'Enregistrer le diagramme de l\'onde verte en PDF (choisir « Enregistrer au format PDF » dans la boîte d\'impression)' },
                 { type: 'separator' },
                 { label: 'Fermer', action: 'close' }
             ]

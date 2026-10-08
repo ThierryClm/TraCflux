@@ -7,6 +7,8 @@ import HelpContent from './components/HelpContent';
 import Modal from './components/Modal';
 import { useConfirm, useAlert } from './components/ConfirmProvider';
 import { toast } from './utils/toast';
+import { buildExportFilename } from './utils/exportFilename';
+import { buildGreenWavePrintClone } from './utils/greenWavePrint';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
 import { APP_NAME, APP_VERSION, APP_DESCRIPTION } from './version';
@@ -1754,39 +1756,14 @@ const GreenWavePage = () => {
         }
     });
 
-    // Impression de l'onde verte (PDF via window.print). Extrait de
-    // l'ancien onClick du bouton « Imprimer » pour pouvoir être déclenché
-    // depuis le menu Fichier → Imprimer.
-    const handlePrintGreenWave = () => {
+    // Impression de l'onde verte via window.print(). « Imprimer… » et
+    // « Exporter PDF… » partagent ce rendu ; l'export PDF invite seulement à
+    // choisir « Enregistrer au format PDF » et propose un nom de fichier.
+    const handlePrintGreenWave = ({ pdf = false } = {}) => {
         const svgEl = document.querySelector('.green-wave-svg');
         if (!svgEl) return;
 
-        const clone = svgEl.cloneNode(true);
-        clone.querySelectorAll('rect.green-wave-svg-bg').forEach(el => el.setAttribute('fill', '#ffffff'));
-        clone.querySelectorAll('line.green-wave-grid').forEach(el => el.setAttribute('stroke', '#ddd'));
-        clone.querySelectorAll('line.green-wave-grid-cycle').forEach(el => el.setAttribute('stroke', '#bbb'));
-        clone.querySelectorAll('line.green-wave-axis').forEach(el => el.setAttribute('stroke', '#333'));
-        clone.querySelectorAll('text.green-wave-axis-tick').forEach(el => el.setAttribute('fill', '#333'));
-        clone.querySelectorAll('text.green-wave-axis-label').forEach(el => el.setAttribute('fill', '#333'));
-        clone.querySelectorAll('text[fill="#fff"]').forEach(el => el.setAttribute('fill', '#000'));
-        clone.querySelectorAll('line[stroke="transparent"]').forEach(el => el.remove());
-        clone.querySelectorAll('line[stroke="#4CAF50"][stroke-dasharray="8,4"]').forEach(el => {
-            const g = el.parentElement;
-            if (g && g.tagName === 'g' && g.children.length <= 2) g.remove();
-            else el.remove();
-        });
-        clone.querySelectorAll('line[stroke="#FF9800"][stroke-dasharray="8,4"]').forEach(el => {
-            const g = el.parentElement;
-            if (g && g.tagName === 'g' && g.children.length <= 2) g.remove();
-            else el.remove();
-        });
-        clone.querySelectorAll('polygon[opacity]').forEach(el => el.setAttribute('opacity', '0.35'));
-        const clipEl = clone.querySelector('#bandwidth-clip');
-        if (clipEl) {
-            clipEl.setAttribute('id', 'bandwidth-clip-print');
-            const clipG = clone.querySelector('g[clip-path="url(#bandwidth-clip)"]');
-            if (clipG) clipG.setAttribute('clip-path', 'url(#bandwidth-clip-print)');
-        }
+        const clone = buildGreenWavePrintClone(svgEl);
 
         const pageW = 1048;
         const headerH = 76;
@@ -1817,9 +1794,17 @@ const GreenWavePage = () => {
         pageStyle.textContent = '@page { size: A4 landscape; margin: 5mm 10mm; }';
         document.head.appendChild(pageStyle);
 
+        // Le titre du document sert de nom de fichier proposé pour le PDF.
+        const previousTitle = document.title;
+        if (pdf) {
+            document.title = buildExportFilename('Onde verte', greenWaveName);
+            toast.info('Dans la boîte d\'impression, sélectionnez « Enregistrer au format PDF »');
+        }
+
         document.body.classList.add('print-greenwave');
         setTimeout(() => {
             window.print();
+            document.title = previousTitle;
             document.body.classList.remove('print-greenwave');
             document.head.removeChild(pageStyle);
             document.body.removeChild(printDiv);
@@ -2056,6 +2041,9 @@ const GreenWavePage = () => {
                 break;
             case 'print':
                 handlePrintGreenWave();
+                break;
+            case 'exportPdf':
+                handlePrintGreenWave({ pdf: true });
                 break;
             case 'close':
                 window.close();
@@ -2588,10 +2576,12 @@ const GreenWavePage = () => {
                         );
                     })}
 
-                    {/* Clip path pour tronquer les bandes passantes à gauche de l'axe Y */}
+                    {/* Clip path : les bandes passantes restent dans le cadre du diagramme */}
                     <defs>
                         <clipPath id="bandwidth-clip">
-                            <rect x={PADDING_LEFT} y={0} width={diagramWidth - PADDING_LEFT} height={diagramHeight} />
+                            <rect x={PADDING_LEFT} y={PADDING_TOP}
+                                  width={diagramWidth - PADDING_LEFT - PADDING_RIGHT}
+                                  height={diagramHeight - PADDING_TOP - PADDING_BOTTOM} />
                         </clipPath>
                         {/* Clip path pour les barres de vert : coupe à gauche
                             (t=0) ET à droite (fin du dernier cycle visible).
