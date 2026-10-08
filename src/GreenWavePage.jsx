@@ -9,7 +9,8 @@ import { useConfirm, useAlert } from './components/ConfirmProvider';
 import { toast } from './utils/toast';
 import { buildExportFilename } from './utils/exportFilename';
 import { buildGreenWavePrintClone } from './utils/greenWavePrint';
-import { computeLeftPadding, truncateName } from './utils/greenWaveLayout';
+import { computeLeftPadding, computeRightPadding, computeTickSpace, truncateName, LABEL_GAP } from './utils/greenWaveLayout';
+import RelinkDossierDialog from './components/RelinkDossierDialog';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
 import { APP_NAME, APP_VERSION, APP_DESCRIPTION } from './version';
@@ -56,14 +57,16 @@ const GreenWavePage = () => {
     const [addCarrefourModalOpen, setAddCarrefourModalOpen] = useState(false);
     const [addCarrefourCandidates, setAddCarrefourCandidates] = useState([]);
     const [addCarrefourSelected, setAddCarrefourSelected] = useState(null);
+    // Carrefour dont on change le dossier relié (index dans intersections).
+    const [relinkIdx, setRelinkIdx] = useState(null);
 
     // Réclame le premier plan tant que la modale est ouverte : ramène la
     // fenêtre principale devant et suspend le retour-au-premier-plan des
     // fenêtres détachées, sinon la modale est masquée derrière la popup.
     useEffect(() => {
-        setMainModalActive(addCarrefourModalOpen);
+        setMainModalActive(addCarrefourModalOpen || relinkIdx !== null);
         return () => setMainModalActive(false);
-    }, [addCarrefourModalOpen]);
+    }, [addCarrefourModalOpen, relinkIdx]);
     // Invitation « onde verte exemple » (cf. utils/welcomeInvite) — figée
     // au montage. Compteurs propres au module Onde verte.
     const [showExampleInvite] = useState(() => isInviteVisible('greenwave'));
@@ -1195,8 +1198,22 @@ const GreenWavePage = () => {
     const speedUpMps = (speedUp * 1000) / 3600; // Convert km/h to m/s - ascending
     const speedDownMps = (speedDown * 1000) / 3600; // Convert km/h to m/s - descending
 
+    const distanceTicks = [];
+    const distanceSpan = maxDistance - minDistance;
+    const distanceStep = distanceSpan > 500 ? 100 : 50;
+    // Graduation arrondie au pas inférieur pour démarrer proprement (ex. -180 → -200).
+    const firstTick = Math.floor(minDistance / distanceStep) * distanceStep;
+    for (let d = firstTick; d <= maxDistance; d += distanceStep) {
+        distanceTicks.push(d);
+    }
+
+    // Colonne des chiffres de l'axe des distances, à gauche comme dans le
+    // rappel à droite du diagramme.
+    const tickSpace = computeTickSpace(distanceTicks);
+
     // Marge gauche élargie au besoin pour que les noms de carrefours et de
-    // groupes, alignés à droite sur l'axe, ne soient pas tronqués au début.
+    // groupes, alignés à droite avant les chiffres de l'axe, ne soient ni
+    // tronqués au début ni superposés à ces chiffres.
     const PADDING_LEFT = useMemo(() => {
         const labels = [];
         intersections?.forEach(intersection => {
@@ -1206,11 +1223,12 @@ const GreenWavePage = () => {
                 if (group) labels.push(`G${group.id} - ${truncateName(group.name) || 'Sans nom'}`);
             });
         });
-        return computeLeftPadding(labels);
-    }, [intersections]);
+        return computeLeftPadding(labels, tickSpace);
+    }, [intersections, tickSpace]);
+    const LABEL_X = PADDING_LEFT - tickSpace - LABEL_GAP;
     const PADDING_BOTTOM = 50;
     const PADDING_TOP = 20;
-    const PADDING_RIGHT = 20;
+    const PADDING_RIGHT = computeRightPadding(tickSpace);
 
     const diagramWidth = maxTime * pixelsPerSecond + PADDING_LEFT + PADDING_RIGHT;
     const diagramHeight = (maxDistance - minDistance) * pixelsPerMeter + PADDING_TOP + PADDING_BOTTOM;
@@ -1225,15 +1243,6 @@ const GreenWavePage = () => {
     const timeStep = cycleLength >= 60 ? 10 : 5;
     for (let t = 0; t <= maxTime; t += timeStep) {
         timeTicks.push(t);
-    }
-
-    const distanceTicks = [];
-    const distanceSpan = maxDistance - minDistance;
-    const distanceStep = distanceSpan > 500 ? 100 : 50;
-    // Graduation arrondie au pas inférieur pour démarrer proprement (ex. -180 → -200).
-    const firstTick = Math.floor(minDistance / distanceStep) * distanceStep;
-    for (let d = firstTick; d <= maxDistance; d += distanceStep) {
-        distanceTicks.push(d);
     }
 
     // Calculate bandwidth corridors (ascending and descending)
@@ -1674,7 +1683,16 @@ const GreenWavePage = () => {
                                             >↓</button>
                                         </div>
                                     </td>
-                                    <td className="col-name">{intersection.projectName}</td>
+                                    <td className="col-name">
+                                        <div className="col-name-wrap">
+                                            <span className="col-name-text" title={intersection.projectName}>{intersection.projectName}</span>
+                                            <button
+                                                className="btn-relink-dossier"
+                                                onClick={() => setRelinkIdx(idx)}
+                                                title="Changer de dossier… (dossier renommé ou nouvelle version)"
+                                            >⇄</button>
+                                        </div>
+                                    </td>
                                     <td className="col-pf">
                                         <select
                                             value={intersection.selectedPfId || ''}
@@ -2517,7 +2535,7 @@ const GreenWavePage = () => {
                                 {/* Group 1 name (Descendant) */}
                                 {group1 && (
                                     <text
-                                        x={PADDING_LEFT - 5}
+                                        x={LABEL_X}
                                         y={yG1 + 4}
                                         textAnchor="end"
                                         fill="#FF9800"
@@ -2530,7 +2548,7 @@ const GreenWavePage = () => {
 
                                 {/* Project name - 16px above group 1 (Descendant) */}
                                 <text
-                                    x={PADDING_LEFT - 5}
+                                    x={LABEL_X}
                                     y={yG1 - 12}
                                     textAnchor="end"
                                     fill="#fff"
@@ -2543,7 +2561,7 @@ const GreenWavePage = () => {
                                 {/* Group 2 name (Montant) */}
                                 {group2 && (
                                     <text
-                                        x={PADDING_LEFT - 5}
+                                        x={LABEL_X}
                                         y={yG2 + 4}
                                         textAnchor="end"
                                         fill="#8BC34A"
@@ -2816,6 +2834,36 @@ const GreenWavePage = () => {
                         </g>
                     ))}
 
+                    {/* Rappel de l'axe des distances à droite du diagramme */}
+                    <line
+                        x1={diagramWidth - PADDING_RIGHT}
+                        y1={PADDING_TOP}
+                        x2={diagramWidth - PADDING_RIGHT}
+                        y2={diagramHeight - PADDING_BOTTOM}
+                        className="green-wave-axis"
+                        strokeWidth={1}
+                    />
+                    {distanceTicks.map(d => (
+                        <g key={`tick-d-right-${d}`}>
+                            <line
+                                x1={diagramWidth - PADDING_RIGHT}
+                                y1={distanceToY(d)}
+                                x2={diagramWidth - PADDING_RIGHT + 5}
+                                y2={distanceToY(d)}
+                                className="green-wave-axis"
+                            />
+                            <text
+                                x={diagramWidth - PADDING_RIGHT + 8}
+                                y={distanceToY(d) + 4}
+                                textAnchor="start"
+                                className="green-wave-axis-tick"
+                                fontSize="10"
+                            >
+                                {d}
+                            </text>
+                        </g>
+                    ))}
+
                     {/* Y Axis label */}
                     <text
                         x={15}
@@ -3001,6 +3049,19 @@ const GreenWavePage = () => {
                     </>
                 ) : null}
             </Modal>
+
+            {/* Changement du dossier relié à un carrefour */}
+            <RelinkDossierDialog
+                intersection={relinkIdx !== null ? intersections[relinkIdx] ?? null : null}
+                onClose={() => setRelinkIdx(null)}
+                onConfirm={(updated) => {
+                    const idx = relinkIdx;
+                    setRelinkIdx(null);
+                    setIntersections(prev => prev.map((it, i) => (i === idx ? updated : it)));
+                }}
+                listProjects={() => getAllSavesLocal().map(save => save.name)}
+                loadProjectData={getProjectDataLocal}
+            />
 
             {renderRestoreModal()}
         </div>
