@@ -1665,7 +1665,11 @@ const GreenWavePage = () => {
                             const hasCycleConflict = intersection.cycleLength !== referenceCycle;
 
                             return (
-                                <tr key={idx} className={hasCycleConflict ? 'row-cycle-conflict' : ''}>
+                                <tr
+                                    key={idx}
+                                    className={hasCycleConflict ? 'row-cycle-conflict' : ''}
+                                    title={`Dossier relié : ${intersection.projectName}`}
+                                >
                                     <td className="col-order">
                                         <div className="order-controls">
                                             <button
@@ -1685,7 +1689,7 @@ const GreenWavePage = () => {
                                     </td>
                                     <td className="col-name">
                                         <div className="col-name-wrap">
-                                            <span className="col-name-text" title={intersection.projectName}>{intersection.projectName}</span>
+                                            <span className="col-name-text">{intersection.projectName}</span>
                                             <button
                                                 className="btn-relink-dossier"
                                                 onClick={() => setRelinkIdx(idx)}
@@ -1705,7 +1709,7 @@ const GreenWavePage = () => {
                                             ))}
                                         </select>
                                     </td>
-                                    <td className={`col-cycle ${hasCycleConflict ? 'cycle-conflict' : ''}`} title={hasCycleConflict ? `Cycle différent du cycle de référence (${referenceCycle}s)` : ''}>
+                                    <td className={`col-cycle ${hasCycleConflict ? 'cycle-conflict' : ''}`} title={hasCycleConflict ? `Cycle différent du cycle de référence (${referenceCycle}s)` : undefined}>
                                         {intersection.cycleLength}
                                     </td>
                                     <td
