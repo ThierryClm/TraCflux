@@ -7,6 +7,11 @@ import HelpContent from './components/HelpContent';
 import Modal from './components/Modal';
 import { useConfirm, useAlert } from './components/ConfirmProvider';
 import { toast } from './utils/toast';
+import { buildExportFilename } from './utils/exportFilename';
+import { buildGreenWavePrintClone } from './utils/greenWavePrint';
+import { computeLeftPadding, computeRightPadding, computeTickSpace, truncateName, LABEL_GAP } from './utils/greenWaveLayout';
+import RelinkDossierDialog from './components/RelinkDossierDialog';
+import { intersectionTitle } from './utils/greenWaveRelink';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
 import { APP_NAME, APP_VERSION, APP_DESCRIPTION } from './version';
@@ -53,14 +58,16 @@ const GreenWavePage = () => {
     const [addCarrefourModalOpen, setAddCarrefourModalOpen] = useState(false);
     const [addCarrefourCandidates, setAddCarrefourCandidates] = useState([]);
     const [addCarrefourSelected, setAddCarrefourSelected] = useState(null);
+    // Carrefour dont on change le dossier relié (index dans intersections).
+    const [relinkIdx, setRelinkIdx] = useState(null);
 
     // Réclame le premier plan tant que la modale est ouverte : ramène la
     // fenêtre principale devant et suspend le retour-au-premier-plan des
     // fenêtres détachées, sinon la modale est masquée derrière la popup.
     useEffect(() => {
-        setMainModalActive(addCarrefourModalOpen);
+        setMainModalActive(addCarrefourModalOpen || relinkIdx !== null);
         return () => setMainModalActive(false);
-    }, [addCarrefourModalOpen]);
+    }, [addCarrefourModalOpen, relinkIdx]);
     // Invitation « onde verte exemple » (cf. utils/welcomeInvite) — figée
     // au montage. Compteurs propres au module Onde verte.
     const [showExampleInvite] = useState(() => isInviteVisible('greenwave'));
@@ -128,6 +135,7 @@ const GreenWavePage = () => {
         width: 1260,
         height: 500
     });
+    const dataTableIsDetached = showFloatingDataTable && dataTablePopup.popupOpen;
 
     // Référence pour le dernier répertoire utilisé
     const lastGreenWaveDirectoryRef = useRef(null);
@@ -594,6 +602,7 @@ const GreenWavePage = () => {
                         synced.push(intersection.projectName);
                         return {
                             ...intersection,
+                            intersectionName: projectData.intersectionName || intersection.intersectionName,
                             groups: updatedGroups,
                             cycleLength: pfCycleLength,
                             pfTabs: pfTabs,
@@ -1106,6 +1115,7 @@ const GreenWavePage = () => {
             // Create new intersection object
             const newIntersection = {
                 projectName: selectedProject,
+                intersectionName: projectData.intersectionName || undefined,
                 groups: groups,
                 cycleLength: pfCycleLength,
                 pfTabs: pfTabs,
@@ -1191,10 +1201,37 @@ const GreenWavePage = () => {
     const speedUpMps = (speedUp * 1000) / 3600; // Convert km/h to m/s - ascending
     const speedDownMps = (speedDown * 1000) / 3600; // Convert km/h to m/s - descending
 
-    const PADDING_LEFT = 260;
+    const distanceTicks = [];
+    const distanceSpan = maxDistance - minDistance;
+    const distanceStep = distanceSpan > 500 ? 100 : 50;
+    // Graduation arrondie au pas inférieur pour démarrer proprement (ex. -180 → -200).
+    const firstTick = Math.floor(minDistance / distanceStep) * distanceStep;
+    for (let d = firstTick; d <= maxDistance; d += distanceStep) {
+        distanceTicks.push(d);
+    }
+
+    // Colonne des chiffres de l'axe des distances, à gauche comme dans le
+    // rappel à droite du diagramme.
+    const tickSpace = computeTickSpace(distanceTicks);
+
+    // Marge gauche élargie au besoin pour que les noms de carrefours et de
+    // groupes, alignés à droite avant les chiffres de l'axe, ne soient ni
+    // tronqués au début ni superposés à ces chiffres.
+    const PADDING_LEFT = useMemo(() => {
+        const labels = [];
+        intersections?.forEach(intersection => {
+            labels.push(truncateName(intersection.projectName));
+            [intersection.selectedGroup1, intersection.selectedGroup2].forEach(groupId => {
+                const group = intersection.groups?.find(g => g.id === groupId);
+                if (group) labels.push(`G${group.id} - ${truncateName(group.name) || 'Sans nom'}`);
+            });
+        });
+        return computeLeftPadding(labels, tickSpace);
+    }, [intersections, tickSpace]);
+    const LABEL_X = PADDING_LEFT - tickSpace - LABEL_GAP;
     const PADDING_BOTTOM = 50;
     const PADDING_TOP = 20;
-    const PADDING_RIGHT = 20;
+    const PADDING_RIGHT = computeRightPadding(tickSpace);
 
     const diagramWidth = maxTime * pixelsPerSecond + PADDING_LEFT + PADDING_RIGHT;
     const diagramHeight = (maxDistance - minDistance) * pixelsPerMeter + PADDING_TOP + PADDING_BOTTOM;
@@ -1209,15 +1246,6 @@ const GreenWavePage = () => {
     const timeStep = cycleLength >= 60 ? 10 : 5;
     for (let t = 0; t <= maxTime; t += timeStep) {
         timeTicks.push(t);
-    }
-
-    const distanceTicks = [];
-    const distanceSpan = maxDistance - minDistance;
-    const distanceStep = distanceSpan > 500 ? 100 : 50;
-    // Graduation arrondie au pas inférieur pour démarrer proprement (ex. -180 → -200).
-    const firstTick = Math.floor(minDistance / distanceStep) * distanceStep;
-    for (let d = firstTick; d <= maxDistance; d += distanceStep) {
-        distanceTicks.push(d);
     }
 
     // Calculate bandwidth corridors (ascending and descending)
@@ -1583,6 +1611,26 @@ const GreenWavePage = () => {
         setDragging(null);
     };
 
+    // Titre du projet de chaque carrefour, lu dans le dossier en cache pour
+    // les ondes vertes enregistrées avant que le titre ne soit conservé.
+    // Clé : la liste des noms de fichiers, pour ne relire le cache qu'au
+    // changement de dossier et non à chaque saisie de distance.
+    const projectNamesKey = intersections?.map(i => i.projectName).join('\n') ?? '';
+    const cachedTitles = useMemo(() => {
+        const titles = {};
+        intersections?.forEach(intersection => {
+            if (intersection.intersectionName || intersection.projectName in titles) return;
+            try {
+                const raw = localStorage.getItem(`traffic_project_${intersection.projectName}`);
+                titles[intersection.projectName] = raw ? JSON.parse(raw).intersectionName || null : null;
+            } catch {
+                titles[intersection.projectName] = null;
+            }
+        });
+        return titles;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectNamesKey]);
+
     // Tableau des données saisies — JSX partagé entre le rendu inline
     // (sous le diagramme) et la fenêtre popup détachée. Le bouton Détacher
     // n'apparaît que dans le rendu inline (pas dans la popup déjà détachée).
@@ -1597,10 +1645,13 @@ const GreenWavePage = () => {
                     onClick={addIntersection}
                     title="Ajouter un carrefour"
                 >+</button>
-                {!showFloatingDataTable && (
+                {!dataTableIsDetached && (
                     <button
                         className="btn-detach-datatable"
-                        onClick={() => setShowFloatingDataTable(true)}
+                        onClick={() => {
+                            setShowFloatingDataTable(true);
+                            dataTablePopup.retryOpen();
+                        }}
                         title="Ouvrir le tableau dans une fenêtre séparée pour libérer l'espace"
                     >Détacher</button>
                 )}
@@ -1637,7 +1688,11 @@ const GreenWavePage = () => {
                             const hasCycleConflict = intersection.cycleLength !== referenceCycle;
 
                             return (
-                                <tr key={idx} className={hasCycleConflict ? 'row-cycle-conflict' : ''}>
+                                <tr
+                                    key={idx}
+                                    className={hasCycleConflict ? 'row-cycle-conflict' : ''}
+                                    title={`Fichier : ${intersection.projectName}`}
+                                >
                                     <td className="col-order">
                                         <div className="order-controls">
                                             <button
@@ -1655,7 +1710,16 @@ const GreenWavePage = () => {
                                             >↓</button>
                                         </div>
                                     </td>
-                                    <td className="col-name">{intersection.projectName}</td>
+                                    <td className="col-name">
+                                        <div className="col-name-wrap">
+                                            <span className="col-name-text">{intersectionTitle(intersection, cachedTitles[intersection.projectName])}</span>
+                                            <button
+                                                className="btn-relink-dossier"
+                                                onClick={() => setRelinkIdx(idx)}
+                                                title="Changer de dossier… (dossier renommé ou nouvelle version)"
+                                            >⇄</button>
+                                        </div>
+                                    </td>
                                     <td className="col-pf">
                                         <select
                                             value={intersection.selectedPfId || ''}
@@ -1668,7 +1732,7 @@ const GreenWavePage = () => {
                                             ))}
                                         </select>
                                     </td>
-                                    <td className={`col-cycle ${hasCycleConflict ? 'cycle-conflict' : ''}`} title={hasCycleConflict ? `Cycle différent du cycle de référence (${referenceCycle}s)` : ''}>
+                                    <td className={`col-cycle ${hasCycleConflict ? 'cycle-conflict' : ''}`} title={hasCycleConflict ? `Cycle différent du cycle de référence (${referenceCycle}s)` : undefined}>
                                         {intersection.cycleLength}
                                     </td>
                                     <td
@@ -1745,44 +1809,19 @@ const GreenWavePage = () => {
     // Synchronise la popup détachée avec le contenu du tableau : re-rendu
     // à chaque update pour rester en phase avec l'inline.
     useEffect(() => {
-        if (showFloatingDataTable) {
+        if (dataTableIsDetached) {
             dataTablePopup.renderToPopup(dataPanelJSX);
         }
     });
 
-    // Impression de l'onde verte (PDF via window.print). Extrait de
-    // l'ancien onClick du bouton « Imprimer » pour pouvoir être déclenché
-    // depuis le menu Fichier → Imprimer.
-    const handlePrintGreenWave = () => {
+    // Impression de l'onde verte via window.print(). « Imprimer… » et
+    // « Exporter PDF… » partagent ce rendu ; l'export PDF invite seulement à
+    // choisir « Enregistrer au format PDF » et propose un nom de fichier.
+    const handlePrintGreenWave = ({ pdf = false } = {}) => {
         const svgEl = document.querySelector('.green-wave-svg');
         if (!svgEl) return;
 
-        const clone = svgEl.cloneNode(true);
-        clone.querySelectorAll('rect.green-wave-svg-bg').forEach(el => el.setAttribute('fill', '#ffffff'));
-        clone.querySelectorAll('line.green-wave-grid').forEach(el => el.setAttribute('stroke', '#ddd'));
-        clone.querySelectorAll('line.green-wave-grid-cycle').forEach(el => el.setAttribute('stroke', '#bbb'));
-        clone.querySelectorAll('line.green-wave-axis').forEach(el => el.setAttribute('stroke', '#333'));
-        clone.querySelectorAll('text.green-wave-axis-tick').forEach(el => el.setAttribute('fill', '#333'));
-        clone.querySelectorAll('text.green-wave-axis-label').forEach(el => el.setAttribute('fill', '#333'));
-        clone.querySelectorAll('text[fill="#fff"]').forEach(el => el.setAttribute('fill', '#000'));
-        clone.querySelectorAll('line[stroke="transparent"]').forEach(el => el.remove());
-        clone.querySelectorAll('line[stroke="#4CAF50"][stroke-dasharray="8,4"]').forEach(el => {
-            const g = el.parentElement;
-            if (g && g.tagName === 'g' && g.children.length <= 2) g.remove();
-            else el.remove();
-        });
-        clone.querySelectorAll('line[stroke="#FF9800"][stroke-dasharray="8,4"]').forEach(el => {
-            const g = el.parentElement;
-            if (g && g.tagName === 'g' && g.children.length <= 2) g.remove();
-            else el.remove();
-        });
-        clone.querySelectorAll('polygon[opacity]').forEach(el => el.setAttribute('opacity', '0.35'));
-        const clipEl = clone.querySelector('#bandwidth-clip');
-        if (clipEl) {
-            clipEl.setAttribute('id', 'bandwidth-clip-print');
-            const clipG = clone.querySelector('g[clip-path="url(#bandwidth-clip)"]');
-            if (clipG) clipG.setAttribute('clip-path', 'url(#bandwidth-clip-print)');
-        }
+        const clone = buildGreenWavePrintClone(svgEl);
 
         const pageW = 1048;
         const headerH = 76;
@@ -1813,9 +1852,17 @@ const GreenWavePage = () => {
         pageStyle.textContent = '@page { size: A4 landscape; margin: 5mm 10mm; }';
         document.head.appendChild(pageStyle);
 
+        // Le titre du document sert de nom de fichier proposé pour le PDF.
+        const previousTitle = document.title;
+        if (pdf) {
+            document.title = buildExportFilename('Onde verte', greenWaveName);
+            toast.info('Dans la boîte d\'impression, sélectionnez « Enregistrer au format PDF »');
+        }
+
         document.body.classList.add('print-greenwave');
         setTimeout(() => {
             window.print();
+            document.title = previousTitle;
             document.body.classList.remove('print-greenwave');
             document.head.removeChild(pageStyle);
             document.body.removeChild(printDiv);
@@ -2052,6 +2099,9 @@ const GreenWavePage = () => {
                 break;
             case 'print':
                 handlePrintGreenWave();
+                break;
+            case 'exportPdf':
+                handlePrintGreenWave({ pdf: true });
                 break;
             case 'close':
                 window.close();
@@ -2507,18 +2557,12 @@ const GreenWavePage = () => {
                             });
                         }
 
-                        // Helper to truncate names to 40 characters
-                        const truncateName = (name, maxLen = 40) => {
-                            if (!name) return '';
-                            return name.length > maxLen ? name.substring(0, maxLen) + '…' : name;
-                        };
-
                         return (
                             <g key={`intersection-${idx}`}>
                                 {/* Group 1 name (Descendant) */}
                                 {group1 && (
                                     <text
-                                        x={PADDING_LEFT - 5}
+                                        x={LABEL_X}
                                         y={yG1 + 4}
                                         textAnchor="end"
                                         fill="#FF9800"
@@ -2531,7 +2575,7 @@ const GreenWavePage = () => {
 
                                 {/* Project name - 16px above group 1 (Descendant) */}
                                 <text
-                                    x={PADDING_LEFT - 5}
+                                    x={LABEL_X}
                                     y={yG1 - 12}
                                     textAnchor="end"
                                     fill="#fff"
@@ -2544,7 +2588,7 @@ const GreenWavePage = () => {
                                 {/* Group 2 name (Montant) */}
                                 {group2 && (
                                     <text
-                                        x={PADDING_LEFT - 5}
+                                        x={LABEL_X}
                                         y={yG2 + 4}
                                         textAnchor="end"
                                         fill="#8BC34A"
@@ -2584,10 +2628,12 @@ const GreenWavePage = () => {
                         );
                     })}
 
-                    {/* Clip path pour tronquer les bandes passantes à gauche de l'axe Y */}
+                    {/* Clip path : les bandes passantes restent dans le cadre du diagramme */}
                     <defs>
                         <clipPath id="bandwidth-clip">
-                            <rect x={PADDING_LEFT} y={0} width={diagramWidth - PADDING_LEFT} height={diagramHeight} />
+                            <rect x={PADDING_LEFT} y={PADDING_TOP}
+                                  width={diagramWidth - PADDING_LEFT - PADDING_RIGHT}
+                                  height={diagramHeight - PADDING_TOP - PADDING_BOTTOM} />
                         </clipPath>
                         {/* Clip path pour les barres de vert : coupe à gauche
                             (t=0) ET à droite (fin du dernier cycle visible).
@@ -2815,6 +2861,36 @@ const GreenWavePage = () => {
                         </g>
                     ))}
 
+                    {/* Rappel de l'axe des distances à droite du diagramme */}
+                    <line
+                        x1={diagramWidth - PADDING_RIGHT}
+                        y1={PADDING_TOP}
+                        x2={diagramWidth - PADDING_RIGHT}
+                        y2={diagramHeight - PADDING_BOTTOM}
+                        className="green-wave-axis"
+                        strokeWidth={1}
+                    />
+                    {distanceTicks.map(d => (
+                        <g key={`tick-d-right-${d}`}>
+                            <line
+                                x1={diagramWidth - PADDING_RIGHT}
+                                y1={distanceToY(d)}
+                                x2={diagramWidth - PADDING_RIGHT + 5}
+                                y2={distanceToY(d)}
+                                className="green-wave-axis"
+                            />
+                            <text
+                                x={diagramWidth - PADDING_RIGHT + 8}
+                                y={distanceToY(d) + 4}
+                                textAnchor="start"
+                                className="green-wave-axis-tick"
+                                fontSize="10"
+                            >
+                                {d}
+                            </text>
+                        </g>
+                    ))}
+
                     {/* Y Axis label */}
                     <text
                         x={15}
@@ -2872,7 +2948,7 @@ const GreenWavePage = () => {
             </div>
 
             {/* Parameters panel — rendu inline ou en popup détachée */}
-            {!showFloatingDataTable && dataPanelJSX}
+            {!dataTableIsDetached && dataPanelJSX}
 
             {/* Modale « À propos » de la fenêtre Onde verte */}
             {showAboutModal && (
@@ -3000,6 +3076,19 @@ const GreenWavePage = () => {
                     </>
                 ) : null}
             </Modal>
+
+            {/* Changement du dossier relié à un carrefour */}
+            <RelinkDossierDialog
+                intersection={relinkIdx !== null ? intersections[relinkIdx] ?? null : null}
+                onClose={() => setRelinkIdx(null)}
+                onConfirm={(updated) => {
+                    const idx = relinkIdx;
+                    setRelinkIdx(null);
+                    setIntersections(prev => prev.map((it, i) => (i === idx ? updated : it)));
+                }}
+                listProjects={() => getAllSavesLocal().map(save => save.name)}
+                loadProjectData={getProjectDataLocal}
+            />
 
             {renderRestoreModal()}
         </div>

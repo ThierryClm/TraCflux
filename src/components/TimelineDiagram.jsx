@@ -9,12 +9,14 @@ import { createTimelineGeometry } from './timeline/timelineGeometry';
 import { createTimelineSimulation } from './timeline/timelineSimulation';
 import { useTimelineDrag } from './timeline/useTimelineDrag';
 import { useMicroVariables } from './MicroVariablesProvider';
+import { resetTextFormatting } from '../utils/resetTextFormatting';
 import './TimelineDiagram.css';
 
 const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }) => {
     const tip = (text) => tooltipsEnabled ? text : undefined;
     const { names: microVariableNames } = useMicroVariables();
     const containerRef = useRef(null);
+    const activeCommentRef = useRef(null);
     // Whether the mouse is currently over the diagram container (not the action table)
     // Used to suppress the action tooltip when hovering actions via the ActionTable rows
     const [isMouseInDiagram, setIsMouseInDiagram] = useState(false);
@@ -102,6 +104,17 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         }
         setPhaseFlagTooltipId(null);
     }, []);
+
+    const resetActiveCommentFormatting = useCallback((e) => {
+        e.preventDefault();
+        const editable = activeCommentRef.current;
+        if (!editable) return;
+
+        const groupId = Number(editable.dataset.groupId);
+        const comment = resetTextFormatting(editable);
+        editable.focus({ preventScroll: true });
+        updateGroupParams(groupId, { comment });
+    }, [updateGroupParams]);
 
     // Handle Alt+A / Alt+E to toggle phaseFlag
     const handlePhaseFlagKeyDown = useCallback((e, groupId, currentFlag) => {
@@ -3610,6 +3623,12 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                         <span>Commentaire</span>
                         <CustomTooltip text="Couleur verte (+)"><span className="comment-color-btn comment-color-plus" role="button" aria-label="Colorer le texte sélectionné en vert">+</span></CustomTooltip>
                         <CustomTooltip text="Couleur rouge (-)"><span className="comment-color-btn comment-color-minus" role="button" aria-label="Colorer le texte sélectionné en rouge">−</span></CustomTooltip>
+                        <CustomTooltip text="Réinitialiser la couleur et la taille du commentaire actif"><span
+                            className="comment-reset-btn"
+                            role="button"
+                            aria-label="Réinitialiser la couleur et la taille du commentaire actif"
+                            onMouseDown={resetActiveCommentFormatting}
+                        >Réinit.</span></CustomTooltip>
                     </div>
 
                     {/* Comment input for each group */}
@@ -3617,9 +3636,11 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                         <div key={g.id} className="comment-row">
                             <div
                                 className="input-comment"
+                                data-group-id={g.id}
                                 contentEditable
                                 suppressContentEditableWarning
                                 dangerouslySetInnerHTML={{ __html: g.comment || '' }}
+                                onFocus={(e) => { activeCommentRef.current = e.currentTarget; }}
                                 onBlur={(e) => {
                                     const html = e.currentTarget.innerHTML;
                                     // Extract text to check length

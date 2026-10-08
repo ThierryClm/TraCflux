@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { PlanDeFeu } from '../types/projet';
 import Modal from './Modal';
 import './ExportPfModal.css';
+
+interface ImportPfModalProps {
+    name: string;
+    pfTabs?: PlanDeFeu[];
+    onImport: (selectedIds: number[], readOnly: boolean) => void;
+    onClose: () => void;
+}
 
 /**
  * Modale d'import d'un projet TraCflux externe : choix des plans de feux à
@@ -12,11 +20,11 @@ import './ExportPfModal.css';
  * - onImport(selectedIds, readOnly) : lance la fusion.
  * - onClose() : annule.
  */
-const ImportPfModal = ({ name, pfTabs = [], onImport, onClose }) => {
-    const [selected, setSelected] = useState(() => new Set(pfTabs.map(p => p.id)));
+const ImportPfModal = ({ name, pfTabs = [], onImport, onClose }: ImportPfModalProps) => {
+    const [selected, setSelected] = useState<Set<number>>(() => new Set(pfTabs.map(p => p.id)));
     const [readOnly, setReadOnly] = useState(true); // coché par défaut
 
-    const toggle = (id) => setSelected(prev => {
+    const toggle = (id: number) => setSelected(prev => {
         const next = new Set(prev);
         if (next.has(id)) next.delete(id); else next.add(id);
         return next;

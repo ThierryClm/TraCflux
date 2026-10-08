@@ -561,7 +561,7 @@ function App() {
 
     // Floating image state (visibilité, recadrage, zoom, popup)
     const {
-        showFloatingImage, setShowFloatingImage,
+        showFloatingImage, setShowFloatingImage, openFloatingImage,
         floatingCrop, setFloatingCrop, markLegacyCrop,
         showCropControls, setShowCropControls,
         floatingZoom, setFloatingZoom,
@@ -2612,7 +2612,7 @@ function App() {
                         setHoveredArrowGroupId, setHoveredDiagramTime, setHoveredPhasageGroupId, setImageBrightness, setImageContrast,
                         setIntersectionArrows, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
                         setPhasageBulleCount, setPhasageBulleEnabled, setPhasageBulleModal, setPhasageBulleTimes, setPhasageBulleVersion,
-                        setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, setShowFloatingImage,
+                        setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
                         setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
                         showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
                         showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,

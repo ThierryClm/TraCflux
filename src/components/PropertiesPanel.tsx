@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
+import type { ChangeEvent } from 'react';
 import './PropertiesPanel.css';
 import { LOGO_APP } from '../utils/logoApp';
 
@@ -13,19 +14,59 @@ const PHASE_OPTIONS = [
     { value: 'DOE', label: 'DOE - Dossier ouvrage' }
 ];
 
-const LogoBox = ({ logoPath, onSelect, label }) => {
-    const fileRef = useRef(null);
+export interface ProjectProperties {
+    commune: string;
+    idCommune: string;
+    idCarrefour: string;
+    controleur: string;
+    programme: string;
+    horsAgglomeration: boolean;
+    moa: string;
+    moe: string;
+    bureauEtudes: string;
+    auteur: string;
+    logoMoa: string;
+    logoMoe: string;
+    dateCreation: string;
+    dateModification: string;
+    numeroDossier: string;
+    phaseEtude: string;
+    commentaires: string;
+}
+
+interface LogoBoxProps {
+    logoPath?: string;
+    onSelect: (dataUrl: string, fileName: string) => void;
+    label: string;
+}
+
+interface PropertiesPanelProps {
+    intersectionName: string;
+    setIntersectionName: (name: string) => void;
+    projectProperties: ProjectProperties;
+    updateProjectProperty: <K extends keyof ProjectProperties>(field: K, value: ProjectProperties[K]) => void;
+    appCommunes?: string[];
+    appMoaLogos?: Record<string, string>;
+    appMoeLogos?: Record<string, string>;
+    onDetach?: () => void;
+    tooltipsEnabled?: boolean;
+}
+
+const LogoBox = ({ logoPath, onSelect, label }: LogoBoxProps) => {
+    const fileRef = useRef<HTMLInputElement>(null);
 
     const handleClick = () => {
         fileRef.current?.click();
     };
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (evt) => {
-            onSelect(evt.target.result, file.name);
+            if (typeof evt.target?.result === 'string') {
+                onSelect(evt.target.result, file.name);
+            }
         };
         reader.readAsDataURL(file);
         e.target.value = '';
@@ -49,10 +90,10 @@ const LogoBox = ({ logoPath, onSelect, label }) => {
     );
 };
 
-const PropertiesPanel = ({ intersectionName, setIntersectionName, projectProperties, updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, onDetach, tooltipsEnabled = true }) => {
-    const tip = (text) => tooltipsEnabled ? text : undefined;
+const PropertiesPanel = ({ intersectionName, setIntersectionName, projectProperties, updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, onDetach, tooltipsEnabled = true }: PropertiesPanelProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
-    const handleIntField = (field, value) => {
+    const handleIntField = (field: 'idCommune' | 'idCarrefour', value: string) => {
         const val = value.replace(/[^0-9]/g, '');
         if (val === '') { updateProjectProperty(field, ''); return; }
         const num = parseInt(val);

@@ -1,9 +1,10 @@
 import { cloneElement, Fragment } from 'react';
-import TimelineDiagram from '../TimelineDiagram';
-import TrafficTable from '../TrafficTable';
-import DiagnosticPanel from '../DiagnosticPanel';
-import DiagramLegend from '../DiagramLegend';
-import PhasageBulle from '../PhasageBulle';
+import type { ComponentType, CSSProperties, RefObject } from 'react';
+import TimelineDiagramImplementation from '../TimelineDiagram';
+import TrafficTableImplementation from '../TrafficTable';
+import DiagnosticPanelImplementation from '../DiagnosticPanel';
+import DiagramLegendImplementation from '../DiagramLegend';
+import PhasageBulleImplementation from '../PhasageBulle';
 import { APP_NAME, APP_VERSION } from '../../version';
 import { actionsSimulables, conflitsSimules } from '../../utils/simulationCalculator';
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
@@ -11,6 +12,124 @@ import { groupesInhibes } from '../../utils/trafficHelpers';
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
 import { ARROW_SIZE, BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { SimulationResult } from '../../utils/simulationCalculator';
+import type { ProjectProperties } from '../PropertiesPanel';
+
+type LooseComponent = ComponentType<Record<string, unknown>>;
+type PrintType = 'matrix' | 'form' | 'diagram' | 'dossier';
+type DossierSections = Record<string, boolean | undefined>;
+
+interface IntersectionArrow {
+    id: string | number;
+    groupId?: string | number;
+    x: number;
+    y: number;
+    rotation?: number;
+    scale?: number;
+    length?: number;
+    turnLength?: number;
+}
+
+interface ImageDimensions {
+    width: number;
+    height: number;
+}
+
+interface TrafficData {
+    trafficVol?: number | string;
+}
+
+interface PrintPreviewModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    project: {
+        projectName: string | null;
+        intersectionName: string;
+        projectProperties: ProjectProperties;
+        groups: Groupe[];
+        conflictMatrix: Matrice;
+        cycleLength: number;
+    };
+    plans: {
+        pfTabs: PlanDeFeu[];
+        activePFId: number;
+        pfTrafficDatasetMap: Record<number, string>;
+    };
+    traffic: {
+        activeTrafficDataset: string;
+        trafficDatasets: Record<string, Record<number, TrafficData>>;
+        trafficDatasetNames: string[];
+    };
+    simulation: {
+        simulationName: string;
+        simulationResultImpression: SimulationResult | null;
+        simulationSelectedActions: number[];
+    };
+    image: {
+        intersectionImage: string | null;
+        intersectionArrows: IntersectionArrow[];
+        imageBrightness: number;
+        imageContrast: number;
+        imageNaturalDims: ImageDimensions | null;
+    };
+    print: {
+        printType: PrintType;
+        dossierSections: DossierSections;
+        dossierPortrait: boolean;
+        dossierPrintWidth: number;
+        descriptionPrintStyle: CSSProperties | null;
+        largeurConditionsImpression: number;
+        microPrintStyle: CSSProperties | null;
+        printPreviewPageRef: RefObject<HTMLDivElement>;
+        injectDossierFooterStyle: () => HTMLStyleElement | null;
+    };
+    actions: {
+        actionData: ActionMicro[];
+        microCustomFields: string[];
+    };
+    preferences: {
+        tooltipPrefs: { diagram?: boolean };
+    };
+}
+
+interface PrintedIntersectionArrow extends IntersectionArrow {
+    printX: number;
+    printY: number;
+}
+
+interface BubblePageFit {
+    bubbleScale: number;
+    ellipseScale: number;
+    ellipseScaleX: number;
+    arrowOffsetX: number;
+    arrowOffsetY: number;
+}
+
+const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
+const TrafficTable = TrafficTableImplementation as unknown as LooseComponent;
+const DiagnosticPanel = DiagnosticPanelImplementation as unknown as LooseComponent;
+const DiagramLegend = DiagramLegendImplementation as unknown as LooseComponent;
+const PhasageBulle = PhasageBulleImplementation as unknown as LooseComponent;
+const fitBubblesToPrintPage = fitBubblesToPage as unknown as (options: {
+    count: number;
+    ratio?: number;
+    ellipseScale?: number;
+    pageWidth: number;
+    pageHeight: number;
+    jeu?: number;
+    degagement?: number;
+}) => BubblePageFit;
+
+const PHASE_LABELS: Record<string, string> = {
+    ESQ: 'Esquisse',
+    AVP: 'Avant-projet',
+    PRO: 'Projet',
+    DCE: 'Consultation',
+    ACT: 'Assistance',
+    EXE: 'Exécution',
+    DOE: 'Dossier ouvrage',
+};
 
 function PrintPreviewModal({
     isOpen,
@@ -23,9 +142,9 @@ function PrintPreviewModal({
     print,
     actions,
     preferences,
-}) {
+}: PrintPreviewModalProps) {
     const printPreviewModal = isOpen;
-    const setPrintPreviewModal = (visible) => { if (!visible) onClose(); };
+    const setPrintPreviewModal = (visible: boolean) => { if (!visible) onClose(); };
     const { projectName, intersectionName, projectProperties, groups, conflictMatrix, cycleLength } = project;
     const { pfTabs, activePFId, pfTrafficDatasetMap } = plans;
     const { activeTrafficDataset, trafficDatasets, trafficDatasetNames } = traffic;
@@ -44,10 +163,10 @@ function PrintPreviewModal({
     // de travail ; sur le plan imprimé, appliquer ce facteur tel quel doublait
     // leur emprise. La contre-échelle porte sur le cadre extérieur afin de
     // conserver le dessin, la longueur et la rotation du SVG.
-    const printedArrowTypeScale = (courant) => (
+    const printedArrowTypeScale = (courant: string | undefined) => (
         courant === 'Piéton' || courant === 'Cycle' ? 0.5 : 1
     );
-    const printedImageArrows = intersectionArrows
+    const printedImageArrows: PrintedIntersectionArrow[] = intersectionArrows
         .map(arrow => ({
             ...arrow,
             printX: ((((arrow.x / 100) * BOX_W) - printedImageFrame.x) / printedImageFrame.w) * 100,
@@ -241,8 +360,8 @@ function PrintPreviewModal({
                                                             <th>Fin</th>
                                                             <th>Abrv</th>
                                                             <th>Action_Micro</th>
-                                                            <th colSpan="2">Plage</th>
-                                                            <th colSpan="4">Action GF</th>
+                                                            <th colSpan={2}>Plage</th>
+                                                            <th colSpan={4}>Action GF</th>
                                                         </tr>
                                                         <tr className="print-actions-subheader">
                                                             <th></th>
@@ -360,18 +479,18 @@ function PrintPreviewModal({
                                         : availableWidth / cycleLength;
 
                                     // Fonctions de calcul trafic (dupliquées de TrafficTable)
-                                    const getTotalGreenTime = (groupId, mainGreenTime) => {
+                                    const getTotalGreenTime = (groupId: number, mainGreenTime: number) => {
                                         if (!mainGreenTime) return 0;
                                         const lucarneActions = actionData.filter(
                                             action => action.action === 'Seconde lucarne' &&
-                                                     parseInt(action.gf) === groupId &&
+                                                     parseInt(String(action.gf ?? '')) === groupId &&
                                                      action.deb !== '' && action.deb !== null &&
                                                      action.fin !== '' && action.fin !== null
                                         );
                                         let lucarneDuration = 0;
                                         lucarneActions.forEach(lucarne => {
-                                            const deb = parseFloat(lucarne.deb);
-                                            const fin = parseFloat(lucarne.fin);
+                                            const deb = parseFloat(String(lucarne.deb ?? ''));
+                                            const fin = parseFloat(String(lucarne.fin ?? ''));
                                             if (!isNaN(deb) && !isNaN(fin)) {
                                                 let duration = fin - deb;
                                                 if (duration < 0) duration += cycleLength;
@@ -380,22 +499,28 @@ function PrintPreviewModal({
                                         });
                                         return mainGreenTime + lucarneDuration;
                                     };
-                                    const calcVUtile = (trafficVol, laneCoef) => {
+                                    const calcVUtile = (trafficVol: number, laneCoef: number) => {
                                         if (!trafficVol || !laneCoef || !cycleLength || laneCoef === 0) return null;
                                         return Math.round(trafficVol / (1800 * laneCoef / cycleLength));
                                     };
-                                    const calcCapacity = (greenTime, vUtile) => {
+                                    const calcCapacity = (greenTime: number, vUtile: number) => {
                                         if (!greenTime || !vUtile || greenTime === 0) return null;
                                         return Math.round((vUtile / greenTime) * 100);
                                     };
-                                    const calcDelay = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
+                                    const calcDelay = (
+                                        greenTime: number,
+                                        trafficVol: number,
+                                        laneCoef: number,
+                                        groupId: number,
+                                        groupOffset: number | null | undefined,
+                                    ) => {
                                         const bandeAction = actionData.find(
                                             action => action.action === 'Début de bande passante' &&
-                                                     parseInt(action.actGf1) === groupId &&
+                                                     parseInt(String(action.actGf1 ?? '')) === groupId &&
                                                      action.fin !== '' && action.fin !== null && action.fin !== undefined
                                         );
                                         if (bandeAction) {
-                                            const finValue = parseFloat(bandeAction.fin);
+                                            const finValue = parseFloat(String(bandeAction.fin ?? ''));
                                             if (!isNaN(finValue) && groupOffset !== undefined && groupOffset !== null) {
                                                 return Math.max(0, Math.round(groupOffset - finValue));
                                             }
@@ -408,14 +533,20 @@ function PrintPreviewModal({
                                         const redTime = cycleLength - greenTime;
                                         return Math.round((redTime * redTime) / denominator);
                                     };
-                                    const calcQueue = (greenTime, trafficVol, laneCoef, groupId, groupOffset) => {
+                                    const calcQueue = (
+                                        greenTime: number,
+                                        trafficVol: number,
+                                        laneCoef: number,
+                                        groupId: number,
+                                        groupOffset: number | null | undefined,
+                                    ) => {
                                         const bandeAction = actionData.find(
                                             action => action.action === 'Début de bande passante' &&
-                                                     parseInt(action.actGf1) === groupId &&
+                                                     parseInt(String(action.actGf1 ?? '')) === groupId &&
                                                      action.fin !== '' && action.fin !== null && action.fin !== undefined
                                         );
                                         if (bandeAction) {
-                                            const finValue = parseFloat(bandeAction.fin);
+                                            const finValue = parseFloat(String(bandeAction.fin ?? ''));
                                             if (!isNaN(finValue) && groupOffset !== undefined && groupOffset !== null) {
                                                 return Math.max(0, Math.round(groupOffset - finValue));
                                             }
@@ -425,7 +556,7 @@ function PrintPreviewModal({
                                         const innerValue = trafficVol * redTime / 3600 / laneCoef;
                                         return (Math.floor(innerValue) + 1) * 6;
                                     };
-                                    const parseTrafficVol = (val) => {
+                                    const parseTrafficVol = (val: unknown) => {
                                         if (!val) return 0;
                                         return parseInt(String(val).replace(/c$/i, '')) || 0;
                                     };
@@ -520,7 +651,7 @@ function PrintPreviewModal({
                                                     })}
                                                     {dossierSections.gfNumbers && (() => {
                                                         // Grouper les flèches par groupId (exclure celles hors image)
-                                                        const groupMap = {};
+                                                        const groupMap: Record<string, Array<{ x: number; y: number }>> = {};
                                                         printedImageArrows.forEach(arrow => {
                                                             if (!arrow.groupId) return;
                                                             if (arrow.x < 0 || arrow.x > 100 || arrow.y < 0 || arrow.y > 100) return;
@@ -539,8 +670,9 @@ function PrintPreviewModal({
                                                                 px += (dxPx * Math.cos(rotRad) - dyPx * Math.sin(rotRad)) / printedImageFrame.w * 100;
                                                                 py += (dxPx * Math.sin(rotRad) + dyPx * Math.cos(rotRad)) / printedImageFrame.h * 100;
                                                             }
-                                                            if (!groupMap[arrow.groupId]) groupMap[arrow.groupId] = [];
-                                                            groupMap[arrow.groupId].push({ x: px, y: py });
+                                                            const groupId = String(arrow.groupId);
+                                                            if (!groupMap[groupId]) groupMap[groupId] = [];
+                                                            groupMap[groupId].push({ x: px, y: py });
                                                         });
                                                         return Object.entries(groupMap).map(([gId, pts]) => {
                                                             const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
@@ -584,7 +716,7 @@ function PrintPreviewModal({
                                                         {projectProperties.idCarrefour && <tr><td>Id. carrefour</td><td>{projectProperties.idCarrefour}</td></tr>}
                                                         {projectProperties.numeroDossier && <tr><td>N° dossier</td><td>{projectProperties.numeroDossier}</td></tr>}
                                                         {projectProperties.phaseEtude && <tr><td>Phase d'étude</td><td>{
-                                                            ({ESQ:'Esquisse',AVP:'Avant-projet',PRO:'Projet',DCE:'Consultation',ACT:'Assistance',EXE:'Exécution',DOE:'Dossier ouvrage'})[projectProperties.phaseEtude] || projectProperties.phaseEtude
+                                                            PHASE_LABELS[projectProperties.phaseEtude] || projectProperties.phaseEtude
                                                         }</td></tr>}
                                                         {projectProperties.moa && <tr><td>Maître d'ouvrage</td><td>{projectProperties.moa}</td></tr>}
                                                         {projectProperties.moe && <tr><td>Concepteur</td><td>{projectProperties.moe}</td></tr>}
@@ -655,9 +787,9 @@ function PrintPreviewModal({
                                                             <td className="row-name">{fromGroup.name || ''}</td>
                                                             {groups.map((toGroup, toIdx) => {
                                                                 const rawVal = fromIdx !== toIdx ? (conflictMatrix[fromIdx]?.[toIdx] || '') : '';
-                                                                let val = '';
+                                                                let val: number | '' = '';
                                                                 if (rawVal !== '' && rawVal != null) {
-                                                                    const numVal = parseInt(rawVal);
+                                                                    const numVal = parseInt(String(rawVal));
                                                                     if (!isNaN(numVal)) {
                                                                         const fromType = fromGroup.type;
                                                                         const isVehicle = (fromType === 'V' || fromType === 'VL' || fromType === 'B' || fromType === 'TC');
@@ -668,7 +800,7 @@ function PrintPreviewModal({
                                                                 if (isComparing && fromIdx !== toIdx && val !== '') {
                                                                     const pf1RawVal = pf1Matrix[fromIdx]?.[toIdx];
                                                                     if (pf1RawVal !== '' && pf1RawVal != null) {
-                                                                        const pf1Num = parseInt(pf1RawVal);
+                                                                        const pf1Num = parseInt(String(pf1RawVal));
                                                                         if (!isNaN(pf1Num)) {
                                                                             const fromType = fromGroup.type;
                                                                             const isVehicle = (fromType === 'V' || fromType === 'VL' || fromType === 'B' || fromType === 'TC');
@@ -723,8 +855,8 @@ function PrintPreviewModal({
                                                                 let color = null;
                                                                 if (isComparing && fromIdx !== toIdx && val !== '') {
                                                                     const pf1Val = pf1Matrix[fromIdx]?.[toIdx];
-                                                                    const curr = parseInt(val) || 0;
-                                                                    const ref = (pf1Val === '' || pf1Val == null) ? 0 : parseInt(pf1Val);
+                                                                    const curr = parseInt(String(val)) || 0;
+                                                                    const ref = (pf1Val === '' || pf1Val == null) ? 0 : parseInt(String(pf1Val));
                                                                     if (curr > ref) color = '#f44336';
                                                                     else if (curr < ref) color = '#4caf50';
                                                                 }
@@ -897,8 +1029,8 @@ function PrintPreviewModal({
                                                             <th>Fin</th>
                                                             <th>Abrv</th>
                                                             <th>Action_Micro</th>
-                                                            <th colSpan="2">Plage</th>
-                                                            <th colSpan="4">Action GF</th>
+                                                            <th colSpan={2}>Plage</th>
+                                                            <th colSpan={4}>Action GF</th>
                                                         </tr>
                                                         <tr className="print-actions-subheader">
                                                             <th></th><th></th><th></th><th></th><th></th><th></th><th></th>
@@ -991,7 +1123,7 @@ function PrintPreviewModal({
                                             // croit dans le rendu d'impression.
                                             const PAGE_W = PAGE_MM_W;
                                             const PAGE_H = PAGE_MM_H;
-                                            const dessin = fitBubblesToPage({
+                                            const dessin = fitBubblesToPrintPage({
                                                 count: bulleCount,
                                                 ratio: pf.phasageBubbleRatio ?? 100,
                                                 ellipseScale: pf.phasageEllipseScale ?? 100,
@@ -1000,7 +1132,7 @@ function PrintPreviewModal({
                                                 jeu: 1.02 // un cheveu de jour entre bulles voisines
                                             });
                                             // Image ratio: hide ellipse if very elongated
-                                            const imgRatio = imageNaturalDims.width / imageNaturalDims.height;
+                                            const imgRatio = imageNaturalDims!.width / imageNaturalDims!.height;
                                             const hideOvals = imgRatio > 1.5 || imgRatio < (1 / 1.5);
                                             // Visible image bounds within bubble (object-fit: contain).
                                             // Rapport du cadre où le plan est posé. C'est celui de l'image du
@@ -1064,7 +1196,7 @@ function PrintPreviewModal({
                                                     activeTrafficDataset={pfDataset}
                                                     setActiveTrafficDataset={() => {}}
                                                     updateTrafficData={() => {}}
-                                                    getTrafficData={(id) => (trafficDatasets[pfDataset] || {})[id] || {}}
+                                                    getTrafficData={(id: number) => (trafficDatasets[pfDataset] || {})[id] || {}}
                                                     updateGroupParams={() => {}}
                                                     trafficDatasetNames={trafficDatasetNames}
                                                     copyTrafficDataset={() => {}}
@@ -1089,7 +1221,7 @@ function PrintPreviewModal({
                                                 <DiagnosticPanel
                                                     groups={pfGroups}
                                                     cycleLength={pfCycleLength}
-                                                    getTrafficData={(id) => (trafficDatasets[pfDataset] || {})[id] || {}}
+                                                    getTrafficData={(id: number) => (trafficDatasets[pfDataset] || {})[id] || {}}
                                                     actionData={pfActionData}
                                                     activeTrafficDataset={pfDataset}
                                                     hideTitle={true}
@@ -1263,7 +1395,7 @@ function PrintPreviewModal({
                                                         activeTrafficDataset={activeTrafficDataset}
                                                         setActiveTrafficDataset={() => {}}
                                                         updateTrafficData={() => {}}
-                                                        getTrafficData={(id) => (trafficDatasets[activeTrafficDataset] || {})[id] || {}}
+                                                        getTrafficData={(id: number) => (trafficDatasets[activeTrafficDataset] || {})[id] || {}}
                                                         updateGroupParams={() => {}}
                                                         trafficDatasetNames={trafficDatasetNames}
                                                         copyTrafficDataset={() => {}}
@@ -1283,7 +1415,7 @@ function PrintPreviewModal({
                                                     <DiagnosticPanel
                                                         groups={groupesSimules}
                                                         cycleLength={simCycle}
-                                                        getTrafficData={(id) => (trafficDatasets[activeTrafficDataset] || {})[id] || {}}
+                                                        getTrafficData={(id: number) => (trafficDatasets[activeTrafficDataset] || {})[id] || {}}
                                                         actionData={actionData}
                                                         activeTrafficDataset={activeTrafficDataset}
                                                         inhibitedGroups={groupesInhibes(actionData, simulationSelectedActions)}

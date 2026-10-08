@@ -1262,6 +1262,22 @@ body.light-mode .action-hover-tooltip-micro .micro-keyword {
     color: #ccc;
 }
 
+.comment-reset-btn {
+    cursor: pointer;
+    user-select: none;
+    color: #aaa;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 0.9em;
+    line-height: 1.2;
+}
+
+.comment-reset-btn:hover {
+    color: #fff;
+    border-color: #888;
+}
+
 .comment-row {
     height: 30px;
     display: flex;

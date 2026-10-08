@@ -1,11 +1,19 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
+import type { Durees } from '../types/projet';
 import './CycleDiagram.css';
 
-const CycleDiagram = ({ durations, currentPhase, elapsedTime, isPlaying }) => {
+interface CycleDiagramProps {
+    durations: Durees;
+    currentPhase: keyof Durees;
+    elapsedTime: number;
+    isPlaying: boolean;
+}
+
+const CycleDiagram = ({ durations, currentPhase, elapsedTime, isPlaying }: CycleDiagramProps) => {
     const { red, orange, green } = durations;
     const totalDuration = red + orange + green;
 
-    const getPhaseColor = (phase) => {
+    const getPhaseColor = (phase: keyof Durees) => {
         switch (phase) {
             case 'red': return '#e74c3c';
             case 'orange': return '#f1c40f';

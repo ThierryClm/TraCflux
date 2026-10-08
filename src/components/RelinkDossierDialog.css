@@ -1,0 +1,49 @@
+/* Colonne « Carrefour » du tableau de l'onde verte : nom du dossier relié et
+   bouton « Changer de dossier… ». Le nom garde son ellipse, le bouton reste
+   visible à droite de la cellule. */
+.green-wave-data-table .col-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.green-wave-data-table .col-name-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-relink-dossier {
+    flex-shrink: 0;
+    padding: 0 6px;
+    border: 1px solid #555;
+    border-radius: 3px;
+    background: transparent;
+    color: #aaa;
+    font-size: 0.9em;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.btn-relink-dossier:hover {
+    border-color: #4CAF50;
+    color: #4CAF50;
+}
+
+/* Fenêtre « Changer de dossier… » */
+.relink-hint {
+    margin: 0 0 10px 0;
+    color: var(--md-muted, #aaa);
+    font-size: 0.9em;
+}
+
+.relink-summary {
+    margin: 0 0 12px 0;
+    padding-left: 18px;
+    line-height: 1.7;
+}
+
+.relink-summary .relink-warning {
+    color: #FF9800;
+}

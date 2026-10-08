@@ -4,7 +4,11 @@ import WorkspaceMain from './WorkspaceMain';
 
 vi.mock('../TimelineDiagram', () => ({ default: () => <div data-testid="timeline" /> }));
 vi.mock('../PhasageBulle', () => ({ default: () => <div data-testid="phasage" /> }));
-vi.mock('../IntersectionImage', () => ({ default: () => <div data-testid="intersection" /> }));
+vi.mock('../IntersectionImage', () => ({
+    default: ({ onShowFloatingImage }) => (
+        <button data-testid="intersection" onClick={onShowFloatingImage}>Détacher image</button>
+    )
+}));
 vi.mock('../ActionTable', () => ({ default: () => <div data-testid="actions" /> }));
 
 const buildModel = (overrides = {}) => ({
@@ -45,6 +49,7 @@ const buildModel = (overrides = {}) => ({
     simulationCurrentTime: 0,
     isPlayingSimulation: false,
     phasageBulleModal: false,
+    openFloatingImage: vi.fn(),
     cycleLength: 60,
     actionData: [],
     microCustomFields: [],
@@ -83,5 +88,14 @@ describe('WorkspaceMain', () => {
         expect(model.setBrouillonPhasage).toHaveBeenCalledWith(null);
         expect(model.setPhasageBulleModal).toHaveBeenCalledWith(true);
         expect(model.setPhasageBulleEnabled).toHaveBeenCalledWith(true);
+    });
+
+    it("transmet au bouton image une ouverture qui peut retenter la popup", () => {
+        const model = buildModel({ simulationEnabled: true });
+        render(<WorkspaceMain model={model} />);
+
+        fireEvent.click(screen.getByText('Détacher image'));
+
+        expect(model.openFloatingImage).toHaveBeenCalledTimes(1);
     });
 });

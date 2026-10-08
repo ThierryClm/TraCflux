@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { PlanDeFeu } from '../types/projet';
 import Modal from './Modal';
 import './ExportPfModal.css';
+
+interface ExportPfModalProps {
+    pfTabs?: PlanDeFeu[];
+    activePFId: number;
+    onExport: (selectedIds: number[], readOnly: boolean) => void;
+    onClose: () => void;
+}
 
 /**
  * Modale d'export sélectif : choix des plans de feux à inclure dans le fichier
@@ -11,11 +19,11 @@ import './ExportPfModal.css';
  * - onExport(selectedIds) : lance l'export avec les ids cochés.
  * - onClose() : ferme sans exporter.
  */
-const ExportPfModal = ({ pfTabs = [], activePFId, onExport, onClose }) => {
-    const [selected, setSelected] = useState(() => new Set(pfTabs.map(p => p.id)));
+const ExportPfModal = ({ pfTabs = [], activePFId, onExport, onClose }: ExportPfModalProps) => {
+    const [selected, setSelected] = useState<Set<number>>(() => new Set(pfTabs.map(p => p.id)));
     const [readOnly, setReadOnly] = useState(false);
 
-    const toggle = (id) => setSelected(prev => {
+    const toggle = (id: number) => setSelected(prev => {
         const next = new Set(prev);
         if (next.has(id)) next.delete(id); else next.add(id);
         return next;

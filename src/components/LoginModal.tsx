@@ -1,8 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import './LoginModal.css';
 
-const LoginModal = ({ onLogin, onCreateUser, hasUsers, isLoading }) => {
-    const [mode, setMode] = useState(hasUsers ? 'login' : 'register');
+type AuthResult =
+    | { success: true; error?: never }
+    | { success: false; error: string };
+
+interface LoginModalProps {
+    onLogin: (username: string, password: string) => Promise<AuthResult>;
+    onCreateUser: (username: string, password: string) => Promise<AuthResult>;
+    hasUsers: boolean;
+    isLoading: boolean;
+}
+
+const LoginModal = ({ onLogin, onCreateUser, hasUsers, isLoading }: LoginModalProps) => {
+    const [mode, setMode] = useState<'login' | 'register'>(hasUsers ? 'login' : 'register');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,7 +30,7 @@ const LoginModal = ({ onLogin, onCreateUser, hasUsers, isLoading }) => {
         }
     }, [hasUsers]);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError('');
         setIsSubmitting(true);

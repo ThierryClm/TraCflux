@@ -1,6 +1,6 @@
 import Modal from '../Modal';
 import MicroVariablesDialog from '../MicroVariablesDialog';
-import HelpContent from '../HelpContent';
+import HelpContentImplementation from '../HelpContent';
 import { APP_VERSION, APP_NAME, APP_DESCRIPTION } from '../../version';
 import {
     buildDiagnosticReport,
@@ -11,8 +11,53 @@ import {
 } from '../../utils/diagnostics';
 import { getInterceptedEntries, clearInterceptedEntries } from '../../utils/errorInterceptor';
 import { toast } from '../../utils/toast';
+import type { ComponentType, Dispatch, SetStateAction } from 'react';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
 
-export default function SupportDialogs({ model }) {
+interface SupportDialogsModel {
+    aboutModal: boolean;
+    actionData: ActionMicro[];
+    activePFId: number;
+    activePfReadOnly: boolean;
+    conflictMatrix: Matrice;
+    cycleLength: number;
+    diagnosticIncludeProject: boolean;
+    diagnosticMaskNames: boolean;
+    diagnosticModal: boolean;
+    diagnosticRefresh: number;
+    dossierReadOnly: boolean;
+    groups: Groupe[];
+    helpAnchor: string | null;
+    helpModal: boolean;
+    imageNaturalDims: { width: number; height: number } | null;
+    intersectionImage: string | null;
+    intersectionName: string;
+    matricesLocked: boolean;
+    microVariablesModal: boolean;
+    optionsModal: boolean;
+    pfTabs: PlanDeFeu[];
+    projectName: string | null;
+    setAboutModal: (value: boolean) => void;
+    setDiagnosticIncludeProject: (value: boolean) => void;
+    setDiagnosticMaskNames: (value: boolean) => void;
+    setDiagnosticModal: (value: boolean) => void;
+    setDiagnosticRefresh: Dispatch<SetStateAction<number>>;
+    setHelpModal: (value: boolean) => void;
+    setMicroVariablesModal: (value: boolean) => void;
+    setOptionsModal: (value: boolean) => void;
+    tip: (label: string) => string | undefined;
+    tooltipPrefs: { main?: boolean };
+}
+
+interface SupportDialogsProps {
+    model: SupportDialogsModel;
+}
+
+const HelpContent = HelpContentImplementation as unknown as ComponentType<{
+    initialAnchor?: string | null;
+}>;
+
+export default function SupportDialogs({ model }: SupportDialogsProps) {
     const {
         aboutModal, actionData, activePFId, activePfReadOnly, conflictMatrix,
         cycleLength, diagnosticIncludeProject, diagnosticMaskNames, diagnosticModal, diagnosticRefresh,

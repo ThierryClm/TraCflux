@@ -1,9 +1,18 @@
-import React from 'react';
+import type { ChangeEvent, Dispatch, SetStateAction } from 'react';
+import type { Durees } from '../types/projet';
 import './Controls.css';
 
-const Controls = ({ durations, setDurations, isPlaying, setIsPlaying, reset }) => {
+interface ControlsProps {
+    durations: Durees;
+    setDurations: Dispatch<SetStateAction<Durees>>;
+    isPlaying: boolean;
+    setIsPlaying: Dispatch<SetStateAction<boolean>>;
+    reset: () => void;
+}
 
-    const handleChange = (e) => {
+const Controls = ({ durations, setDurations, isPlaying, setIsPlaying, reset }: ControlsProps) => {
+
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setDurations(prev => ({
             ...prev,
