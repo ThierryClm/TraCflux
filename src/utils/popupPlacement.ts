@@ -13,6 +13,22 @@
  * mesurer, jamais la coïncidence des positions.
  */
 
+/** Rectangle d'écran : coin haut-gauche et taille, en pixels. */
+export interface ScreenRect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+/** Zone utile de l'écran, au format de `window.screen` (avail*). */
+export interface ScreenBounds {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
+
 /** Pas de la cascade, en pixels. */
 export const PAS_CASCADE = 40;
 
@@ -25,14 +41,8 @@ const ESSAIS_MAX = 14;
 /** Écart au coin de l'écran lorsque la cascade reboucle. */
 const MARGE_REBOUCLAGE = 24;
 
-/**
- * Part de `rect` recouverte par `autre`, entre 0 et 1.
- *
- * @param {{x: number, y: number, w: number, h: number}} rect
- * @param {{x: number, y: number, w: number, h: number}} autre
- * @returns {number}
- */
-export const partRecouverte = (rect, autre) => {
+/** Part de `rect` recouverte par `autre`, entre 0 et 1. */
+export const partRecouverte = (rect: ScreenRect | null | undefined, autre: ScreenRect | null | undefined): number => {
     if (!rect || !autre || rect.w <= 0 || rect.h <= 0) return 0;
     const ix = Math.min(rect.x + rect.w, autre.x + autre.w) - Math.max(rect.x, autre.x);
     const iy = Math.min(rect.y + rect.h, autre.y + autre.h) - Math.max(rect.y, autre.y);
@@ -47,17 +57,21 @@ export const partRecouverte = (rect, autre) => {
  * droite : mieux vaut une fenêtre partiellement couverte qu'une fenêtre
  * poussée hors de l'écran, où elle serait tout aussi perdue.
  *
- * @param {{x: number, y: number, w: number, h: number}} rect - Place visée
- * @param {Array<{x: number, y: number, w: number, h: number}>} occupes - Fenêtres déjà placées
- * @param {{left: number, top: number, width: number, height: number}} bornes - Zone utile de l'écran
- * @returns {{x: number, y: number}} Place retenue
+ * @param rect - Place visée
+ * @param occupes - Fenêtres déjà placées
+ * @param bornes - Zone utile de l'écran
+ * @returns Place retenue
  */
-export const placerSansEscamotage = (rect, occupes = [], bornes = null) => {
-    const pertinents = (occupes || []).filter(o => o && o.w > 0 && o.h > 0);
+export const placerSansEscamotage = (
+    rect: ScreenRect,
+    occupes: ReadonlyArray<ScreenRect | null | undefined> | null = [],
+    bornes: ScreenBounds | null = null
+): { x: number; y: number } => {
+    const pertinents = (occupes || []).filter((o): o is ScreenRect => !!o && o.w > 0 && o.h > 0);
     if (pertinents.length === 0) return { x: rect.x, y: rect.y };
 
     // Pire recouvrement subi à une position donnée.
-    const score = (x, y) => pertinents.reduce(
+    const score = (x: number, y: number): number => pertinents.reduce(
         (max, o) => Math.max(max, partRecouverte({ x, y, w: rect.w, h: rect.h }, o)),
         0
     );

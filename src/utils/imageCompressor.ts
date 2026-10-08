@@ -17,7 +17,7 @@ const SKIP_BELOW_BYTES = 200 * 1024;   // en dessous, on ne touche pas (inutile 
 export const ALERT_ABOVE_BYTES = 200 * 1024; // au-delà (après compression), on alerte
 
 /** Estime la taille en octets d'un data URL base64. */
-export function dataUrlBytes(dataUrl) {
+export function dataUrlBytes(dataUrl: unknown): number {
     if (!dataUrl || typeof dataUrl !== 'string') return 0;
     const comma = dataUrl.indexOf(',');
     const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
@@ -25,9 +25,14 @@ export function dataUrlBytes(dataUrl) {
 }
 
 /** Formate un nombre d'octets en Ko ou Mo lisible. */
-export function formatBytes(bytes) {
+export function formatBytes(bytes: number): string {
     if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
     return `${Math.round(bytes / 1024)} Ko`;
+}
+
+export interface CompressedImage {
+    dataUrl: string;
+    compressed: boolean;
 }
 
 /**
@@ -35,7 +40,7 @@ export function formatBytes(bytes) {
  * Renvoie { dataUrl, compressed } — compressed=false si on a gardé l'original
  * (SVG vectoriel, image déjà petite, ou compression non bénéfique).
  */
-export async function compressImageDataUrl(dataUrl) {
+export async function compressImageDataUrl(dataUrl: string): Promise<CompressedImage> {
     // SVG : vectoriel, ne pas rasteriser (on perdrait la netteté ET le faible poids)
     if (typeof dataUrl === 'string' && dataUrl.startsWith('data:image/svg')) {
         return { dataUrl, compressed: false };
@@ -45,7 +50,7 @@ export async function compressImageDataUrl(dataUrl) {
         return { dataUrl, compressed: false };
     }
 
-    return new Promise((resolve) => {
+    return new Promise<CompressedImage>((resolve) => {
         const img = new Image();
         img.onload = () => {
             try {
@@ -64,6 +69,11 @@ export async function compressImageDataUrl(dataUrl) {
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                // Canvas indisponible : même issue que l'exception, on garde l'original.
+                if (!ctx) {
+                    resolve({ dataUrl, compressed: false });
+                    return;
+                }
                 ctx.drawImage(img, 0, 0, width, height);
 
                 let out = canvas.toDataURL('image/webp', WEBP_QUALITY);

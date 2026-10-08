@@ -16,18 +16,21 @@
 const MAX_WELCOME_VIEWS = 5;
 const MAX_PROJECTS_SEEN = 2;
 
-const key = (scope, name) => `tracflux.welcomeInvite.${scope}.${name}`;
+/** Module dont l'écran d'accueil porte l'invitation. */
+export type WelcomeScope = 'diagram' | 'greenwave';
 
-function readInt(k) {
+const key = (scope: WelcomeScope, name: string): string => `tracflux.welcomeInvite.${scope}.${name}`;
+
+function readInt(k: string): number {
     try {
-        const v = parseInt(localStorage.getItem(k), 10);
+        const v = parseInt(localStorage.getItem(k) ?? '', 10);
         return Number.isFinite(v) ? v : 0;
     } catch {
         return 0;
     }
 }
 
-function bump(k) {
+function bump(k: string): void {
     try {
         localStorage.setItem(k, String(readInt(k) + 1));
     } catch {
@@ -38,19 +41,19 @@ function bump(k) {
 
 // À appeler une fois au rendu de l'écran d'accueil pour décider de
 // l'affichage. Lecture seule : n'incrémente rien.
-export function isInviteVisible(scope) {
+export function isInviteVisible(scope: WelcomeScope): boolean {
     return readInt(key(scope, 'welcomeViews')) < MAX_WELCOME_VIEWS
         && readInt(key(scope, 'projectsSeen')) < MAX_PROJECTS_SEEN;
 }
 
 // L'écran d'accueil a été réellement présenté (aucun projet en cours de
 // chargement). À n'appeler qu'une fois par montage.
-export function noteWelcomeView(scope) {
+export function noteWelcomeView(scope: WelcomeScope): void {
     bump(key(scope, 'welcomeViews'));
 }
 
 // Un projet a été ouvert/créé/restauré (l'exemple compte). À n'appeler
 // qu'une fois par montage, à la première activation d'un projet.
-export function noteProjectSeen(scope) {
+export function noteProjectSeen(scope: WelcomeScope): void {
     bump(key(scope, 'projectsSeen'));
 }

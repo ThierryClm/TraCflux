@@ -1,17 +1,41 @@
-const normalizeToCycle = (value, cycle) => ((value % cycle) + cycle) % cycle;
+import type { Groupe } from '../../types/projet';
+import type { SimulatedGroup, SimulationResult } from '../../utils/simulationCalculator';
 
-export const createTimelineSimulation = ({ groups, cycleLength, simulationResult }) => {
+/** Identifiant de groupe, numérique ou tel que lu dans un champ de saisie. */
+type GroupId = number | string;
+
+/** Plage de groupes visée par une action « Adaptatif vertical ». */
+export interface ActionPlage {
+    plage1: number;
+    plage2: number;
+}
+
+export interface ShiftedActionPosition {
+    deb: number;
+    fin: number;
+    hidden: boolean;
+}
+
+export interface TimelineSimulationInput {
+    groups: Groupe[];
+    cycleLength: number;
+    simulationResult: SimulationResult | null | undefined;
+}
+
+const normalizeToCycle = (value: number, cycle: number): number => ((value % cycle) + cycle) % cycle;
+
+export const createTimelineSimulation = ({ groups, cycleLength, simulationResult }: TimelineSimulationInput) => {
     const effectiveCycleLength = simulationResult?.simulatedCycleLength || cycleLength;
 
-    const getSimulatedGroup = (groupId) => {
+    const getSimulatedGroup = (groupId: number): SimulatedGroup | null => {
         if (!simulationResult) return null;
         return simulationResult.simulatedGroups.find(group => group.id === groupId) || null;
     };
 
-    const getGroupShift = (groupId) => {
+    const getGroupShift = (groupId: GroupId): number => {
         if (!simulationResult) return 0;
-        const originalGroup = groups.find(group => group.id === parseInt(groupId));
-        const simulatedGroup = simulationResult.simulatedGroups.find(group => group.id === parseInt(groupId));
+        const originalGroup = groups.find(group => group.id === parseInt(String(groupId)));
+        const simulatedGroup = simulationResult.simulatedGroups.find(group => group.id === parseInt(String(groupId)));
         if (!originalGroup || !simulatedGroup) return 0;
 
         const cycle = simulationResult.simulatedCycleLength || cycleLength;
@@ -19,10 +43,10 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
         return shift > cycle / 2 ? 0 : shift;
     };
 
-    const getGroupEndShift = (groupId) => {
+    const getGroupEndShift = (groupId: GroupId): number => {
         if (!simulationResult) return 0;
-        const originalGroup = groups.find(group => group.id === parseInt(groupId));
-        const simulatedGroup = simulationResult.simulatedGroups.find(group => group.id === parseInt(groupId));
+        const originalGroup = groups.find(group => group.id === parseInt(String(groupId)));
+        const simulatedGroup = simulationResult.simulatedGroups.find(group => group.id === parseInt(String(groupId)));
         if (!originalGroup || !simulatedGroup) return 0;
 
         const cycle = simulationResult.simulatedCycleLength || cycleLength;
@@ -33,13 +57,13 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
     };
 
     const getShiftedActionPosition = (
-        deb,
-        fin,
-        groupId = null,
-        actionType = null,
-        actionPlage = null,
-        actionId = null
-    ) => {
+        deb: number,
+        fin: number,
+        groupId: GroupId | null = null,
+        actionType: string | null = null,
+        actionPlage: ActionPlage | null = null,
+        actionId: number | null = null
+    ): ShiftedActionPosition => {
         let hidden = false;
         let totalShift = 0;
         let adjustedDeb = deb;
@@ -113,7 +137,7 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
             actionType !== 'Adaptatif vertical' &&
             actionType !== 'Escamotage de phase'
         ) {
-            const originalGroup = groups.find(group => group.id === parseInt(groupId));
+            const originalGroup = groups.find(group => group.id === parseInt(String(groupId)));
             let useEndShift = false;
 
             if (originalGroup && actionType === 'Fermeture anticipée') {
@@ -121,7 +145,7 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
                 const greenStart = originalGroup.offset;
                 const greenEnd = (originalGroup.offset + originalGroup.durations.green) % cycleLength;
                 const actionMid = (adjustedDeb + ((adjustedFin > adjustedDeb ? adjustedFin - adjustedDeb : 0) / 2)) % cycle;
-                const circularDistance = (a, b) => {
+                const circularDistance = (a: number, b: number): number => {
                     const distance = Math.abs(a - b);
                     return Math.min(distance, cycle - distance);
                 };
@@ -137,14 +161,14 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
                 if (adjustedDeb < shift.from || !shift.isPartial) return;
 
                 if (groupId) {
-                    const parsedGroupId = parseInt(groupId);
-                    if (parsedGroupId >= shift.plage1 && parsedGroupId <= shift.plage2) {
+                    const parsedGroupId = parseInt(String(groupId));
+                    if (parsedGroupId >= (shift.plage1 as number) && parsedGroupId <= (shift.plage2 as number)) {
                         totalShift += shift.amount;
                     }
                 } else if (
                     actionPlage &&
-                    actionPlage.plage1 >= shift.plage1 &&
-                    actionPlage.plage2 <= shift.plage2
+                    actionPlage.plage1 >= (shift.plage1 as number) &&
+                    actionPlage.plage2 <= (shift.plage2 as number)
                 ) {
                     totalShift += shift.amount;
                 }
