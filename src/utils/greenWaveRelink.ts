@@ -27,7 +27,10 @@ interface PfLike {
 }
 
 export interface GreenWaveIntersection {
+    /** Nom du fichier du dossier, qui sert aussi de clé dans le cache. */
     projectName: string;
+    /** Titre du projet (champ « nom du carrefour » du dossier). */
+    intersectionName?: string;
     groups: GroupLike[];
     pfTabs?: PfLike[];
     selectedPfId?: number;
@@ -39,6 +42,7 @@ export interface GreenWaveIntersection {
 }
 
 export interface ProjectLike {
+    intersectionName?: string;
     groups?: GroupLike[];
     pfTabs?: PfLike[];
     cycleLength?: number;
@@ -67,6 +71,10 @@ export interface RelinkReport {
     descending: GroupReport;
     ascending: GroupReport;
 }
+
+/** Titre affiché pour un carrefour : titre du projet, à défaut le nom du fichier. */
+export const intersectionTitle = (intersection: Pick<GreenWaveIntersection, 'projectName' | 'intersectionName'>, cachedTitle?: string | null): string =>
+    intersection.intersectionName || cachedTitle || intersection.projectName;
 
 const groupLabel = (group: GroupLike | undefined): string =>
     group ? `G${group.id} - ${group.name || 'Sans nom'}` : '—';
@@ -125,6 +133,7 @@ export const relinkIntersection = (
         intersection: {
             ...intersection,
             projectName,
+            intersectionName: project.intersectionName || undefined,
             groups,
             pfTabs,
             selectedPfId: pf?.id,

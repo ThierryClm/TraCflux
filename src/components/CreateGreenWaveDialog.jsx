@@ -42,6 +42,7 @@ const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadPr
         const newIntersection = {
             id: Date.now(),
             projectName: projectName,
+            intersectionName: projectData.intersectionName || undefined,
             distance: indexBasedM,
             distanceD: indexBasedM + 20,
             groups: projectData.groups || [],

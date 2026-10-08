@@ -11,6 +11,7 @@ import { buildExportFilename } from './utils/exportFilename';
 import { buildGreenWavePrintClone } from './utils/greenWavePrint';
 import { computeLeftPadding, computeRightPadding, computeTickSpace, truncateName, LABEL_GAP } from './utils/greenWaveLayout';
 import RelinkDossierDialog from './components/RelinkDossierDialog';
+import { intersectionTitle } from './utils/greenWaveRelink';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
 import { APP_NAME, APP_VERSION, APP_DESCRIPTION } from './version';
@@ -601,6 +602,7 @@ const GreenWavePage = () => {
                         synced.push(intersection.projectName);
                         return {
                             ...intersection,
+                            intersectionName: projectData.intersectionName || intersection.intersectionName,
                             groups: updatedGroups,
                             cycleLength: pfCycleLength,
                             pfTabs: pfTabs,
@@ -1113,6 +1115,7 @@ const GreenWavePage = () => {
             // Create new intersection object
             const newIntersection = {
                 projectName: selectedProject,
+                intersectionName: projectData.intersectionName || undefined,
                 groups: groups,
                 cycleLength: pfCycleLength,
                 pfTabs: pfTabs,
@@ -1608,6 +1611,26 @@ const GreenWavePage = () => {
         setDragging(null);
     };
 
+    // Titre du projet de chaque carrefour, lu dans le dossier en cache pour
+    // les ondes vertes enregistrées avant que le titre ne soit conservé.
+    // Clé : la liste des noms de fichiers, pour ne relire le cache qu'au
+    // changement de dossier et non à chaque saisie de distance.
+    const projectNamesKey = intersections?.map(i => i.projectName).join('\n') ?? '';
+    const cachedTitles = useMemo(() => {
+        const titles = {};
+        intersections?.forEach(intersection => {
+            if (intersection.intersectionName || intersection.projectName in titles) return;
+            try {
+                const raw = localStorage.getItem(`traffic_project_${intersection.projectName}`);
+                titles[intersection.projectName] = raw ? JSON.parse(raw).intersectionName || null : null;
+            } catch {
+                titles[intersection.projectName] = null;
+            }
+        });
+        return titles;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectNamesKey]);
+
     // Tableau des données saisies — JSX partagé entre le rendu inline
     // (sous le diagramme) et la fenêtre popup détachée. Le bouton Détacher
     // n'apparaît que dans le rendu inline (pas dans la popup déjà détachée).
@@ -1668,7 +1691,7 @@ const GreenWavePage = () => {
                                 <tr
                                     key={idx}
                                     className={hasCycleConflict ? 'row-cycle-conflict' : ''}
-                                    title={`Dossier relié : ${intersection.projectName}`}
+                                    title={`Fichier : ${intersection.projectName}`}
                                 >
                                     <td className="col-order">
                                         <div className="order-controls">
@@ -1689,7 +1712,7 @@ const GreenWavePage = () => {
                                     </td>
                                     <td className="col-name">
                                         <div className="col-name-wrap">
-                                            <span className="col-name-text">{intersection.projectName}</span>
+                                            <span className="col-name-text">{intersectionTitle(intersection, cachedTitles[intersection.projectName])}</span>
                                             <button
                                                 className="btn-relink-dossier"
                                                 onClick={() => setRelinkIdx(idx)}

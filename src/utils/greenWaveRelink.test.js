@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { relinkIntersection } from './greenWaveRelink';
+import { intersectionTitle, relinkIntersection } from './greenWaveRelink';
 
 const intersection = {
     id: 7,
@@ -51,11 +51,26 @@ describe('relinkIntersection', () => {
         expect(updated.cycleLength).toBe(110);
     });
 
+    it('reprend le titre du projet du nouveau dossier', () => {
+        const project = { intersectionName: 'Alpes-Provence / Patriotes', groups: [] };
+        const { intersection: updated } = relinkIntersection(intersection, 'Car 26057_1 v2', project);
+        expect(updated.intersectionName).toBe('Alpes-Provence / Patriotes');
+        expect(updated.projectName).toBe('Car 26057_1 v2');
+    });
+
     it('choisit le premier groupe quand aucun ne correspond', () => {
         const project = { groups: [{ id: 9, name: 'Z' }] };
         const { intersection: updated, report } = relinkIntersection(intersection, 'X', project);
         expect(updated.selectedGroup1).toBe(9);
         expect(report.descending.match).toBe('missing');
         expect(updated.pfTabs).toEqual([{ id: 1, name: 'PF1', data: [] }]);
+    });
+});
+
+describe('intersectionTitle', () => {
+    it('affiche le titre du projet, à défaut celui du cache, à défaut le nom du fichier', () => {
+        expect(intersectionTitle({ projectName: 'fichier', intersectionName: 'Titre' }, 'Cache')).toBe('Titre');
+        expect(intersectionTitle({ projectName: 'fichier' }, 'Cache')).toBe('Cache');
+        expect(intersectionTitle({ projectName: 'fichier' }, null)).toBe('fichier');
     });
 });
