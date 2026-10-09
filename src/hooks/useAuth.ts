@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { safeShowOpenFilePicker, safeShowSaveFilePicker } from '../utils/filePicker';
+import { writeTextToFileHandle } from '../utils/writeFileHandle';
 import { isExampleSession } from '../utils/exampleMode';
 
 export type PermissionLevel = 'lecture' | 'partiel' | 'total';
@@ -420,9 +421,7 @@ export const useAuth = () => {
             });
 
             const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}');
-            const writable = await fileHandle.createWritable();
-            await writable.write(JSON.stringify(usersData, null, 2));
-            await writable.close();
+            await writeTextToFileHandle(fileHandle, JSON.stringify(usersData, null, 2));
 
             return { success: true };
         } catch (e) {

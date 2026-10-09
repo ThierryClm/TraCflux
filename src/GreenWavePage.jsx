@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { safeShowSaveFilePicker, safeShowOpenFilePicker } from './utils/filePicker';
+import { writeTextToFileHandle } from './utils/writeFileHandle';
 import usePopupWindow, { setMainModalActive } from './hooks/usePopupWindow';
 import GreenWaveMenuBar from './components/GreenWaveMenuBar';
 import CreateGreenWaveDialog from './components/CreateGreenWaveDialog';
@@ -496,9 +497,7 @@ const GreenWavePage = () => {
 
             // Write the file
             const jsonContent = JSON.stringify(greenWaveData, null, 2);
-            const writable = await fileHandle.createWritable();
-            await writable.write(jsonContent);
-            await writable.close();
+            await writeTextToFileHandle(fileHandle, jsonContent);
 
             // Vérifier que le fichier n'est pas vide après sauvegarde
             try {
