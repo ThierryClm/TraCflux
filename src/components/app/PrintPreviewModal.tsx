@@ -1,6 +1,6 @@
 import { cloneElement, Fragment } from 'react';
 import type { ComponentType, CSSProperties, RefObject } from 'react';
-import TimelineDiagramImplementation from '../TimelineDiagram';
+import TimelineDiagram from '../TimelineDiagram';
 import TrafficTableImplementation from '../TrafficTable';
 import DiagnosticPanelImplementation from '../DiagnosticPanel';
 import DiagramLegendImplementation from '../DiagramLegend';
@@ -97,7 +97,6 @@ interface BubblePageFit {
     arrowOffsetY: number;
 }
 
-const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
 const TrafficTable = TrafficTableImplementation as unknown as LooseComponent;
 const DiagnosticPanel = DiagnosticPanelImplementation as unknown as LooseComponent;
 const DiagramLegend = DiagramLegendImplementation as unknown as LooseComponent;
@@ -331,7 +330,6 @@ function PrintPreviewModal({
                                                 hoveredActionId={null}
                                                 setHoveredActionId={() => {}}
                                                 planName={pfTabs.find(pf => pf.id === activePFId)?.name || 'PF1'}
-                                                isPrintMode={true}
                                             tooltipsEnabled={tooltipPrefs.diagram}
                                             />
                                         </div>
@@ -972,7 +970,6 @@ function PrintPreviewModal({
                                                         hoveredActionId={null}
                                                         setHoveredActionId={() => {}}
                                                         planName={pf.name}
-                                                        isPrintMode={true}
                                                         /* La colonne des commentaires et le bloc des remarques
                                                            n'étaient pas désactivés : invisibles à l'impression,
                                                            ils occupaient tout de même 270 px de large. La mise en
@@ -1295,7 +1292,6 @@ function PrintPreviewModal({
                                                             simulationFilter={new Set(simulationSelectedActions)}
                                                             simulationResult={simu}
                                                             planName={simPfName}
-                                                            isPrintMode={true}
                                                             showComments={false}
                                                             showRemarks={false}
                                                             tooltipsEnabled={tooltipPrefs.diagram}

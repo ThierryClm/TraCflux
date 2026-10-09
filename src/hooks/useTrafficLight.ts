@@ -16,6 +16,7 @@ import { ACTIONS_HORS_SIMULATION, actionsSimulables } from '../utils/simulationC
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
+import { entier } from '../utils/entier';
 import { buildTrafficDatasetNames, trafficDatasetHasData } from '../utils/trafficHelpers';
 import type { TrafficConflict } from '../utils/conflictUtils';
 import type { AlertFunction, ConfirmFunction } from '../components/ConfirmProvider';
@@ -107,8 +108,6 @@ export interface UseTrafficLightOptions {
 /** Champs d'une condition qui désignent un groupe de feu par son numéro. */
 const CHAMPS_GF: ('gf' | 'plage1' | 'plage2' | 'actGf1' | 'actGf1Gf2' | 'actGf1Gf3' | 'actGf1Gf4')[] = ['gf', 'plage1', 'plage2', 'actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'];
 
-/** parseInt d'une valeur saisie, quel que soit son type ; NaN si vide. */
-const entier = (v: unknown) => parseInt(String(v), 10);
 
 /** Un groupe piéton ou cycliste admet un intervert de 0 s ; les autres, 3 s. */
 const intervertMinimal = (groupe: Pick<Groupe, 'type'> | GroupeEnregistre | undefined) =>

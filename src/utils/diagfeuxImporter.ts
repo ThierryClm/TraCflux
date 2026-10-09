@@ -114,7 +114,7 @@ export const parseDiagfeux = (xmlText: unknown): DiagfeuxResult => {
     const jauneFor = (id: string): number => isPieton(id) ? 0 : (enAgglo ? 3 : 5);
 
     // Mapping vers le schéma RÉEL de projectProperties (cf. DEFAULT_PROJECT_PROPERTIES
-    // dans useTrafficLight.js) : toute autre clé serait silencieusement ignorée.
+    // dans useTrafficLight.ts) : toute autre clé serait silencieusement ignorée.
     const controleur = [txt(props, 'Fabricant'), txt(props, 'TypeControleur')]
         .filter(Boolean).join(' ').trim();
     const projectProperties = props ? {

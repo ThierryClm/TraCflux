@@ -41,7 +41,7 @@ export function rangesOverlap(
 
 /**
  * Calcule les conflits d'intervert entre groupes.
- * Logique extraite de useTrafficLight.js pour être testable indépendamment.
+ * Logique extraite de useTrafficLight.ts pour être testable indépendamment.
  *
  * @param {Array} groups - Liste des groupes de feux
  * @param {Array} conflictMatrix - Matrice 2D des temps intervert
@@ -152,7 +152,7 @@ export function moveGroup(groups: Groupe[], fromIndex: number, toIndex: number):
 
 /**
  * Réorganise la matrice de conflits après un déplacement de groupe.
- * Logique extraite de moveGroupToPosition dans useTrafficLight.js.
+ * Logique extraite de moveGroupToPosition dans useTrafficLight.ts.
  *
  * @param {Array} matrix - Matrice 2D originale
  * @param {Array} groups - Groupes avant déplacement

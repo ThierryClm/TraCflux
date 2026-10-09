@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 import CustomTooltip from './CustomTooltip';
 import RemarquesEditor from './RemarquesEditor';
 import TimelineFloatingOverlays from './timeline/TimelineFloatingOverlays';
@@ -10,31 +11,101 @@ import { createTimelineSimulation } from './timeline/timelineSimulation';
 import { useTimelineDrag } from './timeline/useTimelineDrag';
 import { useMicroVariables } from './MicroVariablesProvider';
 import { resetTextFormatting } from '../utils/resetTextFormatting';
+import { entier } from '../utils/entier';
+import type { ActionMicro, DrapeauPhase, Groupe, Matrice } from '../types/projet';
+import type { SimulationResult } from '../utils/simulationCalculator';
+import type { TrafficConflict } from '../utils/conflictUtils';
+import type { ParametresGroupe } from '../hooks/useTrafficLight';
+import type { TimelineActionTooltip } from './timeline/timelineTypes';
 import './TimelineDiagram.css';
 
-const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }) => {
-    const tip = (text) => tooltipsEnabled ? text : undefined;
+/** Vert utile survolé dans le tableau de capacité, à reporter sur la barre du groupe. */
+export interface VertUtileSurvole {
+    groupId: number;
+    vUtile: number;
+    capacityValue: number | null;
+}
+
+export interface TimelineDiagramProps {
+    groups: Groupe[];
+    /** Reçu de l'appelant, non utilisé par le diagramme. */
+    globalTime?: number;
+    onGroupClick?: (group: Groupe) => void;
+    pixelsPerSecond?: number;
+    conflicts: TrafficConflict[];
+    conflictMatrix?: Matrice;
+    updateGroupParams: (groupId: number, params: ParametresGroupe) => void;
+    cycleLength: number;
+    actionData?: ActionMicro[];
+    updateActionRow?: (rowId: number, field: 'deb' | 'fin', value: string) => void;
+    startDrag?: () => void;
+    endDrag?: () => void;
+    showDependencies?: boolean;
+    dependencyGap?: number;
+    hoveredActionId?: number | null;
+    setHoveredActionId?: (id: number | null) => void;
+    /** Actions cochées dans le scénario de simulation ; null hors simulation. */
+    simulationFilter?: Set<number> | null;
+    simulationResult?: SimulationResult | null;
+    simulationCurrentTime?: number | null;
+    isPlayingSimulation?: boolean;
+    playbackTime?: number | null;
+    setIsPlayingSimulation?: (value: boolean) => void;
+    setSimulationCurrentTime?: (value: number) => void;
+    simulationSpeed?: number;
+    cycleSimulationSpeed?: (() => void) | null;
+    hoveredArrowGroupId?: number | null;
+    hoveredArrowGroupSaturated?: boolean;
+    /** Conflit survolé dans la matrice ; isConflict distingue conflit avéré et potentiel. */
+    hoveredConflict?: { from: number; to: number; isConflict?: boolean } | null;
+    setHoveredGroupId?: ((id: number | null) => void) | null;
+    setHoveredDiagramTime?: ((time: number | null) => void) | null;
+    hoveredVUtile?: VertUtileSurvole | null;
+    planName?: string;
+    activePFName?: string;
+    remarques?: string;
+    updateRemarques?: ((remarques: string) => void) | null;
+    biCarrefourSeparator?: number | null;
+    showComments?: boolean;
+    showRemarks?: boolean;
+    showGroupNames?: boolean;
+    showMicroOnHover?: boolean;
+    showWrapFlash?: boolean;
+    cycleLengthInput?: string | number;
+    setCycleLengthInput?: (value: string) => void;
+    setCycleLength?: (value: number) => void;
+    onDragConflicts?: (conflicts: TrafficConflict[] | null) => void;
+    remarquesDetached?: boolean;
+    tooltipsEnabled?: boolean;
+    readOnly?: boolean;
+    onDetach?: (() => void) | null;
+    scrollable?: boolean;
+    titreEnBandeau?: boolean;
+}
+
+const TimelineDiagram = ({ groups, globalTime, onGroupClick = () => {}, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId = () => {}, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }: TimelineDiagramProps) => {
+    const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
     const { names: microVariableNames } = useMicroVariables();
-    const containerRef = useRef(null);
-    const activeCommentRef = useRef(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const activeCommentRef = useRef<HTMLElement | null>(null);
     // Whether the mouse is currently over the diagram container (not the action table)
     // Used to suppress the action tooltip when hovering actions via the ActionTable rows
     const [isMouseInDiagram, setIsMouseInDiagram] = useState(false);
 
     // Hovered group id for showing dependencies only for that group
-    const [hoveredGroupIdLocal, setHoveredGroupIdLocal] = useState(null);
+    const [hoveredGroupIdLocal, setHoveredGroupIdLocal] = useState<number | null>(null);
     // Use local state for internal logic, but also call prop setter if provided
     const hoveredGroupId = hoveredGroupIdLocal;
-    const setHoveredGroupId = useCallback((id) => {
+    const setHoveredGroupId = useCallback((id: number | null) => {
         setHoveredGroupIdLocal(id);
         if (setHoveredGroupIdProp) {
             setHoveredGroupIdProp(id);
         }
     }, [setHoveredGroupIdProp]);
     // Action tooltip: info at 2s + micro condition at 4s
-    const [actionTooltip, setActionTooltip] = useState(null); // { actionId, showMicro, x, y }
-    const tooltipTimer1Ref = useRef(null);
-    const tooltipTimer2Ref = useRef(null);
+    const [actionTooltip, setActionTooltip] = useState<TimelineActionTooltip | null>(null);
+    const tooltipTimer1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const tooltipTimer2Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
     const actionTooltipMouseRef = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
@@ -54,7 +125,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
         // After 0.5s: show tooltip with action name + seconds
         tooltipTimer1Ref.current = setTimeout(() => {
-            setActionTooltip({ actionId: hoveredActionId, showMicro: false, x: pos.x, y: pos.y });
+            setActionTooltip({ actionId: action.id, showMicro: false, x: pos.x, y: pos.y });
         }, 500);
 
         // After 3s: enrich with micro text if enabled and available
@@ -79,7 +150,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     // aucune trace du survol dans la fenêtre où se trouvait réellement le
     // curseur. Passer par l'événement React supprime la question : il est
     // délivré dans la fenêtre qui porte le diagramme, quelle qu'elle soit.
-    const suivreCurseur = useCallback((e) => {
+    const suivreCurseur = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
         actionTooltipMouseRef.current = { x: e.clientX, y: e.clientY };
         // Filet : si un re-rendu a avalé le mouseenter, le premier mouvement
         // rétablit l'état. Sans lui, l'infobulle restait muette dans la
@@ -88,10 +159,10 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     }, []);
 
     // Phase flag tooltip (aiguillage/escamotage)
-    const [phaseFlagTooltipId, setPhaseFlagTooltipId] = useState(null);
-    const phaseFlagTimerRef = useRef(null);
+    const [phaseFlagTooltipId, setPhaseFlagTooltipId] = useState<number | null>(null);
+    const phaseFlagTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const handleNameMouseEnter = useCallback((groupId) => {
+    const handleNameMouseEnter = useCallback((groupId: number) => {
         phaseFlagTimerRef.current = setTimeout(() => {
             setPhaseFlagTooltipId(groupId);
         }, 5000);
@@ -105,7 +176,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         setPhaseFlagTooltipId(null);
     }, []);
 
-    const resetActiveCommentFormatting = useCallback((e) => {
+    const resetActiveCommentFormatting = useCallback((e: ReactMouseEvent) => {
         e.preventDefault();
         const editable = activeCommentRef.current;
         if (!editable) return;
@@ -117,7 +188,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     }, [updateGroupParams]);
 
     // Handle Alt+A / Alt+E to toggle phaseFlag
-    const handlePhaseFlagKeyDown = useCallback((e, groupId, currentFlag) => {
+    const handlePhaseFlagKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>, groupId: number, currentFlag?: DrapeauPhase) => {
         if (e.altKey && (e.key === 'a' || e.key === 'A')) {
             e.preventDefault();
             updateGroupParams(groupId, { phaseFlag: currentFlag === 'a' ? '' : 'a' });
@@ -162,7 +233,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     });
     // Helper to get actions for a specific group
     // In simulation mode: show overlay when action is UNCHECKED (inverted logic)
-    const getActionsForGroup = (groupId) => {
+    const getActionsForGroup = (groupId: number) => {
         return actionData.filter(action => {
             const gf = action.gf?.toString().replace(/[Gg]/g, '').trim();
             return gf === groupId.toString() && action.deb !== '' && action.fin !== '' &&
@@ -183,12 +254,12 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     ) : [];
 
     // Helper to check if a time range overlaps with any selected Escamotage de phase or Adaptatif vertical
-    const isWithinSelectedEscamotageOrAdaptatif = (deb, fin) => {
+    const isWithinSelectedEscamotageOrAdaptatif = (deb: number, fin: number) => {
         const allSelectedZones = [...selectedEscamotageDePhase, ...selectedAdaptatifVertical];
         if (allSelectedZones.length === 0) return false;
         for (const zone of allSelectedZones) {
-            const zoneDeb = parseInt(zone.deb) || 0;
-            const zoneFin = parseInt(zone.fin) || 0;
+            const zoneDeb = entier(zone.deb) || 0;
+            const zoneFin = entier(zone.fin) || 0;
             // Check if ranges overlap (handling wrap-around)
             if (zoneDeb <= zoneFin) {
                 // Normal case: zone doesn't wrap
@@ -205,11 +276,11 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     };
 
     // Helper to check if a time range overlaps with any selected Escamotage de phase only
-    const isWithinSelectedEscamotage = (deb, fin) => {
+    const isWithinSelectedEscamotage = (deb: number, fin: number) => {
         if (selectedEscamotageDePhase.length === 0) return false;
         for (const escamotage of selectedEscamotageDePhase) {
-            const escDeb = parseInt(escamotage.deb) || 0;
-            const escFin = parseInt(escamotage.fin) || 0;
+            const escDeb = entier(escamotage.deb) || 0;
+            const escFin = entier(escamotage.fin) || 0;
             // Check if ranges overlap (handling wrap-around)
             if (escDeb <= escFin) {
                 // Normal case: escamotage doesn't wrap
@@ -244,8 +315,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         if (!(action.actGf1 || action.actGf1Gf2 || action.actGf1Gf3 || action.actGf1Gf4)) return false;
         if (simulationFilter && simulationFilter.has(action.id)) return false;
         // Hide if within a selected Escamotage de phase or Adaptatif vertical
-        const deb = parseInt(action.deb) || 0;
-        const fin = parseInt(action.fin) || 0;
+        const deb = entier(action.deb) || 0;
+        const fin = entier(action.fin) || 0;
         if (isWithinSelectedEscamotageOrAdaptatif(deb, fin)) return false;
         return true;
     });
@@ -273,10 +344,10 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     ) : [];
 
     // Groupes impliqués dans des actions "Escamotage" (GF source + actGf cibles) → afficher "e" automatiquement
-    const escamotageGroupIds = new Set();
+    const escamotageGroupIds = new Set<number>();
     actionData.forEach(action => {
         if (action.action === 'Escamotage' && action.gf) {
-            const gfId = parseInt(action.gf.toString().replace(/[Gg]/g, '').trim());
+            const gfId = entier(action.gf.toString().replace(/[Gg]/g, '').trim());
             if (gfId) escamotageGroupIds.add(gfId);
             [action.actGf1, action.actGf1Gf2, action.actGf1Gf3, action.actGf1Gf4].forEach(actGf => {
                 if (actGf) {
@@ -288,20 +359,20 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
     });
 
     // Precompute shifted zone ranges for brace truncation (SELECTED/checked zones only - simulation mode)
-    const braceZoneRanges = [];
+    const braceZoneRanges: { deb: number; fin: number; rawDeb: number; rawFin: number; plage1?: number; plage2?: number; isPartial?: boolean }[] = [];
     selectedEscamotageDePhase.forEach(a => {
-        const zDeb = parseInt(a.deb) || 0;
-        const zFin = parseInt(a.fin) || 0;
+        const zDeb = entier(a.deb) || 0;
+        const zFin = entier(a.fin) || 0;
         const shifted = getShiftedActionPosition(zDeb, zFin, null, 'Escamotage de phase', null, a.id);
         if (!shifted.hidden) {
             braceZoneRanges.push({ deb: shifted.deb, fin: shifted.fin, rawDeb: zDeb, rawFin: zFin });
         }
     });
     selectedAdaptatifVertical.forEach(a => {
-        const zDeb = parseInt(a.deb) || 0;
-        const zFin = parseInt(a.fin) || 0;
-        const plage1 = parseInt(a.plage1) || 0;
-        const plage2 = parseInt(a.plage2) || 0;
+        const zDeb = entier(a.deb) || 0;
+        const zFin = entier(a.fin) || 0;
+        const plage1 = entier(a.plage1) || 0;
+        const plage2 = entier(a.plage2) || 0;
         const avPlage = (plage1 > 0 && plage2 > 0) ? { plage1, plage2 } : null;
         const shifted = getShiftedActionPosition(zDeb, zFin, null, 'Adaptatif vertical', avPlage, a.id);
         if (!shifted.hidden) {
@@ -315,8 +386,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         if (action.action !== 'Signal aide conduite') return false;
         if (action.deb === '' || action.fin === '') return false;
         if (simulationFilter && simulationFilter.has(action.id)) return false;
-        const deb = parseInt(action.deb) || 0;
-        const fin = parseInt(action.fin) || 0;
+        const deb = entier(action.deb) || 0;
+        const fin = entier(action.fin) || 0;
         if (deb === fin) return false;
         // Only show if orange zone exists (fin - 5 > deb)
         if (fin - 5 <= deb) return false;
@@ -330,8 +401,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         if (action.gf === '' || action.gf === undefined) return false;
         if (action.deb === '' || action.fin === '') return false;
         if (simulationFilter && simulationFilter.has(action.id)) return false;
-        const deb = parseInt(action.deb) || 0;
-        const fin = parseInt(action.fin) || 0;
+        const deb = entier(action.deb) || 0;
+        const fin = entier(action.fin) || 0;
         if (deb >= fin) return false;
         return true;
     });
@@ -347,10 +418,10 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         return true;
     }).map(action => ({
         ...action,
-        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(parseInt(action.plage1)) || parseInt(action.plage1) < 1)
+        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(entier(action.plage1)) || entier(action.plage1) < 1)
             ? 1
             : action.plage1,
-        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(parseInt(action.plage2)) || parseInt(action.plage2) < 1)
+        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(entier(action.plage2)) || entier(action.plage2) < 1)
             ? groups.length
             : action.plage2
     }));
@@ -366,10 +437,10 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         return true;
     }).map(action => ({
         ...action,
-        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(parseInt(action.plage1)) || parseInt(action.plage1) < 1)
+        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(entier(action.plage1)) || entier(action.plage1) < 1)
             ? 1
             : action.plage1,
-        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(parseInt(action.plage2)) || parseInt(action.plage2) < 1)
+        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(entier(action.plage2)) || entier(action.plage2) < 1)
             ? groups.length
             : action.plage2
     }));
@@ -385,10 +456,10 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         return true;
     }).map(action => ({
         ...action,
-        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(parseInt(action.plage1)) || parseInt(action.plage1) < 1)
+        plage1: (action.plage1 === '' || action.plage1 === undefined || isNaN(entier(action.plage1)) || entier(action.plage1) < 1)
             ? 1
             : action.plage1,
-        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(parseInt(action.plage2)) || parseInt(action.plage2) < 1)
+        plage2: (action.plage2 === '' || action.plage2 === undefined || isNaN(entier(action.plage2)) || entier(action.plage2) < 1)
             ? groups.length
             : action.plage2
     }));
@@ -423,8 +494,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         if (action.gf === '' || action.deb === '' || action.fin === '' || action.actGf1 === '') return false;
         if (simulationFilter && simulationFilter.has(action.id)) return false;
         // Hide if within a selected Escamotage de phase or Adaptatif vertical
-        const deb = parseInt(action.deb) || 0;
-        const fin = parseInt(action.fin) || 0;
+        const deb = entier(action.deb) || 0;
+        const fin = entier(action.fin) || 0;
         if (isWithinSelectedEscamotageOrAdaptatif(deb, fin)) return false;
         return true;
     });
@@ -437,8 +508,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
         if (action.gf === '' || action.deb === '' || action.fin === '' || action.actGf1 === '') return false;
         if (simulationFilter && simulationFilter.has(action.id)) return false;
         // Hide if within a selected Escamotage de phase or Adaptatif vertical
-        const deb = parseInt(action.deb) || 0;
-        const fin = parseInt(action.fin) || 0;
+        const deb = entier(action.deb) || 0;
+        const fin = entier(action.fin) || 0;
         if (isWithinSelectedEscamotageOrAdaptatif(deb, fin)) return false;
         return true;
     });
@@ -551,8 +622,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                 if (c.from !== group.id && c.to !== group.id) return false;
                                 // Check if this conflict is inhibited by a selected Escamotage action
                                 const isInhibitedByEscamotage = selectedEscamotageGroup.some(action => {
-                                    const sourceGfId = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                                    const targetGfId = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                                    const sourceGfId = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                                    const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
                                     return (sourceGfId === c.from && targetGfId === c.to) ||
                                            (sourceGfId === c.to && targetGfId === c.from);
                                 });
@@ -642,7 +713,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         // V.Utile overlay (capacity color on first green seconds) - available for ALL cases
                                         const showVUtileOverlay = hoveredVUtile && hoveredVUtile.groupId === group.id;
                                         const vUtileSec = showVUtileOverlay ? Math.min(hoveredVUtile.vUtile, greenDuration) : 0;
-                                        const getCapacityColorClass = (value) => {
+                                        const getCapacityColorClass = (value: number | null | undefined) => {
                                             if (value === null || value === undefined) return '';
                                             if (value < 76) return 'vutile-green';
                                             if (value <= 85) return 'vutile-orange';
@@ -882,20 +953,20 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     {/* Green cuts from SELECTED Escamotage (group-specific) actions */}
                                     {selectedEscamotageGroup
                                         .filter(action => {
-                                            const targetGfId = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                                            const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
                                             return targetGfId === group.id;
                                         })
                                         .map((action, idx) => {
-                                            const sourceGfId = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                                            const targetGfId = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                                            const sourceGfId = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                                            const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
                                             if (sourceGfId === 0 || targetGfId === 0) return null;
 
                                             const sourceGroup = groups.find(g => g.id === sourceGfId);
                                             if (!sourceGroup) return null;
 
                                             // Get intergreen times from conflict matrix
-                                            const intergreenSourceToTarget = conflictMatrix[sourceGfId - 1]?.[targetGfId - 1] || 0;
-                                            const intergreenTargetToSource = conflictMatrix[targetGfId - 1]?.[sourceGfId - 1] || 0;
+                                            const intergreenSourceToTarget = Number(conflictMatrix[sourceGfId - 1]?.[targetGfId - 1] || 0);
+                                            const intergreenTargetToSource = Number(conflictMatrix[targetGfId - 1]?.[sourceGfId - 1] || 0);
 
                                             // Source group times
                                             const currentCycleLen = effectiveCycleLength || cycleLength;
@@ -950,8 +1021,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                                     {/* Action-based overlays */}
                                     {groupActions.map((action, idx) => {
-                                        const origDeb = parseInt(action.deb) || 0;
-                                        const origFin = parseInt(action.fin) || 0;
+                                        const origDeb = entier(action.deb) || 0;
+                                        const origFin = entier(action.fin) || 0;
                                         // Apply time shifts from escamotage/adaptatif
                                         // Pass action type to exclude "Seconde lucarne" from group shift
                                         const shifted = getShiftedActionPosition(origDeb, origFin, group.id, action.action, null, action.id);
@@ -990,7 +1061,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                                 // deb >= t décalé — déjà calculée par getShiftedActionPosition).
                                                 const greenStartOrig = group.offset;
                                                 const greenEndOrig = group.offset + group.durations.green;
-                                                const restPointStretchesGreen = simulationResult.restPoints?.some(rp =>
+                                                const restPointStretchesGreen = simulationResult?.restPoints?.some(rp =>
                                                     rp.originalDeb >= greenStartOrig && rp.originalDeb <= greenEndOrig
                                                 );
 
@@ -998,8 +1069,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                                 let straddlesZone = false;
                                                 for (const zone of braceZoneRanges) {
                                                     if (zone.isPartial) {
-                                                        const gId = parseInt(group.id);
-                                                        if (gId < zone.plage1 || gId > zone.plage2) continue;
+                                                        const gId = group.id;
+                                                        if (gId < (zone.plage1 ?? 0) || gId > (zone.plage2 ?? 0)) continue;
                                                     }
                                                     // La fermeture chevauche la zone : début avant, fin dans ou après
                                                     if (origDeb < zone.rawDeb && origFin > zone.rawDeb) {
@@ -1025,8 +1096,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             for (const zone of braceZoneRanges) {
                                                 // Seules les zones partielles tronquent les accolades
                                                 if (!zone.isPartial) continue;
-                                                const gId = parseInt(group.id);
-                                                if (gId < zone.plage1 || gId > zone.plage2) continue;
+                                                const gId = group.id;
+                                                if (gId < (zone.plage1 ?? 0) || gId > (zone.plage2 ?? 0)) continue;
                                                 if (zone.deb < zone.fin && fermetureStartPos < fermetureEndPos) {
                                                     if (fermetureStartPos < zone.deb && fermetureEndPos > zone.deb) {
                                                         // Début accolade < début zone : tronquer la fin au début de la zone
@@ -1274,11 +1345,11 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Adaptatif vertical overlays */}
                         {adaptatifActions.map((action, idx) => {
-                            const origDeb = parseInt(action.deb) || 0;
-                            const origFin = parseInt(action.fin) || 0;
+                            const origDeb = entier(action.deb) || 0;
+                            const origFin = entier(action.fin) || 0;
                             // Apply shift from other Escamotage de phase or Adaptatif vertical actions
-                            const plage1 = parseInt(action.plage1) || 0;
-                            const plage2 = parseInt(action.plage2) || 0;
+                            const plage1 = entier(action.plage1) || 0;
+                            const plage2 = entier(action.plage2) || 0;
                             const avPlage = (plage1 > 0 && plage2 > 0) ? { plage1, plage2 } : null;
                             const shifted = getShiftedActionPosition(origDeb, origFin, null, 'Adaptatif vertical', avPlage, action.id);
                             if (shifted.hidden) return null;
@@ -1391,9 +1462,9 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Fermeture anticipée arrows */}
                         {fermetureActions.map((action, idx) => {
-                            const sourceGf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                            const origDeb = parseInt(action.deb) || 0;
-                            const fin = parseInt(action.fin) || 0;
+                            const sourceGf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const origDeb = entier(action.deb) || 0;
+                            const fin = entier(action.fin) || 0;
 
                             // Check if overlay is hidden (e.g. within AV zone)
                             if (simulationResult) {
@@ -1406,19 +1477,19 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                             // Get target groups from ActGF1, ActGF2, ActGF3, ActGF4
                             const targets = [];
                             if (action.actGf1) {
-                                const targetId = parseInt(action.actGf1.toString().replace(/[Gg]/g, '').trim());
+                                const targetId = entier(action.actGf1.toString().replace(/[Gg]/g, '').trim());
                                 if (targetId) targets.push(targetId);
                             }
                             if (action.actGf1Gf2) {
-                                const targetId = parseInt(action.actGf1Gf2.toString().replace(/[Gg]/g, '').trim());
+                                const targetId = entier(action.actGf1Gf2.toString().replace(/[Gg]/g, '').trim());
                                 if (targetId) targets.push(targetId);
                             }
                             if (action.actGf1Gf3) {
-                                const targetId = parseInt(action.actGf1Gf3.toString().replace(/[Gg]/g, '').trim());
+                                const targetId = entier(action.actGf1Gf3.toString().replace(/[Gg]/g, '').trim());
                                 if (targetId) targets.push(targetId);
                             }
                             if (action.actGf1Gf4) {
-                                const targetId = parseInt(action.actGf1Gf4.toString().replace(/[Gg]/g, '').trim());
+                                const targetId = entier(action.actGf1Gf4.toString().replace(/[Gg]/g, '').trim());
                                 if (targetId) targets.push(targetId);
                             }
 
@@ -1429,7 +1500,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                 // Check if target group (Action GF) overlaps with source group (GF)
                                 // Get source group green period
                                 const sourceGroup = groups.find(g => g.id === sourceGf);
-                                const targetGroup = groups.find(g => g.id === parseInt(targetGf));
+                                const targetGroup = groups.find(g => g.id === targetGf);
                                 if (!sourceGroup || !targetGroup) return null;
 
                                 // Skip if source group is escamoted or has no green duration
@@ -1474,6 +1545,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                 const sourceY = getGroupRowY(sourceGf);
                                 const targetY = getGroupRowY(targetGf);
                                 if (sourceY === null || targetY === null) return null;
+                                if (sourceEnd === null || targetPos === null) return null;
                                 // Use the group's actual end position (already accounts for simulation)
                                 // This ensures the arrow follows the group's green bar end, not just the action's fin value
                                 const sourceX = sourceEnd * pixelsPerSecond;
@@ -1581,8 +1653,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Escamotage de phase overlays */}
                         {escamotageActions.map((action, idx) => {
-                            const origDeb = parseInt(action.deb) || 0;
-                            const origFin = parseInt(action.fin) || 0;
+                            const origDeb = entier(action.deb) || 0;
+                            const origFin = entier(action.fin) || 0;
                             // Apply shift from other Escamotage de phase or Adaptatif vertical actions
                             const shifted = getShiftedActionPosition(origDeb, origFin, null, 'Escamotage de phase', null, action.id);
                             if (shifted.hidden) return null;
@@ -1687,8 +1759,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Escamotage (group-specific) with arrows */}
                         {escamotageGroupActions.map((action, idx) => {
-                            const sourceGfId = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                            const targetGfId = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const sourceGfId = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
                             const isHighlighted = hoveredActionId === action.id;
                             const hasTarget = targetGfId > 0 && targetGfId <= groups.length;
 
@@ -1718,8 +1790,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                             if (hasTarget && targetGroup) {
                                 // Get intergreen times from conflict matrix
-                                const intergreenSourceToTarget = conflictMatrix[sourceGfId - 1]?.[targetGfId - 1] || 0;
-                                const intergreenTargetToSource = conflictMatrix[targetGfId - 1]?.[sourceGfId - 1] || 0;
+                                const intergreenSourceToTarget = Number(conflictMatrix[sourceGfId - 1]?.[targetGfId - 1] || 0);
+                                const intergreenTargetToSource = Number(conflictMatrix[targetGfId - 1]?.[sourceGfId - 1] || 0);
 
                                 // Y positions (center of each row)
                                 sourceY = RULER_HEIGHT + 1 + (sourceGroupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
@@ -1745,8 +1817,8 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                             } else {
                                 // No target defined - show rectangle on source group
                                 // If deb/fin are specified, use them (e.g. for seconde lucarne); otherwise use green phase
-                                const actionDeb = action.deb !== '' ? parseInt(action.deb) : null;
-                                const actionFin = action.fin !== '' ? parseInt(action.fin) : null;
+                                const actionDeb = action.deb !== '' ? entier(action.deb) : null;
+                                const actionFin = action.fin !== '' ? entier(action.fin) : null;
                                 if (actionDeb !== null && actionFin !== null && !isNaN(actionDeb) && !isNaN(actionFin)) {
                                     rectX = actionDeb * pixelsPerSecond;
                                     rectWidth = (actionFin > actionDeb ? actionFin - actionDeb : (cycleLength - actionDeb + actionFin)) * pixelsPerSecond;
@@ -1858,9 +1930,9 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Signa d'aide à la conduite overlays */}
                         {signaActions.map((action, idx) => {
-                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                            const rawDeb = parseInt(action.deb) || 0;
-                            const rawFin = parseInt(action.fin) || 0;
+                            const gf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = entier(action.deb) || 0;
+                            const rawFin = entier(action.fin) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -1930,7 +2002,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             top: `${topPos}px`,
                                             height: `${height}px`,
                                             '--stripe-width': `${stripeWidth}px`
-                                        }}
+                                        } as CSSProperties}
                                     />
                                     {/* Blue bar at end (last 5s) */}
                                     <div
@@ -1949,9 +2021,9 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Contrôle de flot overlays */}
                         {controleFlotActions.map((action, idx) => {
-                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                            const deb = parseInt(action.deb) || 0;
-                            const fin = parseInt(action.fin) || 0;
+                            const gf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const deb = entier(action.deb) || 0;
+                            const fin = entier(action.fin) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -2030,7 +2102,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                                 top: `${topPos}px`,
                                                 height: `${height}px`,
                                                 '--stripe-width': `${stripeWidth}px`
-                                            }}
+                                            } as CSSProperties}
                                         />
                                     )}
                                     {/* Orange/Yellow solid bar (orange duration) */}
@@ -2064,9 +2136,9 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Point de repos arrows - vertical red arrows */}
                         {pointReposActions.map((action, idx) => {
-                            const rawDeb = parseInt(action.deb) || 0;
-                            const plage1 = parseInt(action.plage1) || 0;
-                            const plage2 = parseInt(action.plage2) || 0;
+                            const rawDeb = entier(action.deb) || 0;
+                            const plage1 = entier(action.plage1) || 0;
+                            const plage2 = entier(action.plage2) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -2194,9 +2266,9 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Synchro BTS arrows - vertical blue arrows */}
                         {synchroBtsActions.map((action, idx) => {
-                            const rawDeb = parseInt(action.deb) || 0;
-                            const plage1 = parseInt(action.plage1) || 0;
-                            const plage2 = parseInt(action.plage2) || 0;
+                            const rawDeb = entier(action.deb) || 0;
+                            const plage1 = entier(action.plage1) || 0;
+                            const plage2 = entier(action.plage2) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -2322,9 +2394,9 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Instant Co arrows - vertical orange arrows */}
                         {instantCoActions.map((action, idx) => {
-                            const rawDeb = parseInt(action.deb) || 0;
-                            const plage1 = parseInt(action.plage1) || 0;
-                            const plage2 = parseInt(action.plage2) || 0;
+                            const rawDeb = entier(action.deb) || 0;
+                            const plage1 = entier(action.plage1) || 0;
+                            const plage2 = entier(action.plage2) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -2450,9 +2522,9 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Priorité piétons - intermittent yellow bar */}
                         {prioritePietonsActions.map((action, idx) => {
-                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                            const rawDeb = parseInt(action.deb) || 0;
-                            const rawFin = parseInt(action.fin) || 0;
+                            const gf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = entier(action.deb) || 0;
+                            const rawFin = entier(action.fin) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -2481,7 +2553,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                             const stripeWidth = pixelsPerSecond;
 
                             // Common style for the yellow intermittent bar
-                            const barStyle = (left, width) => ({
+                            const barStyle = (left: number, width: number): CSSProperties => ({
                                 position: 'absolute',
                                 left: `${left}px`,
                                 width: `${width}px`,
@@ -2614,9 +2686,9 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Flèche d'anticipation - intermittent yellow bar (same as Priorité piétons) */}
                         {flecheAnticipationActions.map((action, idx) => {
-                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                            const rawDeb = parseInt(action.deb) || 0;
-                            const rawFin = parseInt(action.fin) || 0;
+                            const gf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = entier(action.deb) || 0;
+                            const rawFin = entier(action.fin) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -2643,7 +2715,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                             const stripeWidth = pixelsPerSecond;
 
                             // Common style for the yellow intermittent bar
-                            const barStyle = (left, width) => ({
+                            const barStyle = (left: number, width: number): CSSProperties => ({
                                 position: 'absolute',
                                 left: `${left}px`,
                                 width: `${width}px`,
@@ -2794,7 +2866,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                             const stripeWidth = pixelsPerSecond;
 
                             // Common style for the yellow intermittent bar
-                            const barStyle = (left, width) => ({
+                            const barStyle = (left: number, width: number): CSSProperties => ({
                                 position: 'absolute',
                                 left: `${left}px`,
                                 width: `${width}px`,
@@ -2849,10 +2921,10 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Début de bande passante arrows - dashed green diagonal arrows */}
                         {debutBandeActions.map((action, idx) => {
-                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                            const rawDeb = parseInt(action.deb) || 0;
-                            const rawFin = parseInt(action.fin) || 0;
-                            const actGf1 = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const gf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = entier(action.deb) || 0;
+                            const rawFin = entier(action.fin) || 0;
+                            const actGf1 = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -2978,10 +3050,10 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                         {/* Fin de bande passante arrows - dashed red diagonal arrows */}
                         {finBandeActions.map((action, idx) => {
-                            const gf = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                            const rawDeb = parseInt(action.deb) || 0;
-                            const rawFin = parseInt(action.fin) || 0;
-                            const actGf1 = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const gf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                            const rawDeb = entier(action.deb) || 0;
+                            const rawFin = entier(action.fin) || 0;
+                            const actGf1 = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
                             const abrv = action.abrv || '';
                             const isHighlighted = hoveredActionId === action.id;
 
@@ -3177,7 +3249,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         // If hoveredConflict is active but doesn't match this pair, hide the arrow
                                         if (hoveredConflict && !showForConflict) return null;
 
-                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        const intergreenTime = Number(conflictMatrix[fromId - 1]?.[toId - 1] || 0);
                                         if (intergreenTime <= 0) return null;
 
                                         // Determine if this arrow is a conflict (from matrix hover)
@@ -3265,11 +3337,11 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                                 {/* Arrows from Seconde lucarne phases */}
                                 {actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.fin !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((lucarne, lIdx) => {
-                                    const fromId = parseInt(lucarne.gf);
+                                    const fromId = entier(lucarne.gf);
                                     const fromIndex = groups.findIndex(g => g.id === fromId);
                                     if (fromIndex === -1) return null;
 
-                                    const lucarneEnd = parseInt(lucarne.fin) || 0;
+                                    const lucarneEnd = entier(lucarne.fin) || 0;
                                     const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
                                     const fromX = lucarneEnd * pixelsPerSecond;
 
@@ -3286,7 +3358,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         // If hoveredConflict is active but doesn't match this pair, hide the arrow
                                         if (hoveredConflict && !showForConflict) return null;
 
-                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        const intergreenTime = Number(conflictMatrix[fromId - 1]?.[toId - 1] || 0);
                                         if (intergreenTime <= 0) return null;
 
                                         const toOffset = toGroup.offset % cycleLength;
@@ -3351,16 +3423,16 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                                 {/* Arrows from Seconde lucarne to other Seconde lucarne */}
                                 {actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.fin !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((fromLucarne, fromLIdx) => {
-                                    const fromId = parseInt(fromLucarne.gf);
+                                    const fromId = entier(fromLucarne.gf);
                                     const fromIndex = groups.findIndex(g => g.id === fromId);
                                     if (fromIndex === -1) return null;
 
-                                    const fromLucarneEnd = parseInt(fromLucarne.fin) || 0;
+                                    const fromLucarneEnd = entier(fromLucarne.fin) || 0;
                                     const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
                                     const fromX = fromLucarneEnd * pixelsPerSecond;
 
                                     return actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.deb !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((toLucarne, toLIdx) => {
-                                        const toId = parseInt(toLucarne.gf);
+                                        const toId = entier(toLucarne.gf);
                                         if (fromId === toId) return null;
                                         if (fromLIdx === toLIdx) return null;
 
@@ -3373,13 +3445,13 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         // If hoveredConflict is active but doesn't match this pair, hide the arrow
                                         if (hoveredConflict && !showForConflict) return null;
 
-                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        const intergreenTime = Number(conflictMatrix[fromId - 1]?.[toId - 1] || 0);
                                         if (intergreenTime <= 0) return null;
 
                                         const toIndex = groups.findIndex(g => g.id === toId);
                                         if (toIndex === -1) return null;
 
-                                        const toLucarneDeb = parseInt(toLucarne.deb) || 0;
+                                        const toLucarneDeb = entier(toLucarne.deb) || 0;
 
                                         // Calculate gap between end of fromLucarne and start of toLucarne
                                         let gap = (toLucarneDeb - fromLucarneEnd + cycleLength) % cycleLength;
@@ -3448,7 +3520,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     const fromX = fromGreenEnd * pixelsPerSecond;
 
                                     return actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.deb !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((toLucarne, toLIdx) => {
-                                        const toId = parseInt(toLucarne.gf);
+                                        const toId = entier(toLucarne.gf);
                                         if (fromId === toId) return null;
 
                                         // Check if this arrow matches the hovered conflict (exact direction only)
@@ -3460,13 +3532,13 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         // If hoveredConflict is active but doesn't match this pair, hide the arrow
                                         if (hoveredConflict && !showForConflict) return null;
 
-                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        const intergreenTime = Number(conflictMatrix[fromId - 1]?.[toId - 1] || 0);
                                         if (intergreenTime <= 0) return null;
 
                                         const toIndex = groups.findIndex(g => g.id === toId);
                                         if (toIndex === -1) return null;
 
-                                        const toLucarneDeb = parseInt(toLucarne.deb) || 0;
+                                        const toLucarneDeb = entier(toLucarne.deb) || 0;
 
                                         // Calculate gap between end of main green and start of lucarne
                                         let gap = (toLucarneDeb - fromGreenEnd + cycleLength) % cycleLength;
@@ -3528,16 +3600,16 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
 
                                 {/* Arrows from Seconde lucarne to Seconde lucarne (end to start) */}
                                 {actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.fin !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((fromLucarne, fromLIdx) => {
-                                    const fromId = parseInt(fromLucarne.gf);
+                                    const fromId = entier(fromLucarne.gf);
                                     const fromIndex = groups.findIndex(g => g.id === fromId);
                                     if (fromIndex === -1) return null;
 
-                                    const fromLucarneEnd = parseInt(fromLucarne.fin) || 0;
+                                    const fromLucarneEnd = entier(fromLucarne.fin) || 0;
                                     const fromRowY = RULER_HEIGHT + 1 + (fromIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
                                     const fromX = fromLucarneEnd * pixelsPerSecond;
 
                                     return actionData.filter(a => a.action === 'Seconde lucarne' && a.gf && a.deb !== '' && (!simulationFilter || simulationFilter.has(a.id))).map((toLucarne, toLIdx) => {
-                                        const toId = parseInt(toLucarne.gf);
+                                        const toId = entier(toLucarne.gf);
                                         if (fromId === toId) return null;
                                         if (fromLIdx === toLIdx) return null;
 
@@ -3550,13 +3622,13 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                         // If hoveredConflict is active but doesn't match this pair, hide the arrow
                                         if (hoveredConflict && !showForConflict) return null;
 
-                                        const intergreenTime = conflictMatrix[fromId - 1]?.[toId - 1] || 0;
+                                        const intergreenTime = Number(conflictMatrix[fromId - 1]?.[toId - 1] || 0);
                                         if (intergreenTime <= 0) return null;
 
                                         const toIndex = groups.findIndex(g => g.id === toId);
                                         if (toIndex === -1) return null;
 
-                                        const toLucarneDeb = parseInt(toLucarne.deb) || 0;
+                                        const toLucarneDeb = entier(toLucarne.deb) || 0;
 
                                         // Calculate gap between end of fromLucarne and start of toLucarne
                                         let gap = (toLucarneDeb - fromLucarneEnd + cycleLength) % cycleLength;
@@ -3679,7 +3751,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                             const content = e.currentTarget.textContent || '';
                                             if (content) {
                                                 // Check if content is already entirely wrapped in a colored span
-                                                const firstChild = e.currentTarget.firstChild;
+                                                const firstChild = e.currentTarget.firstChild as HTMLElement | null;
                                                 const isEntirelyColored = firstChild &&
                                                     firstChild.nodeType === 1 &&
                                                     firstChild.tagName === 'SPAN' &&
@@ -3707,7 +3779,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                 {showRemarks && !remarquesDetached && (
                     <RemarquesEditor
                         remarques={remarques}
-                        updateRemarques={updateRemarques}
+                        updateRemarques={updateRemarques ?? undefined}
                         groupCount={groups.length}
                     />
                 )}

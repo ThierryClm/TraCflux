@@ -1,4 +1,5 @@
-import TimelineDiagramImplementation from '../TimelineDiagram';
+import TimelineDiagram from '../TimelineDiagram';
+import type { TimelineDiagramProps } from '../TimelineDiagram';
 import PhasageBulle from '../PhasageBulle';
 import IntersectionImage from '../IntersectionImage';
 import type { IntersectionImageProps } from '../IntersectionImage';
@@ -39,15 +40,14 @@ interface WorkspaceMainModel {
     currentRemarques: string;
     cycleLength: number;
     cycleLengthInput: string;
-    cycleSimulationSpeed: number;
+    cycleSimulationSpeed: () => void;
     dependencyGap: number;
     diagramAreaRef: RefObject<HTMLElement>;
     diagramHeight: number | null;
-    displayConflicts: unknown[];
+    displayConflicts: TimelineDiagramProps['conflicts'];
     dossierReadOnly: boolean;
     draggedTabIndex: number | null;
     endDrag: Callback;
-    getGroupState: (...args: unknown[]) => unknown;
     globalTime: number;
     groups: Groupe[];
     handleActionPanelResize: Callback;
@@ -57,10 +57,10 @@ interface WorkspaceMainModel {
     hoveredActionId: number | null;
     hoveredArrowGroupId: number | null;
     hoveredArrowGroupSaturated: boolean;
-    hoveredConflict: unknown;
+    hoveredConflict: TimelineDiagramProps['hoveredConflict'];
     hoveredDiagramTime: number | null;
     hoveredPhasageGroupId: number | null;
-    hoveredVUtile: unknown;
+    hoveredVUtile: TimelineDiagramProps['hoveredVUtile'];
     imageBrightness: number;
     imageContrast: number;
     imageFondClair: boolean;
@@ -154,14 +154,13 @@ interface WorkspaceMainProps {
     model: WorkspaceMainModel;
 }
 
-const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
 
 export default function WorkspaceMain({ model }: WorkspaceMainProps) {
     const {
         actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
         biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
         cycleLengthInput, cycleSimulationSpeed, dependencyGap, diagramAreaRef, diagramHeight,
-        displayConflicts, dossierReadOnly, draggedTabIndex, endDrag, getGroupState,
+        displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
         helpZoneRef, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict,
         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
@@ -302,7 +301,6 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 readOnly={dossierReadOnly || activePfReadOnly}
                                 groups={groups}
                                 globalTime={globalTime}
-                                getGroupState={getGroupState}
                                 onGroupClick={(g: Groupe) => setSelectedGroupId(g.id)}
                                 pixelsPerSecond={pixelsPerSecond}
                                 conflicts={displayConflicts}

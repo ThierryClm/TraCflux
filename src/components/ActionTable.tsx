@@ -248,7 +248,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
 
     // showFloatingConditions and showFloatingVariables are now passed as props
 
-    // Compute visible micro fields: filled fields + 1 empty, max MAX_MICRO_FIELDS=60 (aligne sur la limite de stockage dans useTrafficLight.js)
+    // Compute visible micro fields: filled fields + 1 empty, max MAX_MICRO_FIELDS=60 (aligne sur la limite de stockage dans useTrafficLight.ts)
     const visibleMicroFields = useMemo(() => {
         const lastFilledIndex = microCustomFields.reduce((acc, f, i) => f !== '' ? i : acc, -1);
         // Show all filled fields + 1 empty field (min 1 field shown)

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import type { ActionMicro, Groupe } from '../../types/projet';
+import type { ActionMicro, CaseMatrice, Groupe } from '../../types/projet';
+import type { TrafficConflict } from '../../utils/conflictUtils';
 
 type DragHandleType = 'start' | 'end';
 type ActionTimeField = 'deb' | 'fin';
-type ConflictCell = number | '' | null | undefined;
+type ConflictCell = CaseMatrice | null | undefined;
 
 interface LinkedBandwidthAction {
     id: ActionMicro['id'];
@@ -57,7 +58,7 @@ interface CalculateDragConflictsOptions {
 interface UseTimelineDragOptions {
     actionData: ActionMicro[];
     conflictMatrix: ConflictCell[][];
-    conflicts: TimelineConflict[];
+    conflicts: TrafficConflict[];
     cycleLength: number;
     endDrag?: () => void;
     groups: Groupe[];
@@ -185,11 +186,11 @@ export const useTimelineDrag = ({
 }: UseTimelineDragOptions) => {
     const [dragState, setDragState] = useState<TimelineDragState | null>(null);
 
-    const handleStartChange = useCallback((id: number, value: string) => {
+    const handleStartChange = useCallback((id: number, value: string | number) => {
         const group = groups.find(candidate => candidate.id === id);
         if (!group) return;
 
-        const newStart = parseInt(value) || 0;
+        const newStart = parseInt(String(value)) || 0;
         const oldStart = group.offset % cycleLength;
         const oldEnd = (oldStart + group.durations.green) % cycleLength;
         let newDuration = oldEnd - newStart;
@@ -201,8 +202,8 @@ export const useTimelineDrag = ({
         });
     }, [cycleLength, groups, updateGroupParams]);
 
-    const handleEndChange = useCallback((id: number, endValue: string, startValue: number) => {
-        let duration = (parseInt(endValue) || 0) - startValue;
+    const handleEndChange = useCallback((id: number, endValue: string | number, startValue: number) => {
+        let duration = (parseInt(String(endValue)) || 0) - startValue;
         if (duration < 0) duration += cycleLength;
         updateGroupParams(id, { durations: { green: Math.max(0, duration) } });
     }, [cycleLength, updateGroupParams]);
