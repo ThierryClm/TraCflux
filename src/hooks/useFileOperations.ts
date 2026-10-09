@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { safeShowOpenFilePicker, safeShowSaveFilePicker } from '../utils/filePicker';
+import { writeTextToFileHandle } from '../utils/writeFileHandle';
 import { toast } from '../utils/toast';
 import { validateProject } from '../utils/projectValidator';
 import { selectPfSubset } from '../utils/pfHelpers';
@@ -520,9 +521,7 @@ const useFileOperations = ({
 
             // Écrire le fichier
             const jsonContent = JSON.stringify(projectData, null, 2);
-            const writable = await fileHandle.createWritable();
-            await writable.write(jsonContent);
-            await writable.close();
+            await writeTextToFileHandle(fileHandle, jsonContent);
 
             // Vérifier que le fichier n'est pas vide après sauvegarde
             try {
@@ -619,9 +618,7 @@ const useFileOperations = ({
 
             // Écrire le fichier
             const jsonContent = JSON.stringify(projectData, null, 2);
-            const writable = await fileHandle.createWritable();
-            await writable.write(jsonContent);
-            await writable.close();
+            await writeTextToFileHandle(fileHandle, jsonContent);
 
             // Vérifier que le fichier n'est pas vide après sauvegarde
             try {
@@ -723,9 +720,7 @@ const useFileOperations = ({
             };
             if (lastSaveDirectoryRef.current) options.startIn = lastSaveDirectoryRef.current;
             const fileHandle = await safeShowSaveFilePicker(options);
-            const writable = await fileHandle.createWritable();
-            await writable.write(jsonContent);
-            await writable.close();
+            await writeTextToFileHandle(fileHandle, jsonContent);
             toast.success(`Extrait exporté : ${nb} plan${nb > 1 ? 's' : ''} de feux${roSuffix}`);
         } catch (e) {
             if (e.name !== 'AbortError') {
