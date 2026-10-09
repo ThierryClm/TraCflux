@@ -158,7 +158,7 @@ export interface Projet {
     pfTabs: PlanDeFeu[];
     activePFId: number;
     intersectionImage?: string | null;
-    intersectionArrows?: Record<string, unknown>[];
+    intersectionArrows?: FlecheCarrefour[];
     imageBrightness?: number;
     imageContrast?: number;
     trafficDatasets?: Record<string, JeuTrafic>;

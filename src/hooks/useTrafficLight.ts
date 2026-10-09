@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { MutableRefObject, SetStateAction } from 'react';
 import {
     DEFAULT_CYCLE,
     MAX_PF,
@@ -16,11 +17,106 @@ import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
 import { buildTrafficDatasetNames, trafficDatasetHasData } from '../utils/trafficHelpers';
+import type { TrafficConflict } from '../utils/conflictUtils';
+import type { AlertFunction, ConfirmFunction } from '../components/ConfirmProvider';
+import type { LargeursColonnes } from '../components/ActionTable';
+import type {
+    ActionMicro,
+    CaseMatrice,
+    Durees,
+    FlecheCarrefour,
+    Groupe,
+    JeuTrafic,
+    LigneDiagramme,
+    Matrice,
+    PlanDeFeu,
+    Projet,
+    TypeGroupe
+} from '../types/projet';
 const MAX_HISTORY_SIZE = 50;
+
+/** Jeux de trafic du projet, indexés par nom (HPM, HPS…). */
+export type JeuxTrafic = Record<string, JeuTrafic>;
+
+/** Propriétés administratives du projet (fenêtre « Propriétés »). */
+export type ProprietesProjet = typeof DEFAULT_PROJECT_PROPERTIES;
+
+/**
+ * Groupe tel qu'un ancien projet a pu l'enregistrer : durées parfois posées
+ * à plat sur le groupe, champs parfois absents.
+ */
+type GroupeEnregistre = Partial<Omit<Groupe, 'durations' | 'id'>> & {
+    id: number;
+    durations?: Partial<Durees> | null;
+    green?: number;
+    orange?: number;
+    red?: number;
+    greenDuration?: number;
+};
+
+/** Projet relu du cache ou d'un fichier, avant toute normalisation. */
+export type ProjetEnregistre = Omit<Partial<Projet>, 'groups'> & {
+    groups?: GroupeEnregistre[];
+    /** Format d'avant les plans de feux : une seule table d'actions. */
+    actionData?: ActionMicro[];
+};
+
+/** Modification partielle d'un groupe ; les durées peuvent n'être que partielles. */
+export type ParametresGroupe = Partial<Omit<Groupe, 'durations'>> & { durations?: Partial<Durees> };
+
+/** Projet complet au format actuel, tel que loadFullState le reçoit. */
+export type EtatProjet = Partial<Projet> & {
+    /** Format d'avant les plans de feux : une seule table d'actions. */
+    actionData?: ActionMicro[];
+};
+
+/** Instantané pris avant une modification, pour Annuler / Rétablir. */
+interface EtatHistorique {
+    groups: Groupe[];
+    conflictMatrix: Matrice;
+    pfTabs?: PlanDeFeu[];
+    activePFId: number;
+    cycleLength: number;
+    intersectionName: string;
+    /** Format d'historique d'avant les plans de feux. */
+    actionData?: ActionMicro[];
+}
+
+/** Entrée de la liste « Restaurer un projet récent ». */
+export interface SauvegardeCache {
+    name: string;
+    savedAt: string | null;
+    size: number;
+}
+
+/**
+ * Champs de projet tenus par d'autres modules : `lire` les fournit à
+ * l'enregistrement, `ecrire` les leur rend à l'ouverture.
+ */
+export interface ChampsProjet {
+    lire?: () => Record<string, unknown>;
+    ecrire?: (data: ProjetEnregistre) => void;
+}
+
+export interface UseTrafficLightOptions {
+    askConfirm?: ConfirmFunction;
+    showAlert?: AlertFunction;
+    champsProjetRef?: MutableRefObject<ChampsProjet>;
+}
+
+/** Champs d'une condition qui désignent un groupe de feu par son numéro. */
+const CHAMPS_GF: ('gf' | 'plage1' | 'plage2' | 'actGf1' | 'actGf1Gf2' | 'actGf1Gf3' | 'actGf1Gf4')[] = ['gf', 'plage1', 'plage2', 'actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'];
+
+/** parseInt d'une valeur saisie, quel que soit son type ; NaN si vide. */
+const entier = (v: unknown) => parseInt(String(v), 10);
+
+/** Un groupe piéton ou cycliste admet un intervert de 0 s ; les autres, 3 s. */
+const intervertMinimal = (groupe: Pick<Groupe, 'type'> | GroupeEnregistre | undefined) =>
+    (groupe && (groupe.type === 'Piéton' || groupe.type === 'P' || groupe.type === 'Cycliste' || groupe.type === 'CY')) ? 0 : 3;
 
 // Safe localStorage helper to prevent QuotaExceededError crashes
 const safeLocalStorage = {
-    setItem: (key, value) => {
+    setItem: (key: string, value: string) => {
         try {
             localStorage.setItem(key, value);
             return true;
@@ -33,8 +129,8 @@ const safeLocalStorage = {
             throw e;
         }
     },
-    getItem: (key) => localStorage.getItem(key),
-    removeItem: (key) => localStorage.removeItem(key)
+    getItem: (key: string) => localStorage.getItem(key),
+    removeItem: (key: string) => localStorage.removeItem(key)
 };
 
 // Clés d'une ancienne mécanique de cache, remplacée par la sérialisation
@@ -76,7 +172,8 @@ const getLocalStorageUsage = () => {
     let total = 0;
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        const value = localStorage.getItem(key);
+        if (key === null) continue;
+        const value = localStorage.getItem(key) ?? '';
         // Each character is 2 bytes in JavaScript (UTF-16)
         total += (key.length + value.length) * 2;
     }
@@ -90,8 +187,8 @@ const freeUpLocalStorage = (targetBytes = 1000000) => {
     if (!orderRaw) return freedBytes;
 
     try {
-        const order = JSON.parse(orderRaw);
-        const projectsToRemove = [];
+        const order: string[] = JSON.parse(orderRaw);
+        const projectsToRemove: string[] = [];
 
         // Start from the end (oldest projects)
         for (let i = order.length - 1; i >= 0 && freedBytes < targetBytes; i--) {
@@ -138,7 +235,7 @@ const freeUpLocalStorage = (targetBytes = 1000000) => {
 // on peut les supprimer sans risque. Renvoie l'espace libéré en octets UTF-16.
 const removeOrphanBackups = () => {
     let freed = 0;
-    const orphanKeys = [];
+    const orphanKeys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (!key || !key.startsWith('traffic_project_') || !key.endsWith('_backup')) continue;
@@ -205,13 +302,13 @@ const createEmptyTrafficData = () => ({
  *   cases à cocher de l'impression, par exemple. C'est une réf parce que ces
  *   modules sont créés APRÈS celui-ci ; elle n'est lue qu'au moment d'enregistrer.
  */
-export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {}) => {
+export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseTrafficLightOptions = {}) => {
     // Fallback : si showAlert n'est pas fourni, on retombe sur window.alert
-    const alertFn = showAlert || (({ message }) => { window.alert(message); return Promise.resolve(); });
+    const alertFn: AlertFunction = showAlert || (({ message }) => { window.alert(message); return Promise.resolve(); });
     const [intersectionName, setIntersectionName] = useState("Nouveau Carrefour");
-    const [cycleLength, setCycleLength] = useState(DEFAULT_CYCLE);
+    const [cycleLength, setCycleLength] = useState<number>(DEFAULT_CYCLE);
     const [dependencyGap, setDependencyGap] = useState(20);
-    const [biCarrefourSeparator, setBiCarrefourSeparator] = useState(null);
+    const [biCarrefourSeparator, setBiCarrefourSeparator] = useState<number | null>(null);
     const [matricesLocked, setMatricesLocked] = useState(false);
     // Dossier en lecture seule (ouvert depuis un export « lecture seule »).
     // Verrou de CONVENTION : bloque la persistance (sauvegarde + autosave) et,
@@ -228,14 +325,14 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     // Largeurs (px) ajustables des colonnes Description et Action_Micro du
     // tableau de micro-régulation. Reglage unique par projet, sauvegarde.
     // Bornes a la restauration : Desc 100-350, Micro 300-700, Abrv 38-75.
-    const [actionColWidths, setActionColWidths] = useState({ description: 160, micro: 420, abrv: 38 });
-    const [externalLinks, setExternalLinks] = useState([]);
+    const [actionColWidths, setActionColWidths] = useState<LargeursColonnes>({ description: 160, micro: 420, abrv: 38 });
+    const [externalLinks, setExternalLinks] = useState<Record<string, unknown>[]>([]);
     // Sélection mémorisée du comparateur de capacité (fenêtre « Comparer la
     // capacité des plans de feu ») : liste d'id de PF cochés (null = tous par
     // défaut) et jeu de trafic choisi ('__per_pf__' = jeu associé à chaque PF).
-    const [capacityCompareSelection, setCapacityCompareSelection] = useState(null);
+    const [capacityCompareSelection, setCapacityCompareSelection] = useState<number[] | null>(null);
     const [capacityCompareDataset, setCapacityCompareDataset] = useState('__per_pf__');
-    const [projectProperties, setProjectProperties] = useState(() => {
+    const [projectProperties, setProjectProperties] = useState<ProprietesProjet>(() => {
         try {
             const saved = safeLocalStorage.getItem('trafficProjectProperties');
             if (saved) {
@@ -248,44 +345,44 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             return { ...DEFAULT_PROJECT_PROPERTIES };
         } catch { return { ...DEFAULT_PROJECT_PROPERTIES }; }
     });
-    const updateProjectProperty = useCallback((field, value) => {
+    const updateProjectProperty = useCallback(<K extends keyof ProprietesProjet>(field: K, value: ProprietesProjet[K]) => {
         if (isEditLocked()) return;
         setProjectProperties(prev => ({ ...prev, [field]: value }));
     }, []);
     // Registres globaux de l'application (partagés entre projets)
-    const [appCommunes, setAppCommunes] = useState(() => {
+    const [appCommunes, setAppCommunes] = useState<string[]>(() => {
         try {
             const saved = safeLocalStorage.getItem('trafficAppCommunes');
             return saved ? JSON.parse(saved) : [];
         } catch { return []; }
     });
-    const [appMoaLogos, setAppMoaLogos] = useState(() => {
+    const [appMoaLogos, setAppMoaLogos] = useState<Record<string, string>>(() => {
         try {
             const saved = safeLocalStorage.getItem('trafficAppMoaLogos');
             return saved ? JSON.parse(saved) : {};
         } catch { return {}; }
     });
-    const [appMoeLogos, setAppMoeLogos] = useState(() => {
+    const [appMoeLogos, setAppMoeLogos] = useState<Record<string, string>>(() => {
         try {
             const saved = safeLocalStorage.getItem('trafficAppMoeLogos');
             return saved ? JSON.parse(saved) : {};
         } catch { return {}; }
     });
     // Nom du projet (clé de sauvegarde), indépendant du nom du carrefour
-    const [projectName, setProjectName] = useState(null);
-    const currentProjectNameRef = useRef(null);
+    const [projectName, setProjectName] = useState<string | null>(null);
+    const currentProjectNameRef = useRef<string | null>(null);
     const [globalTime, setGlobalTime] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
 
     // History for undo/redo functionality
-    const [history, setHistory] = useState([]);
-    const [redoHistory, setRedoHistory] = useState([]);
+    const [history, setHistory] = useState<EtatHistorique[]>([]);
+    const [redoHistory, setRedoHistory] = useState<EtatHistorique[]>([]);
     const isUndoing = useRef(false);
     const isRedoing = useRef(false);
     const isDragging = useRef(false);
 
     // Groups State
-    const createGroup = (id) => ({
+    const createGroup = (id: number): Groupe => ({
         id,
         name: `Groupe ${id}`, // Default name
         type: 'VL', // VL, TC, Cycliste, Piéton
@@ -307,15 +404,15 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         queueLength: 0, // Ile d'attente
     });
 
-    const [groups, setGroups] = useState(() => Array.from({ length: 5 }, (_, i) => createGroup(i + 1)));
+    const [groups, setGroups] = useState<Groupe[]>(() => Array.from({ length: 5 }, (_, i) => createGroup(i + 1)));
 
     // Matrix: Size depends on number of groups.
     // We store as a URL-like generic object or always resize.
     // Let's keep it as 2D array, resizing when groups change.
-    const [conflictMatrix, setConflictMatrix] = useState(() => Array.from({ length: 5 }, () => Array(5).fill('')));
+    const [conflictMatrix, setConflictMatrix] = useState<Matrice>(() => Array.from({ length: 5 }, () => Array(5).fill('')));
 
-    const setGroupCountInternal = (count) => {
-        const newCount = Math.min(MAX_GROUPS, Math.max(1, parseInt(count) || 1));
+    const setGroupCountInternal = (count: number | string) => {
+        const newCount = Math.min(MAX_GROUPS, Math.max(1, entier(count) || 1));
 
         setGroups(prev => {
             const oldCount = prev.length;
@@ -326,23 +423,23 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                     return currentData.map(row => {
                         const updatedRow = { ...row };
                         // Update plage1, plage2 if they equal old count
-                        if (parseInt(row.plage1) === oldCount) {
+                        if (entier(row.plage1) === oldCount) {
                             updatedRow.plage1 = newCount.toString();
                         }
-                        if (parseInt(row.plage2) === oldCount) {
+                        if (entier(row.plage2) === oldCount) {
                             updatedRow.plage2 = newCount.toString();
                         }
                         // Update actGf1, actGf1Gf2, actGf1Gf3, actGf1Gf4 if they equal old count
-                        if (parseInt(row.actGf1?.toString().replace(/[Gg]/g, '').trim()) === oldCount) {
+                        if (entier(row.actGf1?.toString().replace(/[Gg]/g, '').trim()) === oldCount) {
                             updatedRow.actGf1 = newCount.toString();
                         }
-                        if (parseInt(row.actGf1Gf2?.toString().replace(/[Gg]/g, '').trim()) === oldCount) {
+                        if (entier(row.actGf1Gf2?.toString().replace(/[Gg]/g, '').trim()) === oldCount) {
                             updatedRow.actGf1Gf2 = newCount.toString();
                         }
-                        if (parseInt(row.actGf1Gf3?.toString().replace(/[Gg]/g, '').trim()) === oldCount) {
+                        if (entier(row.actGf1Gf3?.toString().replace(/[Gg]/g, '').trim()) === oldCount) {
                             updatedRow.actGf1Gf3 = newCount.toString();
                         }
-                        if (parseInt(row.actGf1Gf4?.toString().replace(/[Gg]/g, '').trim()) === oldCount) {
+                        if (entier(row.actGf1Gf4?.toString().replace(/[Gg]/g, '').trim()) === oldCount) {
                             updatedRow.actGf1Gf4 = newCount.toString();
                         }
                         return updatedRow;
@@ -365,7 +462,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
             // Resize matrix
             const newMatrix = Array.from({ length: newCount }, (_, r) => {
-                const row = new Array(newCount).fill('');
+                const row: CaseMatrice[] = new Array(newCount).fill('');
                 // Copy existing values
                 for (let c = 0; c < newCount; c++) {
                     if (r < currentSize && c < currentSize) {
@@ -379,7 +476,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     };
 
     // Swap group data and matrix, but keep GF IDs in place (G1 stays G1, G2 stays G2)
-    const moveGroup = (index, direction) => {
+    const moveGroup = (index: number, direction: 'up' | 'down') => {
         if (direction === 'up' && index === 0) return;
         if (direction === 'down' && index === groups.length - 1) return;
 
@@ -430,22 +527,21 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         });
 
         // 3. Swap GF references in ActionTable
-        const gfFields = ['gf', 'plage1', 'plage2', 'actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'];
-
-        setActionData(currentData => {
-            return currentData.map(row => {
-                const newRow = { ...row };
-                gfFields.forEach(field => {
-                    const val = parseInt(newRow[field]);
-                    if (val === gfA) {
-                        newRow[field] = gfB.toString();
-                    } else if (val === gfB) {
-                        newRow[field] = gfA.toString();
-                    }
-                });
-                return newRow;
+        // Permute les références aux deux groupes dans une condition.
+        const permuterGf = (row: ActionMicro): ActionMicro => {
+            const newRow = { ...row };
+            CHAMPS_GF.forEach(field => {
+                const val = entier(newRow[field]);
+                if (val === gfA) {
+                    newRow[field] = gfB.toString();
+                } else if (val === gfB) {
+                    newRow[field] = gfA.toString();
+                }
             });
-        });
+            return newRow;
+        };
+
+        setActionData(currentData => currentData.map(permuterGf));
 
         // 4. Swap diagram data in ALL PF tabs (not just the active one)
         setPfTabs(currentTabs => {
@@ -502,18 +598,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
                 // Swap GF references in action data if it exists
                 if (newPf.data && newPf.data.length > 0) {
-                    newPf.data = newPf.data.map(row => {
-                        const newRow = { ...row };
-                        gfFields.forEach(field => {
-                            const val = parseInt(newRow[field]);
-                            if (val === gfA) {
-                                newRow[field] = gfB.toString();
-                            } else if (val === gfB) {
-                                newRow[field] = gfA.toString();
-                            }
-                        });
-                        return newRow;
-                    });
+                    newPf.data = newPf.data.map(permuterGf);
                 }
 
                 return newPf;
@@ -524,7 +609,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     // Move a group to a new position (after another group)
     // sourceId: the ID of the group to move
     // afterId: the ID of the group after which to insert (0 = insert at beginning)
-    const moveGroupToPosition = (sourceId, afterId) => {
+    const moveGroupToPosition = (sourceId: number, afterId: number) => {
         const sourceIndex = groups.findIndex(g => g.id === sourceId);
         if (sourceIndex === -1) return;
 
@@ -546,8 +631,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         if (sourceIndex === targetIndex) return; // No change needed
 
         // Create mapping from old positions to new positions
-        const oldToNew = {};
-        const newToOld = {};
+        const oldToNew: Record<number, number> = {};
+        const newToOld: Record<number, number> = {};
 
         // Build the new order of groups
         const newGroups = [...groups];
@@ -577,7 +662,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             if (!currentMatrix || currentMatrix.length === 0) return currentMatrix;
 
             const size = currentMatrix.length;
-            const newMatrix = Array(size).fill(null).map(() => Array(size).fill(0));
+            const newMatrix: Matrice = Array(size).fill(null).map(() => Array(size).fill(0));
 
             // Copy values to new positions
             for (let oldRow = 0; oldRow < size; oldRow++) {
@@ -594,22 +679,22 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         });
 
         // 3. Update GF references in ActionTable
-        const gfFields = ['gf', 'plage1', 'plage2', 'actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'];
         const size = groups.length;
 
-        // Remap active PF tab data first
-        setActionData(currentData => {
-            return currentData.map(row => {
-                const newRow = { ...row };
-                gfFields.forEach(field => {
-                    const val = parseInt(newRow[field]);
-                    if (!isNaN(val) && val > 0 && val <= size) {
-                        newRow[field] = oldToNew[val].toString();
-                    }
-                });
-                return newRow;
+        // Renumérote les références aux groupes dans une condition.
+        const renumeroterGf = (row: ActionMicro): ActionMicro => {
+            const newRow = { ...row };
+            CHAMPS_GF.forEach(field => {
+                const val = entier(newRow[field]);
+                if (!isNaN(val) && val > 0 && val <= size) {
+                    newRow[field] = oldToNew[val].toString();
+                }
             });
-        });
+            return newRow;
+        };
+
+        // Remap active PF tab data first
+        setActionData(currentData => currentData.map(renumeroterGf));
 
         // 4. Update ALL PF tabs with reordered data
         setPfTabs(currentTabs => {
@@ -627,14 +712,15 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 // Reorder conflict matrix in PF if it exists
                 if (newPf.conflictMatrix && newPf.conflictMatrix.length > 0) {
                     const pfSize = newPf.conflictMatrix.length;
-                    const newMatrix = Array(pfSize).fill(null).map(() => Array(pfSize).fill(''));
+                    const newMatrix: Matrice = Array(pfSize).fill(null).map(() => Array(pfSize).fill(''));
+                    const source = newPf.conflictMatrix;
 
                     for (let oldRow = 0; oldRow < pfSize; oldRow++) {
                         for (let oldCol = 0; oldCol < pfSize; oldCol++) {
                             const newRow = oldToNew[oldRow + 1] - 1;
                             const newCol = oldToNew[oldCol + 1] - 1;
                             if (newRow >= 0 && newRow < pfSize && newCol >= 0 && newCol < pfSize) {
-                                newMatrix[newRow][newCol] = newPf.conflictMatrix[oldRow][oldCol];
+                                newMatrix[newRow][newCol] = source[oldRow][oldCol];
                             }
                         }
                     }
@@ -644,16 +730,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 // Update GF references in action data for non-active tabs
                 // (active tab already handled by setActionData above)
                 if (pf.id !== activePFId && newPf.data && newPf.data.length > 0) {
-                    newPf.data = newPf.data.map(row => {
-                        const newRow = { ...row };
-                        gfFields.forEach(field => {
-                            const val = parseInt(newRow[field]);
-                            if (!isNaN(val) && val > 0 && val <= size) {
-                                newRow[field] = oldToNew[val].toString();
-                            }
-                        });
-                        return newRow;
-                    });
+                    newPf.data = newPf.data.map(renumeroterGf);
                 }
 
                 return newPf;
@@ -662,12 +739,12 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
         // 5. Reorder traffic datasets (keyed by groupId)
         setTrafficDatasets(currentDatasets => {
-            const newDatasets = {};
+            const newDatasets: JeuxTrafic = {};
             Object.keys(currentDatasets).forEach(datasetKey => {
                 const dataset = currentDatasets[datasetKey];
-                const newDataset = {};
+                const newDataset: JeuTrafic = {};
                 Object.keys(dataset).forEach(oldGroupId => {
-                    const oldId = parseInt(oldGroupId);
+                    const oldId = entier(oldGroupId);
                     const newId = oldToNew[oldId];
                     if (newId) {
                         newDataset[newId] = dataset[oldGroupId];
@@ -680,7 +757,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     };
 
     // Helper: Check if two time ranges overlap in cyclic time
-    const rangesOverlap = (start1, end1, start2, end2, cycle) => {
+    const rangesOverlap = (start1: number, end1: number, start2: number, end2: number, cycle: number) => {
         // Normalize to cycle
         start1 = ((start1 % cycle) + cycle) % cycle;
         end1 = ((end1 % cycle) + cycle) % cycle;
@@ -706,7 +783,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         }
     };
 
-    const updateGroupParams = (id, params) => {
+    const updateGroupParams = (id: number, params: ParametresGroupe) => {
         if (isEditLocked()) return;
         setGroups(prev => prev.map(g => {
             if (g.id !== id) return g;
@@ -714,7 +791,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             // Handle nested durations update specifically if needed, or spread top level
             // params can contain { type, minGreen, durations: { ... }, offset }
 
-            let newG = { ...g, ...params };
+            let newG: Groupe = { ...g, ...params, durations: g.durations };
 
             // If durations or cycle changed, recalc Red
             if (params.durations || params.offset !== undefined) {
@@ -736,21 +813,21 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         }));
     };
 
-    const setMatrixValue = (fromId, toId, value) => {
+    const setMatrixValue = (fromId: number, toId: number, value: CaseMatrice) => {
         if (isEditLocked()) return;
         setConflictMatrix(prev => {
             const next = prev.map(row => [...row]);
             // Guard against out of bounds if resizing happened async
             if (next[fromId - 1]) {
                 // Keep empty string if value is empty, otherwise parse as integer
-                const parsedValue = value === '' ? '' : parseInt(value);
+                const parsedValue = value === '' ? NaN : entier(value);
                 next[fromId - 1][toId - 1] = isNaN(parsedValue) ? '' : parsedValue;
             }
             return next;
         });
     };
 
-    const getGroupState = useCallback((group, time) => {
+    const getGroupState = useCallback((group: Groupe, time: number) => {
         const { durations, offset } = group;
         const totalDuration = cycleLength;
         const cycleTime = (time + offset) % totalDuration;
@@ -765,7 +842,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [cycleLength]);
 
     useEffect(() => {
-        let intervalId;
+        let intervalId: ReturnType<typeof setInterval> | undefined;
         if (isPlaying) {
             const step = 50;
             intervalId = setInterval(() => {
@@ -784,15 +861,15 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
     // Centralized ref for PF sync reset — filled in later when individual refs are created,
     // but callable from loadProject / loadFullState immediately.
-    const pfSyncRefsResetRef = useRef(null);
-    const resetPfSyncRefs = (newActivePFId) => {
+    const pfSyncRefsResetRef = useRef<((newActivePFId: number) => void) | null>(null);
+    const resetPfSyncRefs = (newActivePFId: number) => {
         if (pfSyncRefsResetRef.current) pfSyncRefsResetRef.current(newActivePFId);
     };
 
     // Flag to prevent auto-save during project loading
     const isLoadingProjectRef = useRef(false);
 
-    const loadProject = (name) => {
+    const loadProject = (name: string): ProjetEnregistre | false => {
         // Set flag to prevent auto-save during loading
         isLoadingProjectRef.current = true;
         // Chargement depuis le cache = copie de travail de l'utilisateur : éditable.
@@ -804,7 +881,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 isLoadingProjectRef.current = false;
                 return false;
             }
-            const data = JSON.parse(raw);
+            const data: ProjetEnregistre = JSON.parse(raw);
 
             // Mémoriser le nom du projet (clé de sauvegarde)
             currentProjectNameRef.current = name;
@@ -814,7 +891,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
             // Migrate and validate groups structure for old projects
             if (data.groups) {
-                const migratedGroups = data.groups.map((g, index) => {
+                const migratedGroups = data.groups.map((g, index): Groupe => {
                     // Ensure all required fields exist with proper defaults
                     const id = g.id !== undefined ? g.id : index + 1;
 
@@ -829,10 +906,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                         };
                     }
                     // Validate duration values
-                    durations = {
-                        green: !isNaN(durations.green) ? durations.green : 10,
-                        orange: !isNaN(durations.orange) ? durations.orange : 3,
-                        red: !isNaN(durations.red) ? durations.red : 0
+                    const dureesValides: Durees = {
+                        green: !isNaN(Number(durations.green)) ? Number(durations.green) : 10,
+                        orange: !isNaN(Number(durations.orange)) ? Number(durations.orange) : 3,
+                        red: !isNaN(Number(durations.red)) ? Number(durations.red) : 0
                     };
 
                     return {
@@ -841,7 +918,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                         type: g.type || 'VL',
                         courant: g.courant || '',
                         minGreen: g.minGreen !== undefined && !isNaN(g.minGreen) ? g.minGreen : 6,
-                        durations,
+                        durations: dureesValides,
                         offset: g.offset !== undefined && !isNaN(g.offset) ? g.offset : 0,
                         da: g.da || '',
                         phaseFlag: g.phaseFlag || '',
@@ -873,11 +950,11 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 const loadedGroups = data.groups || [];
                 const cleanedMatrix = Array.from({ length: groupCount }, (_, r) => {
                     return Array.from({ length: groupCount }, (_, c) => {
-                        const val = data.conflictMatrix[r]?.[c];
+                        const val = data.conflictMatrix?.[r]?.[c];
                         if (val === undefined || val === null) return '';
                         const fromGroup = loadedGroups[r];
-                        const minVal = (fromGroup && (fromGroup.type === 'Piéton' || fromGroup.type === 'P' || fromGroup.type === 'Cycliste' || fromGroup.type === 'CY')) ? 0 : 3;
-                        const numericVal = typeof val === 'number' ? val : parseInt(val);
+                        const minVal = intervertMinimal(fromGroup);
+                        const numericVal = typeof val === 'number' ? val : entier(val);
                         if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) return '';
                         return numericVal;
                     });
@@ -891,8 +968,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             if (data.pfTabs) {
                 // Migrate and validate pfTabs structure
                 const groupCount = data.groups ? data.groups.length : 0;
-                const migratedPfTabs = data.pfTabs.map(pf => {
-                    const migrated = { ...pf };
+                const migratedPfTabs = data.pfTabs.map((pf): PlanDeFeu => {
+                    const migrated: PlanDeFeu = { ...pf };
 
                     // Ensure data array exists
                     if (!migrated.data) {
@@ -948,7 +1025,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             } else if (data.actionData) {
                 // Handle old format for backward compatibility
                 const groupCount = data.groups ? data.groups.length : 0;
-                const initialDiagram = data.groups ? data.groups.map(g => ({
+                const initialDiagram: LigneDiagramme[] = data.groups ? data.groups.map(g => ({
                     groupId: g.id,
                     offset: g.offset !== undefined && !isNaN(g.offset) ? g.offset : 0,
                     greenDuration: g.durations?.green !== undefined && !isNaN(g.durations.green) ? g.durations.green : 10,
@@ -958,7 +1035,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 })) : [];
                 const initialMatrix = data.conflictMatrix && data.conflictMatrix.length > 0
                     ? data.conflictMatrix.map(row => [...row])
-                    : (groupCount > 0 ? Array.from({ length: groupCount }, () => new Array(groupCount).fill('')) : []);
+                    : (groupCount > 0 ? Array.from({ length: groupCount }, () => new Array<CaseMatrice>(groupCount).fill('')) : []);
                 setPfTabs([{
                     id: 1,
                     name: 'PF1',
@@ -1011,7 +1088,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             setMatricesLocked(data.matricesLocked === true);
             {
                 const acw = data.actionColWidths || {};
-                const clamp = (v, lo, hi, def) => {
+                const clamp = (v: unknown, lo: number, hi: number, def: number) => {
                     const n = Number(v);
                     if (!isFinite(n)) return def;
                     return Math.min(hi, Math.max(lo, Math.round(n)));
@@ -1091,10 +1168,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     const MAX_CACHED_PROJECTS = 15;
 
     // Update project order - move project to top and limit to MAX_CACHED_PROJECTS
-    const updateProjectOrder = (name) => {
+    const updateProjectOrder = (name: string) => {
         try {
             const orderRaw = localStorage.getItem('traffic_project_order');
-            let order = orderRaw ? JSON.parse(orderRaw) : [];
+            let order: string[] = orderRaw ? JSON.parse(orderRaw) : [];
             // Remove if already exists
             order = order.filter(n => n !== name);
             // Add to top
@@ -1115,7 +1192,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     };
 
     const getAllSaves = () => {
-        const saves = [];
+        const saves: SauvegardeCache[] = [];
         try {
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
@@ -1148,7 +1225,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             // Sort by order (most recently loaded first) and limit to MAX_CACHED_PROJECTS
             const orderRaw = localStorage.getItem('traffic_project_order');
             if (orderRaw) {
-                const order = JSON.parse(orderRaw);
+                const order: string[] = JSON.parse(orderRaw);
                 saves.sort((a, b) => {
                     const indexA = order.indexOf(a.name);
                     const indexB = order.indexOf(b.name);
@@ -1168,7 +1245,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     };
 
     // Get project data without applying to state (for green wave)
-    const getProjectData = (name) => {
+    const getProjectData = (name: string): ProjetEnregistre | null => {
         try {
             const raw = localStorage.getItem(`traffic_project_${name}`);
             if (!raw) return null;
@@ -1180,7 +1257,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     };
 
     // Load full state (for duplication)
-    const loadFullState = (state) => {
+    const loadFullState = (state: EtatProjet) => {
         try {
             champsProjetRef?.current?.ecrire?.(state);
             // Dossier « lecture seule » : détecté depuis le marqueur du fichier.
@@ -1209,11 +1286,11 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             if (state.conflictMatrix && Array.isArray(state.conflictMatrix)) {
                 // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
                 const loadedGroups = state.groups || [];
-                const cleanedMatrix = state.conflictMatrix.map((row, r) => row.map(val => {
+                const cleanedMatrix = state.conflictMatrix.map((row, r) => row.map((val): CaseMatrice => {
                     if (val === undefined || val === null) return '';
                     const fromGroup = loadedGroups[r];
-                    const minVal = (fromGroup && (fromGroup.type === 'Piéton' || fromGroup.type === 'P' || fromGroup.type === 'Cycliste' || fromGroup.type === 'CY')) ? 0 : 3;
-                    const numericVal = typeof val === 'number' ? val : parseInt(val);
+                    const minVal = intervertMinimal(fromGroup);
+                    const numericVal = typeof val === 'number' ? val : entier(val);
                     if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) return '';
                     return numericVal;
                 }));
@@ -1308,7 +1385,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             // si absent/invalide.
             {
                 const acw = state.actionColWidths || {};
-                const clamp = (v, lo, hi, def) => {
+                const clamp = (v: unknown, lo: number, hi: number, def: number) => {
                     const n = Number(v);
                     if (!isFinite(n)) return def;
                     return Math.min(hi, Math.max(lo, Math.round(n)));
@@ -1346,7 +1423,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         setIntersectionName("Nouveau Carrefour");
 
         // Reset to 8 groups with default cycle (type vide pour inviter à la saisie)
-        const newGroups = Array.from({ length: 8 }, (_, i) => ({ ...createGroup(i + 1), type: '' }));
+        const newGroups: Groupe[] = Array.from({ length: 8 }, (_, i) => ({ ...createGroup(i + 1), type: '' as TypeGroupe }));
         setGroups(newGroups);
         setCycleLength(DEFAULT_CYCLE);
 
@@ -1437,12 +1514,12 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     const getFullStateRef = useRef(getFullState);
     getFullStateRef.current = getFullState;
 
-    const deleteSave = (name) => {
+    const deleteSave = (name: string) => {
         localStorage.removeItem(`traffic_project_${name}`);
     };
 
     // Multiple PF (Plans de Feux) support
-    const [pfTabs, setPfTabs] = useState(() => [{ id: 1, name: 'PF1', data: createEmptyActionData(), remarques: '' }]);
+    const [pfTabs, setPfTabs] = useState<PlanDeFeu[]>(() => [{ id: 1, name: 'PF1', data: createEmptyActionData(), diagram: [], remarques: '' }]);
 
     const [activePFId, setActivePFIdRaw] = useState(1);
 
@@ -1455,8 +1532,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     const [simulationEnabled, setSimulationEnabled] = useState(false);
 
     // Intersection image state (persisted with project)
-    const [intersectionImage, setIntersectionImage] = useState(null);
-    const [intersectionArrows, setIntersectionArrows] = useState([]);
+    const [intersectionImage, setIntersectionImage] = useState<string | null>(null);
+    const [intersectionArrows, setIntersectionArrows] = useState<FlecheCarrefour[]>([]);
     const [imageBrightness, setImageBrightness] = useState(100);
     const [imageContrast, setImageContrast] = useState(100);
 
@@ -1464,7 +1541,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     const [activeTrafficDataset, setActiveTrafficDataset] = useState(() => {
         return safeLocalStorage.getItem('trafficActiveDataset') || 'HPM';
     });
-    const [customTrafficDatasetNames, setCustomTrafficDatasetNames] = useState(() => {
+    const [customTrafficDatasetNames, setCustomTrafficDatasetNames] = useState<string[]>(() => {
         try {
             const saved = safeLocalStorage.getItem('customTrafficDatasetNames');
             return saved ? JSON.parse(saved) : [];
@@ -1472,7 +1549,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     });
 
     // Mapping PF id → dataset actif (choix conservé par PF)
-    const [pfTrafficDatasetMap, setPfTrafficDatasetMap] = useState(() => {
+    const [pfTrafficDatasetMap, setPfTrafficDatasetMap] = useState<Record<string, string>>(() => {
         try {
             const saved = safeLocalStorage.getItem('pfTrafficDatasetMap');
             return saved ? JSON.parse(saved) : {};
@@ -1484,7 +1561,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     pfTrafficDatasetMapRef.current = pfTrafficDatasetMap;
 
     // Wrapper qui restaure le dataset trafic mémorisé pour le PF cible
-    const setActivePFId = useCallback((pfId) => {
+    const setActivePFId = useCallback((pfId: number) => {
         setActivePFIdRaw(pfId);
         const savedDataset = pfTrafficDatasetMapRef.current[pfId];
         if (savedDataset) {
@@ -1493,8 +1570,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, []);
 
     // Initialize traffic datasets with empty data for all groups
-    const createInitialTrafficDatasets = (groupCount) => {
-        const datasets = {};
+    const createInitialTrafficDatasets = (groupCount: number) => {
+        const datasets: JeuxTrafic = {};
         TRAFFIC_DATASETS.forEach(ds => {
             datasets[ds] = {};
             for (let i = 1; i <= groupCount; i++) {
@@ -1504,11 +1581,11 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         return datasets;
     };
 
-    const [trafficDatasets, setTrafficDatasets] = useState(() => createInitialTrafficDatasets(5));
+    const [trafficDatasets, setTrafficDatasets] = useState<JeuxTrafic>(() => createInitialTrafficDatasets(5));
 
     // Applique le résultat de mergePfFromProject : ajoute les PF importés + les
     // jeux de trafic rapatriés, SANS toucher aux groupes ni au PF actif courant.
-    const applyMergedPf = useCallback((mergedState) => {
+    const applyMergedPf = useCallback((mergedState: Partial<Projet> | null | undefined) => {
         if (!mergedState || !Array.isArray(mergedState.pfTabs)) return;
         setPfTabs(mergedState.pfTabs);
         if (mergedState.trafficDatasets) setTrafficDatasets(mergedState.trafficDatasets);
@@ -1534,7 +1611,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [pfTabs, activePFId]);
 
     // Update microCustomFields for the active PF
-    const updateMicroCustomField = useCallback((index, value) => {
+    const updateMicroCustomField = useCallback((index: number, value: string) => {
         setPfTabs(prev => prev.map(pf => {
             if (pf.id !== activePFId) return pf;
             const current = pf.microCustomFields || [];
@@ -1564,7 +1641,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [pfTabs, activePFId]);
 
     // Update phasage bulle count for active PF
-    const setPhasageBulleCount = useCallback((count) => {
+    const setPhasageBulleCount = useCallback((count: number) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === activePFId
                 ? { ...pf, phasageBulleCount: count }
@@ -1573,7 +1650,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [activePFId]);
 
     // Update phasage bulle times for active PF
-    const setPhasageBulleTimes = useCallback((times) => {
+    const setPhasageBulleTimes = useCallback((times: number[]) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === activePFId
                 ? { ...pf, phasageBulleTimes: times }
@@ -1593,7 +1670,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [pfTabs, activePFId]);
 
     // Update phasage bulle scale factors for active PF
-    const setPhasageBubbleScale = useCallback((scale) => {
+    const setPhasageBubbleScale = useCallback((scale: number) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === activePFId
                 ? { ...pf, phasageBubbleScale: scale }
@@ -1601,7 +1678,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         ));
     }, [activePFId]);
 
-    const setPhasageEllipseScale = useCallback((scale) => {
+    const setPhasageEllipseScale = useCallback((scale: number) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === activePFId
                 ? { ...pf, phasageEllipseScale: scale }
@@ -1615,7 +1692,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         return activePF?.phasageBubbleRatio ?? 100;
     }, [pfTabs, activePFId]);
 
-    const setPhasageBubbleRatio = useCallback((ratio) => {
+    const setPhasageBubbleRatio = useCallback((ratio: number) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === activePFId
                 ? { ...pf, phasageBubbleRatio: ratio }
@@ -1646,7 +1723,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
     // Computed Conflicts
     const conflicts = useMemo(() => {
-        const list = [];
+        const list: TrafficConflict[] = [];
         const count = groups.length;
 
         // Get seconde lucarne actions from current actionData
@@ -1656,9 +1733,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             action.deb !== '' &&
             action.fin !== ''
         ).map(action => ({
-            gf: parseInt(action.gf),
-            deb: parseInt(action.deb),
-            fin: parseInt(action.fin),
+            gf: entier(action.gf),
+            deb: entier(action.deb),
+            fin: entier(action.fin),
             abrv: action.abrv || 'SL'
         }));
 
@@ -1668,8 +1745,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             action.gf !== '' &&
             action.actGf1 !== ''
         ).map(action => ({
-            sourceGf: parseInt(action.gf),
-            targetGf: parseInt(action.actGf1)
+            sourceGf: entier(action.gf),
+            targetGf: entier(action.actGf1)
         }));
 
         // Get flèche d'anticipation actions - these override the green phase timing for conflict calculation
@@ -1678,20 +1755,20 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             action.gf !== '' &&
             action.deb !== '' &&
             action.fin !== ''
-        ).reduce((acc, action) => {
-            const gf = parseInt(action.gf);
+        ).reduce<Record<number, { deb: number; fin: number }>>((acc, action) => {
+            const gf = entier(action.gf);
             // Store the first flèche d'anticipation for each group
             if (!acc[gf]) {
                 acc[gf] = {
-                    deb: parseInt(action.deb),
-                    fin: parseInt(action.fin)
+                    deb: entier(action.deb),
+                    fin: entier(action.fin)
                 };
             }
             return acc;
         }, {});
 
         // Helper to check if an escamotage exists between two groups
-        const hasEscamotage = (gfA, gfB) => {
+        const hasEscamotage = (gfA: number, gfB: number) => {
             return escamotages.some(e =>
                 (e.sourceGf === gfA && e.targetGf === gfB) ||
                 (e.sourceGf === gfB && e.targetGf === gfA)
@@ -1703,9 +1780,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             // Safety check: skip if row doesn't exist in matrix
             if (!conflictMatrix[from]) continue;
             for (let to = 0; to < count; to++) {
-                const minGap = conflictMatrix[from][to];
+                const caseMatrice = conflictMatrix[from][to];
                 // Skip empty values
-                if ((minGap === '' || minGap === undefined || minGap === null) || from === to) continue;
+                if ((caseMatrice === '' || caseMatrice === undefined || caseMatrice === null) || from === to) continue;
+                const minGap = Number(caseMatrice);
 
                 const gFrom = groups[from];
                 const gTo = groups[to];
@@ -1817,7 +1895,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [groups, conflictMatrix, cycleLength, actionData]);
 
     // Update action data for active PF
-    const setActionData = useCallback((newData) => {
+    const setActionData = useCallback((newData: SetStateAction<ActionMicro[]>) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === activePFId
                 ? { ...pf, data: typeof newData === 'function' ? newData(pf.data) : newData }
@@ -1826,7 +1904,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [activePFId]);
 
     // Reorder actions (for sorting)
-    const reorderActions = useCallback((sortedData) => {
+    const reorderActions = useCallback((sortedData: ActionMicro[]) => {
         // Reassign IDs to maintain order
         const reorderedData = sortedData.map((row, index) => ({
             ...row,
@@ -1863,7 +1941,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [pfTabs, actionData, activePFId, conflictMatrix, cycleLength]);
 
     // Delete a PF (cannot delete if only one remains)
-    const deletePF = useCallback((pfId) => {
+    const deletePF = useCallback((pfId: number) => {
         if (dossierReadOnlyRef.current) return;
         if (pfTabs.length <= 1) return false;
         setPfTabs(prev => prev.filter(pf => pf.id !== pfId));
@@ -1875,7 +1953,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [pfTabs, activePFId]);
 
     // Rename a PF
-    const renamePF = useCallback((pfId, newName) => {
+    const renamePF = useCallback((pfId: number, newName: string) => {
         if (dossierReadOnlyRef.current) return;
         setPfTabs(prev => prev.map(pf =>
             pf.id === pfId ? { ...pf, name: newName } : pf
@@ -1883,21 +1961,21 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, []);
 
     // Set PF color (for validation)
-    const setPFColor = useCallback((pfId, color) => {
+    const setPFColor = useCallback((pfId: number, color: string) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === pfId ? { ...pf, color: color } : pf
         ));
     }, []);
 
     // Update remarques for active PF
-    const updatePFRemarques = useCallback((remarques) => {
+    const updatePFRemarques = useCallback((remarques: string) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === activePFId ? { ...pf, remarques: remarques } : pf
         ));
     }, [activePFId]);
 
     // Reorder PF tabs (drag & drop)
-    const reorderPF = useCallback((fromIndex, toIndex) => {
+    const reorderPF = useCallback((fromIndex: number, toIndex: number) => {
         if (fromIndex === toIndex) return;
         setPfTabs(prev => {
             const newTabs = [...prev];
@@ -1930,7 +2008,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     const simulationName = planActif?.simulationName || '';
 
     /** Écrit dans le plan de feu actif, seul dépositaire du scénario. */
-    const ecrireScenario = useCallback((maj) => {
+    const ecrireScenario = useCallback((maj: (actuelles: number[], pf: PlanDeFeu) => Partial<PlanDeFeu>) => {
         setPfTabs(prev => prev.map(pf => {
             if (pf.id !== activePFId) return pf;
             const actuelles = Array.isArray(pf.simulationActions) ? pf.simulationActions : [];
@@ -1938,13 +2016,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         }));
     }, [activePFId]);
 
-    const updateSimulationName = useCallback((nom) => {
+    const updateSimulationName = useCallback((nom: string) => {
         if (isEditLocked()) return;
         ecrireScenario(() => ({ simulationName: String(nom || '').slice(0, 60) }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ecrireScenario]);
 
-    const toggleSimulationAction = useCallback((actionId) => {
+    const toggleSimulationAction = useCallback((actionId: number) => {
         ecrireScenario(actuelles => ({
             simulationActions: actuelles.includes(actionId)
                 ? actuelles.filter(id => id !== actionId)
@@ -1969,7 +2047,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [ecrireScenario, actionData]);
 
     // Save project - defined after all state declarations to capture current values
-    const saveProject = useCallback(async (name) => {
+    const saveProject = useCallback(async (name: string) => {
         if (!name) return false;
         // Projet exemple : non persistable (filet de sécurité — l'entrée
         // de menu Sauvegarder est déjà grisée).
@@ -2083,7 +2161,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 try {
                     const orderRaw = localStorage.getItem('traffic_project_order');
                     if (orderRaw) {
-                        const order = JSON.parse(orderRaw);
+                        const order: string[] = JSON.parse(orderRaw);
                         // Find the oldest project (last in the list) that is not the current one
                         const oldestProject = order.filter(n => n !== name).pop();
                         if (oldestProject) {
@@ -2143,7 +2221,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
     // Synchronize current conflict matrix with active PF tab
     // Use a ref to prevent infinite loops
-    const lastSyncedMatrixRef = useRef(null);
+    const lastSyncedMatrixRef = useRef<string | null>(null);
     const prevActivePFIdForMatrixSyncRef = useRef(activePFId);
     useEffect(() => {
         // Skip during initial load
@@ -2205,7 +2283,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [conflictMatrix, activePFId]);
 
     // Synchronize current groups (diagram data) with active PF tab
-    const lastSyncedGroupsRef = useRef(null);
+    const lastSyncedGroupsRef = useRef<string | null>(null);
     const prevActivePFIdForGroupsSyncRef = useRef(activePFId);
     useEffect(() => {
         // Skip during initial load
@@ -2218,7 +2296,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         const syncKey = groupsKey + '|' + cycleLength;
 
         // Helper: write diagram + cycleLength to a specific PF, skipping if unchanged
-        const writeDiagramToPF = (pfId) => {
+        const writeDiagramToPF = (pfId: number) => {
             setPfTabs(prevTabs => {
                 const tabIndex = prevTabs.findIndex(pf => pf.id === pfId);
                 if (tabIndex === -1) return prevTabs;
@@ -2253,10 +2331,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
     // Apply diagram data from active PF tab to groups when changing tabs
     // Use a ref to track the last applied PF to avoid unnecessary re-renders
-    const lastAppliedPFRef = useRef(null);
+    const lastAppliedPFRef = useRef<string | null>(null);
 
     // Wire up the centralized reset function now that all sync refs exist
-    pfSyncRefsResetRef.current = (newActivePFId) => {
+    pfSyncRefsResetRef.current = (newActivePFId: number) => {
         prevActivePFIdForGroupsSyncRef.current = newActivePFId;
         prevActivePFIdForMatrixSyncRef.current = newActivePFId;
         lastSyncedGroupsRef.current = null;
@@ -2326,24 +2404,25 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             }
             // Also update conflict matrix if the PF has a specific one
             // Resize matrix to match current group count to prevent errors
-            if (activePF.conflictMatrix && activePF.conflictMatrix.length > 0) {
+            const matricePlan = activePF.conflictMatrix;
+            if (matricePlan && matricePlan.length > 0) {
                 setConflictMatrix(prevMatrix => {
                     const currentSize = prevMatrix.length;
-                    const pfMatrixSize = activePF.conflictMatrix.length;
+                    const pfMatrixSize = matricePlan.length;
 
                     // Create a new matrix with the current size, filled with empty values
                     const resizedMatrix = Array.from({ length: currentSize }, (_, r) => {
-                        const row = new Array(currentSize).fill('');
+                        const row: CaseMatrice[] = new Array(currentSize).fill('');
                         for (let c = 0; c < currentSize; c++) {
                             // Copy values from PF matrix if they exist
-                            if (r < pfMatrixSize && c < pfMatrixSize && activePF.conflictMatrix[r]) {
-                                let val = activePF.conflictMatrix[r][c];
+                            if (r < pfMatrixSize && c < pfMatrixSize && matricePlan[r]) {
+                                let val = matricePlan[r][c];
                                 // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
                                 const fromGroup = groups[r];
-                                const minVal = (fromGroup && (fromGroup.type === 'Piéton' || fromGroup.type === 'P' || fromGroup.type === 'Cycliste' || fromGroup.type === 'CY')) ? 0 : 3;
+                                const minVal = intervertMinimal(fromGroup);
                                 // Clean the value: keep values in [minVal, 20] range
                                 if (val !== '' && val !== undefined) {
-                                    const numericVal = typeof val === 'number' ? val : parseInt(val);
+                                    const numericVal = typeof val === 'number' ? val : entier(val);
                                     if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) val = '';
                                 }
                                 row[c] = val !== undefined ? val : '';
@@ -2380,7 +2459,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [activeTrafficDataset, activePFId]);
 
     // Auto-save current project to cache (debounced)
-    const autoSaveTimerRef = useRef(null);
+    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => {
         // Skip during initial load or project loading
         if (isInitialLoadRef.current || isLoadingProjectRef.current) return;
@@ -2398,6 +2477,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         }
 
         autoSaveTimerRef.current = setTimeout(() => {
+            // Le projet a pu être fermé pendant l'attente : rien à mettre en cache.
+            const nomProjet = currentProjectNameRef.current;
+            if (!nomProjet) return;
             try {
                 // Même payload canonique que la sauvegarde explicite et l'export
                 // fichier (getFullState) : garantit qu'un aller-retour par le
@@ -2413,7 +2495,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 ensureLocalStorageSpace();
 
                 // Save project
-                const ecrit = safeLocalStorage.setItem(`traffic_project_${currentProjectNameRef.current}`, jsonData);
+                const ecrit = safeLocalStorage.setItem(`traffic_project_${nomProjet}`, jsonData);
 
                 // Un échec de cache passait jusqu'ici par un simple console.warn :
                 // l'utilisateur croyait son travail à l'abri alors que rien
@@ -2429,7 +2511,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 echecCacheSignale = false;
 
                 // Update order and clean up old projects
-                updateProjectOrder(currentProjectNameRef.current);
+                updateProjectOrder(nomProjet);
             } catch (e) {
                 console.warn('Auto-save failed:', e);
             }
@@ -2443,7 +2525,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, intersectionName, projectProperties, capacityCompareSelection, capacityCompareDataset, customTrafficDatasetNames, pfTrafficDatasetMap, externalLinks, matricesLocked, actionColWidths]);
 
     // Update traffic data for a specific group in the active dataset
-    const updateTrafficData = useCallback((groupId, field, value) => {
+    const updateTrafficData = useCallback((groupId: number, field: keyof JeuTrafic[string], value: number | string) => {
         if (isEditLocked()) return;
         setTrafficDatasets(prev => {
             const newDatasets = { ...prev };
@@ -2462,7 +2544,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [activeTrafficDataset]);
 
     // Get traffic data for a specific group in the active dataset
-    const getTrafficData = useCallback((groupId) => {
+    const getTrafficData = useCallback((groupId: number) => {
         if (!trafficDatasets[activeTrafficDataset]) {
             return createEmptyTrafficData();
         }
@@ -2470,7 +2552,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [trafficDatasets, activeTrafficDataset]);
 
     // Copy traffic data from one dataset to another
-    const copyTrafficDataset = useCallback((sourceDataset, targetDataset) => {
+    const copyTrafficDataset = useCallback((sourceDataset: string, targetDataset: string) => {
         setTrafficDatasets(prev => {
             const source = prev[sourceDataset];
             if (!source || sourceDataset === targetDataset) return prev;
@@ -2482,7 +2564,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         });
     }, []);
 
-    const addCustomTrafficDataset = useCallback((name) => {
+    const addCustomTrafficDataset = useCallback((name: string) => {
         if (!name || trafficDatasetNames.includes(name)) return;
         setCustomTrafficDatasetNames(prev => [...prev, name]);
         // Initialiser les données vides pour ce nouveau jeu
@@ -2523,7 +2605,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     const saveToHistory = useCallback(() => {
         if (isUndoing.current || isRedoing.current) return; // Don't save during undo/redo
 
-        const currentState = {
+        const currentState: EtatHistorique = {
             groups: JSON.parse(JSON.stringify(groups)),
             conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
             pfTabs: JSON.parse(JSON.stringify(pfTabs)),
@@ -2565,7 +2647,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         isUndoing.current = true;
 
         // Save current state to redo history before restoring
-        const currentState = {
+        const currentState: EtatHistorique = {
             groups: JSON.parse(JSON.stringify(groups)),
             conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
             pfTabs: JSON.parse(JSON.stringify(pfTabs)),
@@ -2585,8 +2667,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             setActivePFIdRaw(previousState.activePFId);
         } else if (previousState.actionData) {
             // Handle old history format
+            const anciennesActions = previousState.actionData;
             setPfTabs(prev => prev.map(pf =>
-                pf.id === activePFId ? { ...pf, data: previousState.actionData } : pf
+                pf.id === activePFId ? { ...pf, data: anciennesActions } : pf
             ));
         }
         setCycleLength(previousState.cycleLength);
@@ -2618,7 +2701,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         isRedoing.current = true;
 
         // Save current state to history before restoring
-        const currentState = {
+        const currentState: EtatHistorique = {
             groups: JSON.parse(JSON.stringify(groups)),
             conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
             pfTabs: JSON.parse(JSON.stringify(pfTabs)),
@@ -2657,7 +2740,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [redoHistory, groups, conflictMatrix, pfTabs, activePFId, cycleLength, intersectionName]);
 
     // Wrapped update functions that save to history (skip if dragging)
-    const updateActionRowWithHistory = useCallback((rowId, field, value) => {
+    const updateActionRowWithHistory = useCallback((rowId: number, field: keyof ActionMicro, value: string) => {
         if (isEditLocked()) return;
         if (!isDragging.current) {
             saveToHistory();
@@ -2668,7 +2751,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [saveToHistory]);
 
     // Wrapped setCycleLength that saves to history
-    const setCycleLengthWithHistory = useCallback((newCycle) => {
+    const setCycleLengthWithHistory = useCallback((newCycle: number) => {
         if (isEditLocked()) return;
         if (newCycle === cycleLength) return; // No change
         saveToHistory();
@@ -2676,15 +2759,15 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [saveToHistory, cycleLength]);
 
     // Wrapped setGroupCount that saves to history
-    const setGroupCountWithHistory = useCallback((count) => {
+    const setGroupCountWithHistory = useCallback((count: number | string) => {
         if (isEditLocked()) return;
-        const newCount = Math.max(1, parseInt(count) || 1);
+        const newCount = Math.max(1, entier(count) || 1);
         if (newCount === groups.length) return; // No change
         saveToHistory();
         setGroupCountInternal(count);
     }, [saveToHistory, groups.length]);
 
-    const updateGroupParamsWithHistory = useCallback((id, params) => {
+    const updateGroupParamsWithHistory = useCallback((id: number, params: ParametresGroupe) => {
         if (!isDragging.current) {
             saveToHistory();
         }
@@ -2710,14 +2793,14 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
                 setActionData(currentData => {
                     return currentData.map(row => {
-                        const rowGf = parseInt(row.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                        const rowGf = entier(row.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
                         if (rowGf !== id) return row;
 
                         // "Début de bande passante" is linked to START of green (offset)
                         if (row.action === 'Début de bande passante' && row.deb !== '' && deltaOffset !== 0) {
-                            const newDeb = ((parseInt(row.deb) + deltaOffset) % cycleLength + cycleLength) % cycleLength;
+                            const newDeb = ((entier(row.deb) + deltaOffset) % cycleLength + cycleLength) % cycleLength;
                             if (row.fin !== '') {
-                                const newFin = ((parseInt(row.fin) + deltaOffset) % cycleLength + cycleLength) % cycleLength;
+                                const newFin = ((entier(row.fin) + deltaOffset) % cycleLength + cycleLength) % cycleLength;
                                 return { ...row, deb: newDeb.toString(), fin: newFin.toString() };
                             }
                             return { ...row, deb: newDeb.toString() };
@@ -2725,9 +2808,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
                         // "Fin de bande passante" is linked to END of green (offset + green duration)
                         if (row.action === 'Fin de bande passante' && row.deb !== '' && normalizedDeltaEnd !== 0) {
-                            const newDeb = ((parseInt(row.deb) + normalizedDeltaEnd) % cycleLength + cycleLength) % cycleLength;
+                            const newDeb = ((entier(row.deb) + normalizedDeltaEnd) % cycleLength + cycleLength) % cycleLength;
                             if (row.fin !== '') {
-                                const newFin = ((parseInt(row.fin) + normalizedDeltaEnd) % cycleLength + cycleLength) % cycleLength;
+                                const newFin = ((entier(row.fin) + normalizedDeltaEnd) % cycleLength + cycleLength) % cycleLength;
                                 return { ...row, deb: newDeb.toString(), fin: newFin.toString() };
                             }
                             return { ...row, deb: newDeb.toString() };
@@ -2742,7 +2825,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         setGroups(prev => prev.map(g => {
             if (g.id !== id) return g;
 
-            let newG = { ...g, ...params };
+            let newG: Groupe = { ...g, ...params, durations: g.durations };
 
             if (params.durations || params.offset !== undefined) {
                 const mergedDurations = { ...g.durations, ...(params.durations || {}) };
@@ -2760,7 +2843,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
         }));
     }, [saveToHistory, cycleLength, groups, setActionData]);
 
-    const setMatrixValueWithHistory = useCallback((fromId, toId, value) => {
+    const setMatrixValueWithHistory = useCallback((fromId: number, toId: number, value: CaseMatrice) => {
         if (!isDragging.current) {
             saveToHistory();
         }
@@ -2771,10 +2854,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
                 if (value === '') {
                     next[fromId - 1][toId - 1] = '';
                 } else {
-                    const parsedValue = parseInt(value);
+                    const parsedValue = entier(value);
                     // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
                     const fromGroup = groups[fromId - 1];
-                    const minValue = (fromGroup && (fromGroup.type === 'Piéton' || fromGroup.type === 'P' || fromGroup.type === 'Cycliste' || fromGroup.type === 'CY')) ? 0 : 3;
+                    const minValue = intervertMinimal(fromGroup);
                     if (!isNaN(parsedValue) && parsedValue >= minValue && parsedValue <= 20) {
                         next[fromId - 1][toId - 1] = parsedValue;
                     } else if (!isNaN(parsedValue) && parsedValue < minValue) {
@@ -2794,7 +2877,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     // Bloquée en lecture seule ; ne copie que si la matrice source a la même
     // taille que les groupes courants (mêmes groupes -> copie sûre). Le sync
     // matrice propage ensuite la valeur au PF actif. Renvoie true si copiée.
-    const copyMatrixFromPF = useCallback((sourcePFId) => {
+    const copyMatrixFromPF = useCallback((sourcePFId: number) => {
         if (isEditLocked()) return false;
         const src = pfTabs.find(p => p.id === sourcePFId);
         if (!src || !Array.isArray(src.conflictMatrix) || src.conflictMatrix.length === 0) return false;
@@ -2806,7 +2889,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [pfTabs, groups, saveToHistory]);
 
     // Slide all groups by a given offset
-    const slideAllGroups = useCallback((delta, fromGroupId = null, toGroupId = null) => {
+    const slideAllGroups = useCallback((delta: number, fromGroupId: number | null = null, toGroupId: number | null = null) => {
         saveToHistory();
         setGroups(currentGroups => {
             const fromIdx = fromGroupId != null ? currentGroups.findIndex(g => g.id === fromGroupId) : 0;
@@ -2828,16 +2911,16 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             const toIdx = toGroupId != null ? groups.findIndex(g => g.id === toGroupId) : groups.length - 1;
 
             return currentData.map(row => {
-                const gf = parseInt(row.gf);
+                const gf = entier(row.gf);
                 if (isNaN(gf) || gf < fromIdx + 1 || gf > toIdx + 1) return row;
 
                 const newRow = { ...row };
                 if (newRow.deb !== '' && newRow.deb !== undefined) {
-                    const newDeb = ((parseInt(newRow.deb) + delta) % cycleLength + cycleLength) % cycleLength;
+                    const newDeb = ((entier(newRow.deb) + delta) % cycleLength + cycleLength) % cycleLength;
                     newRow.deb = newDeb.toString();
                 }
                 if (newRow.fin !== '' && newRow.fin !== undefined) {
-                    const newFin = ((parseInt(newRow.fin) + delta) % cycleLength + cycleLength) % cycleLength;
+                    const newFin = ((entier(newRow.fin) + delta) % cycleLength + cycleLength) % cycleLength;
                     newRow.fin = newFin.toString();
                 }
                 return newRow;
@@ -2846,7 +2929,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
     }, [saveToHistory, cycleLength, groups]);
 
     // Insert time at a given position for a given duration
-    const insertTime = useCallback((startSecond, duration) => {
+    const insertTime = useCallback((startSecond: number, duration: number) => {
         saveToHistory();
         // Increase cycle length first
         setCycleLength(prev => prev + duration);
@@ -2875,13 +2958,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             return currentData.map(row => {
                 const newRow = { ...row };
                 if (newRow.deb !== '' && newRow.deb !== undefined) {
-                    const deb = parseInt(newRow.deb);
+                    const deb = entier(newRow.deb);
                     if (!isNaN(deb) && deb > startSecond) {
                         newRow.deb = (deb + duration).toString();
                     }
                 }
                 if (newRow.fin !== '' && newRow.fin !== undefined) {
-                    const fin = parseInt(newRow.fin);
+                    const fin = entier(newRow.fin);
                     if (!isNaN(fin) && fin > startSecond) {
                         newRow.fin = (fin + duration).toString();
                     }
@@ -2893,7 +2976,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
 
     // Reduce time at a given position for a given duration
     // Décale toutes les valeurs (groupes et actions) > startSecond de -duration
-    const reduceTime = useCallback((startSecond, duration) => {
+    const reduceTime = useCallback((startSecond: number, duration: number) => {
         saveToHistory();
         // Réduire le cycle en premier
         setCycleLength(prev => Math.max(1, prev - duration));
@@ -2923,13 +3006,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef } = {})
             return currentData.map(row => {
                 const newRow = { ...row };
                 if (newRow.deb !== '' && newRow.deb !== undefined) {
-                    const deb = parseInt(newRow.deb);
+                    const deb = entier(newRow.deb);
                     if (!isNaN(deb) && deb > startSecond) {
                         newRow.deb = Math.max(0, deb - duration).toString();
                     }
                 }
                 if (newRow.fin !== '' && newRow.fin !== undefined) {
-                    const fin = parseInt(newRow.fin);
+                    const fin = entier(newRow.fin);
                     if (!isNaN(fin) && fin > startSecond) {
                         newRow.fin = Math.max(0, fin - duration).toString();
                     }

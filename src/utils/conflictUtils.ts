@@ -6,7 +6,7 @@ import type { ActionMicro, Groupe, Matrice } from '../types/projet';
 export interface TrafficConflict {
     from: number;
     to: number;
-    type: 'intergreen' | 'overlap' | 'sl-overlap';
+    type: 'intergreen' | 'overlap' | 'sl-overlap' | 'sl-sl-overlap';
     required?: number;
     actual?: number;
     message?: string;
