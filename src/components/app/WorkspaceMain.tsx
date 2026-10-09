@@ -1,5 +1,5 @@
 import TimelineDiagramImplementation from '../TimelineDiagram';
-import PhasageBulleImplementation from '../PhasageBulle';
+import PhasageBulle from '../PhasageBulle';
 import IntersectionImageImplementation from '../IntersectionImage';
 import ActionTable from '../ActionTable';
 import type { ActionTableProps } from '../ActionTable';
@@ -12,19 +12,14 @@ import type {
     RefObject,
     SetStateAction,
 } from 'react';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
 import type { SimulationResult } from '../../utils/simulationCalculator';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../../hooks/useIntersectionDisplayOptions';
 
 type LooseComponent = ComponentType<Record<string, unknown>>;
 type Callback = (...args: unknown[]) => void;
 
-interface IntersectionArrow {
-    groupId: number;
-    x: number;
-    y: number;
-    [key: string]: unknown;
-}
+type IntersectionArrow = FlecheCarrefour;
 
 interface PhasageDraft {
     count: number;
@@ -159,7 +154,6 @@ interface WorkspaceMainProps {
 }
 
 const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
-const PhasageBulle = PhasageBulleImplementation as unknown as LooseComponent;
 const IntersectionImage = IntersectionImageImplementation as unknown as LooseComponent;
 
 export default function WorkspaceMain({ model }: WorkspaceMainProps) {

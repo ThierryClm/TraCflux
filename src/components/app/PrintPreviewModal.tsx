@@ -4,7 +4,7 @@ import TimelineDiagramImplementation from '../TimelineDiagram';
 import TrafficTableImplementation from '../TrafficTable';
 import DiagnosticPanelImplementation from '../DiagnosticPanel';
 import DiagramLegendImplementation from '../DiagramLegend';
-import PhasageBulleImplementation from '../PhasageBulle';
+import PhasageBulle from '../PhasageBulle';
 import { APP_NAME, APP_VERSION } from '../../version';
 import { actionsSimulables, conflitsSimules } from '../../utils/simulationCalculator';
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
@@ -12,7 +12,7 @@ import { groupesInhibes } from '../../utils/trafficHelpers';
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
 import { ARROW_SIZE, BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
 import type { SimulationResult } from '../../utils/simulationCalculator';
 import type { ProjectProperties } from '../PropertiesPanel';
 
@@ -20,16 +20,7 @@ type LooseComponent = ComponentType<Record<string, unknown>>;
 type PrintType = 'matrix' | 'form' | 'diagram' | 'dossier';
 type DossierSections = Record<string, boolean | undefined>;
 
-interface IntersectionArrow {
-    id: string | number;
-    groupId?: string | number;
-    x: number;
-    y: number;
-    rotation?: number;
-    scale?: number;
-    length?: number;
-    turnLength?: number;
-}
+type IntersectionArrow = FlecheCarrefour;
 
 interface ImageDimensions {
     width: number;
@@ -110,7 +101,6 @@ const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseCompone
 const TrafficTable = TrafficTableImplementation as unknown as LooseComponent;
 const DiagnosticPanel = DiagnosticPanelImplementation as unknown as LooseComponent;
 const DiagramLegend = DiagramLegendImplementation as unknown as LooseComponent;
-const PhasageBulle = PhasageBulleImplementation as unknown as LooseComponent;
 const fitBubblesToPrintPage = fitBubblesToPage as unknown as (options: {
     count: number;
     ratio?: number;

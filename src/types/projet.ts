@@ -107,6 +107,23 @@ export interface PlanDeFeu {
     phasageBubbleRatio?: number;
 }
 
+/** Une flèche de courant posée sur l'image du carrefour. */
+export interface FlecheCarrefour {
+    id: number;
+    /** Groupe de feu dont la flèche prend la couleur. */
+    groupId: number;
+    /** Position du centre, en % de l'image. */
+    x: number;
+    y: number;
+    /** Rotation en degrés ; 0 pointe vers le haut. */
+    rotation?: number;
+    scale?: number;
+    /** Longueur de la hampe, 1 = normale. */
+    length?: number;
+    /** Portée de la branche tournante, de 0 à 1. */
+    turnLength?: number;
+}
+
 /** Données de trafic d'un jeu donné, indexées par groupe. */
 export type JeuTrafic = Record<string, { trafficVol?: number | string }>;
 
