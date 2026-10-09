@@ -514,7 +514,22 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                         groups={groups}
                         tooltipsEnabled={tooltipsEnabled}
                     />
-                    <div className="timeline-track-container" style={{ width: `${totalWidth}px` }}>
+                    {/* L'instant survolé, qui anime l'image du carrefour, se suit sur
+                        tout le conteneur : lignes ET cadres d'action posés par-dessus
+                        (adaptatif vertical, escamotage de phase, point de repos…).
+                        Suivi ligne par ligne, il s'effaçait dès que la souris entrait
+                        sur un cadre, que la ligne prenait pour une sortie. */}
+                    <div
+                        className="timeline-track-container"
+                        style={{ width: `${totalWidth}px` }}
+                        onMouseMove={setHoveredDiagramTime ? (e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const time = Math.floor(x / pixelsPerSecond);
+                            setHoveredDiagramTime(Math.max(0, Math.min(time, effectiveCycleLength - 1)));
+                        } : undefined}
+                        onMouseLeave={setHoveredDiagramTime ? () => setHoveredDiagramTime(null) : undefined}
+                    >
                         <TimelineGridBackground
                             groups={groups}
                             isPlayingSimulation={isPlayingSimulation}
@@ -600,18 +615,7 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick, pixelsPerSecond = 3
                                     onClick={() => onGroupClick(group)}
                                     style={{ backgroundColor: isHighlightedByArrow ? (hoveredArrowGroupSaturated ? 'rgba(231, 76, 60, 0.25)' : 'rgba(100, 150, 255, 0.2)') : (isConflict ? 'rgba(231, 76, 60, 0.1)' : 'transparent'), ...(biCarrefourSeparator != null && group.id === biCarrefourSeparator ? { borderBottom: '1px solid white' } : {}) }}
                                     onMouseEnter={() => setHoveredGroupId(group.id)}
-                                    onMouseLeave={() => {
-                                        setHoveredGroupId(null);
-                                        if (setHoveredDiagramTime) setHoveredDiagramTime(null);
-                                    }}
-                                    onMouseMove={(e) => {
-                                        if (setHoveredDiagramTime) {
-                                            const rect = e.currentTarget.getBoundingClientRect();
-                                            const x = e.clientX - rect.left;
-                                            const time = Math.floor(x / pixelsPerSecond);
-                                            setHoveredDiagramTime(Math.max(0, Math.min(time, effectiveCycleLength - 1)));
-                                        }
-                                    }}
+                                    onMouseLeave={() => setHoveredGroupId(null)}
                                 >
                                     {/* Base bars from group Début/Fin (sidebar values) - only if phase exists */}
                                     {hasPhase && (() => {

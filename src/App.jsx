@@ -67,7 +67,7 @@ import SupportDialogs from './components/app/SupportDialogs';
 import './components/GroupTable.css';
 import './components/IntergreenMatrix.css';
 import './App.css';
-import { lireMiseEnPage, appliquerMiseEnPage } from './utils/miseEnPageProjet';
+import { lireMiseEnPage, appliquerMiseEnPage, affichageCommentairesRemarques } from './utils/miseEnPageProjet';
 
 function App() {
     const askConfirm = useConfirm();
@@ -409,14 +409,36 @@ function App() {
     const [hoveredConflict, setHoveredConflict] = useState(null); // {from, to} for conflict hover
     const [isSaving, setIsSaving] = useState(false);
 
+    const {
+        darkMode, setDarkMode,
+        colorTheme, setColorTheme,
+        showComments, setShowComments,
+        showRemarks, setShowRemarks,
+        showGroupNamesForm, setShowGroupNamesForm,
+        showGroupNamesMatrix, setShowGroupNamesMatrix,
+        showGroupNamesDiagram, setShowGroupNamesDiagram,
+        showActionDescription, setShowActionDescription
+    } = useDarkMode();
+
     // Cases d'affichage de l'image du carrefour (numéros, noms, ajout de
     // flèches) : enregistrées avec le projet, cf. champsProjetRef. Leur
     // changement compte comme une modification du projet.
     const { intersectionDisplay, setIntersectionDisplayOption } = useIntersectionDisplayOptions();
 
     // Track whether project has been modified (for "Nouveau projet" menu)
-    const { projectModified, setProjectModified, resetModified: resetProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges } =
-        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, intersectionDisplay]);
+    const { projectModified, setProjectModified, resetModified: resetProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
+        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, intersectionDisplay,
+            // Enregistrés dans le projet : les cocher est une modification.
+            showComments, showRemarks]);
+
+    // Passer d'un plan de feux à un autre n'est pas une modification du projet :
+    // l'écran recharge les groupes, le cycle, la matrice et les actions du plan
+    // choisi, et ces recopies ne doivent pas faire apparaître l'astérisque.
+    const selectActivePF = useCallback((pfId) => {
+        if (pfId !== activePFId) absorbDerivedChanges();
+        setActivePFId(pfId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activePFId, setActivePFId]);
 
     // Update document title (browser tab) to reflect project name and unsaved status.
     // Sur l'écran d'accueil (aucun projet ouvert), on affiche juste
@@ -885,16 +907,6 @@ function App() {
         setCycleLengthInput(cycleLength.toString());
     }, [cycleLength]);
 
-    const {
-        darkMode, setDarkMode,
-        colorTheme, setColorTheme,
-        showComments, setShowComments,
-        showRemarks, setShowRemarks,
-        showGroupNamesForm, setShowGroupNamesForm,
-        showGroupNamesMatrix, setShowGroupNamesMatrix,
-        showGroupNamesDiagram, setShowGroupNamesDiagram,
-        showActionDescription, setShowActionDescription
-    } = useDarkMode();
     const { recentFiles, setRecentFiles, addToRecentFiles, getRecentDirectories, getRecentDirectoriesForMenu } = useRecentFiles();
     const [selectedProject, setSelectedProject] = useState(null);
     const [importFile, setImportFile] = useState(null);
@@ -2150,6 +2162,20 @@ function App() {
         }
 
         const data = loadProject(projectNameToOpen);
+        if (data) {
+            // Un projet tout juste rouvert depuis le cache n'a aucune
+            // modification : même remise à zéro que l'ouverture d'un fichier.
+            // Sans elle, l'installation de ses données comptait comme une
+            // modification et l'astérisque apparaissait aussitôt.
+            // setHasUnsavedChanges(false) ignore les changements des 300 ms
+            // suivantes, le temps que le chargement se pose. Le drapeau de saut
+            // est baissé : resté levé (après « Nouveau projet », par exemple),
+            // il ne serait pas consommé pendant cette fenêtre et absorberait la
+            // première modification de l'utilisateur.
+            setProjectModified(true); // active « Nouveau projet » dans le menu
+            projectModifiedSkip.current = false;
+            setHasUnsavedChanges(false); // pas de modifications non sauvegardées
+        }
         setOpenModal(false);
         setSelectedProject(null);
         setFloatingCrop(data?.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
@@ -2166,12 +2192,13 @@ function App() {
         setSidebarVisible(typeof data?.layoutOptions?.showParameters === 'boolean'
             ? data.layoutOptions.showParameters
             : true);
+        // Commentaires et remarques : le réglage enregistré dans le projet
+        // l'emporte. Recalculer à chaque ouverture faisait perdre le choix de
+        // l'utilisateur.
         if (data && typeof data === 'object') {
-            const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
-            setShowComments(!!hasComments);
-            const pfList = data.pfTabs || [];
-            const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
-            setShowRemarks(!!hasRemarks);
+            const affichage = affichageCommentairesRemarques(data);
+            setShowComments(affichage.showComments);
+            setShowRemarks(affichage.showRemarks);
         }
         setHasActiveProject(true);
     };
@@ -2620,7 +2647,7 @@ function App() {
                         phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
                         phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,
                         pixelsPerSecond, recentImageDirs, renamePF, reorderActions, reorderPF,
-                        resetDiagramHeight, saveDirectoryHandle, setActionColWidths, setActivePFId, setBrouillonPhasage,
+                        resetDiagramHeight, saveDirectoryHandle, setActionColWidths, setActivePFId: selectActivePF, setBrouillonPhasage,
                         setCycleLength, setCycleLengthInput, setDragConflictsFromDiagram, setDraggedTabIndex, setHoveredActionId,
                         setHoveredArrowGroupId, setHoveredDiagramTime, setHoveredPhasageGroupId, setImageBrightness, setImageContrast,
                         setIntersectionArrows, setIntersectionDisplayOption, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,

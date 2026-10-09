@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { lireMiseEnPage, appliquerMiseEnPage } from './miseEnPageProjet';
+import { lireMiseEnPage, appliquerMiseEnPage, affichageCommentairesRemarques } from './miseEnPageProjet';
 
 const etatCourant = {
     diagramHeight: 640,
@@ -142,5 +142,46 @@ describe("miseEnPageProjet — cases de l'image du carrefour", () => {
         const { vus: vusAncien, s: sAncien } = poseurs();
         appliquerMiseEnPage({ groups: [], pfTabs: [] }, sAncien);
         expect(vusAncien).not.toHaveProperty('imageNoms');
+    });
+});
+
+describe("affichageCommentairesRemarques — ouverture d'un projet", () => {
+    const avecContenu = {
+        groups: [{ comment: 'à vérifier' }],
+        pfTabs: [{ remarques: 'plan de pointe' }]
+    };
+
+    it('reprend le réglage enregistré, même si le projet a du contenu', () => {
+        expect(affichageCommentairesRemarques({
+            ...avecContenu,
+            layoutOptions: { showComments: false, showRemarks: false }
+        })).toEqual({ showComments: false, showRemarks: false });
+    });
+
+    it('reprend le réglage enregistré, même sans contenu', () => {
+        expect(affichageCommentairesRemarques({
+            groups: [], pfTabs: [],
+            layoutOptions: { showComments: true, showRemarks: true }
+        })).toEqual({ showComments: true, showRemarks: true });
+    });
+
+    it('sans réglage enregistré, affiche ce qui a du contenu', () => {
+        expect(affichageCommentairesRemarques(avecContenu))
+            .toEqual({ showComments: true, showRemarks: true });
+        expect(affichageCommentairesRemarques({ groups: [], pfTabs: [{ remarques: '  ' }] }))
+            .toEqual({ showComments: false, showRemarks: false });
+    });
+
+    it("trouve les commentaires portés par un plan de feux", () => {
+        expect(affichageCommentairesRemarques({
+            groups: [], pfTabs: [{ diagram: [{ comment: 'G2' }] }]
+        }).showComments).toBe(true);
+    });
+
+    it('traite chaque case séparément', () => {
+        expect(affichageCommentairesRemarques({
+            ...avecContenu,
+            layoutOptions: { showComments: false }
+        })).toEqual({ showComments: false, showRemarks: true });
     });
 });

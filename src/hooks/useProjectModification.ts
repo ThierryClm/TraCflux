@@ -80,7 +80,17 @@ const useProjectModification = (deps: DependencyList) => {
         }
     };
 
-    return { projectModified, setProjectModified, resetModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges };
+    // Ignore les changements des 300 ms qui suivent, SANS toucher à l'état
+    // « modifié » : pour les recopies que déclenche un simple changement de
+    // vue — le passage d'un plan de feux à un autre recharge groupes, cycle,
+    // matrice et actions de ce plan, sans rien modifier au projet. Une
+    // modification faite avant reste signalée.
+    const absorbDerivedChanges = () => {
+        isLoading.current = true;
+        setTimeout(() => { isLoading.current = false; }, 300);
+    };
+
+    return { projectModified, setProjectModified, resetModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges };
 };
 
 export default useProjectModification;
