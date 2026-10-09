@@ -2,21 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAlert, useConfirm } from './ConfirmProvider';
 import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { validateProject } from '../utils/projectValidator';
-import type { ActionMicro, Groupe, PlanDeFeu } from '../types/projet';
+import type { ActionMicro, Groupe } from '../types/projet';
+import type { GreenWavePf, GreenWaveProjectSource } from '../types/greenWave';
 import './CreateGreenWaveDialog.css';
 
-/** Plan de feux tel que lu dans un dossier : au minimum numéro, nom et actions. */
-type PfSource = Pick<PlanDeFeu, 'id' | 'name' | 'data'> & Partial<PlanDeFeu>;
+type PfSource = GreenWavePf;
 
 /** Champs d'un dossier TraCflux utiles à la création de l'onde verte. */
-export interface ProjectSource {
-    projectName?: string | null;
-    intersectionName?: string;
-    groups?: Groupe[];
-    cycleLength?: number;
-    pfTabs?: PfSource[];
-    actionData?: ActionMicro[];
-}
+export type ProjectSource = GreenWaveProjectSource;
 
 /** Carrefour en cours de saisie dans la fenêtre de création. */
 interface DraftIntersection {

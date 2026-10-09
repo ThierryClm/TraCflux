@@ -9,46 +9,12 @@
  * carrefour, ses distances et, si possible, son plan de feux et ses groupes.
  */
 
-interface GroupLike {
-    id: number;
-    name?: string;
-    offset?: number;
-    durations?: { green?: number; [key: string]: unknown };
-    [key: string]: unknown;
-}
+import type { Groupe } from '../types/projet';
+import type { GreenWaveIntersection, GreenWavePf, GreenWaveProjectSource } from '../types/greenWave';
 
-interface PfLike {
-    id: number;
-    name?: string;
-    cycleLength?: number;
-    data?: unknown[];
-    diagram?: Array<{ groupId: number; offset?: number; greenDuration?: number }>;
-    [key: string]: unknown;
-}
-
-export interface GreenWaveIntersection {
-    /** Nom du fichier du dossier, qui sert aussi de clé dans le cache. */
-    projectName: string;
-    /** Titre du projet (champ « nom du carrefour » du dossier). */
-    intersectionName?: string;
-    groups: GroupLike[];
-    pfTabs?: PfLike[];
-    selectedPfId?: number;
-    selectedGroup1?: number;
-    selectedGroup2?: number;
-    cycleLength?: number;
-    actionData?: unknown[];
-    [key: string]: unknown;
-}
-
-export interface ProjectLike {
-    intersectionName?: string;
-    groups?: GroupLike[];
-    pfTabs?: PfLike[];
-    cycleLength?: number;
-    actionData?: unknown[];
-    [key: string]: unknown;
-}
+export type { GreenWaveIntersection };
+/** Dossier relu pour le rattachement. */
+export type ProjectLike = GreenWaveProjectSource;
 
 /** same : même numéro et même nom ; byName : retrouvé par son nom ;
  *  byId : même numéro mais nom différent ; missing : remplacé par défaut. */
@@ -76,11 +42,11 @@ export interface RelinkReport {
 export const intersectionTitle = (intersection: Pick<GreenWaveIntersection, 'projectName' | 'intersectionName'>, cachedTitle?: string | null): string =>
     intersection.intersectionName || cachedTitle || intersection.projectName;
 
-const groupLabel = (group: GroupLike | undefined): string =>
+const groupLabel = (group: Groupe | undefined): string =>
     group ? `G${group.id} - ${group.name || 'Sans nom'}` : '—';
 
 /** Applique au groupe les décalages et durées de vert propres au plan de feux. */
-export const applyPfDiagram = (groups: GroupLike[], pf: PfLike | undefined): GroupLike[] => {
+export const applyPfDiagram = (groups: Groupe[], pf: GreenWavePf | undefined): Groupe[] => {
     if (!pf?.diagram || !Array.isArray(pf.diagram)) return groups;
     const diagram = pf.diagram;
     return groups.map(group => {
@@ -97,7 +63,7 @@ export const applyPfDiagram = (groups: GroupLike[], pf: PfLike | undefined): Gro
     });
 };
 
-const matchGroup = (previous: GroupLike | undefined, groups: GroupLike[]): { group: GroupLike | undefined; match: GroupMatch } => {
+const matchGroup = (previous: Groupe | undefined, groups: Groupe[]): { group: Groupe | undefined; match: GroupMatch } => {
     if (previous) {
         const sameId = groups.find(g => g.id === previous.id);
         if (sameId && (sameId.name || '') === (previous.name || '')) return { group: sameId, match: 'same' };
@@ -113,7 +79,7 @@ export const relinkIntersection = (
     projectName: string,
     project: ProjectLike
 ): { intersection: GreenWaveIntersection; report: RelinkReport } => {
-    const pfTabs: PfLike[] = Array.isArray(project.pfTabs) && project.pfTabs.length > 0
+    const pfTabs: GreenWavePf[] = Array.isArray(project.pfTabs) && project.pfTabs.length > 0
         ? project.pfTabs
         : [{ id: 1, name: 'PF1', data: project.actionData || [] }];
 
