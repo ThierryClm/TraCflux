@@ -1,7 +1,8 @@
 import TimelineDiagramImplementation from '../TimelineDiagram';
 import PhasageBulleImplementation from '../PhasageBulle';
 import IntersectionImageImplementation from '../IntersectionImage';
-import ActionTableImplementation from '../ActionTable';
+import ActionTable from '../ActionTable';
+import type { ActionTableProps } from '../ActionTable';
 import { toast } from '../../utils/toast';
 import type {
     ComponentType,
@@ -31,7 +32,7 @@ interface PhasageDraft {
 }
 
 interface WorkspaceMainModel {
-    actionColWidths: Record<string, number>;
+    actionColWidths: NonNullable<ActionTableProps['actionColWidths']>;
     actionData: ActionMicro[];
     activePFId: number;
     activePfReadOnly: boolean;
@@ -90,18 +91,18 @@ interface WorkspaceMainModel {
     pixelsPerSecond: number;
     recentImageDirs: unknown[];
     renamePF: (id: number, name: string) => void;
-    reorderActions: Callback;
+    reorderActions: NonNullable<ActionTableProps['reorderActions']>;
     reorderPF: (fromIndex: number, toIndex: number) => void;
     resetDiagramHeight: Callback;
     saveDirectoryHandle: Callback;
-    setActionColWidths: Callback;
+    setActionColWidths: NonNullable<ActionTableProps['setActionColWidths']>;
     setActivePFId: (id: number) => void;
     setBrouillonPhasage: Dispatch<SetStateAction<PhasageDraft | null>>;
     setCycleLength: Callback;
     setCycleLengthInput: Callback;
     setDragConflictsFromDiagram: Callback;
     setDraggedTabIndex: (index: number | null) => void;
-    setHoveredActionId: Callback;
+    setHoveredActionId: ActionTableProps['setHoveredActionId'];
     setHoveredArrowGroupId: Callback;
     setHoveredDiagramTime: Callback;
     setHoveredPhasageGroupId: Callback;
@@ -120,10 +121,10 @@ interface WorkspaceMainModel {
     setPhasageBulleVersion: Dispatch<SetStateAction<number>>;
     setPhasageEllipseScale: Callback;
     setSelectedGroupId: (id: number) => void;
-    setShowFloatingConditions: Callback;
+    setShowFloatingConditions: ActionTableProps['setShowFloatingConditions'];
     setShowFloatingDiagram: (value: boolean) => void;
     openFloatingImage: () => void;
-    setShowFloatingVariables: Callback;
+    setShowFloatingVariables: ActionTableProps['setShowFloatingVariables'];
     setSidebarWidth: (value: number) => void;
     setSimulationCurrentTime: Callback;
     setSimulationEnabled: (value: boolean) => void;
@@ -147,9 +148,9 @@ interface WorkspaceMainModel {
     startDrag: Callback;
     tip: (label: string) => string | undefined;
     tooltipPrefs: { diagram?: boolean; micro?: boolean };
-    updateActionRow: Callback;
+    updateActionRow: ActionTableProps['updateActionRow'];
     updateGroupParams: Callback;
-    updateMicroCustomField: Callback;
+    updateMicroCustomField: NonNullable<ActionTableProps['updateMicroCustomField']>;
     updatePFRemarques: Callback;
 }
 
@@ -160,7 +161,6 @@ interface WorkspaceMainProps {
 const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
 const PhasageBulle = PhasageBulleImplementation as unknown as LooseComponent;
 const IntersectionImage = IntersectionImageImplementation as unknown as LooseComponent;
-const ActionTable = ActionTableImplementation as unknown as LooseComponent;
 
 export default function WorkspaceMain({ model }: WorkspaceMainProps) {
     const {
