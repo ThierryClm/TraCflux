@@ -40,6 +40,7 @@ import useRecentFiles from './hooks/useRecentFiles';
 import useSimulationUI from './hooks/useSimulationUI';
 import useDialogState from './hooks/useDialogState';
 import useFloatingImage from './hooks/useFloatingImage';
+import useIntersectionDisplayOptions from './hooks/useIntersectionDisplayOptions';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from './utils/floatingImageBox';
 import useDirectoryHandles from './hooks/useDirectoryHandles';
 import useFloatingImageRenderer from './hooks/useFloatingImageRenderer';
@@ -419,9 +420,14 @@ function App() {
         showActionDescription, setShowActionDescription
     } = useDarkMode();
 
+    // Cases d'affichage de l'image du carrefour (numéros, noms, ajout de
+    // flèches) : enregistrées avec le projet, cf. champsProjetRef. Leur
+    // changement compte comme une modification du projet.
+    const { intersectionDisplay, setIntersectionDisplayOption } = useIntersectionDisplayOptions();
+
     // Track whether project has been modified (for "Nouveau projet" menu)
     const { projectModified, setProjectModified, resetModified: resetProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
-        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset,
+        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, intersectionDisplay,
             // Enregistrés dans le projet : les cocher est une modification.
             showComments, showRemarks]);
 
@@ -1086,6 +1092,9 @@ function App() {
                 showFloatingForm, showFloatingMatrix, showFloatingTraffic,
                 showFloatingImage, showFloatingConditions, showFloatingVariables,
                 showFloatingRemarks,
+                showImageGroupNumbers: intersectionDisplay.showGroupNumbers,
+                showImageGroupNames: intersectionDisplay.showGroupNames,
+                showImageArrows: intersectionDisplay.showArrows,
                 directoryNames: {
                     open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
                     save: lastSaveDirectoryRef.current?.name || recentSaveDirs[0]?.name || null,
@@ -1101,7 +1110,10 @@ function App() {
             setSidebarVisible, setShowComments, setShowRemarks, setShowActionDescription,
             setShowFloatingForm, setShowFloatingMatrix, setShowFloatingTraffic,
             setShowFloatingImage, setShowFloatingConditions, setShowFloatingVariables,
-            setShowFloatingRemarks, setDossierSections
+            setShowFloatingRemarks, setDossierSections,
+            setShowImageGroupNumbers: (v) => setIntersectionDisplayOption('showGroupNumbers', v),
+            setShowImageGroupNames: (v) => setIntersectionDisplayOption('showGroupNames', v),
+            setShowImageArrows: (v) => setIntersectionDisplayOption('showArrows', v)
         })
     };
 
@@ -2286,6 +2298,7 @@ function App() {
         simulationCurrentTime, simulationResult,
         actionData, cycleLength,
         imageBrightness, imageContrast,
+        intersectionDisplay,
         floatingImagePopup
     });
 
@@ -2629,7 +2642,7 @@ function App() {
                         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
                         helpZoneRef, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict,
                         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
-                        imageFondClair, intersectionArrows, intersectionImage, intersectionName, isPlayingSimulation,
+                        imageFondClair, intersectionArrows, intersectionDisplay, intersectionImage, intersectionName, isPlayingSimulation,
                         isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
                         phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
                         phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,
@@ -2637,7 +2650,7 @@ function App() {
                         resetDiagramHeight, saveDirectoryHandle, setActionColWidths, setActivePFId: selectActivePF, setBrouillonPhasage,
                         setCycleLength, setCycleLengthInput, setDragConflictsFromDiagram, setDraggedTabIndex, setHoveredActionId,
                         setHoveredArrowGroupId, setHoveredDiagramTime, setHoveredPhasageGroupId, setImageBrightness, setImageContrast,
-                        setIntersectionArrows, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
+                        setIntersectionArrows, setIntersectionDisplayOption, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
                         setPhasageBulleCount, setPhasageBulleEnabled, setPhasageBulleModal, setPhasageBulleTimes, setPhasageBulleVersion,
                         setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
                         setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,

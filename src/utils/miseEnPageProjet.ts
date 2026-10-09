@@ -16,7 +16,8 @@ type LayoutSetter = (value?: unknown) => void;
 type LayoutSetters = Record<string, LayoutSetter | undefined>;
 
 /**
- * Les sept drapeaux de détachement, plus les quatre options d'affichage.
+ * Les sept drapeaux de détachement, les quatre options d'affichage et les
+ * trois cases de l'image du carrefour.
  * La liste est liée au type afin qu'une nouvelle option ne puisse pas être
  * oubliée silencieusement lors de la persistance.
  */
@@ -24,7 +25,8 @@ const DRAPEAUX_MISE_EN_PAGE: (keyof OptionsMiseEnPage)[] = [
     'showParameters', 'showComments', 'showRemarks', 'showActionDescription',
     'showFloatingForm', 'showFloatingMatrix', 'showFloatingTraffic',
     'showFloatingImage', 'showFloatingConditions', 'showFloatingVariables',
-    'showFloatingRemarks'
+    'showFloatingRemarks',
+    'showImageGroupNumbers', 'showImageGroupNames', 'showImageArrows'
 ];
 
 /** Compose les réglages persistants depuis l'état courant de l'application. */
@@ -44,7 +46,10 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
         showFloatingImage: v.showFloatingImage,
         showFloatingConditions: v.showFloatingConditions,
         showFloatingVariables: v.showFloatingVariables,
-        showFloatingRemarks: v.showFloatingRemarks
+        showFloatingRemarks: v.showFloatingRemarks,
+        showImageGroupNumbers: v.showImageGroupNumbers,
+        showImageGroupNames: v.showImageGroupNames,
+        showImageArrows: v.showImageArrows
     },
     directoryNames: {
         open: v.directoryNames?.open ?? null,
@@ -102,7 +107,10 @@ export const appliquerMiseEnPage = (
         showFloatingImage: s.setShowFloatingImage,
         showFloatingConditions: s.setShowFloatingConditions,
         showFloatingVariables: s.setShowFloatingVariables,
-        showFloatingRemarks: s.setShowFloatingRemarks
+        showFloatingRemarks: s.setShowFloatingRemarks,
+        showImageGroupNumbers: s.setShowImageGroupNumbers,
+        showImageGroupNames: s.setShowImageGroupNames,
+        showImageArrows: s.setShowImageArrows
     };
 
     if (data.layoutOptions && typeof data.layoutOptions === 'object') {

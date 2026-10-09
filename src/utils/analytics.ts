@@ -52,7 +52,7 @@ export function shouldLoadAnalytics({ hostname, token, doNotTrack, globalPrivacy
 /**
  * Charge Cloudflare Web Analytics une seule fois, sans cookie ni événement
  * métier. Le script ne reçoit que son identifiant public de site : aucune
- * donnée de projet TraCFlux ne lui est transmise.
+ * donnée de projet TraCflux ne lui est transmise.
  */
 export function initPrivacyFriendlyAnalytics({
     windowRef = window as AnalyticsWindow,

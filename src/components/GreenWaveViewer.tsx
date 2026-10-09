@@ -1,7 +1,30 @@
 import React, { useState, useMemo } from 'react';
+import type { Groupe } from '../types/projet';
 import './GreenWaveViewer.css';
 
-const GreenWaveViewer = ({ isOpen, onClose, intersections, folderName }) => {
+/** Carrefour d'une onde verte, tel que l'aperçu le dessine. */
+export interface ViewerIntersection {
+    projectName?: string;
+    /** Distance du GF descendant, en mètres. */
+    distance: number;
+    /** Distance du GF montant, en mètres (à défaut, celle du descendant). */
+    distanceG2?: number;
+    cycleLength: number;
+    groups: Groupe[];
+    /** GF descendant. */
+    selectedGroup1?: number;
+    /** GF montant. */
+    selectedGroup2?: number;
+}
+
+interface GreenWaveViewerProps {
+    isOpen: boolean;
+    onClose: () => void;
+    intersections: ViewerIntersection[] | null | undefined;
+    folderName?: string;
+}
+
+const GreenWaveViewer = ({ isOpen, onClose, intersections, folderName }: GreenWaveViewerProps) => {
     const [pixelsPerSecond, setPixelsPerSecond] = useState(8);
     const [pixelsPerMeter, setPixelsPerMeter] = useState(1);
     const [speedUp, setSpeedUp] = useState(50); // km/h - vitesse montante
@@ -41,17 +64,17 @@ const GreenWaveViewer = ({ isOpen, onClose, intersections, folderName }) => {
     const diagramHeight = (maxDistance - minDistance) * pixelsPerMeter + PADDING_TOP + PADDING_BOTTOM;
 
     // Convert coordinates : Y mesuré depuis le bas du diagramme = minDistance.
-    const timeToX = (time) => PADDING_LEFT + time * pixelsPerSecond;
-    const distanceToY = (distance) => diagramHeight - PADDING_BOTTOM - (distance - minDistance) * pixelsPerMeter;
+    const timeToX = (time: number): number => PADDING_LEFT + time * pixelsPerSecond;
+    const distanceToY = (distance: number): number => diagramHeight - PADDING_BOTTOM - (distance - minDistance) * pixelsPerMeter;
 
     // Generate axis ticks
-    const timeTicks = [];
+    const timeTicks: number[] = [];
     const timeStep = cycleLength >= 60 ? 10 : 5;
     for (let t = 0; t <= maxTime; t += timeStep) {
         timeTicks.push(t);
     }
 
-    const distanceTicks = [];
+    const distanceTicks: number[] = [];
     const distanceSpan = maxDistance - minDistance;
     const distanceStep = distanceSpan > 500 ? 100 : 50;
     const firstTick = Math.floor(minDistance / distanceStep) * distanceStep;
@@ -310,7 +333,7 @@ const GreenWaveViewer = ({ isOpen, onClose, intersections, folderName }) => {
                             const group1 = intersection.groups.find(g => g.id === intersection.selectedGroup1);
                             const group2 = intersection.groups.find(g => g.id === intersection.selectedGroup2);
 
-                            const bars = [];
+                            const bars: React.ReactElement[] = [];
 
                             // Render bars for multiple cycles
                             for (let cycle = 0; cycle < 2; cycle++) {
@@ -444,7 +467,7 @@ const GreenWaveViewer = ({ isOpen, onClose, intersections, folderName }) => {
                             const { start, width } = bandwidthData.ascending;
                             const barHeight = 8;
 
-                            const elements = [];
+                            const elements: React.ReactElement[] = [];
                             for (let cycle = -1; cycle < 2; cycle++) {
                                 const cycleOffset = cycle * cycleLength;
                                 const bandStartAtBottom = start + cycleOffset;
@@ -529,7 +552,7 @@ const GreenWaveViewer = ({ isOpen, onClose, intersections, folderName }) => {
                             const { start, width } = bandwidthData.descending;
                             const barHeight = 8;
 
-                            const elements = [];
+                            const elements: React.ReactElement[] = [];
                             for (let cycle = -1; cycle < 2; cycle++) {
                                 const cycleOffset = cycle * cycleLength;
                                 const bandStartAtTop = start + cycleOffset;

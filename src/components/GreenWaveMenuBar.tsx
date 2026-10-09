@@ -9,6 +9,47 @@ import './MenuBar.css';
  * Fichier, Mise en page, À propos. Les contrôles continus (zoom X/Y,
  * cycles, lignes directrices) sont exposés en sous-menu.
  */
+/** Entrée de menu : action, case à cocher, curseur, sous-menu, en-tête ou séparateur. */
+interface MenuEntry {
+    label?: string;
+    action?: string;
+    type?: 'separator' | 'header' | 'slider' | 'submenu';
+    disabled?: boolean;
+    title?: string;
+    submenuId?: string;
+    submenu?: MenuEntry[];
+    toggle?: boolean;
+    checked?: boolean;
+    onSelect?: () => void;
+    keepSubmenuOpen?: boolean;
+    min?: number;
+    max?: number;
+    step?: number;
+    value?: number;
+    unit?: string;
+    onChange?: (value: number) => void;
+}
+
+interface Menu {
+    label: string;
+    disabled?: boolean;
+    items: MenuEntry[];
+}
+
+interface GreenWaveMenuBarProps {
+    onAction?: (action: string) => void;
+    pixelsPerSecond: number;
+    onPixelsPerSecondChange?: (value: number) => void;
+    pixelsPerMeter: number;
+    onPixelsPerMeterChange?: (value: number) => void;
+    displayCycles: number;
+    onDisplayCyclesChange?: (value: number) => void;
+    showSpeedLines: boolean;
+    onShowSpeedLinesChange?: (value: boolean) => void;
+    hasActiveProject?: boolean;
+    isExampleProject?: boolean;
+}
+
 const GreenWaveMenuBar = ({
     onAction,
     pixelsPerSecond, onPixelsPerSecondChange,
@@ -17,14 +58,14 @@ const GreenWaveMenuBar = ({
     showSpeedLines, onShowSpeedLinesChange,
     hasActiveProject = true,
     isExampleProject = false
-}) => {
-    const [openMenu, setOpenMenu] = useState(null);
-    const [openSubmenu, setOpenSubmenu] = useState(null);
-    const menuRef = useRef(null);
+}: GreenWaveMenuBarProps) => {
+    const [openMenu, setOpenMenu] = useState<string | null>(null);
+    const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
                 setOpenMenu(null);
                 setOpenSubmenu(null);
             }
@@ -33,12 +74,12 @@ const GreenWaveMenuBar = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleMenuClick = (key) => {
+    const handleMenuClick = (key: string) => {
         setOpenMenu(openMenu === key ? null : key);
         setOpenSubmenu(null);
     };
 
-    const handleItemClick = (action, keepSubmenuOpen = false) => {
+    const handleItemClick = (action: string | undefined, keepSubmenuOpen = false) => {
         if (!keepSubmenuOpen) {
             setOpenMenu(null);
             setOpenSubmenu(null);
@@ -46,11 +87,12 @@ const GreenWaveMenuBar = ({
         if (action && onAction) onAction(action);
     };
 
-    const handleSubmenuHover = (submenuId) => {
-        setOpenSubmenu(submenuId);
+    const handleSubmenuHover = (submenuId: string | undefined) => {
+        // Une entrée de sous-menu porte toujours son identifiant.
+        setOpenSubmenu(submenuId as string);
     };
 
-    const menus = {
+    const menus: Record<string, Menu> = {
         fichier: {
             label: 'Fichier',
             items: [
@@ -83,7 +125,7 @@ const GreenWaveMenuBar = ({
                         min: 4, max: 20, step: 1,
                         value: pixelsPerSecond,
                         unit: ' px/s',
-                        onChange: (v) => onPixelsPerSecondChange?.(v)
+                        onChange: (v: number) => onPixelsPerSecondChange?.(v)
                     }]
                 },
                 {
@@ -96,7 +138,7 @@ const GreenWaveMenuBar = ({
                         min: 0.2, max: 3, step: 0.1,
                         value: pixelsPerMeter,
                         unit: ' px/m',
-                        onChange: (v) => onPixelsPerMeterChange?.(v)
+                        onChange: (v: number) => onPixelsPerMeterChange?.(v)
                     }]
                 },
                 {
@@ -128,7 +170,7 @@ const GreenWaveMenuBar = ({
         }
     };
 
-    const renderSubmenuItem = (subItem, subIdx) => {
+    const renderSubmenuItem = (subItem: MenuEntry, subIdx: number) => {
         if (subItem.type === 'separator') {
             return <div key={subIdx} className="menu-separator" />;
         }
@@ -149,7 +191,7 @@ const GreenWaveMenuBar = ({
                         className="menu-slider-input"
                     />
                     <span className="menu-slider-value">
-                        {typeof subItem.value === 'number' ? subItem.value.toFixed(subItem.step < 1 ? 1 : 0) : subItem.value}{subItem.unit}
+                        {typeof subItem.value === 'number' ? subItem.value.toFixed((subItem.step ?? 1) < 1 ? 1 : 0) : subItem.value}{subItem.unit}
                     </span>
                 </div>
             );
@@ -184,7 +226,7 @@ const GreenWaveMenuBar = ({
         );
     };
 
-    const renderMenuItem = (item, idx) => {
+    const renderMenuItem = (item: MenuEntry, idx: number) => {
         if (item.type === 'separator') {
             return <div key={idx} className="menu-separator" />;
         }
@@ -195,7 +237,7 @@ const GreenWaveMenuBar = ({
                     className="menu-item-with-submenu"
                     onMouseEnter={() => handleSubmenuHover(item.submenuId)}
                     onMouseLeave={(e) => {
-                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
                             setOpenSubmenu(null);
                         }
                     }}
@@ -206,7 +248,7 @@ const GreenWaveMenuBar = ({
                     </button>
                     {openSubmenu === item.submenuId && (
                         <div className="submenu-dropdown">
-                            {item.submenu.map((s, i) => renderSubmenuItem(s, i))}
+                            {item.submenu!.map((s, i) => renderSubmenuItem(s, i))}
                         </div>
                     )}
                 </div>

@@ -690,6 +690,8 @@ const useFileOperations = ({
             floatingZoom,
             dossierSections,
             layoutOptions: {
+                // Options portées par le projet hors de ce hook (cases de l'image du carrefour…)
+                ...subset.layoutOptions,
                 showParameters: sidebarVisible,
                 showComments, showRemarks, showActionDescription,
                 showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
