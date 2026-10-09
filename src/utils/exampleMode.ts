@@ -19,12 +19,12 @@ try {
     _example = false;
 }
 
-export function isExampleSession() {
+export function isExampleSession(): boolean {
     return _example;
 }
 
 // À appeler dès qu'un vrai projet est chargé/créé : la sauvegarde et la
 // persistance localStorage redeviennent autorisées pour cette fenêtre.
-export function exitExampleSession() {
+export function exitExampleSession(): void {
     _example = false;
 }

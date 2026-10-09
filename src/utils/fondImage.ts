@@ -25,7 +25,7 @@ export const SEUIL_FOND_CLAIR = 170;
  * Les pixels transparents sont ignorés : une image à fond alpha se lirait
  * sinon comme un fond noir, alors qu'elle s'affiche sur le fond de la page.
  */
-export const luminanceMoyenne = (pixels) => {
+export const luminanceMoyenne = (pixels: ArrayLike<number>): number => {
     let somme = 0;
     let comptes = 0;
     for (let i = 0; i < pixels.length; i += 4) {
@@ -38,7 +38,7 @@ export const luminanceMoyenne = (pixels) => {
     return somme / comptes;
 };
 
-export const fondEstClair = (luminance) => luminance >= SEUIL_FOND_CLAIR;
+export const fondEstClair = (luminance: number): boolean => luminance >= SEUIL_FOND_CLAIR;
 
 /**
  * Mesure une image déjà décodée en la réduisant à `taille` × `taille`.
@@ -49,7 +49,7 @@ export const fondEstClair = (luminance) => luminance >= SEUIL_FOND_CLAIR;
  * clair est le cas courant, et son halo coloré reste visible sur fond sombre,
  * alors que l'inverse serait invisible.
  */
-export const mesurerFondClair = (img, taille = 32) => {
+export const mesurerFondClair = (img: CanvasImageSource, taille = 32): boolean => {
     try {
         const canvas = document.createElement('canvas');
         canvas.width = taille;

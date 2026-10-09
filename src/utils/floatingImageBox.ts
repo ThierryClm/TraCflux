@@ -11,6 +11,45 @@
 export const BOX_W = 750;
 export const BOX_H = 530;
 
+/** Dimensions natives d'une image (0 ou absentes tant qu'elle n'est pas décodée). */
+export interface NaturalDims {
+    width?: number;
+    height?: number;
+}
+
+/** Rognage en pixels de la boîte de référence, bord par bord. */
+export interface Crop {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+}
+
+/** Ce que le calcul du cadre retient d'une flèche du carrefour. */
+export interface ArrowFootprint {
+    x: number;
+    y: number;
+    scale?: number;
+    length?: number;
+    turnLength?: number;
+}
+
+/** Cadre dans la boîte de référence. */
+export interface BoxRect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+/** Taille affichée de l'image et bandes vides qui l'encadrent. */
+export interface FittedImage {
+    dispW: number;
+    dispH: number;
+    padX: number;
+    padY: number;
+}
+
 /**
  * Référentiel du rognage enregistré dans un projet.
  *
@@ -27,7 +66,7 @@ export const CROP_BASIS = 'image';
  * Convertit un rognage exprimé depuis le bord de la boîte vers un rognage
  * exprimé depuis le bord de l'image : on lui retire les bandes vides.
  */
-export const cropFromBoxToImage = (crop, naturalDims) => {
+export const cropFromBoxToImage = (crop: Partial<Crop> | null | undefined, naturalDims: NaturalDims | null | undefined): Crop => {
     const { padX, padY } = fitImageBox(naturalDims);
     return {
         top: Math.max(0, (crop?.top || 0) - padY),
@@ -38,17 +77,16 @@ export const cropFromBoxToImage = (crop, naturalDims) => {
 };
 
 /** Cadrage neutre : tout projet démarre sans rognage ni zoom. */
-export const DEFAULT_CROP = { top: 0, bottom: 0, left: 0, right: 0 };
+export const DEFAULT_CROP: Crop = { top: 0, bottom: 0, left: 0, right: 0 };
 export const DEFAULT_ZOOM = 1;
 
 /**
  * Cadre utile de l'image dans la boîte de référence.
  *
- * @param {{width: number, height: number}} naturalDims - Dimensions natives de l'image
- * @returns {{dispW: number, dispH: number, padX: number, padY: number}}
- *          Taille affichée et bandes vides (gauche/droite, haut/bas)
+ * @param naturalDims - Dimensions natives de l'image
+ * @returns Taille affichée et bandes vides (gauche/droite, haut/bas)
  */
-export const fitImageBox = (naturalDims) => {
+export const fitImageBox = (naturalDims: NaturalDims | null | undefined): FittedImage => {
     const natW = naturalDims?.width || 1;
     const natH = naturalDims?.height || 1;
     // Dimensions natives pas encore chargées (l'image se décode en asynchrone,
@@ -75,7 +113,7 @@ export const fitImageBox = (naturalDims) => {
  * dans les bandes de « contain » ne doivent pas réagrandir son cadre et faire
  * réapparaître des marges au-dessus ou au-dessous.
  */
-export const fitDetachedImageBox = (naturalDims) => {
+export const fitDetachedImageBox = (naturalDims: NaturalDims | null | undefined): BoxRect => {
     const { dispW, dispH, padX, padY } = fitImageBox(naturalDims);
     return { x: padX, y: padY, w: dispW, h: dispH };
 };
@@ -105,11 +143,14 @@ export const ARROW_SIZE = 96;
  * Le débordement est majoré sans tenir compte de la rotation — un symbole
  * pivoté déborde dans une autre direction, pas plus loin.
  *
- * @param {{width: number, height: number}} naturalDims - Dimensions natives de l'image
- * @param {Array} arrows - Flèches du carrefour (x, y en % de la boîte)
- * @returns {{x: number, y: number, w: number, h: number}} Cadre dans la boîte de référence
+ * @param naturalDims - Dimensions natives de l'image
+ * @param arrows - Flèches du carrefour (x, y en % de la boîte)
+ * @returns Cadre dans la boîte de référence
  */
-export const fitContentBox = (naturalDims, arrows = []) => {
+export const fitContentBox = (
+    naturalDims: NaturalDims | null | undefined,
+    arrows: ReadonlyArray<Partial<ArrowFootprint> | null | undefined> | null = []
+): BoxRect => {
     const { dispW, dispH, padX, padY } = fitImageBox(naturalDims);
     let gauche = padX;
     let haut = padY;
@@ -118,12 +159,14 @@ export const fitContentBox = (naturalDims, arrows = []) => {
 
     (Array.isArray(arrows) ? arrows : []).forEach(a => {
         if (!a || !Number.isFinite(a.x) || !Number.isFinite(a.y)) return;
+        const x = a.x as number;
+        const y = a.y as number;
         // Les flèches piétonnes et cyclistes s'allongent, les tourne-à-droite et
         // à-gauche ajoutent leur retour : on retient l'allongement le plus grand.
         const allongement = Math.max(1, a.length || 1, a.turnLength || 1);
         const demi = (ARROW_SIZE * (a.scale || 1) * allongement) / 2;
-        const cx = (a.x / 100) * BOX_W;
-        const cy = (a.y / 100) * BOX_H;
+        const cx = (x / 100) * BOX_W;
+        const cy = (y / 100) * BOX_H;
         gauche = Math.min(gauche, cx - demi);
         droite = Math.max(droite, cx + demi);
         haut = Math.min(haut, cy - demi);

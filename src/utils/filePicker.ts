@@ -5,29 +5,29 @@
  */
 let filePickerActive = false;
 
-export function isFilePickerActive() {
+export function isFilePickerActive(): boolean {
     return filePickerActive;
 }
 
-export async function safeShowOpenFilePicker(options) {
+export async function safeShowOpenFilePicker(options?: FilePickerOptionsLike): Promise<FileSystemFileHandleLike[]> {
     if (filePickerActive) {
         throw new DOMException('File picker already active.', 'AbortError');
     }
     filePickerActive = true;
     try {
-        return await window.showOpenFilePicker(options);
+        return await window.showOpenFilePicker!(options);
     } finally {
         filePickerActive = false;
     }
 }
 
-export async function safeShowSaveFilePicker(options) {
+export async function safeShowSaveFilePicker(options?: FilePickerOptionsLike): Promise<FileSystemFileHandleLike> {
     if (filePickerActive) {
         throw new DOMException('File picker already active.', 'AbortError');
     }
     filePickerActive = true;
     try {
-        return await window.showSaveFilePicker(options);
+        return await window.showSaveFilePicker!(options);
     } finally {
         filePickerActive = false;
     }

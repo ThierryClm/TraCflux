@@ -2,13 +2,13 @@
  * Pure filename helper — kept separate from exportHelpers.js so consumers can
  * import it without pulling html2canvas/jsPDF into the main bundle.
  */
-const sanitize = (s) => String(s).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '-');
+const sanitize = (s: unknown): string => String(s).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '-');
 
 /**
  * Build a safe filename base:  {Project}_{PF}_{YYYY-MM-DD}
  */
-export const buildExportFilename = (projectName, pfName) => {
-    const parts = [];
+export const buildExportFilename = (projectName?: string | null, pfName?: string | null): string => {
+    const parts: string[] = [];
     if (projectName) parts.push(sanitize(projectName));
     if (pfName) parts.push(sanitize(pfName));
     const d = new Date();

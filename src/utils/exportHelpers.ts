@@ -6,14 +6,22 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
+/** Options transmises telles quelles à html2canvas (par exemple `onclone`). */
+type CanvasOptions = Parameters<typeof html2canvas>[1];
+
+export interface PdfExportOptions {
+    orientation?: 'portrait' | 'landscape';
+}
+
 export { buildExportFilename } from './exportFilename';
 
-const measuredSize = (element, axis) => {
+const measuredSize = (element: Element | null | undefined, axis: 'width' | 'height'): number => {
     if (!element) return 0;
     const rect = element.getBoundingClientRect?.();
     const rectSize = axis === 'width' ? rect?.width : rect?.height;
     const scrollSize = axis === 'width' ? element.scrollWidth : element.scrollHeight;
-    const offsetSize = axis === 'width' ? element.offsetWidth : element.offsetHeight;
+    const htmlElement = element as HTMLElement;
+    const offsetSize = axis === 'width' ? htmlElement.offsetWidth : htmlElement.offsetHeight;
     return Math.max(Number(rectSize) || 0, Number(scrollSize) || 0, Number(offsetSize) || 0);
 };
 
@@ -21,7 +29,7 @@ const measuredSize = (element, axis) => {
  * Calcule la surface complète du diagramme, y compris la partie de la piste
  * située hors du viewport courant.
  */
-export const getTimelineCaptureDimensions = (element) => {
+export const getTimelineCaptureDimensions = (element: Element | null | undefined): { width: number; height: number } => {
     if (!element) return { width: 0, height: 0 };
     const sidebar = element.querySelector('.timeline-sidebar');
     const scrollArea = element.querySelector('.timeline-scroll-area');
@@ -34,7 +42,9 @@ export const getTimelineCaptureDimensions = (element) => {
     return { width, height };
 };
 
-const controlText = (control) => {
+type FormControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+const controlText = (control: FormControl): string => {
     if (control instanceof HTMLSelectElement) {
         return control.selectedOptions[0]?.textContent || '';
     }
@@ -49,10 +59,10 @@ const controlText = (control) => {
  * texte statique. Les valeurs React courantes ne sont pas toujours recopiées
  * dans les attributs HTML du clone.
  */
-export const materializeFormControlValues = (sourceRoot, clonedRoot) => {
+export const materializeFormControlValues = (sourceRoot: ParentNode | null | undefined, clonedRoot: ParentNode | null | undefined): void => {
     if (!sourceRoot || !clonedRoot) return;
-    const sourceControls = sourceRoot.querySelectorAll('input, select, textarea');
-    const clonedControls = clonedRoot.querySelectorAll('input, select, textarea');
+    const sourceControls = sourceRoot.querySelectorAll<FormControl>('input, select, textarea');
+    const clonedControls = clonedRoot.querySelectorAll<FormControl>('input, select, textarea');
 
     sourceControls.forEach((sourceControl, index) => {
         const clonedControl = clonedControls[index];
@@ -66,7 +76,7 @@ export const materializeFormControlValues = (sourceRoot, clonedRoot) => {
 
         if (clonedControl.classList.contains('input-micro')) {
             const backdrop = clonedControl.closest('.micro-highlight-container')
-                ?.querySelector('.micro-highlight-backdrop');
+                ?.querySelector<HTMLElement>('.micro-highlight-backdrop');
             if (backdrop) backdrop.style.display = 'none';
         }
 
@@ -79,7 +89,7 @@ export const materializeFormControlValues = (sourceRoot, clonedRoot) => {
  * Extra options are passed through to html2canvas (e.g. onclone for DOM
  * tweaks on the cloned document used for rendering).
  */
-const renderToCanvas = async (element, extraOptions = {}) => {
+const renderToCanvas = async (element: HTMLElement, extraOptions: CanvasOptions = {}): Promise<HTMLCanvasElement> => {
     return html2canvas(element, {
         backgroundColor: '#1e1e1e',
         scale: 2,              // retina quality
@@ -94,18 +104,22 @@ const renderToCanvas = async (element, extraOptions = {}) => {
 /**
  * Export a DOM element as a PNG file (downloaded) AND copy it to the clipboard.
  *
- * @param {Element} element - DOM element to capture
- * @param {string} filename - filename without extension
- * @param {Object} [options] - extra html2canvas options (e.g. onclone)
- * @returns {Promise<{clipboardSuccess: boolean}>} indicates if the clipboard
- *   copy succeeded ; the file download is always attempted.
+ * @param element - DOM element to capture
+ * @param filename - filename without extension
+ * @param options - extra html2canvas options (e.g. onclone)
+ * @returns indicates if the clipboard copy succeeded ; the file download is
+ *   always attempted.
  */
-export const exportElementAsPNG = async (element, filename, options = {}) => {
+export const exportElementAsPNG = async (
+    element: HTMLElement | null | undefined,
+    filename: string,
+    options: CanvasOptions = {}
+): Promise<{ clipboardSuccess: boolean }> => {
     if (!element) throw new Error('Élément introuvable');
     const canvas = await renderToCanvas(element, options);
 
     // toBlob is callback-based; promisify for sequential await
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('Génération du PNG échouée');
 
     // 1. Download to disk
@@ -138,7 +152,11 @@ export const exportElementAsPNG = async (element, filename, options = {}) => {
  * Automatically chooses orientation (landscape if wider than tall).
  * Splits into multiple A4 pages vertically if content is taller.
  */
-export const exportElementAsPDF = async (element, filename, options = {}) => {
+export const exportElementAsPDF = async (
+    element: HTMLElement | null | undefined,
+    filename: string,
+    options: PdfExportOptions = {}
+): Promise<void> => {
     if (!element) throw new Error('Élément introuvable');
     const canvas = await renderToCanvas(element);
     const imgData = canvas.toDataURL('image/png');
@@ -172,7 +190,7 @@ export const exportElementAsPDF = async (element, filename, options = {}) => {
             const sliceCanvas = document.createElement('canvas');
             sliceCanvas.width = canvas.width;
             sliceCanvas.height = sliceHeight;
-            const ctx = sliceCanvas.getContext('2d');
+            const ctx = sliceCanvas.getContext('2d')!;
             ctx.fillStyle = '#1e1e1e';
             ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
             ctx.drawImage(canvas, 0, -yOffset);

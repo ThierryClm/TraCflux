@@ -1,14 +1,22 @@
+import type { ReactElement, SVGProps } from 'react';
+
 /**
  * Renders an SVG arrow for a given traffic movement type.
  *
- * @param {string} courant - Movement type ('TD', 'TàD', 'TàG', 'TDTàD', 'TDTàG', 'TD_G_D', 'Piéton', 'Cycle')
- * @param {string} color - SVG stroke color
- * @param {number} arrowLength - Length multiplier (default 1)
- * @param {number} turnLength - Turn length multiplier (default 1)
- * @param {boolean} ppAllume - Triangle PP allumé à cet instant (cf. isPPLit)
- * @returns {JSX.Element} SVG element
+ * @param courant - Movement type ('TD', 'TàD', 'TàG', 'TDTàD', 'TDTàG', 'TD_G_D', 'Piéton', 'Cycle')
+ * @param color - SVG stroke color
+ * @param arrowLength - Length multiplier (default 1)
+ * @param turnLength - Turn length multiplier (default 1)
+ * @param ppAllume - Triangle PP allumé à cet instant (cf. isPPLit)
+ * @returns SVG element
  */
-const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1, ppAllume = false) => {
+const renderFloatingArrowSVG = (
+    courant: string | undefined,
+    color: string,
+    arrowLength = 1,
+    turnLength = 1,
+    ppAllume = false
+): ReactElement<SVGProps<SVGSVGElement>> => {
     const strokeWidth = 3;
     const thinStrokeWidth = 2;
     const size = 32;
@@ -60,7 +68,7 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1,
             const racineY = (8 + bottom) / 2;
             const tipY = racineY - portee * ct;
             // Barbes de la pointe, tournées du même angle que la branche.
-            const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
+            const barbe = (dx: number, dy: number): string => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
             return (
                 <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
                     <line x1="12" y1={bottom} x2="12" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
@@ -89,7 +97,7 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1,
             const racineY = (8 + bottom) / 2;
             const tipY = racineY - portee * ct;
             // Barbes de la pointe, tournées du même angle que la branche.
-            const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
+            const barbe = (dx: number, dy: number): string => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
             return (
                 <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
                     <line x1="20" y1={bottom} x2="20" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
@@ -111,9 +119,9 @@ const renderFloatingArrowSVG = (courant, color, arrowLength = 1, turnLength = 1,
             const racineY = (8 + bottom) / 2;
             // Une branche par côté : sens = +1 à droite, -1 à gauche. La branche
             // étant horizontale, les barbes se déduisent sans rotation.
-            const branche = (sens) => {
+            const branche = (sens: number) => {
                 const tipX = 16 + portee * sens;
-                const barbe = (dx, dy) => `${(tipX - dy * sens).toFixed(2)},${(racineY + dx * sens).toFixed(2)}`;
+                const barbe = (dx: number, dy: number): string => `${(tipX - dy * sens).toFixed(2)},${(racineY + dx * sens).toFixed(2)}`;
                 return { tipX: tipX.toFixed(2), pointe: `${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}` };
             };
             return (

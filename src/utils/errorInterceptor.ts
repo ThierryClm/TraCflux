@@ -6,18 +6,27 @@
  * The original console behavior is preserved (we wrap, we don't hijack).
  */
 
+/** Origine d'une entrée : console, erreur non rattrapée ou promesse rejetée. */
+export type InterceptedEntryType = 'error' | 'warn' | 'runtime' | 'promise';
+
+export interface InterceptedEntry {
+    ts: string;
+    type: InterceptedEntryType;
+    message: string;
+}
+
 const MAX_ENTRIES = 50;
-const buffer = [];
+const buffer: InterceptedEntry[] = [];
 let installed = false;
 
-const pushEntry = (entry) => {
+const pushEntry = (entry: InterceptedEntry): void => {
     buffer.push(entry);
     if (buffer.length > MAX_ENTRIES) {
         buffer.splice(0, buffer.length - MAX_ENTRIES);
     }
 };
 
-const formatArg = (arg) => {
+const formatArg = (arg: unknown): string => {
     if (arg === null) return 'null';
     if (arg === undefined) return 'undefined';
     if (arg instanceof Error) return `${arg.name}: ${arg.message}${arg.stack ? '\n' + arg.stack : ''}`;
@@ -27,12 +36,12 @@ const formatArg = (arg) => {
     return String(arg);
 };
 
-const formatArgs = (args) => Array.from(args).map(formatArg).join(' ');
+const formatArgs = (args: ArrayLike<unknown>): string => Array.from(args).map(formatArg).join(' ');
 
 /**
  * Install the interception once. Idempotent.
  */
-export const installErrorInterceptor = () => {
+export const installErrorInterceptor = (): void => {
     if (installed) return;
     installed = true;
 
@@ -83,11 +92,11 @@ export const installErrorInterceptor = () => {
 /**
  * Snapshot of intercepted entries (newest last).
  */
-export const getInterceptedEntries = () => buffer.slice();
+export const getInterceptedEntries = (): InterceptedEntry[] => buffer.slice();
 
 /**
  * Clear the buffer (useful after a diagnostic export, if desired).
  */
-export const clearInterceptedEntries = () => {
+export const clearInterceptedEntries = (): void => {
     buffer.length = 0;
 };

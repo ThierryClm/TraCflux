@@ -9,14 +9,14 @@
  */
 
 let updatePending = false;
-let registeredUrl = null;
+let registeredUrl: string | null = null;
 
 /**
  * L'URL publiée par le hook est relative (base: './' dans vite.config). En
  * absolu elle révèle l'origine — donc le port, utile avec le cloisonnement du
  * stockage local.
  */
-const absolutize = (url) => {
+const absolutize = (url: string | null): string | null => {
     if (!url) return null;
     try {
         return new URL(url, window.location.href).href;
@@ -25,9 +25,17 @@ const absolutize = (url) => {
     }
 };
 
-export const setSwUpdatePending = (pending) => { updatePending = !!pending; };
+export const setSwUpdatePending = (pending: unknown): void => { updatePending = !!pending; };
 
-export const setSwRegisteredUrl = (url) => { registeredUrl = url || null; };
+export const setSwRegisteredUrl = (url: string | null | undefined): void => { registeredUrl = url || null; };
+
+export interface SwStatus {
+    supported: boolean;
+    controlled: boolean;
+    state: ServiceWorkerState | null;
+    scriptUrl: string | null;
+    updatePending: boolean;
+}
 
 /**
  * État du service worker, volontairement synchrone : buildDiagnosticReport est
@@ -35,7 +43,7 @@ export const setSwRegisteredUrl = (url) => { registeredUrl = url || null; };
  * seules informations asynchrones (worker en attente / en installation) sont
  * couvertes par updatePending, publié par le hook.
  */
-export const getSwStatus = () => {
+export const getSwStatus = (): SwStatus => {
     const supported = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
     const controller = supported ? navigator.serviceWorker.controller : null;
     return {
@@ -48,7 +56,7 @@ export const getSwStatus = () => {
 };
 
 /** Remet le registre à zéro — utilisé par les tests. */
-export const resetSwStatus = () => {
+export const resetSwStatus = (): void => {
     updatePending = false;
     registeredUrl = null;
 };

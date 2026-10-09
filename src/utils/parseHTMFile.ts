@@ -1,11 +1,15 @@
+import type { Groupe } from '../types/projet';
+
+export type ParsedHTMGroup = Pick<Groupe, 'id' | 'name' | 'type' | 'minGreen' | 'offset' | 'durations'>;
+
 /**
  * Parses an HTM/HTML file content and extracts traffic light group data.
  *
- * @param {string} content - Raw HTML string
- * @returns {Array} Array of group objects { id, name, type, minGreen, offset, durations }
+ * @param content - Raw HTML string
+ * @returns Array of group objects { id, name, type, minGreen, offset, durations }
  */
-const parseHTMFile = (content) => {
-    const groups = [];
+const parseHTMFile = (content: string): ParsedHTMGroup[] => {
+    const groups: ParsedHTMGroup[] = [];
 
     // Parse HTML table rows - look for traffic light data patterns
     const parser = new DOMParser();
@@ -21,7 +25,7 @@ const parseHTMFile = (content) => {
             const cells = row.querySelectorAll('td, th');
             if (cells.length >= 4) {
                 // Try to extract group data from cells
-                const cellTexts = Array.from(cells).map(c => c.textContent.trim());
+                const cellTexts = Array.from(cells).map(c => (c.textContent ?? '').trim());
 
                 // Look for patterns like: group name, green duration, orange, red
                 const nameCell = cellTexts[0];
