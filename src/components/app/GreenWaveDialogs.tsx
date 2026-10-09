@@ -1,5 +1,5 @@
-import CreateGreenWaveDialog from '../CreateGreenWaveDialog';
-import GreenWaveViewer from '../GreenWaveViewer';
+import CreateGreenWaveDialog, { type CreatedIntersection, type ProjectSource } from '../CreateGreenWaveDialog';
+import GreenWaveViewer, { type ViewerIntersection } from '../GreenWaveViewer';
 
 interface SavedGreenWave {
     name: string;
@@ -23,15 +23,15 @@ interface OpenGreenWaveDialogModel {
 interface CreateGreenWaveDialogModel {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (intersections: unknown[]) => void;
-    getAllSaves: () => unknown[];
-    loadProjectData: (name: string) => unknown;
+    onConfirm: (intersections: CreatedIntersection[]) => void;
+    getAllSaves: () => Array<{ name: string }>;
+    loadProjectData: (name: string) => ProjectSource | null;
 }
 
 interface GreenWaveViewerModel {
     isOpen: boolean;
     onClose: () => void;
-    intersections: unknown[];
+    intersections: ViewerIntersection[];
     folderName?: string;
 }
 

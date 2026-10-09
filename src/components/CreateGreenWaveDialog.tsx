@@ -2,13 +2,53 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAlert, useConfirm } from './ConfirmProvider';
 import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { validateProject } from '../utils/projectValidator';
+import type { ActionMicro, Groupe } from '../types/projet';
+import type { GreenWavePf, GreenWaveProjectSource } from '../types/greenWave';
 import './CreateGreenWaveDialog.css';
 
-const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadProjectData }) => {
+type PfSource = GreenWavePf;
+
+/** Champs d'un dossier TraCflux utiles à la création de l'onde verte. */
+export type ProjectSource = GreenWaveProjectSource;
+
+/** Carrefour en cours de saisie dans la fenêtre de création. */
+interface DraftIntersection {
+    id: number;
+    projectName: string;
+    intersectionName?: string;
+    /** Distance M (GF montant), en mètres. */
+    distance: number;
+    /** Distance D (GF descendant), en mètres ; vide tant qu'elle n'est pas saisie. */
+    distanceD: number | '';
+    groups: Groupe[];
+    cycleLength: number;
+    /** GF montant. */
+    selectedGroup1: number;
+    /** GF descendant. */
+    selectedGroup2: number;
+    pfTabs: PfSource[];
+    selectedPfId: number;
+    actionData: ActionMicro[];
+}
+
+/** Carrefour transmis à l'onde verte : GF et distances remis dans la convention de GreenWavePage. */
+export type CreatedIntersection = DraftIntersection & { distanceG2: number };
+
+type DraftNumberField = 'distance' | 'distanceD' | 'selectedGroup1' | 'selectedGroup2';
+
+interface CreateGreenWaveDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: (intersections: CreatedIntersection[]) => void;
+    getAllSaves: () => Array<{ name: string }>;
+    loadProjectData: (name: string) => ProjectSource | null;
+}
+
+const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadProjectData }: CreateGreenWaveDialogProps) => {
     const showAlert = useAlert();
     const askConfirm = useConfirm();
-    const [intersections, setIntersections] = useState([]);
-    const [availableProjects, setAvailableProjects] = useState([]);
+    const [intersections, setIntersections] = useState<DraftIntersection[]>([]);
+    const [availableProjects, setAvailableProjects] = useState<Array<{ name: string }>>([]);
     const [selectedProject, setSelectedProject] = useState('');
 
     // Ref pour ne réinitialiser que sur la transition fermé→ouvert. Sans ça,
@@ -30,16 +70,16 @@ const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadPr
     // dropdown localStorage) et handleBrowseFile (depuis un .json sur disque).
     // Distances par défaut basées sur l'index : Distance M = N × 200, Distance D
     // = N × 200 + 20 (ébauche régulière, ajustée ensuite dans la vue principale).
-    const addIntersectionFromData = (projectName, projectData) => {
+    const addIntersectionFromData = (projectName: string, projectData: ProjectSource) => {
         // Get pfTabs (plans de feu) from project
         // Note: pfTabs stores actions under the key 'data', not 'actions'
-        const pfTabs = projectData.pfTabs || [{ id: 1, name: 'PF1', data: projectData.actionData || [] }];
+        const pfTabs: PfSource[] = projectData.pfTabs || [{ id: 1, name: 'PF1', data: projectData.actionData || [] }];
         const selectedPfId = pfTabs[0]?.id || 1;
         const selectedPf = pfTabs.find(pf => pf.id === selectedPfId);
 
         const indexBasedM = intersections.length * 200;
 
-        const newIntersection = {
+        const newIntersection: DraftIntersection = {
             id: Date.now(),
             projectName: projectName,
             intersectionName: projectData.intersectionName || undefined,
@@ -61,7 +101,7 @@ const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadPr
     // l'ajout du carrefour sélectionné, puis remet le dropdown sur son
     // placeholder pour permettre d'enchaîner. La suppression d'un ajout
     // erroné se fait via la croix rouge de la ligne correspondante.
-    const handleCachePick = (name) => {
+    const handleCachePick = (name: string) => {
         if (!name) return;
         const projectData = loadProjectData(name);
         if (projectData) {
@@ -91,7 +131,7 @@ const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadPr
                 return;
             }
 
-            let projectData;
+            let projectData: ProjectSource;
             try {
                 projectData = JSON.parse(text);
             } catch {
@@ -126,7 +166,7 @@ const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadPr
             try {
                 localStorage.setItem(storageKey, text);
                 const orderRaw = localStorage.getItem('traffic_project_order');
-                let order = orderRaw ? JSON.parse(orderRaw) : [];
+                let order: string[] = orderRaw ? JSON.parse(orderRaw) : [];
                 order = order.filter(n => n !== projectName);
                 order.unshift(projectName);
                 localStorage.setItem('traffic_project_order', JSON.stringify(order));
@@ -146,18 +186,18 @@ const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadPr
         }
     };
 
-    const removeIntersection = (id) => {
+    const removeIntersection = (id: number) => {
         setIntersections(intersections.filter(i => i.id !== id));
     };
 
-    const updateIntersection = (id, field, value) => {
+    const updateIntersection = (id: number, field: DraftNumberField, value: number) => {
         setIntersections(intersections.map(i =>
             i.id === id ? { ...i, [field]: value } : i
         ));
     };
 
     // Auto-fill Distance D when Distance M is validated (onBlur)
-    const handleDistanceMBlur = (id) => {
+    const handleDistanceMBlur = (id: number) => {
         setIntersections(intersections.map(i => {
             if (i.id !== id) return i;
 
@@ -170,7 +210,7 @@ const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadPr
         }));
     };
 
-    const updateSelectedPf = (id, pfId) => {
+    const updateSelectedPf = (id: number, pfId: number) => {
         setIntersections(intersections.map(i => {
             if (i.id === id) {
                 const selectedPf = i.pfTabs.find(pf => pf.id === pfId);
@@ -192,7 +232,7 @@ const CreateGreenWaveDialog = ({ isOpen, onClose, onConfirm, getAllSaves, loadPr
         // Map and sort intersections by distance (descending)
         // In CreateGreenWaveDialog: selectedGroup1 = GF montant, selectedGroup2 = GF descendant
         // In GreenWavePage: selectedGroup2 = GF montant (distanceG2), selectedGroup1 = GF descendant (distance)
-        const mappedIntersections = intersections.map(i => ({
+        const mappedIntersections = intersections.map((i): CreatedIntersection => ({
             ...i,
             // Swap group selections for GreenWavePage compatibility
             selectedGroup2: i.selectedGroup1, // GF montant -> selectedGroup2
