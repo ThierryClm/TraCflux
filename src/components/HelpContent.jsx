@@ -12,6 +12,8 @@ import React, { useState, useEffect, useRef } from 'react';
  *  - initialAnchor (string, optionnel) : si fourni, scrolle vers l'élément
  *    portant cet id 300 ms après le montage (utile pour l'ouverture via
  *    ?openHelp=ondeVerte qui doit cibler "help-onde-verte").
+ *
+ * @param {{ initialAnchor?: string | null }} props
  */
 const HelpContent = ({ initialAnchor = null }) => {
     const helpContentRef = useRef(null);

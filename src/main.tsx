@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
-import GreenWavePage from './GreenWavePage.jsx'
+import GreenWavePage from './GreenWavePage'
 import { ConfirmProvider } from './components/ConfirmProvider'
 import { MicroVariablesProvider } from './components/MicroVariablesProvider'
 import ReloadPrompt from './components/ReloadPrompt'
