@@ -5,6 +5,7 @@ import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import type { ActionMicro, Groupe, Matrice } from '../types/projet';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
+import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
 
 interface IntersectionArrow {
     id: number | string;
@@ -46,6 +47,8 @@ interface FloatingImageRendererOptions {
     cycleLength: number;
     imageBrightness: number;
     imageContrast: number;
+    /** Cases numéros / noms de groupe de l'image du carrefour. */
+    intersectionDisplay: IntersectionDisplayOptions;
     floatingImagePopup: FloatingImagePopup;
 }
 
@@ -75,13 +78,14 @@ const useFloatingImageRenderer = ({
     cycleLength,
     imageBrightness,
     imageContrast,
+    intersectionDisplay,
     floatingImagePopup
 }: FloatingImageRendererOptions) => {
     useEffect(() => {
         if (!showFloatingImage || !intersectionImage) return;
 
-        const showNums = JSON.parse(localStorage.getItem('intersection_showGroupNumbers') ?? 'true');
-        const showNames = JSON.parse(localStorage.getItem('intersection_showGroupNames') ?? 'true');
+        const showNums = intersectionDisplay.showGroupNumbers;
+        const showNames = intersectionDisplay.showGroupNames;
 
         // Compute group number centroids
         const groupMap: Record<number, Array<{ x: number; y: number }>> = {};
@@ -278,7 +282,8 @@ const useFloatingImageRenderer = ({
         intersectionArrows, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredDiagramTime,
         selectedActions, conflictMatrix,
         isPlayingSimulation, simulationCurrentTime, simulationResult,
-        actionData, cycleLength, imageBrightness, imageContrast, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+        actionData, cycleLength, imageBrightness, imageContrast,
+        intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 
 export default useFloatingImageRenderer;
