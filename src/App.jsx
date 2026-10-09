@@ -2138,6 +2138,20 @@ function App() {
         }
 
         const data = loadProject(projectNameToOpen);
+        if (data) {
+            // Un projet tout juste rouvert depuis le cache n'a aucune
+            // modification : même remise à zéro que l'ouverture d'un fichier.
+            // Sans elle, l'installation de ses données comptait comme une
+            // modification et l'astérisque apparaissait aussitôt.
+            // setHasUnsavedChanges(false) ignore les changements des 300 ms
+            // suivantes, le temps que le chargement se pose. Le drapeau de saut
+            // est baissé : resté levé (après « Nouveau projet », par exemple),
+            // il ne serait pas consommé pendant cette fenêtre et absorberait la
+            // première modification de l'utilisateur.
+            setProjectModified(true); // active « Nouveau projet » dans le menu
+            projectModifiedSkip.current = false;
+            setHasUnsavedChanges(false); // pas de modifications non sauvegardées
+        }
         setOpenModal(false);
         setSelectedProject(null);
         setFloatingCrop(data?.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
