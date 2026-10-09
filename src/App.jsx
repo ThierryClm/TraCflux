@@ -409,8 +409,17 @@ function App() {
     const [isSaving, setIsSaving] = useState(false);
 
     // Track whether project has been modified (for "Nouveau projet" menu)
-    const { projectModified, setProjectModified, resetModified: resetProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges } =
+    const { projectModified, setProjectModified, resetModified: resetProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
         useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset]);
+
+    // Passer d'un plan de feux à un autre n'est pas une modification du projet :
+    // l'écran recharge les groupes, le cycle, la matrice et les actions du plan
+    // choisi, et ces recopies ne doivent pas faire apparaître l'astérisque.
+    const selectActivePF = useCallback((pfId) => {
+        if (pfId !== activePFId) absorbDerivedChanges();
+        setActivePFId(pfId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activePFId, setActivePFId]);
 
     // Update document title (browser tab) to reflect project name and unsaved status.
     // Sur l'écran d'accueil (aucun projet ouvert), on affiche juste
@@ -2621,7 +2630,7 @@ function App() {
                         phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
                         phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,
                         pixelsPerSecond, recentImageDirs, renamePF, reorderActions, reorderPF,
-                        resetDiagramHeight, saveDirectoryHandle, setActionColWidths, setActivePFId, setBrouillonPhasage,
+                        resetDiagramHeight, saveDirectoryHandle, setActionColWidths, setActivePFId: selectActivePF, setBrouillonPhasage,
                         setCycleLength, setCycleLengthInput, setDragConflictsFromDiagram, setDraggedTabIndex, setHoveredActionId,
                         setHoveredArrowGroupId, setHoveredDiagramTime, setHoveredPhasageGroupId, setImageBrightness, setImageContrast,
                         setIntersectionArrows, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,

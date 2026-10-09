@@ -77,6 +77,29 @@ describe('useProjectModification', () => {
         expect(result.current.hasUnsavedChanges.current).toBe(false);
     });
 
+    it('absorbDerivedChanges ignore les recopies sans effacer une modification', () => {
+        const { result, rerender } = renderTracker();
+        act(() => readyCallback());
+        rerender({ dependency: 2 }); // consomme le drapeau de saut du montage
+        act(() => result.current.setHasUnsavedChanges(false));
+        act(() => vi.advanceTimersByTime(300));
+
+        // Changement de plan de feux : la recopie n'est pas une modification.
+        act(() => result.current.absorbDerivedChanges());
+        rerender({ dependency: 3 });
+        expect(result.current.isDirty).toBe(false);
+
+        // Passé le délai, une vraie modification est signalée…
+        act(() => vi.advanceTimersByTime(300));
+        rerender({ dependency: 4 });
+        expect(result.current.isDirty).toBe(true);
+
+        // … et elle le reste après un nouveau changement de plan.
+        act(() => result.current.absorbDerivedChanges());
+        rerender({ dependency: 5 });
+        expect(result.current.isDirty).toBe(true);
+    });
+
     it('retire les écouteurs et annule l’initialisation au démontage', () => {
         const remove = vi.spyOn(window, 'removeEventListener');
         const { unmount } = renderTracker();
