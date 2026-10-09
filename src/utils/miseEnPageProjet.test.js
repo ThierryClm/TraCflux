@@ -16,6 +16,9 @@ const etatCourant = {
     showFloatingConditions: true,
     showFloatingVariables: false,
     showFloatingRemarks: true,
+    showImageGroupNumbers: true,
+    showImageGroupNames: false,
+    showImageArrows: false,
     directoryNames: { open: 'Études', save: 'Études', import: null, image: 'Plans', greenWave: null }
 };
 
@@ -42,7 +45,10 @@ const poseurs = () => {
             setShowFloatingConditions: espion('conditions'),
             setShowFloatingVariables: espion('variables'),
             setShowFloatingRemarks: espion('remarquesDetachees'),
-            setDossierSections: espion('dossier')
+            setDossierSections: espion('dossier'),
+            setShowImageGroupNumbers: espion('imageNumeros'),
+            setShowImageGroupNames: espion('imageNoms'),
+            setShowImageArrows: espion('imageFleches')
         }
     };
 };
@@ -112,5 +118,29 @@ describe('miseEnPageProjet — projets antérieurs', () => {
         const { vus, s } = poseurs();
         appliquerMiseEnPage({ layoutOptions: { showComments: false } }, s);
         expect(vus.panneau).toBe(true);
+    });
+});
+
+describe("miseEnPageProjet — cases de l'image du carrefour", () => {
+    it('les enregistre avec le projet et les restitue', () => {
+        const paquet = lireMiseEnPage(etatCourant);
+        expect(paquet.layoutOptions).toMatchObject({
+            showImageGroupNumbers: true, showImageGroupNames: false, showImageArrows: false
+        });
+        const { vus, s } = poseurs();
+        appliquerMiseEnPage(paquet, s);
+        expect(vus).toMatchObject({ imageNumeros: true, imageNoms: false, imageFleches: false });
+    });
+
+    it("laisse la valeur du navigateur pour un projet enregistré avant qu'elles n'en fassent partie", () => {
+        const { vus, s } = poseurs();
+        appliquerMiseEnPage({ layoutOptions: { showComments: true } }, s);
+        expect(vus).not.toHaveProperty('imageNumeros');
+        expect(vus).not.toHaveProperty('imageNoms');
+        expect(vus).not.toHaveProperty('imageFleches');
+
+        const { vus: vusAncien, s: sAncien } = poseurs();
+        appliquerMiseEnPage({ groups: [], pfTabs: [] }, sAncien);
+        expect(vusAncien).not.toHaveProperty('imageNoms');
     });
 });

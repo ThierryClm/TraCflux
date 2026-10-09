@@ -123,6 +123,12 @@ export interface OptionsMiseEnPage {
     showFloatingConditions?: boolean;
     showFloatingVariables?: boolean;
     showFloatingRemarks?: boolean;
+    /** Image du carrefour : numéros des groupes affichés. */
+    showImageGroupNumbers?: boolean;
+    /** Image du carrefour : noms des groupes affichés. */
+    showImageGroupNames?: boolean;
+    /** Image du carrefour : ajout de flèches au clic (« Ajouter un courant de circulation »). */
+    showImageArrows?: boolean;
 }
 
 /** Un projet enregistré, tel que getFullState le produit. */

@@ -46,7 +46,10 @@ const IntersectionImage = ({
     imageBrightness = 100,
     setImageBrightness,
     imageContrast = 100,
-    setImageContrast
+    setImageContrast,
+    // Cases numéros / noms / flèches (persistées avec le projet)
+    displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true },
+    onDisplayOptionChange
 }) => {
     const fileInputRef = useRef(null);
     const containerRef = useRef(null);
@@ -62,33 +65,12 @@ const IntersectionImage = ({
     }, [showImageMenu]);
     const imageMenuRef = useRef(null);
 
-    // Load display options from localStorage
-    const [showGroupNumbers, setShowGroupNumbers] = useState(() => {
-        const saved = localStorage.getItem('intersection_showGroupNumbers');
-        return saved !== null ? JSON.parse(saved) : true;
-    });
-    const [showGroupNames, setShowGroupNames] = useState(() => {
-        const saved = localStorage.getItem('intersection_showGroupNames');
-        return saved !== null ? JSON.parse(saved) : true;
-    });
-    const [showArrows, setShowArrows] = useState(() => {
-        const saved = localStorage.getItem('intersection_showArrows');
-        return saved !== null ? JSON.parse(saved) : true;
-    });
+    // Cases d'affichage : enregistrées avec le projet (useIntersectionDisplayOptions).
+    const { showGroupNumbers, showGroupNames, showArrows } = displayOptions;
+    const setShowGroupNumbers = (value) => onDisplayOptionChange?.('showGroupNumbers', value);
+    const setShowGroupNames = (value) => onDisplayOptionChange?.('showGroupNames', value);
+    const setShowArrows = (value) => onDisplayOptionChange?.('showArrows', value);
     const [applyToAllSameType, setApplyToAllSameType] = useState(false);
-
-    // Save display options to localStorage when they change
-    useEffect(() => {
-        localStorage.setItem('intersection_showGroupNumbers', JSON.stringify(showGroupNumbers));
-    }, [showGroupNumbers]);
-
-    useEffect(() => {
-        localStorage.setItem('intersection_showGroupNames', JSON.stringify(showGroupNames));
-    }, [showGroupNames]);
-
-    useEffect(() => {
-        localStorage.setItem('intersection_showArrows', JSON.stringify(showArrows));
-    }, [showArrows]);
 
     // Close image menu when clicking outside
     useEffect(() => {

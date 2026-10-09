@@ -13,6 +13,7 @@ import type {
 } from 'react';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
 import type { SimulationResult } from '../../utils/simulationCalculator';
+import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../../hooks/useIntersectionDisplayOptions';
 
 type LooseComponent = ComponentType<Record<string, unknown>>;
 type Callback = (...args: unknown[]) => void;
@@ -66,6 +67,7 @@ interface WorkspaceMainModel {
     imageBrightness: number;
     imageContrast: number;
     imageFondClair: boolean;
+    intersectionDisplay: IntersectionDisplayOptions;
     intersectionArrows: IntersectionArrow[];
     intersectionImage: string | null;
     intersectionName: string;
@@ -106,6 +108,7 @@ interface WorkspaceMainModel {
     setImageBrightness: Callback;
     setImageContrast: Callback;
     setIntersectionArrows: Callback;
+    setIntersectionDisplayOption: (option: IntersectionDisplayOption, value: boolean) => void;
     setIntersectionImage: Callback;
     setIsPlayingSimulation: Callback;
     setPhasageBubbleRatio: Callback;
@@ -168,7 +171,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
         helpZoneRef, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict,
         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
-        imageFondClair, intersectionArrows, intersectionImage, intersectionName, isPlayingSimulation,
+        imageFondClair, intersectionArrows, intersectionDisplay, intersectionImage, intersectionName, isPlayingSimulation,
         isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
         phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
         phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,
@@ -176,7 +179,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         resetDiagramHeight, saveDirectoryHandle, setActionColWidths, setActivePFId, setBrouillonPhasage,
         setCycleLength, setCycleLengthInput, setDragConflictsFromDiagram, setDraggedTabIndex, setHoveredActionId,
         setHoveredArrowGroupId, setHoveredDiagramTime, setHoveredPhasageGroupId, setImageBrightness, setImageContrast,
-        setIntersectionArrows, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
+        setIntersectionArrows, setIntersectionDisplayOption, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
         setPhasageBulleCount, setPhasageBulleEnabled, setPhasageBulleModal, setPhasageBulleTimes, setPhasageBulleVersion,
         setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
         setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
@@ -525,6 +528,8 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 setImageBrightness={setImageBrightness}
                                 imageContrast={imageContrast}
                                 setImageContrast={setImageContrast}
+                                displayOptions={intersectionDisplay}
+                                onDisplayOptionChange={setIntersectionDisplayOption}
                             />
                         </div>
                         <div style={{ display: !phasageBulleEnabled && !simulationEnabled ? 'contents' : 'none' }}>
