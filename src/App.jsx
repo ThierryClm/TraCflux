@@ -66,7 +66,7 @@ import SupportDialogs from './components/app/SupportDialogs';
 import './components/GroupTable.css';
 import './components/IntergreenMatrix.css';
 import './App.css';
-import { lireMiseEnPage, appliquerMiseEnPage } from './utils/miseEnPageProjet';
+import { lireMiseEnPage, appliquerMiseEnPage, affichageCommentairesRemarques } from './utils/miseEnPageProjet';
 
 function App() {
     const askConfirm = useConfirm();
@@ -408,9 +408,22 @@ function App() {
     const [hoveredConflict, setHoveredConflict] = useState(null); // {from, to} for conflict hover
     const [isSaving, setIsSaving] = useState(false);
 
+    const {
+        darkMode, setDarkMode,
+        colorTheme, setColorTheme,
+        showComments, setShowComments,
+        showRemarks, setShowRemarks,
+        showGroupNamesForm, setShowGroupNamesForm,
+        showGroupNamesMatrix, setShowGroupNamesMatrix,
+        showGroupNamesDiagram, setShowGroupNamesDiagram,
+        showActionDescription, setShowActionDescription
+    } = useDarkMode();
+
     // Track whether project has been modified (for "Nouveau projet" menu)
     const { projectModified, setProjectModified, resetModified: resetProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
-        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset]);
+        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset,
+            // Enregistrés dans le projet : les cocher est une modification.
+            showComments, showRemarks]);
 
     // Passer d'un plan de feux à un autre n'est pas une modification du projet :
     // l'écran recharge les groupes, le cycle, la matrice et les actions du plan
@@ -888,16 +901,6 @@ function App() {
         setCycleLengthInput(cycleLength.toString());
     }, [cycleLength]);
 
-    const {
-        darkMode, setDarkMode,
-        colorTheme, setColorTheme,
-        showComments, setShowComments,
-        showRemarks, setShowRemarks,
-        showGroupNamesForm, setShowGroupNamesForm,
-        showGroupNamesMatrix, setShowGroupNamesMatrix,
-        showGroupNamesDiagram, setShowGroupNamesDiagram,
-        showActionDescription, setShowActionDescription
-    } = useDarkMode();
     const { recentFiles, setRecentFiles, addToRecentFiles, getRecentDirectories, getRecentDirectoriesForMenu } = useRecentFiles();
     const [selectedProject, setSelectedProject] = useState(null);
     const [importFile, setImportFile] = useState(null);
@@ -2177,12 +2180,13 @@ function App() {
         setSidebarVisible(typeof data?.layoutOptions?.showParameters === 'boolean'
             ? data.layoutOptions.showParameters
             : true);
+        // Commentaires et remarques : le réglage enregistré dans le projet
+        // l'emporte. Recalculer à chaque ouverture faisait perdre le choix de
+        // l'utilisateur.
         if (data && typeof data === 'object') {
-            const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
-            setShowComments(!!hasComments);
-            const pfList = data.pfTabs || [];
-            const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
-            setShowRemarks(!!hasRemarks);
+            const affichage = affichageCommentairesRemarques(data);
+            setShowComments(affichage.showComments);
+            setShowRemarks(affichage.showRemarks);
         }
         setHasActiveProject(true);
     };

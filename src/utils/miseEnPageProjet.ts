@@ -55,6 +55,25 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
     }
 });
 
+/**
+ * Affichage des commentaires et remarques du diagramme à l'ouverture d'un
+ * projet. Le réglage enregistré dans le projet l'emporte ; un projet antérieur,
+ * qui n'en a pas, l'affiche s'il a du contenu à montrer.
+ */
+export const affichageCommentairesRemarques = (
+    data: Partial<Projet>
+): { showComments: boolean; showRemarks: boolean } => {
+    const lo = data.layoutOptions || {};
+    const plans = data.pfTabs || [];
+    const aDesCommentaires = !!(data.groups?.some(g => g.comment && g.comment.trim() !== '')
+        || plans.some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== '')));
+    const aDesRemarques = plans.some(pf => pf.remarques && pf.remarques.trim() !== '');
+    return {
+        showComments: typeof lo.showComments === 'boolean' ? lo.showComments : aDesCommentaires,
+        showRemarks: typeof lo.showRemarks === 'boolean' ? lo.showRemarks : aDesRemarques
+    };
+};
+
 /** Applique les réglages persistants lors de l'ouverture d'un projet. */
 export const appliquerMiseEnPage = (
     data: Partial<Projet> | null | undefined,
@@ -94,10 +113,9 @@ export const appliquerMiseEnPage = (
             if (typeof lo[nom] === 'boolean') poseurs[nom]?.(lo[nom]);
         });
     } else {
-        const aDesCommentaires = data.groups?.some(g => g.comment && g.comment.trim() !== '')
-            || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
-        s.setShowComments?.(!!aDesCommentaires);
-        s.setShowRemarks?.(!!(data.pfTabs || []).some(pf => pf.remarques && pf.remarques.trim() !== ''));
+        const affichage = affichageCommentairesRemarques(data);
+        s.setShowComments?.(affichage.showComments);
+        s.setShowRemarks?.(affichage.showRemarks);
         s.setSidebarVisible?.(true);
         DRAPEAUX_MISE_EN_PAGE
             .filter(nom => nom.startsWith('showFloating'))
