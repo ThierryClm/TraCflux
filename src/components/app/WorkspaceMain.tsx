@@ -1,6 +1,7 @@
 import TimelineDiagramImplementation from '../TimelineDiagram';
 import PhasageBulle from '../PhasageBulle';
-import IntersectionImageImplementation from '../IntersectionImage';
+import IntersectionImage from '../IntersectionImage';
+import type { IntersectionImageProps } from '../IntersectionImage';
 import ActionTable from '../ActionTable';
 import type { ActionTableProps } from '../ActionTable';
 import { toast } from '../../utils/toast';
@@ -31,7 +32,7 @@ interface WorkspaceMainModel {
     actionData: ActionMicro[];
     activePFId: number;
     activePfReadOnly: boolean;
-    addRecentDirectory: Callback;
+    addRecentDirectory: NonNullable<IntersectionImageProps['addRecentDirectory']>;
     biCarrefourSeparator: number | null;
     brouillonPhasage: PhasageDraft | null;
     conflictMatrix: Matrice;
@@ -70,7 +71,7 @@ interface WorkspaceMainModel {
     isPlayingSimulation: boolean;
     isResizing: boolean;
     isResizingDiagram: boolean;
-    lastImageDirectoryRef: MutableRefObject<unknown>;
+    lastImageDirectoryRef: NonNullable<IntersectionImageProps['lastImageDirectoryRef']>;
     microCustomFields: string[];
     pfTabs: PlanDeFeu[];
     phasageBubbleRatio: number;
@@ -84,12 +85,12 @@ interface WorkspaceMainModel {
     phasageEllipseScale: number;
     phasageModifie: boolean;
     pixelsPerSecond: number;
-    recentImageDirs: unknown[];
+    recentImageDirs: NonNullable<IntersectionImageProps['recentImageDirs']>;
     renamePF: (id: number, name: string) => void;
     reorderActions: NonNullable<ActionTableProps['reorderActions']>;
     reorderPF: (fromIndex: number, toIndex: number) => void;
     resetDiagramHeight: Callback;
-    saveDirectoryHandle: Callback;
+    saveDirectoryHandle: NonNullable<IntersectionImageProps['saveDirectoryHandle']>;
     setActionColWidths: NonNullable<ActionTableProps['setActionColWidths']>;
     setActivePFId: (id: number) => void;
     setBrouillonPhasage: Dispatch<SetStateAction<PhasageDraft | null>>;
@@ -98,15 +99,15 @@ interface WorkspaceMainModel {
     setDragConflictsFromDiagram: Callback;
     setDraggedTabIndex: (index: number | null) => void;
     setHoveredActionId: ActionTableProps['setHoveredActionId'];
-    setHoveredArrowGroupId: Callback;
+    setHoveredArrowGroupId: NonNullable<IntersectionImageProps['setHoveredArrowGroupId']>;
     setHoveredDiagramTime: Callback;
     setHoveredPhasageGroupId: Callback;
-    setImageBrightness: Callback;
-    setImageContrast: Callback;
-    setIntersectionArrows: Callback;
+    setImageBrightness: NonNullable<IntersectionImageProps['setImageBrightness']>;
+    setImageContrast: NonNullable<IntersectionImageProps['setImageContrast']>;
+    setIntersectionArrows: IntersectionImageProps['onArrowsChange'];
     setIntersectionDisplayOption: (option: IntersectionDisplayOption, value: boolean) => void;
-    setIntersectionImage: Callback;
-    setIsPlayingSimulation: Callback;
+    setIntersectionImage: IntersectionImageProps['onImageChange'];
+    setIsPlayingSimulation: NonNullable<IntersectionImageProps['setIsPlaying']>;
     setPhasageBubbleRatio: Callback;
     setPhasageBubbleScale: Callback;
     setPhasageBulleCount: (value: number) => void;
@@ -121,7 +122,7 @@ interface WorkspaceMainModel {
     openFloatingImage: () => void;
     setShowFloatingVariables: ActionTableProps['setShowFloatingVariables'];
     setSidebarWidth: (value: number) => void;
-    setSimulationCurrentTime: Callback;
+    setSimulationCurrentTime: NonNullable<IntersectionImageProps['setCurrentTime']>;
     setSimulationEnabled: (value: boolean) => void;
     showActionDescription: boolean;
     showComments: boolean;
@@ -154,7 +155,6 @@ interface WorkspaceMainProps {
 }
 
 const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
-const IntersectionImage = IntersectionImageImplementation as unknown as LooseComponent;
 
 export default function WorkspaceMain({ model }: WorkspaceMainProps) {
     const {
