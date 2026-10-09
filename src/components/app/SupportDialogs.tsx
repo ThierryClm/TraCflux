@@ -45,7 +45,7 @@ interface SupportDialogsModel {
     setHelpModal: (value: boolean) => void;
     setMicroVariablesModal: (value: boolean) => void;
     setOptionsModal: (value: boolean) => void;
-    tip: (label: string) => string | undefined;
+    tip: (label: string) => string | undefined | undefined;
     tooltipPrefs: { main?: boolean };
 }
 

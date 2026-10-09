@@ -1,6 +1,7 @@
 import parseHTMFile from '../utils/parseHTMFile';
 import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { toast } from '../utils/toast';
+import type { EtatProjet } from './useTrafficLight';
 import type { ChangeEvent, Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { ActionMicro, Groupe, JeuTrafic, Matrice, PlanDeFeu, Projet } from '../types/projet';
 import type { RecentDirectory, RecentDirectoryType } from './useRecentDirectories';
@@ -46,7 +47,7 @@ interface UseImportOperationsOptions {
     setImportedHTMFiles: StateSetter<ImportedHTMFile[]>;
     setImportHTMModal: StateSetter<boolean>;
     cycleLength: number;
-    loadFullState: (state: Partial<Projet> & Record<string, unknown>) => unknown;
+    loadFullState: (state: EtatProjet) => unknown;
     updateGroupParams: (groupId: number, params: GroupUpdate) => unknown;
     setHasActiveProject?: StateSetter<boolean>;
     lastImportDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;

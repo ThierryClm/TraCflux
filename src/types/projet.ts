@@ -96,7 +96,8 @@ export interface PlanDeFeu {
     cycleLength?: number;
     remarques?: string;
     microCustomFields?: string[];
-    color?: string;
+    /** Couleur de validation de l'onglet ; null une fois la marque retirée. */
+    color?: string | null;
     readOnly?: boolean;
     simulationName?: string;
     simulationActions?: number[];
@@ -122,6 +123,21 @@ export interface FlecheCarrefour {
     length?: number;
     /** Portée de la branche tournante, de 0 à 1. */
     turnLength?: number;
+}
+
+/** Lien vers un document externe au projet (fenêtre « Liens externes »). */
+export interface LienExterne {
+    id: number;
+    name: string;
+    path: string;
+}
+
+/** Rognage de l'image détachée du carrefour, en % de chaque bord. */
+export interface CadrageImage {
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
 }
 
 /** Données de trafic d'un jeu donné, indexées par groupe. */
@@ -169,13 +185,14 @@ export interface Projet {
     biCarrefourSeparator?: number | null;
     matricesLocked?: boolean;
     actionColWidths?: Record<string, unknown>;
-    externalLinks?: Record<string, unknown>[];
+    externalLinks?: LienExterne[];
     capacityCompareSelection?: number[] | null;
     capacityCompareDataset?: string;
     projectProperties?: Record<string, unknown>;
-    dossierSections?: Record<string, unknown>;
+    /** Cases cochées de la boîte « Imprimer le projet ». */
+    dossierSections?: Record<string, boolean>;
     diagramHeight?: number | null;
-    floatingCrop?: Record<string, unknown>;
+    floatingCrop?: CadrageImage;
     floatingCropBasis?: string;
     floatingZoom?: number;
     layoutOptions?: OptionsMiseEnPage;

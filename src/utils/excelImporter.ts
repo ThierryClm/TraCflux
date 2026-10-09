@@ -995,7 +995,7 @@ function parseMatrixSheet(sheetData: SheetData, result: ExcelImportResult, sheet
         conflictMatrix: matrix, // Store matrix specific to this PF tab
         data: actions
     }];
-    result.actionData = actions; // Also store in actionData for App.jsx compatibility
+    result.actionData = actions; // Also store in actionData for App.tsx compatibility
 }
 
 /**

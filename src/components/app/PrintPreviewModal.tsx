@@ -1,9 +1,9 @@
 import { cloneElement, Fragment } from 'react';
-import type { ComponentType, CSSProperties, RefObject } from 'react';
+import type { CSSProperties, RefObject } from 'react';
 import TimelineDiagram from '../TimelineDiagram';
-import TrafficTableImplementation from '../TrafficTable';
-import DiagnosticPanelImplementation from '../DiagnosticPanel';
-import DiagramLegendImplementation from '../DiagramLegend';
+import TrafficTable from '../TrafficTable';
+import DiagnosticPanel from '../DiagnosticPanel';
+import DiagramLegend from '../DiagramLegend';
 import PhasageBulle from '../PhasageBulle';
 import { APP_NAME, APP_VERSION } from '../../version';
 import { actionsSimulables, conflitsSimules } from '../../utils/simulationCalculator';
@@ -16,9 +16,8 @@ import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '.
 import type { SimulationResult } from '../../utils/simulationCalculator';
 import type { ProjectProperties } from '../PropertiesPanel';
 
-type LooseComponent = ComponentType<Record<string, unknown>>;
 type PrintType = 'matrix' | 'form' | 'diagram' | 'dossier';
-type DossierSections = Record<string, boolean | undefined>;
+type DossierSections = Record<string, boolean>;
 
 type IntersectionArrow = FlecheCarrefour;
 
@@ -65,14 +64,14 @@ interface PrintPreviewModalProps {
         imageNaturalDims: ImageDimensions | null;
     };
     print: {
-        printType: PrintType;
+        printType: PrintType | null;
         dossierSections: DossierSections;
         dossierPortrait: boolean;
         dossierPrintWidth: number;
         descriptionPrintStyle: CSSProperties | null;
         largeurConditionsImpression: number;
         microPrintStyle: CSSProperties | null;
-        printPreviewPageRef: RefObject<HTMLDivElement>;
+        printPreviewPageRef: RefObject<HTMLDivElement | null>;
         injectDossierFooterStyle: () => HTMLStyleElement | null;
     };
     actions: {
@@ -88,27 +87,6 @@ interface PrintedIntersectionArrow extends IntersectionArrow {
     printX: number;
     printY: number;
 }
-
-interface BubblePageFit {
-    bubbleScale: number;
-    ellipseScale: number;
-    ellipseScaleX: number;
-    arrowOffsetX: number;
-    arrowOffsetY: number;
-}
-
-const TrafficTable = TrafficTableImplementation as unknown as LooseComponent;
-const DiagnosticPanel = DiagnosticPanelImplementation as unknown as LooseComponent;
-const DiagramLegend = DiagramLegendImplementation as unknown as LooseComponent;
-const fitBubblesToPrintPage = fitBubblesToPage as unknown as (options: {
-    count: number;
-    ratio?: number;
-    ellipseScale?: number;
-    pageWidth: number;
-    pageHeight: number;
-    jeu?: number;
-    degagement?: number;
-}) => BubblePageFit;
 
 const PHASE_LABELS: Record<string, string> = {
     ESQ: 'Esquisse',
@@ -1110,7 +1088,7 @@ function PrintPreviewModal({
                                             // croit dans le rendu d'impression.
                                             const PAGE_W = PAGE_MM_W;
                                             const PAGE_H = PAGE_MM_H;
-                                            const dessin = fitBubblesToPrintPage({
+                                            const dessin = fitBubblesToPage({
                                                 count: bulleCount,
                                                 ratio: pf.phasageBubbleRatio ?? 100,
                                                 ellipseScale: pf.phasageEllipseScale ?? 100,

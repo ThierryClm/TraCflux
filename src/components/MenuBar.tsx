@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
+import type { PermissionFlag } from '../hooks/useAuth';
 import './MenuBar.css';
 
 /** Une entrée de menu : action, case à cocher, séparateur, en-tête, sous-menu ou curseur. */
@@ -74,6 +75,8 @@ export interface OptionsMenuBar {
     openPropertiesOnNewProject?: boolean;
     showWrapFlash?: boolean;
     showSaveReminder?: boolean;
+    /** L'appelant passe tout l'état de mise en page ; la barre n'en lit qu'une partie. */
+    [autre: string]: unknown;
 }
 
 interface RepertoireRecent {
@@ -91,7 +94,7 @@ export interface MenuBarProps {
     recentImportDirs?: RepertoireRecent[];
     recentSaveDirs?: RepertoireRecent[];
     currentUser?: { username?: string; isAdmin?: boolean } | null;
-    hasPermission?: (permission: string) => boolean;
+    hasPermission?: (permission: PermissionFlag) => boolean;
     hasActiveProject?: boolean;
     onManageUsers?: () => void;
     biCarrefourSeparator?: number | null;

@@ -33,7 +33,7 @@ interface ImportDialogsProps {
     spreadsheet: SpreadsheetImportDialogModel;
     html: ImportDialogModel;
     recent: RecentImportsModel;
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
 }
 
 const fileInputStyle: CSSProperties = {
@@ -61,7 +61,7 @@ function SpreadsheetImportDialog({
     dialog,
     recent,
     tip,
-}: { dialog: SpreadsheetImportDialogModel; recent: RecentImportsModel; tip: (label: string) => string }) {
+}: { dialog: SpreadsheetImportDialogModel; recent: RecentImportsModel; tip: (label: string) => string | undefined }) {
     return (
         <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Importer un fichier')}>
             {dialog.hintDirectory && (
@@ -136,7 +136,7 @@ function SpreadsheetImportDialog({
 function HtmImportDialog({
     dialog,
     tip,
-}: { dialog: ImportDialogModel; tip: (label: string) => string }) {
+}: { dialog: ImportDialogModel; tip: (label: string) => string | undefined }) {
     return (
         <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Importer un fichier HTM')}>
             <div className="form-row">

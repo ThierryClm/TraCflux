@@ -28,6 +28,7 @@ import type {
     FlecheCarrefour,
     Groupe,
     JeuTrafic,
+    LienExterne,
     LigneDiagramme,
     Matrice,
     PlanDeFeu,
@@ -325,7 +326,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     // tableau de micro-régulation. Reglage unique par projet, sauvegarde.
     // Bornes a la restauration : Desc 100-350, Micro 300-700, Abrv 38-75.
     const [actionColWidths, setActionColWidths] = useState<LargeursColonnes>({ description: 160, micro: 420, abrv: 38 });
-    const [externalLinks, setExternalLinks] = useState<Record<string, unknown>[]>([]);
+    const [externalLinks, setExternalLinks] = useState<LienExterne[]>([]);
     // Sélection mémorisée du comparateur de capacité (fenêtre « Comparer la
     // capacité des plans de feu ») : liste d'id de PF cochés (null = tous par
     // défaut) et jeu de trafic choisi ('__per_pf__' = jeu associé à chaque PF).
@@ -1960,7 +1961,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     }, []);
 
     // Set PF color (for validation)
-    const setPFColor = useCallback((pfId: number, color: string) => {
+    const setPFColor = useCallback((pfId: number, color: string | null) => {
         setPfTabs(prev => prev.map(pf =>
             pf.id === pfId ? { ...pf, color: color } : pf
         ));

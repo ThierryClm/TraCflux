@@ -8,7 +8,8 @@ import { selectPfSubset } from '../utils/pfHelpers';
 import { stampReadOnly } from '../utils/dossierLock';
 import { bringAllPopupsToFront } from './usePopupWindow';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
-import type { OptionsMiseEnPage, Projet } from '../types/projet';
+import type { CadrageImage, OptionsMiseEnPage, Projet } from '../types/projet';
+import type { EtatProjet } from './useTrafficLight';
 import type { RecentDirectory, RecentDirectoryType } from './useRecentDirectories';
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
@@ -23,19 +24,19 @@ interface DialogMessage {
 interface UseFileOperationsOptions {
     projectName: string | null;
     diagramHeight: number | null;
-    floatingCrop: Record<string, unknown>;
+    floatingCrop: CadrageImage;
     floatingZoom: number;
     setSelectedProject: StateSetter<string | null>;
     setOpenModal: StateSetter<boolean>;
     setCurrentProjectPath: StateSetter<string | null>;
     setProjectModified: StateSetter<boolean>;
     projectModifiedSkip: MutableRefObject<boolean>;
-    hasUnsavedChanges: boolean;
-    setHasUnsavedChanges: StateSetter<boolean>;
+    hasUnsavedChanges: MutableRefObject<boolean>;
+    setHasUnsavedChanges: (unsaved: boolean) => void;
     isDirty: boolean;
     setDiagramHeight: StateSetter<number | null>;
     resetDiagramHeight?: () => void;
-    setFloatingCrop: (crop: unknown) => void;
+    setFloatingCrop: (crop: CadrageImage) => void;
     setFloatingZoom: StateSetter<number>;
     markLegacyCrop?: (legacy: boolean) => void;
     setShowComments: StateSetter<boolean>;
@@ -62,11 +63,11 @@ interface UseFileOperationsOptions {
     showFloatingRemarks: boolean;
     setShowFloatingRemarks: StateSetter<boolean>;
     setHasActiveProject?: StateSetter<boolean>;
-    loadFullState: (state: Partial<Projet> & Record<string, unknown>) => unknown;
+    loadFullState: (state: EtatProjet) => unknown;
     getFullState: () => Projet;
     saveProject: (name: string) => unknown;
-    dossierSections: Record<string, unknown>;
-    setDossierSections: (sections: Record<string, unknown>) => void;
+    dossierSections: Record<string, boolean>;
+    setDossierSections: (sections: Record<string, boolean>) => void;
     lastOpenDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
     lastSaveDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
     lastImportDirectoryRef: MutableRefObject<FileSystemDirectoryHandleLike | null>;
@@ -154,9 +155,9 @@ const useFileOperations = ({
                 return;
             }
 
-            let data: Partial<Projet> & Record<string, unknown>;
+            let data: EtatProjet & Record<string, unknown>;
             try {
-                data = JSON.parse(content) as Partial<Projet> & Record<string, unknown>;
+                data = JSON.parse(content) as EtatProjet & Record<string, unknown>;
             } catch (parseError) {
                 console.error('Erreur parsing JSON:', parseError);
                 alertFn({
@@ -338,9 +339,9 @@ const useFileOperations = ({
                 return;
             }
 
-            let data: Partial<Projet> & Record<string, unknown>;
+            let data: EtatProjet & Record<string, unknown>;
             try {
-                data = JSON.parse(content) as Partial<Projet> & Record<string, unknown>;
+                data = JSON.parse(content) as EtatProjet & Record<string, unknown>;
             } catch (parseError) {
                 console.error('Erreur parsing JSON:', parseError);
                 alertFn({

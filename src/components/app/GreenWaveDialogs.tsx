@@ -31,7 +31,7 @@ interface CreateGreenWaveDialogModel {
 interface GreenWaveViewerModel {
     isOpen: boolean;
     onClose: () => void;
-    intersections: ViewerIntersection[];
+    intersections: ViewerIntersection[] | null;
     folderName?: string;
 }
 
@@ -39,7 +39,7 @@ interface GreenWaveDialogsProps {
     openDialog: OpenGreenWaveDialogModel;
     createDialog: CreateGreenWaveDialogModel;
     viewer: GreenWaveViewerModel;
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
 }
 
 function OpenGreenWaveDialog({

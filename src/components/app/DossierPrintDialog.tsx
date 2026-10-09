@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 
 type PlanId = string | number;
-type DossierSections = Record<string, boolean | undefined>;
+type DossierSections = Record<string, boolean>;
 
 interface DossierPlan {
     id: PlanId;
@@ -22,7 +22,7 @@ interface DossierPrintDialogProps {
     intersectionArrows: unknown[];
     onExportPdf: () => void;
     onPrint: () => void;
-    tip: (label: string) => string | undefined;
+    tip: (label: string) => string | undefined | undefined;
 }
 
 function DossierPrintDialog({

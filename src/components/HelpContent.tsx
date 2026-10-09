@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 /**
- * Aide en ligne (menu Aide) — contenu partagé entre App.jsx et GreenWavePage.tsx.
+ * Aide en ligne (menu Aide) — contenu partagé entre App.tsx et GreenWavePage.tsx.
  *
  * Le composant gère lui-même :
  *  - la ref vers le conteneur scrollable (helpContentRef)

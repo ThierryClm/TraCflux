@@ -1,5 +1,7 @@
 import TimelineDiagram from '../TimelineDiagram';
 import type { TimelineDiagramProps } from '../TimelineDiagram';
+import type { PhasageBulleProps } from '../PhasageBulle';
+import type useUILayout from '../../hooks/useUILayout';
 import PhasageBulle from '../PhasageBulle';
 import IntersectionImage from '../IntersectionImage';
 import type { IntersectionImageProps } from '../IntersectionImage';
@@ -7,7 +9,6 @@ import ActionTable from '../ActionTable';
 import type { ActionTableProps } from '../ActionTable';
 import { toast } from '../../utils/toast';
 import type {
-    ComponentType,
     CSSProperties,
     Dispatch,
     MutableRefObject,
@@ -18,8 +19,6 @@ import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '.
 import type { SimulationResult } from '../../utils/simulationCalculator';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../../hooks/useIntersectionDisplayOptions';
 
-type LooseComponent = ComponentType<Record<string, unknown>>;
-type Callback = (...args: unknown[]) => void;
 
 type IntersectionArrow = FlecheCarrefour;
 
@@ -42,17 +41,17 @@ interface WorkspaceMainModel {
     cycleLengthInput: string;
     cycleSimulationSpeed: () => void;
     dependencyGap: number;
-    diagramAreaRef: RefObject<HTMLElement>;
+    diagramAreaRef: RefObject<HTMLElement | null>;
     diagramHeight: number | null;
     displayConflicts: TimelineDiagramProps['conflicts'];
     dossierReadOnly: boolean;
     draggedTabIndex: number | null;
-    endDrag: Callback;
+    endDrag: NonNullable<TimelineDiagramProps['endDrag']>;
     globalTime: number;
     groups: Groupe[];
-    handleActionPanelResize: Callback;
-    handleDiagramResizeStart: Callback;
-    handleResizeStart: Callback;
+    handleActionPanelResize: ReturnType<typeof useUILayout>['handleActionPanelResize'];
+    handleDiagramResizeStart: ReturnType<typeof useUILayout>['handleDiagramResizeStart'];
+    handleResizeStart: ReturnType<typeof useUILayout>['handleResizeStart'];
     helpZoneRef: MutableRefObject<string | null>;
     hoveredActionId: number | null;
     hoveredArrowGroupId: number | null;
@@ -89,33 +88,33 @@ interface WorkspaceMainModel {
     renamePF: (id: number, name: string) => void;
     reorderActions: NonNullable<ActionTableProps['reorderActions']>;
     reorderPF: (fromIndex: number, toIndex: number) => void;
-    resetDiagramHeight: Callback;
+    resetDiagramHeight: () => void;
     saveDirectoryHandle: NonNullable<IntersectionImageProps['saveDirectoryHandle']>;
     setActionColWidths: NonNullable<ActionTableProps['setActionColWidths']>;
     setActivePFId: (id: number) => void;
     setBrouillonPhasage: Dispatch<SetStateAction<PhasageDraft | null>>;
-    setCycleLength: Callback;
-    setCycleLengthInput: Callback;
-    setDragConflictsFromDiagram: Callback;
+    setCycleLength: NonNullable<TimelineDiagramProps['setCycleLength']>;
+    setCycleLengthInput: NonNullable<TimelineDiagramProps['setCycleLengthInput']>;
+    setDragConflictsFromDiagram: NonNullable<TimelineDiagramProps['onDragConflicts']>;
     setDraggedTabIndex: (index: number | null) => void;
     setHoveredActionId: ActionTableProps['setHoveredActionId'];
     setHoveredArrowGroupId: NonNullable<IntersectionImageProps['setHoveredArrowGroupId']>;
-    setHoveredDiagramTime: Callback;
-    setHoveredPhasageGroupId: Callback;
+    setHoveredDiagramTime: (time: number | null) => void;
+    setHoveredPhasageGroupId: NonNullable<PhasageBulleProps['setHoveredGroupId']>;
     setImageBrightness: NonNullable<IntersectionImageProps['setImageBrightness']>;
     setImageContrast: NonNullable<IntersectionImageProps['setImageContrast']>;
     setIntersectionArrows: IntersectionImageProps['onArrowsChange'];
     setIntersectionDisplayOption: (option: IntersectionDisplayOption, value: boolean) => void;
     setIntersectionImage: IntersectionImageProps['onImageChange'];
     setIsPlayingSimulation: NonNullable<IntersectionImageProps['setIsPlaying']>;
-    setPhasageBubbleRatio: Callback;
-    setPhasageBubbleScale: Callback;
+    setPhasageBubbleRatio: NonNullable<PhasageBulleProps['onBubbleRatioChange']>;
+    setPhasageBubbleScale: NonNullable<PhasageBulleProps['onBubbleScaleChange']>;
     setPhasageBulleCount: (value: number) => void;
     setPhasageBulleEnabled: (value: boolean) => void;
     setPhasageBulleModal: (value: boolean) => void;
     setPhasageBulleTimes: (value: number[]) => void;
     setPhasageBulleVersion: Dispatch<SetStateAction<number>>;
-    setPhasageEllipseScale: Callback;
+    setPhasageEllipseScale: NonNullable<PhasageBulleProps['onEllipseScaleChange']>;
     setSelectedGroupId: (id: number) => void;
     setShowFloatingConditions: ActionTableProps['setShowFloatingConditions'];
     setShowFloatingDiagram: (value: boolean) => void;
@@ -141,13 +140,13 @@ interface WorkspaceMainModel {
     simulationResult: SimulationResult | null;
     simulationSelectedActions: number[];
     simulationSpeed: number;
-    startDrag: Callback;
-    tip: (label: string) => string | undefined;
+    startDrag: NonNullable<TimelineDiagramProps['startDrag']>;
+    tip: (label: string) => string | undefined | undefined;
     tooltipPrefs: { diagram?: boolean; micro?: boolean };
     updateActionRow: ActionTableProps['updateActionRow'];
-    updateGroupParams: Callback;
+    updateGroupParams: TimelineDiagramProps['updateGroupParams'];
     updateMicroCustomField: NonNullable<ActionTableProps['updateMicroCustomField']>;
-    updatePFRemarques: Callback;
+    updatePFRemarques: (remarques: string) => void;
 }
 
 interface WorkspaceMainProps {

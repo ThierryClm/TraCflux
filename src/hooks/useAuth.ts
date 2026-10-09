@@ -34,7 +34,12 @@ interface PermissionSet {
     canManageUsers: boolean;
 }
 
-type PermissionFlag = Exclude<keyof PermissionSet, 'label'>;
+export type PermissionFlag = Exclude<keyof PermissionSet, 'label'>;
+
+/** Échec d'une opération sur les comptes, avec son message. */
+export type EchecCompte = { success: false; error: string };
+/** Issue d'une opération sur les comptes. */
+export type ResultatCompte = { success: true; error?: undefined } | EchecCompte;
 
 const isPermissionLevel = (value: unknown): value is PermissionLevel =>
     value === 'lecture' || value === 'partiel' || value === 'total';
@@ -222,7 +227,7 @@ export const useAuth = () => {
     }, [users]);
 
     // Connexion
-    const login = useCallback(async (username: string, password: string) => {
+    const login = useCallback(async (username: string, password: string): Promise<ResultatCompte> => {
         const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
@@ -264,7 +269,7 @@ export const useAuth = () => {
         username: string,
         password: string,
         permissions: PermissionLevel = 'lecture'
-    ) => {
+    ): Promise<{ success: true; isFirstUser: boolean } | EchecCompte> => {
         if (!username || !password) {
             return { success: false, error: 'Nom d\'utilisateur et mot de passe requis' };
         }
@@ -305,7 +310,7 @@ export const useAuth = () => {
     }, [saveUsers]);
 
     // Mettre à jour les permissions d'un utilisateur
-    const updateUser = useCallback((username: string, newPermissions: PermissionLevel) => {
+    const updateUser = useCallback((username: string, newPermissions: PermissionLevel): ResultatCompte => {
         const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
@@ -324,7 +329,7 @@ export const useAuth = () => {
     }, [currentUser, saveUsers]);
 
     // Supprimer un utilisateur
-    const deleteUser = useCallback((username: string) => {
+    const deleteUser = useCallback((username: string): ResultatCompte => {
         if (currentUser && currentUser.username === username) {
             return { success: false, error: 'Vous ne pouvez pas supprimer votre propre compte' };
         }
@@ -350,7 +355,7 @@ export const useAuth = () => {
     }, [currentUser, saveUsers]);
 
     // Changer le mot de passe
-    const changePassword = useCallback(async (username: string, oldPassword: string, newPassword: string) => {
+    const changePassword = useCallback(async (username: string, oldPassword: string, newPassword: string): Promise<ResultatCompte> => {
         const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
@@ -369,7 +374,7 @@ export const useAuth = () => {
     }, [saveUsers]);
 
     // Réinitialiser le mot de passe (admin)
-    const resetPassword = useCallback(async (username: string, newPassword: string) => {
+    const resetPassword = useCallback(async (username: string, newPassword: string): Promise<ResultatCompte> => {
         const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}') as StoredUsers;
 
         if (!usersData[username]) {
@@ -397,7 +402,7 @@ export const useAuth = () => {
     }, [currentUser]);
 
     // Exporter les utilisateurs vers un fichier JSON
-    const exportUsersToFile = useCallback(async () => {
+    const exportUsersToFile = useCallback(async (): Promise<ResultatCompte> => {
         if (!window.showSaveFilePicker) {
             // Fallback: téléchargement classique
             const usersData = JSON.parse(localStorage.getItem('auth_users') || '{}');
@@ -433,7 +438,7 @@ export const useAuth = () => {
     }, []);
 
     // Importer les utilisateurs depuis un fichier JSON
-    const importUsersFromFile = useCallback(async () => {
+    const importUsersFromFile = useCallback(async (): Promise<{ success: true; count: number } | EchecCompte> => {
         if (!window.showOpenFilePicker) {
             return { success: false, error: 'API File System non supportée' };
         }
