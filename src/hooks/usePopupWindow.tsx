@@ -459,10 +459,18 @@ const usePopupWindow = ({
             const maxW = b ? Math.max(200, b.width - 40 - chromeW) : Infinity;
             const maxH = b ? Math.max(200, b.height - 60 - chromeH) : Infinity;
 
+            // resizeTo et non resizeBy : un écart relatif se calcule sur la
+            // taille LUE, et Chrome la rapporte parfois fausse pendant
+            // l'ouverture (fenêtre lue à la taille de l'écran alors qu'elle
+            // est déjà ajustée). L'écart retranché ramenait alors la fenêtre à
+            // une bande pleine largeur de quelques pixels de haut. Une taille
+            // absolue reste juste quelle que soit la lecture.
             const poser = (w: number, h: number) => {
-                const dw = Math.min(Math.round(w), maxW) - popup.innerWidth;
-                const dh = Math.min(Math.round(h), maxH) - popup.innerHeight;
-                if (dw || dh) popup.resizeBy(dw, dh);
+                const cw = Math.min(Math.round(w), maxW);
+                const ch = Math.min(Math.round(h), maxH);
+                if (cw !== popup.innerWidth || ch !== popup.innerHeight) {
+                    popup.resizeTo(cw + chromeW, ch + chromeH);
+                }
             };
 
             // 1. La cible annoncée. L'appelant décrit son contenu ; l'éventuel
