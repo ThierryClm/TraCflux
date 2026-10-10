@@ -154,3 +154,31 @@ describe('Simulation — escamotage de phase qui chevauche la fin du cycle', () 
         expect(vert(r, 8)).toBe('0-7');
     });
 });
+
+describe('Simulation — adaptatif vertical qui chevauche la fin du cycle', () => {
+    // Plan PF1_120 (cycle 120), adaptatif GF8 déplacé de 11-16 s à 115-5 s :
+    // 5 s en fin de cycle, 5 s au début du suivant.
+    const pf1 = exemple.pfTabs.find(pf => pf.name === 'PF1_120');
+    const groupesPf1 = exemple.groups.map(g => {
+        const ligne = pf1.diagram.find(d => d.groupId === g.id);
+        return { ...g, offset: ligne.offset, durations: { ...g.durations, green: ligne.greenDuration } };
+    });
+    const ADAPTATIF_GF8 = 10;
+    const avec = (modif) => pf1.data.map(a => (a.id === ADAPTATIF_GF8 ? { ...a, deb: '115', fin: '5', ...modif } : a));
+    const simulerAv = (actions) => calculateSimulatedDiagram(groupesPf1, actions, [ADAPTATIF_GF8], pf1.cycleLength, pf1.conflictMatrix);
+
+    it('sans plage : 10 s retirées au cycle, de part et d\'autre de sa fin', () => {
+        const r = simulerAv(avec({}));
+        expect(r.simulatedCycleLength).toBe(110);
+        expect(vert(r, 4)).toBe('97-110');      // 102-121 : perd 115-120 et 0-1
+        expect(vert(r, 8)).toBe('0-15');        // 0-20 : perd 0-5
+        expect(vert(r, 1)).toBe('5-54');        // 10-59, reculé de 5 s
+    });
+
+    it('avec plage : seules les lignes de la plage sont coupées, le cycle ne change pas', () => {
+        const r = simulerAv(avec({ plage1: '8', plage2: '13' }));
+        expect(r.simulatedCycleLength).toBe(120);
+        expect(vert(r, 8)).toBe('0-15');        // dans la plage
+        expect(vert(r, 4)).toBe('102-121');     // hors plage : inchangé
+    });
+});
