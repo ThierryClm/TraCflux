@@ -83,12 +83,15 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
         if (simulationResult?.timeShifts?.length) {
             simulationResult.timeShifts.forEach(shift => {
                 if (shift.amount <= 0 || (shift.isPartial && !isAvOrEscamotage)) return;
-                // Le cadre d'un adaptatif vertical ne suit un adaptatif PARTIEL
-                // que si sa plage est comprise dans celle de ce dernier, et
-                // c'est le calcul par plage, plus bas, qui l'applique. Le
-                // prendre en compte ici décalait les cadres de toute autre
-                // plage, et deux fois ceux de la même plage.
-                if (shift.isPartial && actionType === 'Adaptatif vertical') return;
+                // Un adaptatif PARTIEL ne raccourcit que les groupes de sa plage
+                // et ne contracte pas le cycle : le calcul de simulation applique
+                // les adaptatifs et escamotages suivants à leurs instants
+                // d'origine. Leurs cadres n'ont donc pas à le suivre ici. Seul le
+                // cadre d'un adaptatif dont la plage est comprise dans la sienne
+                // recule, et c'est le calcul par plage, plus bas, qui s'en charge.
+                // Le prendre en compte ici décalait les cadres des autres plages,
+                // et deux fois ceux de la même plage.
+                if (shift.isPartial && isAvOrEscamotage) return;
                 if (isAvOrEscamotage && actionId && shift.actionId === actionId) return;
 
                 const zoneStart = shift.from - shift.amount;
