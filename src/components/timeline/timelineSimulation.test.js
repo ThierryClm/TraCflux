@@ -123,4 +123,29 @@ describe('createTimelineSimulation', () => {
             expect(model.getShiftedActionPosition(22, 28, 4, 'Fermeture anticipée').hidden).toBe(true);
         });
     });
+
+    // Plan ACTUEL du projet exemple : adaptatif vertical de GF8 (7-11 s,
+    // plage GF8 à GF13) coché. Il ne raccourcit que les groupes de sa plage.
+    describe('Adaptatif vertical partiel et cadres des autres adaptatifs', () => {
+        const treize = Array.from({ length: 13 }, (_, i) => ({ id: i + 1, offset: 0, durations: { green: 10 } }));
+        const model = createTimelineSimulation({
+            groups: treize,
+            cycleLength: 70,
+            simulationResult: {
+                simulatedCycleLength: 70,
+                simulatedGroups: treize.map(g => ({ id: g.id, simulatedOffset: 0, simulatedGreen: 10 })),
+                timeShifts: [{ from: 11, amount: 4, plage1: 8, plage2: 13, isPartial: true, source: 'Adaptatif vertical', actionId: 6 }]
+            }
+        });
+
+        it("ne déplace pas le cadre d'un adaptatif d'une autre plage", () => {
+            expect(model.getShiftedActionPosition(11, 15, null, 'Adaptatif vertical', { plage1: 1, plage2: 7 }, 4))
+                .toEqual({ deb: 11, fin: 15, hidden: false });
+        });
+
+        it("décale une seule fois le cadre d'un adaptatif de la même plage", () => {
+            expect(model.getShiftedActionPosition(20, 24, null, 'Adaptatif vertical', { plage1: 8, plage2: 13 }, 9))
+                .toEqual({ deb: 16, fin: 20, hidden: false });
+        });
+    });
 });
