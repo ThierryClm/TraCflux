@@ -39,6 +39,12 @@ export const appliquerPointsDeRepos = (etat: EtatSimulation): void => {
             if (g.simulatedOffset >= t) {
                 // Group starts at/after the rest point → shift right
                 g.simulatedOffset += REST_DURATION;
+                // Un vert qui chevauche la fin du cycle reprend au début du
+                // suivant : s'il y couvre encore t (ou y finit à t), il est aussi
+                // étiré, comme un vert qui couvre t dans le cycle.
+                if (greenEnd - etat.simulatedCycleLength >= t) {
+                    g.simulatedGreen += REST_DURATION;
+                }
             } else if (greenEnd >= t) {
                 // Green covers t (or ends exactly at t) → stretch (option A)
                 // Including the equality case: a green ending at t is treated as
