@@ -123,3 +123,34 @@ describe('Simulation — point de repos et verts qui chevauchent la fin du cycle
         expect(finDeVert(7)).toBe('1-20');
     });
 });
+
+describe('Simulation — escamotage de phase qui chevauche la fin du cycle', () => {
+    // Plan PF1_120 (cycle 120) : escamotage de phase GF6 de 102 à 8 s, soit
+    // 18 s en fin de cycle et 8 s au début du suivant.
+    const pf1 = exemple.pfTabs.find(pf => pf.name === 'PF1_120');
+    const groupesPf1 = exemple.groups.map(g => {
+        const ligne = pf1.diagram.find(d => d.groupId === g.id);
+        return { ...g, offset: ligne.offset, durations: { ...g.durations, green: ligne.greenDuration } };
+    });
+    const ESCAMOTAGE_GF6 = 13;
+    const ADAPTATIFS = [8, 9, 10];  // 38-46, 73-76, 11-16, sans plage
+    const simulerPf1 = coches => calculateSimulatedDiagram(groupesPf1, pf1.data, coches, pf1.cycleLength, pf1.conflictMatrix);
+
+    it('seul, il retire 26 s au cycle', () => {
+        const r = simulerPf1([ESCAMOTAGE_GF6]);
+        expect(r.simulatedCycleLength).toBe(94);
+        expect(vert(r, 4)).toBe('escamoté');   // 102-121, entièrement dans la zone
+        expect(vert(r, 6)).toBe('escamoté');
+        expect(vert(r, 7)).toBe('escamoté');
+        expect(vert(r, 5)).toBe('0-45');        // 102-173 : reste 8-53
+        expect(vert(r, 8)).toBe('0-12');        // 0-20 : reste 8-20
+        expect(vert(r, 1)).toBe('2-51');        // 10-59, reculé de 8 s
+    });
+
+    it('après les adaptatifs, il se lit dans le cycle déjà réduit', () => {
+        const r = simulerPf1([...ADAPTATIFS, ESCAMOTAGE_GF6]);
+        expect(r.simulatedCycleLength).toBe(78);
+        expect(vert(r, 5)).toBe('0-32');
+        expect(vert(r, 8)).toBe('0-7');
+    });
+});

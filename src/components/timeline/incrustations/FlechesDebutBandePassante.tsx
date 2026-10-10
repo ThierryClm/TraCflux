@@ -11,7 +11,7 @@ interface FlechesDebutBandePassanteProps {
 
 /** Débuts de bande passante : flèches obliques vertes en pointillés. */
 const FlechesDebutBandePassante = ({ ctx, dashedPath, debutBandeActions }: FlechesDebutBandePassanteProps) => {
-    const { groups, pixelsPerSecond, cycleLength, RULER_HEIGHT, ROW_HEIGHT, ROW_TOTAL_HEIGHT, svgHeight, totalWidth, hoveredActionId, setHoveredActionId, getShiftedActionPosition } = ctx;
+    const { groups, pixelsPerSecond, effectiveCycleLength, RULER_HEIGHT, ROW_HEIGHT, ROW_TOTAL_HEIGHT, svgHeight, totalWidth, hoveredActionId, setHoveredActionId, getShiftedActionPosition } = ctx;
 
     return (
         <>
@@ -40,7 +40,7 @@ const FlechesDebutBandePassante = ({ ctx, dashedPath, debutBandeActions }: Flech
                 const endX = fin * pixelsPerSecond;
                 const startY = RULER_HEIGHT + 1 + (startGroupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
                 const endY = RULER_HEIGHT + 1 + (endGroupIndex * ROW_TOTAL_HEIGHT) + (ROW_HEIGHT / 2);
-                const cycleEndX = cycleLength * pixelsPerSecond;
+                const cycleEndX = effectiveCycleLength * pixelsPerSecond;
 
                 // Arrow head size
                 const arrowSize = 4;
@@ -50,8 +50,8 @@ const FlechesDebutBandePassante = ({ ctx, dashedPath, debutBandeActions }: Flech
 
                 if (wrapsAround) {
                     // Calculate intermediate Y at cycle boundary
-                    const totalXDistance = (cycleLength - deb) + fin;
-                    const firstSegmentRatio = (cycleLength - deb) / totalXDistance;
+                    const totalXDistance = (effectiveCycleLength - deb) + fin;
+                    const firstSegmentRatio = (effectiveCycleLength - deb) / totalXDistance;
                     const intermediateY = startY + (endY - startY) * firstSegmentRatio;
 
                     // Angle for second segment arrow head

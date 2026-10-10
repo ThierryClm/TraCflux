@@ -121,3 +121,31 @@ describe('Cadre pleine largeur hors bicarrefour', () => {
         expect(escamotage([ADAPTATIF_GF2, ADAPTATIF_GF8], null)).toEqual(['16-28']);
     });
 });
+
+describe('Cadre qui chevauche la fin du cycle, cycle réduit par des adaptatifs', () => {
+    // PF1_120 : escamotage de phase 102-8 non coché, adaptatifs 38-46, 73-76 et
+    // 11-16 cochés (cycle 104). La première partie du cadre s'arrête à la
+    // nouvelle fin de cycle, plus à 120 s.
+    it('le cadre va de 86 s à 104 s, puis de 0 à 8 s', () => {
+        const pf1 = exemple.pfTabs.find(pf => pf.name === 'PF1_120');
+        const groupesPf1 = exemple.groups.map(g => {
+            const ligne = pf1.diagram.find(d => d.groupId === g.id);
+            return { ...g, offset: ligne.offset, durations: { ...g.durations, green: ligne.greenDuration } };
+        });
+        const cochees = [8, 9, 10];
+        const simulationResult = calculateSimulatedDiagram(groupesPf1, pf1.data, cochees, pf1.cycleLength, pf1.conflictMatrix);
+        const { container } = render(
+            <TimelineDiagram groups={groupesPf1} cycleLength={pf1.cycleLength} pixelsPerSecond={PPS} conflicts={[]}
+                conflictMatrix={pf1.conflictMatrix} actionData={pf1.data} simulationResult={simulationResult}
+                simulationFilter={new Set(cochees)} biCarrefourSeparator={null}
+                cycleLengthInput="120" setCycleLengthInput={() => {}} setCycleLength={() => {}}
+                onGroupClick={() => {}} updateGroupParams={() => {}} updateActionRow={() => {}}
+                setHoveredActionId={() => {}} startDrag={() => {}} endDrag={() => {}} />
+        );
+        const parties = [...container.querySelectorAll('.escamotage-overlay')].map(el => {
+            const deb = parseFloat(el.style.left) / PPS;
+            return `${deb}-${deb + parseFloat(el.style.width) / PPS}`;
+        });
+        expect(parties).toEqual(['86-104', '0-8']);
+    });
+});

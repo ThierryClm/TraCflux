@@ -11,7 +11,7 @@ interface IncrustationAdaptatifVerticalProps {
 
 /** Cadres des adaptatifs verticaux (pleine largeur ou sur leur plage). */
 const IncrustationAdaptatifVertical = ({ ctx, adaptatifActions, morceauxPleineLargeur }: IncrustationAdaptatifVerticalProps) => {
-    const { groups, pixelsPerSecond, cycleLength, RULER_HEIGHT, ROW_TOTAL_HEIGHT, hoveredActionId, setHoveredActionId, dragState, handleActionDragStart, getShiftedActionPosition } = ctx;
+    const { groups, pixelsPerSecond, effectiveCycleLength, RULER_HEIGHT, ROW_TOTAL_HEIGHT, hoveredActionId, setHoveredActionId, dragState, handleActionDragStart, getShiftedActionPosition } = ctx;
 
     return (
         <>
@@ -55,7 +55,7 @@ const IncrustationAdaptatifVertical = ({ ctx, adaptatifActions, morceauxPleineLa
                             const wrapsAround = deb > fin;
 
                             if (wrapsAround) {
-                                const firstPartWidth = (cycleLength - deb) * pixelsPerSecond;
+                                const firstPartWidth = (effectiveCycleLength - deb) * pixelsPerSecond;
                                 const secondPartWidth = fin * pixelsPerSecond;
                                 return (
                                     <React.Fragment key={`adaptatif-${idx}-${mIdx}`}>

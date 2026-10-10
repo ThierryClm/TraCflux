@@ -74,6 +74,8 @@ export interface EtatSimulation {
     selectedActions: ActionMicro[];
     simulatedGroups: SimulatedGroup[];
     simulatedCycleLength: number;
+    // Durée du cycle du plan, avant simulation
+    cycleOrigine: number;
     // Périodes retirées du diagramme, pour filtrer les actions
     removedPeriods: RemovedPeriod[];
     // Décalages : les positions >= from reculent de amount (incrustations)
