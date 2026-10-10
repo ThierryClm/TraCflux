@@ -4,7 +4,7 @@ import EmptyState from './EmptyState';
 import { useAlert } from './ConfirmProvider';
 import { getTotalGreenTime as computeTotalGreenTime, parseTrafficVol, isCoordinated, groupesInhibes } from '../utils/trafficHelpers';
 import type { ActionMicro, Groupe } from '../types/projet';
-import type { SimulationResult } from '../utils/simulationCalculator';
+import type { SimulationResult } from '../simulation';
 import './TrafficTable.css';
 
 interface TrafficData {

@@ -6,14 +6,14 @@ import DiagnosticPanel from '../DiagnosticPanel';
 import DiagramLegend from '../DiagramLegend';
 import PhasageBulle from '../PhasageBulle';
 import { APP_NAME, APP_VERSION } from '../../version';
-import { actionsSimulables, conflitsSimules } from '../../utils/simulationCalculator';
+import { actionsSimulables, conflitsSimules } from '../../simulation';
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
 import { groupesInhibes } from '../../utils/trafficHelpers';
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
 import { ARROW_SIZE, BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
-import type { SimulationResult } from '../../utils/simulationCalculator';
+import type { SimulationResult } from '../../simulation';
 import type { ProjectProperties } from '../PropertiesPanel';
 
 type PrintType = 'matrix' | 'form' | 'diagram' | 'dossier';

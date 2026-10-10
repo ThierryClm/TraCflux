@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { calculateSimulatedDiagram, actionsSimulables, conflitsSimules } from '../utils/simulationCalculator';
+import { calculateSimulatedDiagram, actionsSimulables, conflitsSimules } from '../simulation';
 import type { ActionMicro, Groupe, Matrice } from '../types/projet';
 import './SimulationPanel.css';
 

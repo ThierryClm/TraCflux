@@ -13,7 +13,7 @@ import { useMicroVariables } from './MicroVariablesProvider';
 import { resetTextFormatting } from '../utils/resetTextFormatting';
 import { entier } from '../utils/entier';
 import type { ActionMicro, DrapeauPhase, Groupe, Matrice } from '../types/projet';
-import type { SimulationResult } from '../utils/simulationCalculator';
+import type { SimulationResult } from '../simulation';
 import type { TrafficConflict } from '../utils/conflictUtils';
 import type { ParametresGroupe } from '../hooks/useTrafficLight';
 import type { TimelineActionTooltip } from './timeline/timelineTypes';

@@ -7,7 +7,7 @@ import DiagnosticPanel from '../DiagnosticPanel';
 import ConflictList from '../ConflictList';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
-import type { SimulationResult } from '../../utils/simulationCalculator';
+import type { SimulationResult } from '../../simulation';
 import type { ConflictInfo, HoveredConflict } from '../ConflictList';
 import type { ProjectProperties } from '../PropertiesPanel';
 

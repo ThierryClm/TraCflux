@@ -16,7 +16,7 @@ import type {
     SetStateAction,
 } from 'react';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
-import type { SimulationResult } from '../../utils/simulationCalculator';
+import type { SimulationResult } from '../../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../../hooks/useIntersectionDisplayOptions';
 
 

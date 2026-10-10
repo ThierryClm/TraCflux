@@ -12,7 +12,7 @@ import {
     ensurePFIntegrity,
     cycleDuPlanActif
 } from '../utils/pfHelpers';
-import { ACTIONS_HORS_SIMULATION, actionsSimulables } from '../utils/simulationCalculator';
+import { ACTIONS_HORS_SIMULATION, actionsSimulables } from '../simulation';
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
