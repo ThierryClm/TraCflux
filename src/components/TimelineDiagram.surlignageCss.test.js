@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -22,7 +22,14 @@ import path from 'node:path';
  */
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
-const jsx = readFileSync(path.join(ici, 'TimelineDiagram.tsx'), 'utf8');
+// Le dessin des familles est réparti entre le diagramme et ses incrustations.
+const dossierIncrustations = path.join(ici, 'timeline', 'incrustations');
+const jsx = [
+    readFileSync(path.join(ici, 'TimelineDiagram.tsx'), 'utf8'),
+    ...readdirSync(dossierIncrustations)
+        .filter(f => f.endsWith('.tsx'))
+        .map(f => readFileSync(path.join(dossierIncrustations, f), 'utf8'))
+].join('\n');
 const css = readFileSync(path.join(ici, 'TimelineDiagram.css'), 'utf8');
 
 // Familles dessinées en SVG : leur règle de surlignage nomme une balise, et
