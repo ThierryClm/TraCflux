@@ -2,7 +2,7 @@ import type { Groupe } from '../../types/projet';
 import type { SimulatedGroup, SimulationResult } from '../../simulation';
 
 /** Identifiant de groupe, numérique ou tel que lu dans un champ de saisie. */
-type GroupId = number | string;
+export type GroupId = number | string;
 
 /** Plage de groupes visée par une action « Adaptatif vertical ». */
 export interface ActionPlage {

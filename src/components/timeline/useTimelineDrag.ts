@@ -4,7 +4,7 @@ import type { ActionMicro, CaseMatrice, Groupe } from '../../types/projet';
 import type { TrafficConflict } from '../../utils/conflictUtils';
 
 type DragHandleType = 'start' | 'end';
-type ActionTimeField = 'deb' | 'fin';
+export type ActionTimeField = 'deb' | 'fin';
 type ConflictCell = CaseMatrice | null | undefined;
 
 interface LinkedBandwidthAction {
@@ -13,7 +13,7 @@ interface LinkedBandwidthAction {
     initialFin: number | null;
 }
 
-interface TimelineDragState {
+export interface TimelineDragState {
     groupId?: number;
     type?: DragHandleType;
     actionId?: ActionMicro['id'];
