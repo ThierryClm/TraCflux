@@ -70,11 +70,29 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
         let adjustedFin = fin;
         let fullShiftOnDeb = 0;
         let fullShiftOnFin = 0;
+        // Recul de la fin de vert du groupe dû aux contractions qui coupent
+        // aussi la fin de l'action. Cette coupure est déjà appliquée à la fin
+        // de l'action (ramenée au début de la contraction) : la reporter une
+        // seconde fois par le décalage de fin de vert ferait glisser toute
+        // l'action vers la gauche.
+        let finCoupeeAvecLeVert = 0;
         const isAvOrEscamotage = actionType === 'Escamotage de phase' || actionType === 'Adaptatif vertical';
+        const groupeAction = groupId ? groups.find(group => group.id === parseInt(String(groupId))) : undefined;
+        const finDeVert = groupeAction ? groupeAction.offset + groupeAction.durations.green : null;
 
         if (simulationResult?.timeShifts?.length) {
             simulationResult.timeShifts.forEach(shift => {
                 if (shift.amount <= 0 || (shift.isPartial && !isAvOrEscamotage)) return;
+                // Le cadre d'un adaptatif À PLAGE ne suit un adaptatif partiel
+                // que si sa plage est comprise dans celle de ce dernier, et c'est
+                // le calcul par plage, plus bas, qui l'applique. Le prendre en
+                // compte ici décalait les cadres des autres plages, et deux fois
+                // ceux de la même plage. Les cadres qui couvrent toutes les lignes
+                // (escamotage de phase, adaptatif sans plage) ne sont pas
+                // concernés : sur les lignes de la plage ils doivent reculer, sur
+                // les autres non, ce que leur dessin en un seul morceau ne peut
+                // pas encore montrer.
+                if (shift.isPartial && actionType === 'Adaptatif vertical' && actionPlage) return;
                 if (isAvOrEscamotage && actionId && shift.actionId === actionId) return;
 
                 const zoneStart = shift.from - shift.amount;
@@ -91,6 +109,9 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
                         adjustedDeb = zoneStart;
                     } else if (finInside) {
                         adjustedFin = zoneStart;
+                        if (finDeVert !== null && finDeVert > zoneStart) {
+                            finCoupeeAvecLeVert += Math.min(finDeVert, zoneEnd) - zoneStart;
+                        }
                     }
                 }
 
@@ -154,7 +175,7 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
 
             const groupShift = useEndShift ? getGroupEndShift(groupId) : getGroupShift(groupId);
             if (groupShift > 0) {
-                totalShift = Math.max(0, groupShift - (useEndShift ? fullShiftOnFin : fullShiftOnDeb));
+                totalShift = Math.max(0, groupShift - (useEndShift ? fullShiftOnFin + finCoupeeAvecLeVert : fullShiftOnDeb));
             }
         } else if (simulationResult?.timeShifts?.length) {
             simulationResult.timeShifts.forEach(shift => {

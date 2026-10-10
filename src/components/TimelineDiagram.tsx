@@ -1098,6 +1098,17 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick = () => {}, pixelsPe
                                                 if (!zone.isPartial) continue;
                                                 const gId = group.id;
                                                 if (gId < (zone.plage1 ?? 0) || gId > (zone.plage2 ?? 0)) continue;
+                                                // Seule une accolade qui chevauche la zone dans le plan
+                                                // d'origine est tronquée. Les positions comparées
+                                                // ci-dessous sont déjà décalées : une accolade située
+                                                // après la zone, ramenée vers la gauche de la durée de
+                                                // l'adaptatif, y retombait et voyait son début repoussé
+                                                // en fin de zone au lieu de suivre le décalage.
+                                                const chevauche = (debut: number, finale: number) => debut < zone.rawFin && finale > zone.rawDeb;
+                                                const chevaucheOrigine = origDeb <= origFin
+                                                    ? chevauche(origDeb, origFin)
+                                                    : chevauche(origDeb, cycleLength) || chevauche(0, origFin);
+                                                if (!chevaucheOrigine) continue;
                                                 if (zone.deb < zone.fin && fermetureStartPos < fermetureEndPos) {
                                                     if (fermetureStartPos < zone.deb && fermetureEndPos > zone.deb) {
                                                         // Début accolade < début zone : tronquer la fin au début de la zone
