@@ -89,3 +89,37 @@ describe('Simulation — zone hachurée du point de repos après une contraction
         expect(repos(simuler([ADAPTATIF_GF2, POINT_REPOS_GF9]), POINT_REPOS_GF9)).toBe(60);
     });
 });
+
+describe('Simulation — point de repos et verts qui chevauchent la fin du cycle', () => {
+    // Plan PF_Aiguillage (cycle 46) : point de repos GF2 à 5 s. GF2 (45 + 9),
+    // GF3 (45 + 6), GF4 (44 + 8), GF8 (44 + 11) et GF12 (44 + 8) débordent sur
+    // le cycle suivant et sont encore verts à 5 s : leur fin de vert recule de
+    // 10 s, comme celle des autres verts couvrant l'instant du repos.
+    const aiguillage = exemple.pfTabs.find(pf => pf.name === 'PF_Aiguillage');
+    const groupesAig = exemple.groups.map(g => {
+        const ligne = aiguillage.diagram.find(d => d.groupId === g.id);
+        return { ...g, offset: ligne.offset, durations: { ...g.durations, green: ligne.greenDuration } };
+    });
+    const r = calculateSimulatedDiagram(groupesAig, aiguillage.data, [3], aiguillage.cycleLength, aiguillage.conflictMatrix);
+    const finDeVert = id => {
+        const g = r.simulatedGroups.find(x => x.id === id);
+        return `${g.simulatedOffset}-${(g.simulatedOffset + g.simulatedGreen) % r.simulatedCycleLength}`;
+    };
+
+    it('le cycle passe à 56 s', () => {
+        expect(r.simulatedCycleLength).toBe(56);
+    });
+
+    it('les verts chevauchants commencent 10 s plus tard et finissent 10 s plus tard', () => {
+        expect(finDeVert(2)).toBe('55-18');
+        expect(finDeVert(3)).toBe('55-15');
+        expect(finDeVert(4)).toBe('54-16');
+        expect(finDeVert(8)).toBe('54-19');
+        expect(finDeVert(12)).toBe('54-16');
+    });
+
+    it('un vert qui ne couvre pas 5 s est seulement décalé', () => {
+        expect(finDeVert(1)).toBe('25-50');
+        expect(finDeVert(7)).toBe('1-20');
+    });
+});

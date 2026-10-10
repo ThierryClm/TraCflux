@@ -481,8 +481,11 @@ const TimelineRow = ({ ctx, group, TIME_WINDOW, activeConflicts, biCarrefourSepa
                         // deb >= t décalé — déjà calculée par getShiftedActionPosition).
                         const greenStartOrig = group.offset;
                         const greenEndOrig = group.offset + group.durations.green;
+                        // Un vert qui chevauche la fin du cycle couvre aussi, au début du
+                        // cycle suivant, les instants jusqu'à greenEndOrig - cycleLength.
                         const restPointStretchesGreen = simulationResult?.restPoints?.some(rp =>
-                            rp.originalDeb >= greenStartOrig && rp.originalDeb <= greenEndOrig
+                            (rp.originalDeb >= greenStartOrig && rp.originalDeb <= greenEndOrig) ||
+                            rp.originalDeb <= greenEndOrig - cycleLength
                         );
 
                         // Vérifier si l'accolade chevauche une zone AV/EP (début avant, fin dans ou après la zone)
