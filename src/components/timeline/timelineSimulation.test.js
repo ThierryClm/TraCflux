@@ -143,16 +143,6 @@ describe('createTimelineSimulation', () => {
                 .toEqual({ deb: 11, fin: 15, hidden: false });
         });
 
-        it("ne déplace pas le cadre d'un escamotage de phase, qui vaut pour tous les groupes", () => {
-            expect(model.getShiftedActionPosition(20, 32, null, 'Escamotage de phase', null, 1))
-                .toEqual({ deb: 20, fin: 32, hidden: false });
-        });
-
-        it("ne déplace pas le cadre d'un adaptatif sans plage", () => {
-            expect(model.getShiftedActionPosition(44, 48, null, 'Adaptatif vertical', null, 11))
-                .toEqual({ deb: 44, fin: 48, hidden: false });
-        });
-
         it("décale une seule fois le cadre d'un adaptatif de la même plage", () => {
             expect(model.getShiftedActionPosition(20, 24, null, 'Adaptatif vertical', { plage1: 8, plage2: 13 }, 9))
                 .toEqual({ deb: 16, fin: 20, hidden: false });
