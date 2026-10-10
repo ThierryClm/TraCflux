@@ -10,6 +10,12 @@ export interface ActionPlage {
     plage2: number;
 }
 
+/** Lignes couvertes par un morceau de cadre pleine largeur (numéros de groupe). */
+export interface SectionGroupes {
+    premier: number;
+    dernier: number;
+}
+
 export interface ShiftedActionPosition {
     deb: number;
     fin: number;
@@ -62,7 +68,8 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
         groupId: GroupId | null = null,
         actionType: string | null = null,
         actionPlage: ActionPlage | null = null,
-        actionId: number | null = null
+        actionId: number | null = null,
+        section: SectionGroupes | null = null
     ): ShiftedActionPosition => {
         let hidden = false;
         let totalShift = 0;
@@ -93,6 +100,13 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
                 // les autres non, ce que leur dessin en un seul morceau ne peut
                 // pas encore montrer.
                 if (shift.isPartial && actionType === 'Adaptatif vertical' && actionPlage) return;
+                // Un cadre pleine largeur recule avec un adaptatif partiel. En
+                // bicarrefour, il est dessiné par section : seul le morceau dont
+                // les lignes croisent la plage de l'adaptatif recule.
+                if (
+                    shift.isPartial && section &&
+                    ((shift.plage1 as number) > section.dernier || (shift.plage2 as number) < section.premier)
+                ) return;
                 if (isAvOrEscamotage && actionId && shift.actionId === actionId) return;
 
                 const zoneStart = shift.from - shift.amount;
