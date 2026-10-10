@@ -9,11 +9,11 @@ const STORE_NAME = 'handles';
  * et les restaure au démarrage.
  */
 const useDirectoryHandles = () => {
-    const lastOpenDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
-    const lastSaveDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
-    const lastImportDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
-    const lastImageDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
-    const lastGreenWaveDirectoryRef = useRef<FileSystemDirectoryHandle | null>(null);
+    const lastOpenDirectoryRef = useRef<FileSystemDirectoryHandleLike | null>(null);
+    const lastSaveDirectoryRef = useRef<FileSystemDirectoryHandleLike | null>(null);
+    const lastImportDirectoryRef = useRef<FileSystemDirectoryHandleLike | null>(null);
+    const lastImageDirectoryRef = useRef<FileSystemDirectoryHandleLike | null>(null);
+    const lastGreenWaveDirectoryRef = useRef<FileSystemDirectoryHandleLike | null>(null);
 
     const openIndexedDB = useCallback((): Promise<IDBDatabase> => {
         return new Promise((resolve, reject) => {
@@ -31,7 +31,7 @@ const useDirectoryHandles = () => {
 
     const saveDirectoryHandle = useCallback(async (
         key: string,
-        handle: FileSystemDirectoryHandle
+        handle: FileSystemDirectoryHandleLike
     ): Promise<void> => {
         try {
             const db = await openIndexedDB();
@@ -49,15 +49,15 @@ const useDirectoryHandles = () => {
 
     const loadDirectoryHandle = useCallback(async (
         key: string
-    ): Promise<FileSystemDirectoryHandle | null> => {
+    ): Promise<FileSystemDirectoryHandleLike | null> => {
         try {
             const db = await openIndexedDB();
-            return await new Promise<FileSystemDirectoryHandle | null>((resolve, reject) => {
+            return await new Promise<FileSystemDirectoryHandleLike | null>((resolve, reject) => {
                 const transaction = db.transaction([STORE_NAME], 'readonly');
                 const store = transaction.objectStore(STORE_NAME);
                 const request = store.get(key);
                 request.onsuccess = () => {
-                    resolve((request.result as FileSystemDirectoryHandle | undefined) ?? null);
+                    resolve((request.result as FileSystemDirectoryHandleLike | undefined) ?? null);
                 };
                 request.onerror = () => reject(request.error);
             });

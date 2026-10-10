@@ -1,11 +1,54 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { ChangeEvent, Dispatch, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, MutableRefObject, SetStateAction } from 'react';
 import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { compressImageDataUrl, dataUrlBytes, formatBytes, ALERT_ABOVE_BYTES } from '../utils/imageCompressor';
 import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
+import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
+import type { SimulationResult } from '../utils/simulationCalculator';
+import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
 import './IntersectionImage.css';
+
+export interface IntersectionImageProps {
+    groups: Groupe[];
+    /** Image du carrefour, en data URL. */
+    imageData?: string | null;
+    imageFondClair?: boolean;
+    onImageChange: (dataUrl: string) => void;
+    arrows: FlecheCarrefour[];
+    onArrowsChange: (arrows: FlecheCarrefour[]) => void;
+    cycleLength: number;
+    simulationResult?: SimulationResult | null;
+    // Animation : état tenu par le parent
+    isPlaying?: boolean;
+    playbackSpeed?: number;
+    setIsPlaying?: Dispatch<SetStateAction<boolean>>;
+    currentTime?: number | null;
+    setCurrentTime?: Dispatch<SetStateAction<number>>;
+    // Survol partagé avec le diagramme
+    hoveredArrowGroupId?: number | null;
+    setHoveredArrowGroupId?: (id: number | null) => void;
+    /** Instant survolé sur le diagramme ; prime sur le curseur d'animation à l'arrêt. */
+    hoveredDiagramTime?: number | null;
+    actionData?: ActionMicro[];
+    selectedActions?: number[];
+    conflictMatrix?: Matrice;
+    // Répertoires (File System Access API)
+    lastImageDirectoryRef?: MutableRefObject<FileSystemDirectoryHandleLike | null>;
+    saveDirectoryHandle?: (key: string, handle: FileSystemDirectoryHandleLike) => Promise<void>;
+    recentImageDirs?: { name: string }[];
+    addRecentDirectory?: (type: 'image', dirName: string) => void;
+    onShowFloatingImage?: () => void;
+    intersectionName?: string;
+    imageBrightness?: number;
+    setImageBrightness?: (value: number) => void;
+    imageContrast?: number;
+    setImageContrast?: (value: number) => void;
+    displayOptions?: IntersectionDisplayOptions;
+    onDisplayOptionChange?: (option: IntersectionDisplayOption, value: boolean) => void;
+}
 
 const IntersectionImage = ({
     groups,
@@ -50,10 +93,10 @@ const IntersectionImage = ({
     // Cases numéros / noms / flèches (persistées avec le projet)
     displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true },
     onDisplayOptionChange
-}) => {
-    const fileInputRef = useRef(null);
-    const containerRef = useRef(null);
-    const [selectedArrow, setSelectedArrow] = useState(null);
+}: IntersectionImageProps) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [selectedArrow, setSelectedArrow] = useState<number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [showImageMenu, setShowImageMenu] = useState(false);
 
@@ -63,19 +106,19 @@ const IntersectionImage = ({
         setMainOverlayOpen('imageMenu', showImageMenu);
         return () => setMainOverlayOpen('imageMenu', false);
     }, [showImageMenu]);
-    const imageMenuRef = useRef(null);
+    const imageMenuRef = useRef<HTMLDivElement>(null);
 
     // Cases d'affichage : enregistrées avec le projet (useIntersectionDisplayOptions).
     const { showGroupNumbers, showGroupNames, showArrows } = displayOptions;
-    const setShowGroupNumbers = (value) => onDisplayOptionChange?.('showGroupNumbers', value);
-    const setShowGroupNames = (value) => onDisplayOptionChange?.('showGroupNames', value);
-    const setShowArrows = (value) => onDisplayOptionChange?.('showArrows', value);
+    const setShowGroupNumbers = (value: boolean) => onDisplayOptionChange?.('showGroupNumbers', value);
+    const setShowGroupNames = (value: boolean) => onDisplayOptionChange?.('showGroupNames', value);
+    const setShowArrows = (value: boolean) => onDisplayOptionChange?.('showArrows', value);
     const [applyToAllSameType, setApplyToAllSameType] = useState(false);
 
     // Close image menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (imageMenuRef.current && !imageMenuRef.current.contains(e.target)) {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (imageMenuRef.current && !imageMenuRef.current.contains(e.target as Node | null)) {
                 setShowImageMenu(false);
             }
         };
@@ -86,12 +129,12 @@ const IntersectionImage = ({
     }, [showImageMenu]);
 
     // Animation refs
-    const animationRef = useRef(null);
-    const lastTimeRef = useRef(null);
+    const animationRef = useRef<number | null>(null);
+    const lastTimeRef = useRef<number | null>(null);
 
     // Compresse l'image importée (redimensionnement + WebP) avant de l'appliquer,
     // puis alerte si elle reste volumineuse. L'image source n'est pas modifiée.
-    const applyImportedImage = useCallback(async (rawDataUrl) => {
+    const applyImportedImage = useCallback(async (rawDataUrl: string) => {
         const originalBytes = dataUrlBytes(rawDataUrl);
         const { dataUrl, compressed } = await compressImageDataUrl(rawDataUrl);
         onImageChange(dataUrl);
@@ -109,17 +152,22 @@ const IntersectionImage = ({
         }
     }, [onImageChange]);
 
+    // Lit un fichier ou un blob en data URL, puis l'applique comme image.
+    const lireEtAppliquer = (blob: Blob) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            applyImportedImage(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+    };
+
     // Handle image upload via File System Access API
-    const handleImageUpload = async (e) => {
+    const handleImageUpload = async (e?: ChangeEvent<HTMLInputElement>) => {
         // If called from input element (fallback)
         if (e && e.target && e.target.files) {
             const file = e.target.files[0];
             if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    applyImportedImage(event.target.result);
-                };
-                reader.readAsDataURL(file);
+                lireEtAppliquer(file);
             }
             return;
         }
@@ -127,7 +175,7 @@ const IntersectionImage = ({
         // Use File System Access API if available
         if (window.showOpenFilePicker) {
             try {
-                const options = {
+                const options: FilePickerOptionsLike = {
                     types: [{
                         description: 'Images (photos aériennes, plans, schémas)',
                         accept: {
@@ -153,7 +201,7 @@ const IntersectionImage = ({
                         await saveDirectoryHandle('lastImageDirectory', dirHandle);
                         // Ajouter aux répertoires récents
                         if (addRecentDirectory) {
-                            addRecentDirectory('image', dirHandle.name, dirHandle);
+                            addRecentDirectory('image', dirHandle.name);
                         }
                     }
                 } catch (err) {
@@ -161,11 +209,7 @@ const IntersectionImage = ({
                 }
 
                 if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        applyImportedImage(event.target.result);
-                    };
-                    reader.readAsDataURL(file);
+                    lireEtAppliquer(file);
                 }
             } catch (err) {
                 if (err.name !== 'AbortError') {
@@ -188,7 +232,7 @@ const IntersectionImage = ({
             toast.error("La capture d'écran n'est pas supportée par ce navigateur (nécessite un contexte sécurisé : localhost ou HTTPS).");
             return;
         }
-        let stream;
+        let stream: MediaStream | undefined;
         try {
             stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
             const video = document.createElement('video');
@@ -196,7 +240,7 @@ const IntersectionImage = ({
             video.muted = true;
             await video.play();
             // Laisse une frame se peindre pour disposer des dimensions réelles.
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
             const w = video.videoWidth;
             const h = video.videoHeight;
@@ -207,7 +251,7 @@ const IntersectionImage = ({
             const canvas = document.createElement('canvas');
             canvas.width = w;
             canvas.height = h;
-            canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+            canvas.getContext('2d')?.drawImage(video, 0, 0, w, h);
             const dataUrl = canvas.toDataURL('image/png');
 
             applyImportedImage(dataUrl);
@@ -238,9 +282,7 @@ const IntersectionImage = ({
                 const imageType = item.types.find(t => t.startsWith('image/'));
                 if (imageType) {
                     const blob = await item.getType(imageType);
-                    const reader = new FileReader();
-                    reader.onload = (event) => applyImportedImage(event.target.result);
-                    reader.readAsDataURL(blob);
+                    lireEtAppliquer(blob);
                     return;
                 }
             }
@@ -256,10 +298,11 @@ const IntersectionImage = ({
     };
 
     // Handle click on image to place arrow
-    const handleImageClick = (e) => {
-        if (!imageData || isDragging || !showArrows) return;
+    const handleImageClick = (e: ReactMouseEvent<HTMLDivElement>) => {
+        const container = containerRef.current;
+        if (!imageData || isDragging || !showArrows || !container) return;
 
-        const rect = containerRef.current.getBoundingClientRect();
+        const rect = container.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
 
@@ -283,7 +326,7 @@ const IntersectionImage = ({
         // restait indéfiniment le candidat, et plus aucune flèche ne pouvait être
         // posée pour les groupes suivants, même correctement renseignés.
         const nextGroup = groupsWithoutArrows.find(g => (g.courant || '').trim());
-        const nomGroupe = (g) => `GF${g.id}${g.name ? ` — ${g.name}` : ''}`;
+        const nomGroupe = (g: Groupe) => `GF${g.id}${g.name ? ` — ${g.name}` : ''}`;
 
         if (!nextGroup) {
             if (groupsWithoutArrows.length > 0) {
@@ -300,7 +343,7 @@ const IntersectionImage = ({
         }
 
         const courant = nextGroup.courant || '';
-        const newArrow = {
+        const newArrow: FlecheCarrefour = {
             id: Date.now(),
             groupId: nextGroup.id,
             x,
@@ -313,19 +356,21 @@ const IntersectionImage = ({
     };
 
     // Handle arrow drag
-    const handleArrowMouseDown = (e, arrowId) => {
+    const handleArrowMouseDown = (e: ReactMouseEvent<HTMLDivElement>, arrowId: number) => {
         e.stopPropagation();
         setSelectedArrow(arrowId);
         setIsDragging(true);
         setTimeout(() => containerRef.current?.focus(), 0);
 
-        const rect = containerRef.current.getBoundingClientRect();
+        const container = containerRef.current;
         const arrowData = arrows.find(a => a.id === arrowId);
+        if (!container || !arrowData) return;
+        const rect = container.getBoundingClientRect();
         const offsetX = ((e.clientX - rect.left) / rect.width) * 100 - arrowData.x;
         const offsetY = ((e.clientY - rect.top) / rect.height) * 100 - arrowData.y;
 
-        const handleMouseMove = (moveEvent) => {
-            const rect = containerRef.current.getBoundingClientRect();
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const rect = container.getBoundingClientRect();
             const x = Math.max(0, Math.min(100, ((moveEvent.clientX - rect.left) / rect.width) * 100 - offsetX));
             const y = Math.max(0, Math.min(100, ((moveEvent.clientY - rect.top) / rect.height) * 100 - offsetY));
 
@@ -345,7 +390,7 @@ const IntersectionImage = ({
     };
 
     // Rotate arrow by 45 degrees
-    const rotateArrow = (arrowId) => {
+    const rotateArrow = (arrowId: number) => {
         onArrowsChange(arrows.map(a => {
             if (a.id === arrowId) {
                 const newRotation = ((a.rotation || 0) + 45) % 360;
@@ -356,7 +401,7 @@ const IntersectionImage = ({
     };
 
     // Helper to get arrows of the same type as the given arrow
-    const getArrowsOfSameType = (arrowId) => {
+    const getArrowsOfSameType = (arrowId: number) => {
         const arrow = arrows.find(a => a.id === arrowId);
         if (!arrow) return [];
         const arrowCourant = getGroupInfo(arrow.groupId).courant;
@@ -364,8 +409,8 @@ const IntersectionImage = ({
     };
 
     // Set arrow rotation directly
-    const setArrowRotation = (arrowId, rotation) => {
-        const rotationValue = parseInt(rotation) || 0;
+    const setArrowRotation = (arrowId: number, rotation: number | string) => {
+        const rotationValue = parseInt(String(rotation), 10) || 0;
         if (applyToAllSameType) {
             const sameTypeArrows = getArrowsOfSameType(arrowId);
             const sameTypeIds = new Set(sameTypeArrows.map(a => a.id));
@@ -380,8 +425,8 @@ const IntersectionImage = ({
     };
 
     // Set arrow scale (zoom)
-    const setArrowScale = (arrowId, scale) => {
-        const scaleValue = parseFloat(scale) || 1;
+    const setArrowScale = (arrowId: number, scale: number | string) => {
+        const scaleValue = parseFloat(String(scale)) || 1;
         if (applyToAllSameType) {
             const sameTypeArrows = getArrowsOfSameType(arrowId);
             const sameTypeIds = new Set(sameTypeArrows.map(a => a.id));
@@ -396,14 +441,14 @@ const IntersectionImage = ({
     };
 
     // Change arrow's associated group
-    const changeArrowGroup = (arrowId, newGroupId) => {
+    const changeArrowGroup = (arrowId: number, newGroupId: number) => {
         onArrowsChange(arrows.map(a =>
             a.id === arrowId ? { ...a, groupId: newGroupId } : a
         ));
     };
 
     // Delete arrow
-    const deleteArrow = (arrowId) => {
+    const deleteArrow = (arrowId: number) => {
         onArrowsChange(arrows.filter(a => a.id !== arrowId));
         if (selectedArrow === arrowId) {
             setSelectedArrow(null);
@@ -418,7 +463,7 @@ const IntersectionImage = ({
     selectedArrowRef.current = selectedArrow;
     onArrowsChangeRef.current = onArrowsChange;
 
-    const handleContainerKeyDown = useCallback((e) => {
+    const handleContainerKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>) => {
         if (!selectedArrowRef.current) return;
         const step = 0.2;
         let dx = 0, dy = 0;
@@ -439,14 +484,14 @@ const IntersectionImage = ({
     }, []);
 
     // Get group info for display
-    const getGroupInfo = (groupId) => {
+    const getGroupInfo = (groupId: number) => {
         const group = groups.find(g => g.id === groupId);
         return group ? { name: group.name, courant: group.courant || '' } : { name: '?', courant: '' };
     };
 
     // Set arrow length (for Piéton/Cycle arrows)
-    const setArrowLength = (arrowId, length) => {
-        const lengthValue = parseFloat(length) || 1;
+    const setArrowLength = (arrowId: number, length: number | string) => {
+        const lengthValue = parseFloat(String(length)) || 1;
         if (applyToAllSameType) {
             const sameTypeArrows = getArrowsOfSameType(arrowId);
             const sameTypeIds = new Set(sameTypeArrows.map(a => a.id));
@@ -461,8 +506,8 @@ const IntersectionImage = ({
     };
 
     // Set arrow turn length (for TàD/TàG arrows - controls the length of the horizontal part)
-    const setArrowTurnLength = (arrowId, turnLength) => {
-        const turnLengthValue = parseFloat(turnLength) || 1;
+    const setArrowTurnLength = (arrowId: number, turnLength: number | string) => {
+        const turnLengthValue = parseFloat(String(turnLength)) || 1;
         if (applyToAllSameType) {
             const sameTypeArrows = getArrowsOfSameType(arrowId);
             const sameTypeIds = new Set(sameTypeArrows.map(a => a.id));
@@ -477,7 +522,7 @@ const IntersectionImage = ({
     };
 
     // Render arrow SVG based on courant type
-    const renderArrowSVG = (courant, color, arrowLength = 1, turnLength = 1, ppAllume = false) => {
+    const renderArrowSVG = (courant: string, color: string, arrowLength = 1, turnLength = 1, ppAllume = false) => {
         const strokeWidth = 3;
         const thinStrokeWidth = 2; // Thinner stroke for Piéton/Cycle
         const size = 32;
@@ -533,7 +578,7 @@ const IntersectionImage = ({
             const racineY = (8 + bottom) / 2;
                 const tipY = racineY - portee * ct;
                 // Barbes de la pointe, tournées du même angle que la branche.
-                const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
+                const barbe = (dx: number, dy: number) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
                 return (
                     <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
                         {/* Flèche tout droit */}
@@ -564,7 +609,7 @@ const IntersectionImage = ({
             const racineY = (8 + bottom) / 2;
                 const tipY = racineY - portee * ct;
                 // Barbes de la pointe, tournées du même angle que la branche.
-                const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
+                const barbe = (dx: number, dy: number) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
                 return (
                     <svg width={size} height={size + (arrowLength - 1) * 24} viewBox={`0 0 32 ${vb}`}>
                         {/* Flèche tout droit */}
@@ -588,9 +633,9 @@ const IntersectionImage = ({
                 const racineY = (8 + bottom) / 2;
                 // Une branche par côté : sens = +1 à droite, -1 à gauche. La branche
                 // étant horizontale, les barbes se déduisent sans rotation.
-                const branche = (sens) => {
+                const branche = (sens: number) => {
                     const tipX = 16 + portee * sens;
-                    const barbe = (dx, dy) => `${(tipX - dy * sens).toFixed(2)},${(racineY + dx * sens).toFixed(2)}`;
+                    const barbe = (dx: number, dy: number) => `${(tipX - dy * sens).toFixed(2)},${(racineY + dx * sens).toFixed(2)}`;
                     return { tipX: tipX.toFixed(2), pointe: `${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}` };
                 };
                 return (
@@ -674,7 +719,7 @@ const IntersectionImage = ({
     // utils/groupColorAtTime.js : elle est partagée avec la fenêtre détachée de
     // l'image, qui en portait une copie réduite — donc divergente.
     const getGroupColorAtTime = useCallback(
-        (groupId, time) => computeGroupColorAtTime(groupId, time, {
+        (groupId: number, time: number) => computeGroupColorAtTime(groupId, time, {
             groups, simulationResult, cycleLength, actionData, selectedActions, conflictMatrix
         }),
         [groups, simulationResult, cycleLength, actionData, selectedActions, conflictMatrix]
@@ -694,7 +739,7 @@ const IntersectionImage = ({
         if (isPlaying) {
             lastTimeRef.current = performance.now();
 
-            const animate = (timestamp) => {
+            const animate = (timestamp: number) => {
                 if (lastTimeRef.current === null) {
                     lastTimeRef.current = timestamp;
                 }
@@ -709,7 +754,7 @@ const IntersectionImage = ({
                 const intervalle = 1000 / (playbackSpeed || 1);
                 if (elapsed >= intervalle) {
                     lastTimeRef.current = timestamp;
-                    setCurrentTime(prev => {
+                    setCurrentTime?.(prev => {
                         const effectiveCycleLength = simulationResult?.simulatedCycleLength || cycleLength;
                         const next = prev + 1;
                         return next >= effectiveCycleLength ? 0 : next;
@@ -733,22 +778,6 @@ const IntersectionImage = ({
             }
         };
     }, [isPlaying, playbackSpeed, cycleLength, simulationResult]);
-
-    // Toggle play/pause
-    const togglePlay = () => {
-        if (setIsPlaying) setIsPlaying(prev => !prev);
-    };
-
-    // Reset animation
-    const resetAnimation = () => {
-        if (setIsPlaying) setIsPlaying(false);
-        if (setCurrentTime) setCurrentTime(0);
-    };
-
-    // Handle time slider change
-    const handleTimeChange = (newTime) => {
-        if (setCurrentTime) setCurrentTime(parseInt(newTime) || 0);
-    };
 
     return (
         <div className="intersection-image-container">
@@ -818,7 +847,7 @@ const IntersectionImage = ({
                 <div
                     ref={containerRef}
                     className={`intersection-image-area ${imageFondClair ? 'fond-clair' : 'fond-sombre'}`}
-                    tabIndex="-1"
+                    tabIndex={-1}
                     style={{ outline: 'none' }}
                     onClick={handleImageClick}
                     onKeyDown={handleContainerKeyDown}
@@ -881,7 +910,7 @@ const IntersectionImage = ({
                         {showGroupNumbers && (() => {
                             const containerW = containerRef.current?.clientWidth || 700;
                             const containerH = containerRef.current?.clientHeight || 500;
-                            const groupMap = {};
+                            const groupMap: Record<number, { x: number; y: number }[]> = {};
                             arrows.forEach(arrow => {
                                 if (!arrow.groupId) return;
                                 const courant = getGroupInfo(arrow.groupId).courant;
@@ -960,7 +989,7 @@ const IntersectionImage = ({
                                 <label>Groupe:</label>
                                 <select
                                     value={arrows.find(a => a.id === selectedArrow)?.groupId || ''}
-                                    onChange={(e) => changeArrowGroup(selectedArrow, parseInt(e.target.value))}
+                                    onChange={(e) => changeArrowGroup(selectedArrow, parseInt(e.target.value, 10))}
                                 >
                                     {groups.map(g => (
                                         <option key={g.id} value={g.id}>
@@ -1175,7 +1204,7 @@ const IntersectionImage = ({
                                     min="20"
                                     max="200"
                                     value={imageContrast}
-                                    onChange={(e) => setImageContrast(Number(e.target.value))}
+                                    onChange={(e) => setImageContrast?.(Number(e.target.value))}
                                     className="filter-slider"
                                 />
                                 <span className="filter-value">{imageContrast}%</span>

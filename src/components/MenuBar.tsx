@@ -1,6 +1,112 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import type { ReactElement } from 'react';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
+import type { PermissionFlag } from '../hooks/useAuth';
 import './MenuBar.css';
+
+/** Une entrée de menu : action, case à cocher, séparateur, en-tête, sous-menu ou curseur. */
+interface ElementMenu {
+    label?: string;
+    action?: string;
+    /** 'separator', 'header', 'submenu' ou 'slider' ; absent pour une simple action. */
+    type?: string;
+    disabled?: boolean;
+    title?: string;
+    /** Case à cocher de premier niveau, avec sa colonne de coche réservée. */
+    toggle?: boolean;
+    checked?: boolean;
+    /** Laisser le menu ouvert après le clic, pour enchaîner les réglages. */
+    keepSubmenuOpen?: boolean;
+    submenuId?: string;
+    submenu?: ElementMenu[];
+    /** Entrée de thème de couleur, cochée quand le thème est actif. */
+    themeId?: string;
+    /** Entrée de style de flèche, cochée quand le style est actif. */
+    styleId?: string;
+    min?: number;
+    max?: number;
+    value?: number;
+    unit?: string;
+    sliderId?: string;
+}
+
+/** Un menu de la barre : liste déroulante, ou action directe sans liste. */
+interface Menu {
+    label: string;
+    disabled?: boolean;
+    action?: string;
+    items?: ElementMenu[];
+}
+
+/** État de l'application que la barre reflète (coches, entrées grisées). */
+export interface OptionsMenuBar {
+    projectModified?: boolean;
+    isExampleProject?: boolean;
+    dossierReadOnly?: boolean;
+    phasageBulleEnabled?: boolean;
+    simulationEnabled?: boolean;
+    activeTab?: string;
+    colorTheme?: string;
+    showParameters?: boolean;
+    showComments?: boolean;
+    showRemarks?: boolean;
+    showActionDescription?: boolean;
+    showCapacityReserve?: boolean;
+    showGroupNamesForm?: boolean;
+    showGroupNamesMatrix?: boolean;
+    showGroupNamesDiagram?: boolean;
+    showFloatingProperties?: boolean;
+    showFloatingForm?: boolean;
+    showFloatingMatrix?: boolean;
+    showFloatingConflicts?: boolean;
+    showFloatingTraffic?: boolean;
+    showFloatingDiagnostic?: boolean;
+    showFloatingDiagram?: boolean;
+    showFloatingConditions?: boolean;
+    showFloatingVariables?: boolean;
+    showFloatingLegend?: boolean;
+    showFloatingRemarks?: boolean;
+    showFloatingImage?: boolean;
+    hasIntersectionImage?: boolean;
+    hasMultiplePf?: boolean;
+    matricesLocked?: boolean;
+    tooltipPrefs?: Partial<Record<'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>>;
+    toastPrefs?: Partial<Record<'success' | 'error' | 'info', boolean>>;
+    openPropertiesOnNewProject?: boolean;
+    showWrapFlash?: boolean;
+    showSaveReminder?: boolean;
+    /** L'appelant passe tout l'état de mise en page ; la barre n'en lit qu'une partie. */
+    [autre: string]: unknown;
+}
+
+interface RepertoireRecent {
+    name?: string;
+    path?: string;
+}
+
+export interface MenuBarProps {
+    onAction?: (action: string) => void;
+    arrowStyle?: string;
+    onArrowStyleChange?: (styleId: string) => void;
+    importedFiles?: { id: string | number; name: string }[];
+    recentDirectories?: RepertoireRecent[];
+    recentOpenDirs?: RepertoireRecent[];
+    recentImportDirs?: RepertoireRecent[];
+    recentSaveDirs?: RepertoireRecent[];
+    currentUser?: { username?: string; isAdmin?: boolean } | null;
+    hasPermission?: (permission: PermissionFlag) => boolean;
+    hasActiveProject?: boolean;
+    onManageUsers?: () => void;
+    biCarrefourSeparator?: number | null;
+    layoutOptions?: OptionsMenuBar;
+    pixelsPerSecond?: number;
+    onPixelsPerSecondChange?: (value: number) => void;
+    showMicroOnHover?: boolean;
+    /** Menu ouvert d'office (accueil, aucun projet chargé). */
+    initialOpenMenu?: string | null;
+    accountsEnabled?: boolean;
+    pfCount?: number;
+}
 
 const MenuBar = ({
     onAction,
@@ -23,13 +129,13 @@ const MenuBar = ({
     initialOpenMenu = null,
     accountsEnabled = false,
     pfCount = 0
-}) => {
-    const [openMenu, setOpenMenu] = useState(initialOpenMenu);
-    const [openSubmenu, setOpenSubmenu] = useState(null);
+}: MenuBarProps) => {
+    const [openMenu, setOpenMenu] = useState<string | null>(initialOpenMenu);
+    const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     // Troisième niveau : un sous-menu ouvert à l'intérieur d'un sous-menu
     // (ex. Diagramme ▸ Options ▸ Style de flèche).
-    const [openNestedSubmenu, setOpenNestedSubmenu] = useState(null);
-    const menuRef = useRef(null);
+    const [openNestedSubmenu, setOpenNestedSubmenu] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
     // Timer pour l'ouverture différée au survol (filtre les passages rapides)
 
     // Drapeau « import Excel » : la fonctionnalité dépend du modèle de
@@ -57,14 +163,6 @@ const MenuBar = ({
         }
     })();
 
-    // Available arrow styles
-    const arrowStyles = [
-        { id: 'solid', label: 'Trait plein' },
-        { id: 'dashed', label: 'Trait pointillé' },
-        { id: 'dotted', label: 'Points' },
-        { id: 'double', label: 'Double trait' }
-    ];
-
     // Le menu d'accueil (Fichier, ouvert d'office tant qu'aucun projet n'est
     // chargé) doit se refermer dès qu'un projet arrive. Sans cela il restait
     // ouvert indéfiniment : la barre demeurait en mode « bascule au survol »,
@@ -86,8 +184,8 @@ const MenuBar = ({
 
     // Close menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (menuRef.current && !menuRef.current.contains(e.target)) {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node | null)) {
                 setOpenMenu(null);
                 setOpenSubmenu(null);
                 setOpenNestedSubmenu(null);
@@ -97,13 +195,13 @@ const MenuBar = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleMenuClick = (menuName) => {
+    const handleMenuClick = (menuName: string) => {
         setOpenMenu(openMenu === menuName ? null : menuName);
         setOpenSubmenu(null);
         setOpenNestedSubmenu(null);
     };
 
-    const handleItemClick = (action, keepSubmenuOpen = false) => {
+    const handleItemClick = (action: string | undefined, keepSubmenuOpen = false) => {
         if (!keepSubmenuOpen) {
             setOpenMenu(null);
             setOpenSubmenu(null);
@@ -116,16 +214,16 @@ const MenuBar = ({
             return;
         }
 
-        if (onAction) {
+        if (onAction && action) {
             onAction(action);
         }
     };
 
-    const handleSubmenuHover = (submenuId) => {
-        setOpenSubmenu(submenuId);
+    const handleSubmenuHover = (submenuId: string | undefined) => {
+        setOpenSubmenu(submenuId ?? null);
     };
 
-    const handleArrowStyleSelect = (styleId) => {
+    const handleArrowStyleSelect = (styleId: string) => {
         if (onArrowStyleChange) {
             onArrowStyleChange(styleId);
         }
@@ -135,7 +233,7 @@ const MenuBar = ({
     };
 
     // Build imported files submenu dynamically
-    const importedFilesSubmenu = importedFiles.length > 0
+    const importedFilesSubmenu: ElementMenu[] = importedFiles.length > 0
         ? [
             { label: 'Fichiers HTM disponibles', type: 'header' },
             ...importedFiles.map(file => ({
@@ -146,7 +244,7 @@ const MenuBar = ({
         : [{ label: '(Aucun fichier)', type: 'header' }];
 
     // Build recent directories submenu dynamically
-    const recentDirsSubmenu = [
+    const recentDirsSubmenu: ElementMenu[] = [
         { label: 'Parcourir...', action: 'browseImport' },
         { type: 'separator' },
         ...(recentDirectories.length > 0
@@ -162,7 +260,7 @@ const MenuBar = ({
     ];
 
     // Build recent open directories submenu
-    const recentOpenDirsSubmenu = [
+    const recentOpenDirsSubmenu: ElementMenu[] = [
         { label: 'Parcourir...', action: 'open' },
         ...(recentOpenDirs.length > 0 ? [
             { type: 'separator' },
@@ -175,7 +273,7 @@ const MenuBar = ({
     ];
 
     // Build recent import directories submenu
-    const recentImportDirsSubmenu = [
+    const recentImportDirsSubmenu: ElementMenu[] = [
         { label: 'Parcourir...', action: 'import' },
         ...(recentImportDirs.length > 0 ? [
             { type: 'separator' },
@@ -188,7 +286,7 @@ const MenuBar = ({
     ];
 
     // Build recent save directories submenu
-    const recentSaveDirsSubmenu = [
+    const recentSaveDirsSubmenu: ElementMenu[] = [
         { label: 'Parcourir...', action: 'save' },
         ...(recentSaveDirs.length > 0 ? [
             { type: 'separator' },
@@ -200,7 +298,7 @@ const MenuBar = ({
         ] : [])
     ];
 
-    const menus = {
+    const menus: Record<string, Menu> = {
         fichier: {
             label: 'Fichier',
             items: [
@@ -286,7 +384,7 @@ const MenuBar = ({
                     title: !hasActiveProject ? 'Aucun projet ouvert' : '',
                     type: 'submenu',
                     submenuId: 'exportPng',
-                    submenu: (() => {
+                    submenu: ((): ElementMenu[] => {
                         const inEditMode = !layoutOptions.phasageBulleEnabled && !layoutOptions.simulationEnabled;
                         return [
                             {
@@ -521,7 +619,7 @@ const MenuBar = ({
     };
 
     // Render submenu item (for Options submenu)
-    const renderSubmenuItem = (subItem, subIdx, parentSubmenuId) => {
+    const renderSubmenuItem = (subItem: ElementMenu, subIdx: number): ReactElement => {
         if (subItem.type === 'separator') {
             return <div key={subIdx} className="menu-separator" />;
         }
@@ -540,9 +638,9 @@ const MenuBar = ({
                 <div
                     key={subIdx}
                     className="menu-item-with-submenu nested-submenu"
-                    onMouseEnter={() => setOpenNestedSubmenu(subItem.submenuId)}
+                    onMouseEnter={() => setOpenNestedSubmenu(subItem.submenuId ?? null)}
                     onMouseLeave={(e) => {
-                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
                             setOpenNestedSubmenu(null);
                         }
                     }}
@@ -553,8 +651,8 @@ const MenuBar = ({
                     </button>
                     {openNestedSubmenu === subItem.submenuId && (
                         <div className="submenu-dropdown nested">
-                            {subItem.submenu.map((child, childIdx) =>
-                                renderSubmenuItem(child, childIdx, subItem.submenuId)
+                            {(subItem.submenu ?? []).map((child, childIdx) =>
+                                renderSubmenuItem(child, childIdx)
                             )}
                         </div>
                     )}
@@ -572,7 +670,7 @@ const MenuBar = ({
                         max={subItem.max}
                         value={subItem.value}
                         onChange={(e) => {
-                            const val = parseInt(e.target.value);
+                            const val = parseInt(e.target.value, 10);
                             if (subItem.sliderId === 'pixelsPerSecond' && onPixelsPerSecondChange) {
                                 onPixelsPerSecondChange(val);
                             }
@@ -601,11 +699,12 @@ const MenuBar = ({
 
         // Check if this is an arrow style item
         if (subItem.styleId) {
+            const styleId = subItem.styleId;
             return (
                 <button
                     key={subIdx}
-                    className={`menu-item ${arrowStyle === subItem.styleId ? 'checked' : ''}`}
-                    onClick={() => handleArrowStyleSelect(subItem.styleId)}
+                    className={`menu-item ${arrowStyle === styleId ? 'checked' : ''}`}
+                    onClick={() => handleArrowStyleSelect(styleId)}
                 >
                     {arrowStyle === subItem.styleId && <span className="checkmark">✓</span>}
                     {subItem.label}
@@ -627,7 +726,7 @@ const MenuBar = ({
         );
     };
 
-    const renderMenuItem = (item, idx) => {
+    const renderMenuItem = (item: ElementMenu, idx: number) => {
         if (item.type === 'separator') {
             return <div key={idx} className="menu-separator" />;
         }
@@ -640,7 +739,7 @@ const MenuBar = ({
                     onMouseEnter={() => !item.disabled && handleSubmenuHover(item.submenuId)}
                     onMouseLeave={(e) => {
                         // Only close if not moving to submenu
-                        const relatedTarget = e.relatedTarget;
+                        const relatedTarget = e.relatedTarget as Node | null;
                         if (!e.currentTarget.contains(relatedTarget)) {
                             setOpenSubmenu(null);
                         }
@@ -652,8 +751,8 @@ const MenuBar = ({
                     </button>
                     {openSubmenu === item.submenuId && !item.disabled && (
                         <div className="submenu-dropdown">
-                            {item.submenu.map((subItem, subIdx) =>
-                                renderSubmenuItem(subItem, subIdx, item.submenuId)
+                            {(item.submenu ?? []).map((subItem, subIdx) =>
+                                renderSubmenuItem(subItem, subIdx)
                             )}
                         </div>
                     )}

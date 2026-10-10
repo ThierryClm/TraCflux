@@ -1,6 +1,6 @@
 import Modal from '../Modal';
 import MicroVariablesDialog from '../MicroVariablesDialog';
-import HelpContentImplementation from '../HelpContent';
+import HelpContent from '../HelpContent';
 import { APP_VERSION, APP_NAME, APP_DESCRIPTION } from '../../version';
 import {
     buildDiagnosticReport,
@@ -11,7 +11,7 @@ import {
 } from '../../utils/diagnostics';
 import { getInterceptedEntries, clearInterceptedEntries } from '../../utils/errorInterceptor';
 import { toast } from '../../utils/toast';
-import type { ComponentType, Dispatch, SetStateAction } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
 
 interface SupportDialogsModel {
@@ -45,7 +45,7 @@ interface SupportDialogsModel {
     setHelpModal: (value: boolean) => void;
     setMicroVariablesModal: (value: boolean) => void;
     setOptionsModal: (value: boolean) => void;
-    tip: (label: string) => string | undefined;
+    tip: (label: string) => string | undefined | undefined;
     tooltipPrefs: { main?: boolean };
 }
 
@@ -53,9 +53,6 @@ interface SupportDialogsProps {
     model: SupportDialogsModel;
 }
 
-const HelpContent = HelpContentImplementation as unknown as ComponentType<{
-    initialAnchor?: string | null;
-}>;
 
 export default function SupportDialogs({ model }: SupportDialogsProps) {
     const {

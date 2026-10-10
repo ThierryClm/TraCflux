@@ -4,7 +4,7 @@ import { PERMISSIONS } from '../../hooks/useAuth';
 import { toast } from '../../utils/toast';
 
 type PermissionLevel = keyof typeof PERMISSIONS;
-type PlanId = string | number;
+type PlanId = number;
 
 interface ConfirmOptions {
     title: string;
@@ -18,7 +18,7 @@ interface ProjectHeaderProps {
         projectName: string | null;
         setProjectName: (value: string) => void;
         isDirty: boolean;
-        projectNameInputRef: RefObject<HTMLInputElement>;
+        projectNameInputRef: RefObject<HTMLInputElement | null>;
     };
     groupCount: {
         groups: Array<{ id: number }>;
@@ -56,7 +56,7 @@ interface ProjectHeaderProps {
     };
     help: {
         helpZoneRef: { current: string | null };
-        tip: (label: string) => string;
+        tip: (label: string) => string | undefined;
     };
     example: boolean;
     readOnly: boolean;

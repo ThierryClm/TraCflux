@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import type { ChangeEvent, CSSProperties } from 'react';
 import { useTrafficLight } from './hooks/useTrafficLight';
 import { MAX_PF, mergePfFromProject } from './utils/pfHelpers';
 import { useAuth } from './hooks/useAuth';
@@ -68,6 +69,28 @@ import './components/GroupTable.css';
 import './components/IntergreenMatrix.css';
 import './App.css';
 import { lireMiseEnPage, appliquerMiseEnPage, affichageCommentairesRemarques } from './utils/miseEnPageProjet';
+import { entier } from './utils/entier';
+import type { ChampsProjet, EtatProjet } from './hooks/useTrafficLight';
+import type { Projet } from './types/projet';
+import type { GreenWaveProjectSource, SavedGreenWave } from './types/greenWave';
+import type { ViewerIntersection } from './components/GreenWaveViewer';
+import type { CreatedIntersection } from './components/CreateGreenWaveDialog';
+import type { TrafficConflict } from './utils/conflictUtils';
+import type { HoveredConflict } from './components/ConflictList';
+import type { VertUtileSurvole } from './components/TimelineDiagram';
+
+/** Options d'un export PNG de section (cf. exportSectionAsPng). */
+interface OptionsExportPng {
+    /** Prépare la vue avant la capture ; renvoie de quoi la restaurer. */
+    beforeCapture?: () => (() => void) | void;
+    /** Capturer le diagramme sur toute sa largeur, au-delà de la zone visible. */
+    fullTimeline?: boolean;
+    /** Retouche du DOM cloné, juste avant la capture. */
+    onCloneExtra?: (clonedDoc: Document, clonedEl: HTMLElement | null) => void;
+}
+
+/** Sections de l'application dont les infobulles peuvent être coupées. */
+type PrefsInfobulles = Record<'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>;
 
 function App() {
     const askConfirm = useConfirm();
@@ -76,7 +99,7 @@ function App() {
     // voyager avec le dossier plutôt que rester des préférences d'application.
     // Réf parce que ces modules sont créés plus bas ; elle n'est lue qu'à
     // l'enregistrement et à l'ouverture.
-    const champsProjetRef = useRef({ lire: () => ({}), ecrire: () => {} });
+    const champsProjetRef = useRef<ChampsProjet>({ lire: () => ({}), ecrire: () => {} });
 
     const {
         intersectionName,
@@ -89,7 +112,6 @@ function App() {
         conflictMatrix,
         conflicts,
         globalTime,
-        getGroupState,
         updateGroupParams,
         moveGroupToPosition,
         saveProject,
@@ -197,7 +219,7 @@ function App() {
         });
     }, [projectProperties.horsAgglomeration]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const [dragConflictsFromDiagram, setDragConflictsFromDiagram] = useState(null);
+    const [dragConflictsFromDiagram, setDragConflictsFromDiagram] = useState<TrafficConflict[] | null>(null);
 
     // Filter conflicts to exclude those managed by SELECTED Escamotage actions (in simulation mode)
     const filteredConflicts = useMemo(() => {
@@ -218,8 +240,8 @@ function App() {
         // Filter out conflicts that are managed by selected Escamotage actions
         return conflicts.filter(c => {
             const isInhibitedByEscamotage = selectedEscamotageGroup.some(action => {
-                const sourceGfId = parseInt(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                const targetGfId = parseInt(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                const sourceGfId = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
+                const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
                 return (sourceGfId === c.from && targetGfId === c.to) ||
                        (sourceGfId === c.to && targetGfId === c.from);
             });
@@ -239,15 +261,14 @@ function App() {
     // During drag, use drag conflicts from TimelineDiagram; otherwise use normal conflicts
     const displayConflicts = dragConflictsFromDiagram || filteredConflicts;
     const displayActiveConflicts = useMemo(() => {
-        return (dragConflictsFromDiagram || activeConflicts).filter ?
-            (dragConflictsFromDiagram || filteredConflicts).filter(c => {
-                const fromGroup = groups.find(g => g.id === c.from);
-                return !fromGroup?.phaseFlag;
-            }) : activeConflicts;
-    }, [dragConflictsFromDiagram, filteredConflicts, activeConflicts, groups]);
+        return (dragConflictsFromDiagram || filteredConflicts).filter(c => {
+            const fromGroup = groups.find(g => g.id === c.from);
+            return !fromGroup?.phaseFlag;
+        });
+    }, [dragConflictsFromDiagram, filteredConflicts, groups]);
 
     // Check if a conflict's first group has phaseFlag (for grayed display)
-    const isConflictGrayed = useCallback((c) => {
+    const isConflictGrayed = useCallback((c: { from: number }) => {
         const fromGroup = groups.find(g => g.id === c.from);
         return !!fromGroup?.phaseFlag;
     }, [groups]);
@@ -276,7 +297,7 @@ function App() {
     // État pour le modal de gestion des utilisateurs
     const [showUserManager, setShowUserManager] = useState(false);
 
-    const [selectedGroupId, setSelectedGroupId] = useState(null);
+    const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
     const {
         pixelsPerSecond, setPixelsPerSecond,
         activeTab, setActiveTab,
@@ -293,7 +314,7 @@ function App() {
         handleActionPanelResize
     } = useUILayout();
     const [showDependencies, setShowDependencies] = useState(false);
-    const [hoveredActionId, setHoveredActionId] = useState(null);
+    const [hoveredActionId, setHoveredActionId] = useState<number | null>(null);
     const [showMicroOnHover, setShowMicroOnHover] = useState(true);
     const [toastPrefs, setToastPrefsState] = useState(getToastPrefs());
     const [openPropertiesOnNewProject, setOpenPropertiesOnNewProject] = useState(() => {
@@ -306,7 +327,7 @@ function App() {
     });
     // Preferences "Infobulles..." (Mise en page). 6 sections, toutes
     // cochees par defaut. Persiste au niveau de l'application (localStorage).
-    const [tooltipPrefs, setTooltipPrefsState] = useState(() => {
+    const [tooltipPrefs, setTooltipPrefsState] = useState<PrefsInfobulles>(() => {
         try {
             const raw = localStorage.getItem('tracflux.tooltips');
             const def = { main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
@@ -317,15 +338,15 @@ function App() {
             return { main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
         }
     });
-    const setTooltipPref = useCallback((key) => {
+    const setTooltipPref = useCallback((key: keyof PrefsInfobulles) => {
         setTooltipPrefsState(prev => {
             const next = { ...prev, [key]: !prev[key] };
             try { localStorage.setItem('tracflux.tooltips', JSON.stringify(next)); } catch {}
             return next;
         });
     }, []);
-    // Helper local : utilise tooltipPrefs.main pour les title= de App.jsx.
-    const tip = (text) => tooltipPrefs.main ? text : undefined;
+    // Helper local : utilise tooltipPrefs.main pour les title= de App.tsx.
+    const tip = (text: string | undefined) => tooltipPrefs.main ? text : undefined;
     const [showSaveReminder, setShowSaveReminder] = useState(() => {
         const saved = localStorage.getItem('showSaveReminder');
         return saved === null ? true : saved === 'true';
@@ -347,23 +368,23 @@ function App() {
     // passe par ce wrapper et quitte le mode exemple. Seul l'effet de
     // chargement de l'exemple appelle loadFullStateRaw et reste en mode
     // exemple.
-    const loadFullState = useCallback((...args) => {
+    const loadFullState = useCallback((state: EtatProjet) => {
         leaveExampleMode();
-        return loadFullStateRaw(...args);
+        return loadFullStateRaw(state);
     }, [loadFullStateRaw, leaveExampleMode]);
     const welcomeViewNoted = useRef(false);
     const projectSeenNoted = useRef(false);
-    const projectNameInputRef = useRef(null);
+    const projectNameInputRef = useRef<HTMLInputElement>(null);
     // Référence vers la fenêtre Onde verte ouverte (single instance).
     // Permet de ré-utiliser la même fenêtre au lieu d'en ouvrir une nouvelle
     // à chaque clic. Si la fenêtre est fermée par l'utilisateur, .closed
     // passe à true et on ouvre une nouvelle.
-    const greenWaveWindowRef = useRef(null);
+    const greenWaveWindowRef = useRef<Window | null>(null);
 
     // Ouvre la fenêtre Onde verte à l'URL fournie, ou y bascule le focus si
     // elle est déjà ouverte. Si l'URL diffère, navigue dedans (l'auto-save
     // ayant déjà persisté l'état courant).
-    const openOrFocusGreenWave = (url) => {
+    const openOrFocusGreenWave = (url: string) => {
         try {
             if (greenWaveWindowRef.current && !greenWaveWindowRef.current.closed) {
                 // Fenêtre déjà ouverte : focus + navigation si URL différente
@@ -373,7 +394,7 @@ function App() {
                     }
                 } catch {
                     // Cross-origin (improbable, même origine) : on tente la nav directe
-                    greenWaveWindowRef.current.location = url;
+                    greenWaveWindowRef.current.location.href = url;
                 }
                 greenWaveWindowRef.current.focus();
                 return;
@@ -386,7 +407,7 @@ function App() {
     };
     // Anchor à atteindre dans la modale d'aide (alimenté par l'URL ?openHelp=…).
     // Passé à <HelpContent /> via la prop initialAnchor.
-    const [helpAnchor, setHelpAnchor] = useState(null);
+    const [helpAnchor, setHelpAnchor] = useState<string | null>(null);
     const [aboutModal, setAboutModal] = useState(false);
     const [diagnosticModal, setDiagnosticModal] = useState(false);
     const [capacityCompareModal, setCapacityCompareModal] = useState(false);
@@ -395,7 +416,7 @@ function App() {
     // et ces noms désignent une commune et des rues réelles.
     const [diagnosticMaskNames, setDiagnosticMaskNames] = useState(true);
     const [diagnosticRefresh, setDiagnosticRefresh] = useState(0);
-    const printPreviewPageRef = useRef(null);
+    const printPreviewPageRef = useRef<HTMLDivElement>(null);
 
     // Intersection image animation state
     const {
@@ -404,9 +425,9 @@ function App() {
         hoveredDiagramTime, setHoveredDiagramTime,
         simulationSpeed, cycleSimulationSpeed
     } = useSimulationUI();
-    const [hoveredArrowGroupId, setHoveredArrowGroupId] = useState(null);
+    const [hoveredArrowGroupId, setHoveredArrowGroupId] = useState<number | null>(null);
     const [hoveredArrowGroupSaturated, setHoveredArrowGroupSaturated] = useState(false);
-    const [hoveredConflict, setHoveredConflict] = useState(null); // {from, to} for conflict hover
+    const [hoveredConflict, setHoveredConflict] = useState<HoveredConflict | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
     const {
@@ -434,7 +455,7 @@ function App() {
     // Passer d'un plan de feux à un autre n'est pas une modification du projet :
     // l'écran recharge les groupes, le cycle, la matrice et les actions du plan
     // choisi, et ces recopies ne doivent pas faire apparaître l'astérisque.
-    const selectActivePF = useCallback((pfId) => {
+    const selectActivePF = useCallback((pfId: number) => {
         if (pfId !== activePFId) absorbDerivedChanges();
         setActivePFId(pfId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -575,7 +596,7 @@ function App() {
     }, [showCapacityReserve]);
 
     // V.Utile hover state: { groupId, vUtile } when hovering V.Utile cell
-    const [hoveredVUtile, setHoveredVUtile] = useState(null);
+    const [hoveredVUtile, setHoveredVUtile] = useState<VertUtileSurvole | null>(null);
 
     // Phasage bulle state (phasageBulleCount and phasageBulleTimes come from useTrafficLight hook - saved per PF)
     const {
@@ -610,8 +631,8 @@ function App() {
     // Taille du contenu du comparateur, annoncée par le composant lui-même à
     // chaque mise en page. La fenêtre s'y ajuste, au lieu de rester au gabarit
     // fixe qui laissait un grand vide sous un tableau court.
-    const [tailleComparateur, setTailleComparateur] = useState(null);
-    const noterTailleComparateur = useCallback((taille) => {
+    const [tailleComparateur, setTailleComparateur] = useState<{ width: number; height: number } | null>(null);
+    const noterTailleComparateur = useCallback((taille: { width: number; height: number }) => {
         // Le seuil coupe la boucle : redimensionner la fenêtre relance une mise
         // en page, donc une mesure, à un ou deux pixels près.
         setTailleComparateur(prec => (prec
@@ -752,7 +773,7 @@ function App() {
     // ne restaurait donc rien et « OK » ne validait rien : les deux se contentaient
     // de fermer le panneau. Le brouillon rend ces deux boutons conformes à leur nom.
     // null = rien de modifié : le panneau affiche alors les valeurs du plan.
-    const [brouillonPhasage, setBrouillonPhasage] = useState(null);
+    const [brouillonPhasage, setBrouillonPhasage] = useState<{ count: number; times: number[] } | null>(null);
 
     // Y a-t-il quelque chose à abandonner ? Le brouillon naît au premier
     // événement de saisie, y compris quand la valeur retapée est la même :
@@ -770,7 +791,7 @@ function App() {
         return false;
     })();
 
-    const [microPrintStyle, setMicroPrintStyle] = useState(null);
+    const [microPrintStyle, setMicroPrintStyle] = useState<CSSProperties | null>(null);
 
     // Même recette pour la Description, devenue multiligne : sans report de la
     // largeur d'écran, l'impression replie où elle veut, et sans `pre-wrap`
@@ -780,7 +801,7 @@ function App() {
     // d'affichage à mesurer, on mesure donc la zone de saisie elle-même. Elle
     // réserve de quoi loger un caractère de plus, si bien qu'un mot en bout de
     // ligne peut se placer autrement qu'à l'écran.
-    const [descriptionPrintStyle, setDescriptionPrintStyle] = useState(null);
+    const [descriptionPrintStyle, setDescriptionPrintStyle] = useState<CSSProperties | null>(null);
     const [largeurTableauConditions, setLargeurTableauConditions] = useState(0);
     /**
      * Relève sur l'écran les largeurs dont l'impression a besoin.
@@ -801,11 +822,11 @@ function App() {
      * d'impression, où le tableau est à coup sûr en place.
      */
     const mesurerColonnesImpression = useCallback(() => {
-        const tableau = document.querySelector('.action-table');
+        const tableau = document.querySelector<HTMLElement>('.action-table');
         if (tableau?.offsetWidth) setLargeurTableauConditions(tableau.offsetWidth);
 
         /** Largeur intérieure d'un champ, rembourrage déduit. */
-        const utileDe = (champ) => {
+        const utileDe = (champ: Element) => {
             const style = window.getComputedStyle(champ);
             return {
                 style,
@@ -908,19 +929,20 @@ function App() {
     }, [cycleLength]);
 
     const { recentFiles, setRecentFiles, addToRecentFiles, getRecentDirectories, getRecentDirectoriesForMenu } = useRecentFiles();
-    const [selectedProject, setSelectedProject] = useState(null);
-    const [importFile, setImportFile] = useState(null);
+    const [selectedProject, setSelectedProject] = useState<string | null>(null);
+    const [importFile, setImportFile] = useState<File | null>(null);
     const [importError, setImportError] = useState('');
     const [importHintDir, setImportHintDir] = useState('');
     const [showExportPfModal, setShowExportPfModal] = useState(false);
     const [showCopyMatrixModal, setShowCopyMatrixModal] = useState(false);
-    const [importPfData, setImportPfData] = useState(null); // { name, state } du projet à fusionner
-    const diagfeuxInputRef = useRef(null);
-    const projectPfInputRef = useRef(null);
+    // Projet dont on importe les plans de feux, en attente des options d'import.
+    const [importPfData, setImportPfData] = useState<{ name: string; state: Projet } | null>(null);
+    const diagfeuxInputRef = useRef<HTMLInputElement>(null);
+    const projectPfInputRef = useRef<HTMLInputElement>(null);
 
     // Import des plans de feux d'un autre projet : lecture + validation, puis
     // ouverture de la modale d'options (lecture seule).
-    const handleProjectPfFileSelect = async (e) => {
+    const handleProjectPfFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (e.target) e.target.value = '';
         if (!file) return;
@@ -938,14 +960,14 @@ function App() {
     };
 
     // Applique la fusion une fois les options confirmées dans la modale.
-    const handleImportProjectPf = (selectedIds, readOnly) => {
+    const handleImportProjectPf = (selectedIds: number[], readOnly: boolean) => {
         if (!importPfData) return;
         const ids = new Set(selectedIds);
         const filteredImported = {
             ...importPfData.state,
             pfTabs: importPfData.state.pfTabs.filter(p => ids.has(p.id))
         };
-        const { state, warnings, error, addedCount } = mergePfFromProject(getFullState(), filteredImported, { readOnly });
+        const { state, warnings, error, addedCount = 0 } = mergePfFromProject(getFullState(), filteredImported, { readOnly });
         setImportPfData(null);
         if (error) {
             showAlert({ title: 'Import des plans de feux impossible', message: error });
@@ -959,7 +981,7 @@ function App() {
     };
 
     // Import d'un projet DiagFeux (.xml) : parse -> loadFullState + avertissements.
-    const handleDiagfeuxFileSelect = async (e) => {
+    const handleDiagfeuxFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (e.target) e.target.value = '';
         if (!file) return;
@@ -1002,12 +1024,12 @@ function App() {
     };
 
     // Green wave data states
-    const [selectedGreenWave, setSelectedGreenWave] = useState(null);
-    const [greenWaveData, setGreenWaveData] = useState(null);
+    const [selectedGreenWave, setSelectedGreenWave] = useState<string | null>(null);
+    const [greenWaveData, setGreenWaveData] = useState<ViewerIntersection[] | null>(null);
     const [greenWaveListKey, setGreenWaveListKey] = useState(0);
 
     // Project path
-    const [currentProjectPath, setCurrentProjectPath] = useState('');
+    const [currentProjectPath, setCurrentProjectPath] = useState<string | null>('');
 
     // Modal and dialog states
     const {
@@ -1158,17 +1180,15 @@ function App() {
         try {
             const saved = localStorage.getItem('savedGreenWaves');
             if (saved) {
-                const greenWaves = JSON.parse(saved);
+                const greenWaves: Record<string, SavedGreenWave> = JSON.parse(saved);
                 return Object.keys(greenWaves)
-                    .map(name => ({
-                        name,
-                        ...greenWaves[name]
-                    }))
+                    // Le nom enregistré dans l'onde verte prime sur sa clé.
+                    .map(name => Object.assign({ name }, greenWaves[name]))
                     .sort((a, b) => {
                         // Sort by savedAt date, most recent first
                         const dateA = a.savedAt ? new Date(a.savedAt) : new Date(0);
                         const dateB = b.savedAt ? new Date(b.savedAt) : new Date(0);
-                        return dateB - dateA;
+                        return dateB.getTime() - dateA.getTime();
                     });
             }
         } catch (e) {
@@ -1178,7 +1198,7 @@ function App() {
     };
 
     // Format date for display
-    const formatDate = (isoString) => {
+    const formatDate = (isoString: string | number | null | undefined) => {
         if (!isoString) return '';
         try {
             const date = new Date(isoString);
@@ -1195,7 +1215,7 @@ function App() {
     };
 
     // Delete a saved green wave
-    const deleteGreenWave = async (name) => {
+    const deleteGreenWave = async (name: string) => {
         const ok = await askConfirm({
             title: 'Supprimer l\'onde verte',
             message: `Êtes-vous sûr de vouloir supprimer l'onde verte « ${name} » ?`,
@@ -1377,10 +1397,10 @@ function App() {
     // onclone), donc invisibles à l'écran de l'utilisateur.
     // Helper : attend qu'un élément existe dans le DOM (utile après setState
     // qui change la vue rendue). Poll toutes les 50ms jusqu'à timeout.
-    const waitForElement = async (selector, timeoutMs = 1000) => {
+    const waitForElement = async (selector: string, timeoutMs = 1000) => {
         const start = Date.now();
         while (Date.now() - start < timeoutMs) {
-            const el = document.querySelector(selector);
+            const el = document.querySelector<HTMLElement>(selector);
             if (el) return el;
             await new Promise(r => setTimeout(r, 50));
         }
@@ -1391,8 +1411,8 @@ function App() {
     // setActiveTab('traffic')) et retourne une fonction de restauration appelée
     // après la capture. On attend que le sélecteur cible soit présent dans le
     // DOM avant de capturer.
-    const exportSectionAsPng = async (selector, suffix, errorLabel, opts = {}) => {
-        let restore = null;
+    const exportSectionAsPng = async (selector: string, suffix: string, errorLabel: string, opts: OptionsExportPng = {}) => {
+        let restore: (() => void) | null | void = null;
         if (opts.beforeCapture) {
             restore = opts.beforeCapture();
         }
@@ -1400,7 +1420,7 @@ function App() {
         try {
             const el = opts.beforeCapture
                 ? await waitForElement(selector, 1500)
-                : document.querySelector(selector);
+                : document.querySelector<HTMLElement>(selector);
             if (!el) {
                 toast.error(`${errorLabel} introuvable — vérifiez que la vue correspondante est affichée`);
                 return;
@@ -1416,21 +1436,21 @@ function App() {
 
             const captureOptions = opts.fullTimeline
                 ? getTimelineCaptureDimensions(el)
-                : {};
+                : { width: 0, height: 0 };
 
-            const onclone = (clonedDoc) => {
+            const onclone = (clonedDoc: Document) => {
                 const themeClasses = ['high-contrast-mode', 'amber-mode',
                                        'daltonian-mode', 'sepia-mode', 'blue-night-mode'];
                 themeClasses.forEach(c => clonedDoc.body.classList.remove(c));
                 clonedDoc.body.classList.add('light-mode');
                 clonedDoc.body.classList.add('png-export-clean');
-                const clonedEl = clonedDoc.querySelector(selector);
+                const clonedEl = clonedDoc.querySelector<HTMLElement>(selector);
                 materializeFormControlValues(el, clonedEl);
 
                 if (opts.fullTimeline && clonedEl && captureOptions.width > 0) {
                     clonedEl.style.width = `${captureOptions.width}px`;
                     clonedEl.style.maxWidth = 'none';
-                    const layout = clonedEl.querySelector('.timeline-layout');
+                    const layout = clonedEl.querySelector<HTMLElement>('.timeline-layout');
                     if (layout) {
                         layout.style.width = `${captureOptions.width}px`;
                         layout.style.maxWidth = 'none';
@@ -1468,7 +1488,7 @@ function App() {
     };
 
     // Menu action handler
-    const handleMenuAction = async (action) => {
+    const handleMenuAction = async (action: string) => {
         switch (action) {
             case 'new': {
                 // Confirmation uniquement s'il y a des modifications à perdre.
@@ -1561,12 +1581,15 @@ function App() {
                 // n'a pas de nom (« Associé à » vide), seule la première
                 // ligne est affichée.
                 const pfName = pfTabs.find(pf => pf.id === activePFId)?.name || '';
-                const datasetName = (trafficDatasetNames && trafficDatasetNames[activeTrafficDataset]) || '';
+                // Le jeu actif est désigné par son nom. On le cherchait comme
+                // une clé dans la LISTE des noms, ce qui ne renvoyait jamais
+                // rien : le sous-titre n'apparaissait jamais.
+                const datasetName = trafficDatasetNames.includes(activeTrafficDataset) ? activeTrafficDataset : '';
                 const titleLine1 = `Capacité utilisée par groupe de feu — Diagramme ${pfName}`;
                 const titleLine2 = datasetName ? `avec le trafic ${datasetName}` : '';
                 exportSectionAsPng('.traffic-table-container', 'Capacite', 'Tableau de capacité utilisée', {
                     onCloneExtra: (clonedDoc) => {
-                        const header = clonedDoc.querySelector('.traffic-header');
+                        const header = clonedDoc.querySelector<HTMLElement>('.traffic-header');
                         if (header) {
                             header.innerHTML = '';
                             // .traffic-header est un flex en ligne : on force
@@ -1958,12 +1981,12 @@ function App() {
 
     // IndexedDB pour données greenwave (localStorage trop limité en taille)
     const openGreenWaveDB = useCallback(() => {
-        return new Promise((resolve, reject) => {
+        return new Promise<IDBDatabase>((resolve, reject) => {
             const request = indexedDB.open('DiagrammeFeux_GreenWave', 1);
             request.onerror = () => reject(request.error);
             request.onsuccess = () => resolve(request.result);
             request.onupgradeneeded = (event) => {
-                const db = event.target.result;
+                const db = (event.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('data')) {
                     db.createObjectStore('data');
                 }
@@ -1971,9 +1994,9 @@ function App() {
         });
     }, []);
 
-    const saveGreenWaveToIDB = useCallback(async (key, value) => {
+    const saveGreenWaveToIDB = useCallback(async (key: string, value: unknown) => {
         const db = await openGreenWaveDB();
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             const tx = db.transaction(['data'], 'readwrite');
             const store = tx.objectStore('data');
             const request = store.put(value, key);
@@ -1983,7 +2006,7 @@ function App() {
     }, [openGreenWaveDB]);
 
     // Handle green wave creation - opens in new tab
-    const handleCreateGreenWave = async (intersections) => {
+    const handleCreateGreenWave = async (intersections: CreatedIntersection[]) => {
         const greenWaveId = Date.now().toString();
         let useIDB = false;
 
@@ -2146,7 +2169,7 @@ function App() {
         }
     };
 
-    const openSavedProject = async (projectNameToOpen, confirmationMessage) => {
+    const openSavedProject = async (projectNameToOpen: string | null, confirmationMessage: string) => {
         if (!projectNameToOpen) return;
 
         // Garde-fou : si le projet courant a des modifications non
@@ -2161,7 +2184,7 @@ function App() {
             if (!ok) return;
         }
 
-        const data = loadProject(projectNameToOpen);
+        const data = loadProject(projectNameToOpen) || null;
         if (data) {
             // Un projet tout juste rouvert depuis le cache n'a aucune
             // modification : même remise à zéro que l'ouverture d'un fichier.
@@ -2258,8 +2281,8 @@ function App() {
     const handleMenuActionRef = useRef(handleMenuAction);
     handleMenuActionRef.current = handleMenuAction;
     useEffect(() => {
-        const handleKeyDown = (e) => {
-            const tag = e.target.tagName;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const tag = (e.target as HTMLElement | null)?.tagName;
             const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 
             if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -2294,7 +2317,7 @@ function App() {
         intersectionArrows, groups, imageNaturalDims, imageFondClair,
         selectedActions: simulationSelectedActions, conflictMatrix,
         hoveredArrowGroupId, setHoveredArrowGroupId, hoveredDiagramTime,
-        simulationEnabled, isPlayingSimulation,
+        isPlayingSimulation,
         simulationCurrentTime, simulationResult,
         actionData, cycleLength,
         imageBrightness, imageContrast,
@@ -2340,13 +2363,11 @@ function App() {
                     showGroupNames={showGroupNamesForm}
                     titreEnBandeau
                     hoveredGroupId={hoveredArrowGroupId}
-                    startDrag={startDrag}
-                    endDrag={endDrag}
                 tooltipsEnabled={tooltipPrefs.config}
                 />
             </div>
         );
-    }, [showFloatingForm, groups, cycleLength, showGroupNamesForm, hoveredArrowGroupId, startDrag, endDrag, formPopup.renderToPopup, updateGroupParams]);
+    }, [showFloatingForm, groups, cycleLength, showGroupNamesForm, hoveredArrowGroupId, formPopup.renderToPopup, updateGroupParams]);
 
     // Render properties into popup window
     useEffect(() => {
@@ -2457,7 +2478,6 @@ function App() {
                     readOnly
                     groups={groups}
                     globalTime={globalTime}
-                    getGroupState={getGroupState}
                     pixelsPerSecond={pixelsPerSecond}
                     conflicts={displayConflicts}
                     conflictMatrix={conflictMatrix}
@@ -2500,7 +2520,7 @@ function App() {
                 />
             </div>
         );
-    }, [showFloatingDiagram, groups, globalTime, getGroupState, pixelsPerSecond, displayConflicts, conflictMatrix, cycleLength, actionData, simulationEnabled, simulationSelectedActions, simulationResult, simulationCurrentTime, isPlayingSimulation, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict, hoveredVUtile, activePFName, biCarrefourSeparator, showGroupNamesDiagram, showMicroOnHover, tooltipPrefs, diagramPopup.renderToPopup]);
+    }, [showFloatingDiagram, groups, globalTime, pixelsPerSecond, displayConflicts, conflictMatrix, cycleLength, actionData, simulationEnabled, simulationSelectedActions, simulationResult, simulationCurrentTime, isPlayingSimulation, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict, hoveredVUtile, activePFName, biCarrefourSeparator, showGroupNamesDiagram, showMicroOnHover, tooltipPrefs, diagramPopup.renderToPopup]);
 
     // Render conflicts list into popup window
     useEffect(() => {
@@ -2625,7 +2645,7 @@ function App() {
                         addCustomTrafficDataset, simulationResult, setShowFloatingTraffic, tooltipPrefs, activeTab,
                         setActiveTab, setSidebarWidth, intersectionName, setIntersectionName, projectProperties,
                         updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, setShowFloatingProperties,
-                        showGroupNamesForm, setShowFloatingForm, startDrag, endDrag, activePFId,
+                        showGroupNamesForm, setShowFloatingForm, activePFId,
                         pfTabs, biCarrefourSeparator, showGroupNamesMatrix, matricesLocked, setShowFloatingMatrix,
                         showCapacityReserve, showFloatingDiagnostic, setShowFloatingDiagnostic, displayConflicts, isConflictGrayed,
                         showFloatingConflicts, setShowFloatingConflicts, recentOpenDirs, recentSaveDirs, recentImportDirs,
@@ -2638,7 +2658,7 @@ function App() {
                         actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
                         biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
                         cycleLengthInput, cycleSimulationSpeed, dependencyGap, diagramAreaRef, diagramHeight,
-                        displayConflicts, dossierReadOnly, draggedTabIndex, endDrag, getGroupState,
+                        displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
                         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
                         helpZoneRef, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict,
                         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
@@ -2794,7 +2814,8 @@ function App() {
                     onClose: () => setCreateGreenWaveModal(false),
                     onConfirm: handleCreateGreenWave,
                     getAllSaves,
-                    loadProjectData: getProjectData,
+                    // Le cache ne contient que des projets enregistrés au format courant.
+                    loadProjectData: (name: string) => getProjectData(name) as GreenWaveProjectSource | null,
                 }}
                 viewer={{
                     isOpen: greenWaveViewer,

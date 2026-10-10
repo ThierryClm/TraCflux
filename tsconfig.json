@@ -1,14 +1,10 @@
 {
-    // Migration TypeScript progressive.
+    // Tout le code de l'application est en TypeScript (`.ts` / `.tsx`),
+    // vérifié en mode strict.
     //
-    // Les modules migrés sont de vrais fichiers `.ts` / `.tsx`. Le reste du
-    // code demeure en JavaScript et continue d'être vérifié fichier par fichier
-    // avec `// @ts-check`, sans conversion globale risquée.
-    //
-    // `checkJs` est à false : la vérification n'est PAS globale. Un fichier
-    // n'est contrôlé que s'il porte `// @ts-check` en tête. On étend donc la
-    // couverture fichier par fichier, sans jamais se retrouver devant trois
-    // mille erreurs d'un coup, et sans bloquer qui que ce soit.
+    // Restent en JavaScript une partie des tests et leur configuration :
+    // `allowJs` les laisse importer les modules typés. `checkJs` est à false :
+    // un fichier JavaScript n'est contrôlé que s'il porte `// @ts-check`.
     "compilerOptions": {
         "target": "ES2022",
         "lib": ["ES2022", "DOM", "DOM.Iterable"],

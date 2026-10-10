@@ -1,13 +1,55 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import type { CSSProperties, Dispatch, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 import usePopupWindow from '../hooks/usePopupWindow';
 import NumericInput from './NumericInput';
 import { useConfirm } from './ConfirmProvider';
 import { useMicroVariables } from './MicroVariablesProvider';
 import { tokenizeMicroText } from '../utils/microVariables';
+import type { ActionMicro } from '../types/projet';
 import './ActionTable.css';
 
+/** Champ modifiable d'une condition de micro-régulation. */
+export type ChampAction = Exclude<keyof ActionMicro, 'id'>;
+
+/** Colonnes dont l'utilisateur peut régler la largeur. */
+export type ColonneRedimensionnable = 'description' | 'micro' | 'abrv';
+
+/** Largeurs de colonnes mémorisées dans le projet, en pixels. */
+export type LargeursColonnes = Partial<Record<ColonneRedimensionnable, number>>;
+
+export interface ActionTableProps {
+    actionData: ActionMicro[];
+    updateActionRow: (rowId: number, field: ChampAction, value: string) => void;
+    reorderActions?: (rows: ActionMicro[]) => void;
+    cycleLength?: number;
+    maxGroup?: number;
+    hoveredActionId: number | null;
+    setHoveredActionId: (id: number | null) => void;
+    microCustomFields?: string[];
+    updateMicroCustomField?: (index: number, value: string) => void;
+    /** Redimensionne le panneau entier ; reçoit le déplacement vertical en pixels. */
+    onResizePanel?: (deltaY: number) => void;
+    showFloatingConditions: boolean;
+    setShowFloatingConditions: Dispatch<SetStateAction<boolean>>;
+    showFloatingVariables: boolean;
+    setShowFloatingVariables: Dispatch<SetStateAction<boolean>>;
+    showWrapFlash?: boolean;
+    showDescription?: boolean;
+    actionColWidths?: LargeursColonnes;
+    setActionColWidths?: Dispatch<SetStateAction<LargeursColonnes>>;
+    tooltipsEnabled?: boolean;
+}
+
+interface RedimensionEnCours {
+    col: ColonneRedimensionnable;
+    startX: number;
+    startW: number;
+    /** Fenêtre qui porte la poignée : principale ou détachée. */
+    win: Window;
+}
+
 // Auto-resize textarea helper
-const autoResizeTextarea = (textarea) => {
+const autoResizeTextarea = (textarea: HTMLTextAreaElement | null) => {
     if (textarea) {
         textarea.style.height = 'auto';
         textarea.style.height = textarea.scrollHeight + 'px';
@@ -74,39 +116,39 @@ const FIN_DISABLED_ACTIONS = [
 ];
 
 // Check if a row has any data
-const isRowFilled = (row) => {
+const isRowFilled = (row: ActionMicro) => {
     return row.gf || row.action || row.description || row.deb !== '' || row.fin !== '' ||
         row.abrv || row.micro || row.plage1 || row.plage2 ||
         row.actGf1 || row.actGf1Gf2 || row.actGf1Gf3 || row.actGf1Gf4;
 };
 
-const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength = 100, maxGroup = 16, hoveredActionId, setHoveredActionId, microCustomFields = [], updateMicroCustomField, onResizePanel, showFloatingConditions, setShowFloatingConditions, showFloatingVariables, setShowFloatingVariables, showWrapFlash = true, showDescription = true, actionColWidths = { description: 160, micro: 420 }, setActionColWidths = () => {}, tooltipsEnabled = true }) => {
-    const tip = (text) => tooltipsEnabled ? text : undefined;
+const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength = 100, maxGroup = 16, hoveredActionId, setHoveredActionId, microCustomFields = [], updateMicroCustomField, onResizePanel, showFloatingConditions, setShowFloatingConditions, showFloatingVariables, setShowFloatingVariables, showWrapFlash = true, showDescription = true, actionColWidths = { description: 160, micro: 420 }, setActionColWidths = () => {}, tooltipsEnabled = true }: ActionTableProps) => {
+    const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
     const { names: microVariableNames } = useMicroVariables();
     const askConfirm = useConfirm();
 
     // Colonnes redimensionnables (poignee a droite de l'en-tete). Bornes :
     // Desc 100-350 (def 160), Action_Micro 300-700 (def 420), Abrv 38-75
     // (def 38, non reductible). Largeur memorisee dans le projet.
-    const COL_SPEC = {
+    const COL_SPEC: Record<ColonneRedimensionnable, { def: number; min: number; max: number; cssVar: string }> = {
         description: { def: 160, min: 100, max: 350, cssVar: '--col-desc-w' },
         micro:       { def: 420, min: 300, max: 700, cssVar: '--col-micro-w' },
         abrv:        { def: 38,  min: 38,  max: 75,  cssVar: '--col-abrv-w' }
     };
-    const colWidth = (k) => {
+    const colWidth = (k: ColonneRedimensionnable) => {
         const n = Number(actionColWidths?.[k]);
         return isFinite(n) ? n : COL_SPEC[k].def;
     };
-    const [liveResize, setLiveResize] = useState(null); // { col, w } pendant le drag
-    const resizeRef = useRef(null);
-    const onResizeMove = useCallback((e) => {
+    const [liveResize, setLiveResize] = useState<{ col: ColonneRedimensionnable; w: number } | null>(null); // pendant le drag
+    const resizeRef = useRef<RedimensionEnCours | null>(null);
+    const onResizeMove = useCallback((e: MouseEvent) => {
         const d = resizeRef.current;
         if (!d) return;
         const s = COL_SPEC[d.col];
         const w = Math.min(s.max, Math.max(s.min, Math.round(d.startW + (e.clientX - d.startX))));
         setLiveResize({ col: d.col, w });
     }, []);
-    const onResizeEnd = useCallback(() => {
+    const onResizeEnd = useCallback((): void => {
         const d = resizeRef.current;
         // Détacher les listeners de la MÊME fenêtre que celle où ils ont été
         // posés (popup détachée le cas échéant — cf. startResize).
@@ -121,28 +163,28 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             return null;
         });
     }, [onResizeMove, setActionColWidths]);
-    const startResize = (col) => (e) => {
+    const startResize = (col: ColonneRedimensionnable) => (e: ReactMouseEvent<HTMLSpanElement>) => {
         e.preventDefault();
         e.stopPropagation();
         // Le composant tourne dans le contexte JS principal mais peut être rendu
         // dans une fenêtre détachée : on attache les listeners à la fenêtre qui
         // possède la poignée cliquée, sinon le drag dans la popup n'est jamais reçu.
-        const win = e.target?.ownerDocument?.defaultView || window;
+        const win = e.currentTarget.ownerDocument.defaultView || window;
         resizeRef.current = { col, startX: e.clientX, startW: colWidth(col), win };
         win.addEventListener('mousemove', onResizeMove);
         win.addEventListener('mouseup', onResizeEnd);
     };
-    const resetCol = (col) => (e) => {
+    const resetCol = (col: ColonneRedimensionnable) => (e: ReactMouseEvent<HTMLSpanElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setActionColWidths(cur => ({ ...cur, [col]: COL_SPEC[col].def }));
     };
-    const dispWidth = (k) => (liveResize && liveResize.col === k) ? liveResize.w : colWidth(k);
+    const dispWidth = (k: ColonneRedimensionnable) => (liveResize && liveResize.col === k) ? liveResize.w : colWidth(k);
     // Poignée de redimensionnement de colonne. Masquée en fenêtre détachée :
     // le drag y est non fiable (le composant tourne dans le contexte JS
     // principal, rendu dans le DOM de la popup) et le redimensionnement reste
     // disponible dans la vue inline. Le projet conserve les largeurs choisies.
-    const resizeHandle = (col) => showFloatingConditions ? null : (
+    const resizeHandle = (col: ColonneRedimensionnable) => showFloatingConditions ? null : (
         <span className="col-resize-handle" title={tip("Glisser pour ajuster · double-clic : largeur par défaut")} onMouseDown={startResize(col)} onDoubleClick={resetCol(col)} />
     );
     useEffect(() => () => {
@@ -151,16 +193,16 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
         win.removeEventListener('mouseup', onResizeEnd);
     }, [onResizeMove, onResizeEnd]);
     // Refs for textarea auto-resize
-    const textareaRefs = useRef({});
+    const textareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
     // La description est multiligne elle aussi : elle doit se redimensionner
     // comme Action_Micro, y compris à l'ouverture d'un projet.
-    const descriptionRefs = useRef({});
+    const descriptionRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
     // Premier champ de la ligne vide en fin de tableau (celle qui sert à ajouter
     // une condition). Cible du bouton « Ajouter une condition » : la ligne peut
     // être hors de vue quand l'ascenseur est actif, ou tout simplement difficile
     // à atteindre selon la barre de défilement — le bouton la ramène et y met le
     // focus de façon fiable, sans dépendre du positionnement.
-    const addRowInputRef = useRef(null);
+    const addRowInputRef = useRef<HTMLInputElement>(null);
 
     // Reste-t-il une ligne vide où saisir ? (30 lignes max : createEmptyActionData)
     const hasEmptyRow = useMemo(() => actionData.some(row => !isRowFilled(row)), [actionData]);
@@ -192,7 +234,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
         const saved = localStorage.getItem('action_table_variables_height');
         const defaultHeight = 130;
         if (saved) {
-            const parsed = parseInt(saved);
+            const parsed = parseInt(saved, 10);
             // Clamp saved value to valid range (0-400)
             return Math.max(0, Math.min(400, parsed));
         }
@@ -206,7 +248,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
 
     // showFloatingConditions and showFloatingVariables are now passed as props
 
-    // Compute visible micro fields: filled fields + 1 empty, max MAX_MICRO_FIELDS=60 (aligne sur la limite de stockage dans useTrafficLight.js)
+    // Compute visible micro fields: filled fields + 1 empty, max MAX_MICRO_FIELDS=60 (aligne sur la limite de stockage dans useTrafficLight.ts)
     const visibleMicroFields = useMemo(() => {
         const lastFilledIndex = microCustomFields.reduce((acc, f, i) => f !== '' ? i : acc, -1);
         // Show all filled fields + 1 empty field (min 1 field shown)
@@ -244,7 +286,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     });
 
     // Handle separator resize
-    const handleSeparatorMouseDown = useCallback((e) => {
+    const handleSeparatorMouseDown = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
         e.preventDefault();
         setIsResizing(true);
         startYRef.current = e.clientY;
@@ -261,7 +303,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     useEffect(() => {
         if (!isResizing) return;
 
-        const handleMouseMove = (e) => {
+        const handleMouseMove = (e: MouseEvent) => {
             const deltaY = startYRef.current - e.clientY;
             const newHeight = startHeightRef.current + deltaY;
             // Clamp between min and max values (0px min to hide variables, 400px max)
@@ -285,7 +327,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     }, [isResizing]);
 
     // Handle panel resize (bottom separator to expand/shrink entire panel)
-    const handlePanelResizeStart = useCallback((e) => {
+    const handlePanelResizeStart = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
         if (!onResizePanel) return;
         e.preventDefault();
         setIsResizingPanel(true);
@@ -295,7 +337,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     useEffect(() => {
         if (!isResizingPanel || !onResizePanel) return;
 
-        const handleMouseMove = (e) => {
+        const handleMouseMove = (e: MouseEvent) => {
             const deltaY = e.clientY - panelResizeStartY.current;
             panelResizeStartY.current = e.clientY;
             onResizePanel(deltaY);
@@ -315,14 +357,14 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     }, [isResizingPanel, onResizePanel]);
 
     // Validate group field value (0 to maxGroup, or empty)
-    const handleGroupFieldChange = useCallback((rowId, field, value) => {
+    const handleGroupFieldChange = useCallback((rowId: number, field: ChampAction, value: string) => {
         // Allow empty value
         if (value === '') {
             updateActionRow(rowId, field, '');
             return;
         }
         // Parse as number and validate (0 is allowed for GF field)
-        const numValue = parseInt(value);
+        const numValue = parseInt(value, 10);
         if (!isNaN(numValue) && numValue >= 0 && numValue <= maxGroup) {
             updateActionRow(rowId, field, value);
         }
@@ -330,7 +372,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     }, [updateActionRow, maxGroup]);
 
     // Handle action change - clear disabled fields when action changes
-    const handleActionChange = useCallback(async (rowId, newAction, currentRow) => {
+    const handleActionChange = useCallback(async (rowId: number, newAction: string, currentRow: ActionMicro) => {
         // Si l'action est supprimée et que la ligne contient des données, proposer de supprimer toute la ligne
         if (newAction === '' && currentRow?.action) {
             const hasData = currentRow.gf || currentRow.description || currentRow.deb ||
@@ -402,35 +444,28 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     }, [updateActionRow, askConfirm]);
 
     // Handle sort - actually reorder the data permanently
-    const handleSort = useCallback((field, direction = 'asc') => {
+    const handleSort = useCallback((field: 'gf' | 'action' | 'deb', direction: 'asc' | 'desc' = 'asc') => {
         if (!reorderActions) return;
 
         // Sort all data (filled rows first, then empty)
         const filledRows = actionData.filter(isRowFilled);
         const emptyRows = actionData.filter(row => !isRowFilled(row));
 
+        // Clé numérique de tri. Un début vide passe en dernier.
+        const cleNumerique = (row: ActionMicro) => field === 'gf'
+            ? parseInt(String(row.gf), 10) || 0
+            : (row.deb !== '' ? parseInt(String(row.deb), 10) : 999);
+
         filledRows.sort((a, b) => {
-            let valA, valB;
-
-            if (field === 'gf') {
-                valA = parseInt(a.gf) || 0;
-                valB = parseInt(b.gf) || 0;
-            } else if (field === 'action') {
-                valA = a.action || '';
-                valB = b.action || '';
-            } else if (field === 'deb') {
-                valA = a.deb !== '' ? parseInt(a.deb) : 999;
-                valB = b.deb !== '' ? parseInt(b.deb) : 999;
-            }
-
             if (field === 'action') {
                 // String comparison
-                const cmp = valA.localeCompare(valB, 'fr');
+                const cmp = (a.action || '').localeCompare(b.action || '', 'fr');
                 return direction === 'asc' ? cmp : -cmp;
-            } else {
-                // Numeric comparison
-                return direction === 'asc' ? valA - valB : valB - valA;
             }
+            // Numeric comparison
+            const valA = cleNumerique(a);
+            const valB = cleNumerique(b);
+            return direction === 'asc' ? valA - valB : valB - valA;
         });
 
         // Apply the new order permanently
@@ -455,18 +490,18 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     // Shared table JSX builder (used in main view and portal)
     const renderTableContent = () => (
         <div className="action-table-scroll">
-        <table className="action-table" style={{ '--col-desc-w': dispWidth('description') + 'px', '--col-micro-w': dispWidth('micro') + 'px', '--col-abrv-w': dispWidth('abrv') + 'px' }}>
+        <table className="action-table" style={{ '--col-desc-w': dispWidth('description') + 'px', '--col-micro-w': dispWidth('micro') + 'px', '--col-abrv-w': dispWidth('abrv') + 'px' } as CSSProperties}>
             <thead>
                 <tr className="header-group">
-                    <th rowSpan="2" title={tip("Groupe de feu / ligne de feu - Cliquer pour trier (croissant)")} className="sortable" onClick={() => handleSort('gf', 'asc')}>GF ↕</th>
-                    <th rowSpan="2" title={tip("Action - Cliquer pour trier (alphabétique)")} className="sortable" onClick={() => handleSort('action', 'asc')}>Action ↕</th>
-                    {showDescription && <th rowSpan="2" className="col-resizable">Description{resizeHandle('description')}</th>}
-                    <th rowSpan="2" title={tip("Début - Cliquer pour trier (croissant)")} className="sortable" onClick={() => handleSort('deb', 'asc')}>Déb ↕</th>
-                    <th rowSpan="2">Fin</th>
-                    <th rowSpan="2" className="col-resizable">Abrv{resizeHandle('abrv')}</th>
-                    <th rowSpan="2" className="col-resizable">Action_Micro{resizeHandle('micro')}</th>
-                    <th colSpan="2" className="header-grouped">Plage</th>
-                    <th colSpan="4" className="header-grouped">Action GF</th>
+                    <th rowSpan={2} title={tip("Groupe de feu / ligne de feu - Cliquer pour trier (croissant)")} className="sortable" onClick={() => handleSort('gf', 'asc')}>GF ↕</th>
+                    <th rowSpan={2} title={tip("Action - Cliquer pour trier (alphabétique)")} className="sortable" onClick={() => handleSort('action', 'asc')}>Action ↕</th>
+                    {showDescription && <th rowSpan={2} className="col-resizable">Description{resizeHandle('description')}</th>}
+                    <th rowSpan={2} title={tip("Début - Cliquer pour trier (croissant)")} className="sortable" onClick={() => handleSort('deb', 'asc')}>Déb ↕</th>
+                    <th rowSpan={2}>Fin</th>
+                    <th rowSpan={2} className="col-resizable">Abrv{resizeHandle('abrv')}</th>
+                    <th rowSpan={2} className="col-resizable">Action_Micro{resizeHandle('micro')}</th>
+                    <th colSpan={2} className="header-grouped">Plage</th>
+                    <th colSpan={4} className="header-grouped">Action GF</th>
                 </tr>
                 <tr className="header-sub">
                     <th>1</th><th>2</th><th>1</th><th>2</th><th>3</th><th>4</th>
@@ -477,10 +512,10 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
                     <tr key={row.id} className={hoveredActionId === row.id ? 'row-highlighted' : ''} onMouseEnter={() => isRowFilled(row) && setHoveredActionId(row.id)} onMouseLeave={() => setHoveredActionId(null)}>
                         <td><input ref={isRowFilled(row) ? undefined : addRowInputRef} type="number" min="0" max={maxGroup} className="input-gf" value={row.gf} onChange={(e) => handleGroupFieldChange(row.id, 'gf', e.target.value)} /></td>
                         <td><select className="input-action" value={row.action} onChange={(e) => handleActionChange(row.id, e.target.value, row)}>{ACTION_OPTIONS.map((opt) => (<option key={opt} value={opt}>{opt || '—'}</option>))}</select></td>
-                        {showDescription && <td><textarea ref={(el) => { descriptionRefs.current[row.id] = el; autoResizeTextarea(el); }} maxLength="60" className="input-desc" value={row.description || ''} onChange={(e) => { updateActionRow(row.id, 'description', e.target.value); autoResizeTextarea(e.target); }} rows={1} /></td>}
+                        {showDescription && <td><textarea ref={(el) => { descriptionRefs.current[row.id] = el; autoResizeTextarea(el); }} maxLength={60} className="input-desc" value={row.description || ''} onChange={(e) => { updateActionRow(row.id, 'description', e.target.value); autoResizeTextarea(e.target); }} rows={1} /></td>}
                         <td><NumericInput className="input-time-xs" value={row.deb} onCommit={(val) => updateActionRow(row.id, 'deb', val)} wrapAt={cycleLength} showWrapFlash={showWrapFlash} selectOnFocus /></td>
                         <td><NumericInput className={`input-time-xs ${FIN_DISABLED_ACTIONS.includes(row.action) ? 'input-disabled' : ''}`} value={row.fin} onCommit={(val) => updateActionRow(row.id, 'fin', val)} disabled={FIN_DISABLED_ACTIONS.includes(row.action)} wrapAt={cycleLength} showWrapFlash={showWrapFlash} selectOnFocus /></td>
-                        <td><input type="text" maxLength="10" className="input-abrv" value={row.abrv || ''} onChange={(e) => updateActionRow(row.id, 'abrv', e.target.value)} /></td>
+                        <td><input type="text" maxLength={10} className="input-abrv" value={row.abrv || ''} onChange={(e) => updateActionRow(row.id, 'abrv', e.target.value)} /></td>
                         <td><div className="micro-highlight-container"><div className="micro-highlight-backdrop" aria-hidden="true">{tokenizeMicroText(row.micro, microVariableNames).map((tok, i) => tok.type === 'keyword' ? <span key={i} className="micro-keyword">{tok.text}</span> : tok.type === 'bold' ? <span key={i} className="micro-bold">{tok.text}</span> : tok.text)}</div><textarea ref={(el) => { textareaRefs.current[row.id] = el; autoResizeTextarea(el); }} className="input-micro micro-has-backdrop" value={row.micro || ''} onChange={(e) => { updateActionRow(row.id, 'micro', e.target.value); autoResizeTextarea(e.target); }} rows={1} /></div></td>
                         <td><input type="number" min="1" max={maxGroup} className={`input-small ${PLAGE_DISABLED_ACTIONS.includes(row.action) ? 'input-disabled' : ''}`} value={row.plage1} onChange={(e) => handleGroupFieldChange(row.id, 'plage1', e.target.value)} disabled={PLAGE_DISABLED_ACTIONS.includes(row.action)} /></td>
                         <td><input type="number" min="1" max={maxGroup} className={`input-small ${PLAGE_DISABLED_ACTIONS.includes(row.action) ? 'input-disabled' : ''}`} value={row.plage2} onChange={(e) => handleGroupFieldChange(row.id, 'plage2', e.target.value)} disabled={PLAGE_DISABLED_ACTIONS.includes(row.action)} /></td>
@@ -495,7 +530,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
         </div>
     );
 
-    const renderVariablesMicroFields = (fields) => (
+    const renderVariablesMicroFields = (fields: string[]) => (
         <div className="custom-fields-list">
             {fields.map((field, index) => (
                 <input key={index} type="text" maxLength={60} className="custom-field-input" value={field} onChange={(e) => updateMicroCustomField && updateMicroCustomField(index, e.target.value)} placeholder={`Variable ${index + 1}`} />
