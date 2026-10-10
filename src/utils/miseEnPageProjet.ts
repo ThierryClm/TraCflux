@@ -1,4 +1,4 @@
-import type { OptionsMiseEnPage, Projet } from '../types/projet';
+import type { CadrageImage, OptionsMiseEnPage, Projet } from '../types/projet';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from './floatingImageBox';
 
 /** Réglages de mise en page persistants d'un projet. */
@@ -6,14 +6,40 @@ type DirectoryKey = 'open' | 'save' | 'import' | 'image' | 'greenWave';
 
 interface LayoutValues extends OptionsMiseEnPage {
     diagramHeight?: number | null;
-    floatingCrop?: Record<string, unknown>;
+    floatingCrop?: CadrageImage;
     floatingZoom?: number;
     sidebarVisible?: boolean;
     directoryNames?: Partial<Record<DirectoryKey, string | null>>;
 }
 
-type LayoutSetter = (value?: unknown) => void;
-type LayoutSetters = Record<string, LayoutSetter | undefined>;
+type SetterBooleen = (value: boolean) => void;
+
+/** Projet à appliquer : seul compte le texte des commentaires de ses groupes. */
+type DonneesMiseEnPage = Omit<Partial<Projet>, 'groups'> & { groups?: Array<{ comment?: string }> };
+
+/** Les setters de l'application que l'ouverture d'un projet met à jour. */
+interface LayoutSetters {
+    setDiagramHeight?: (height: number) => void;
+    resetDiagramHeight?: () => void;
+    setFloatingCrop?: (crop: CadrageImage) => void;
+    setFloatingZoom?: (zoom: number) => void;
+    markLegacyCrop?: (legacy: boolean) => void;
+    setSidebarVisible?: SetterBooleen;
+    setShowComments?: SetterBooleen;
+    setShowRemarks?: SetterBooleen;
+    setShowActionDescription?: SetterBooleen;
+    setShowFloatingForm?: SetterBooleen;
+    setShowFloatingMatrix?: SetterBooleen;
+    setShowFloatingTraffic?: SetterBooleen;
+    setShowFloatingImage?: SetterBooleen;
+    setShowFloatingConditions?: SetterBooleen;
+    setShowFloatingVariables?: SetterBooleen;
+    setShowFloatingRemarks?: SetterBooleen;
+    setShowImageGroupNumbers?: SetterBooleen;
+    setShowImageGroupNames?: SetterBooleen;
+    setShowImageArrows?: SetterBooleen;
+    setDossierSections?: (sections: Record<string, boolean>) => void;
+}
 
 /**
  * Les sept drapeaux de détachement, les quatre options d'affichage et les
@@ -66,7 +92,7 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
  * qui n'en a pas, l'affiche s'il a du contenu à montrer.
  */
 export const affichageCommentairesRemarques = (
-    data: Partial<Projet>
+    data: DonneesMiseEnPage
 ): { showComments: boolean; showRemarks: boolean } => {
     const lo = data.layoutOptions || {};
     const plans = data.pfTabs || [];
@@ -81,7 +107,7 @@ export const affichageCommentairesRemarques = (
 
 /** Applique les réglages persistants lors de l'ouverture d'un projet. */
 export const appliquerMiseEnPage = (
-    data: Partial<Projet> | null | undefined,
+    data: DonneesMiseEnPage | null | undefined,
     s: LayoutSetters
 ): void => {
     if (!data || typeof data !== 'object') return;
@@ -96,7 +122,7 @@ export const appliquerMiseEnPage = (
     s.setFloatingZoom?.(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
     s.markLegacyCrop?.(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
 
-    const poseurs: Partial<Record<keyof OptionsMiseEnPage, LayoutSetter>> = {
+    const poseurs: Partial<Record<keyof OptionsMiseEnPage, SetterBooleen>> = {
         showParameters: s.setSidebarVisible,
         showComments: s.setShowComments,
         showRemarks: s.setShowRemarks,

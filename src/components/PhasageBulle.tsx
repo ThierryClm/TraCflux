@@ -1,7 +1,42 @@
 import { useState, useCallback, useEffect, useId } from 'react';
 import { isPPLit } from '../utils/groupColorAtTime';
 import { getEllipseConfig, computeBubbleBox, ARROW_OUTER_OFFSET, planFrameForBubble } from '../utils/phasageLayout';
+import type { ActionMicro, FlecheCarrefour, Groupe } from '../types/projet';
+import type { SimulationResult } from '../utils/simulationCalculator';
 import './PhasageBulle.css';
+
+/** Unité des longueurs émises : pixels à l'écran, millimètres sur la feuille. */
+export type UniteLongueur = 'px' | 'mm';
+
+export interface PhasageBulleProps {
+    groups: Groupe[];
+    cycleLength: number;
+    intersectionImage?: string | null;
+    intersectionArrows: FlecheCarrefour[];
+    simulationResult?: SimulationResult | null;
+    actionData?: ActionMicro[];
+    /** Actions de micro-régulation retenues pour la simulation. */
+    selectedActions?: number[];
+    intersectionName?: string;
+    planName?: string;
+    initialTimes?: number[];
+    initialCount?: number;
+    hoveredGroupId?: number | null;
+    setHoveredGroupId?: (id: number | null) => void;
+    imageBrightness?: number;
+    imageContrast?: number;
+    initialBubbleScale?: number;
+    initialEllipseScale?: number;
+    initialBubbleRatio?: number;
+    unite?: UniteLongueur;
+    /** Étalement horizontal imposé ; sa présence signale le rendu d'impression. */
+    ellipseScaleX?: number | null;
+    arrowOffsetX?: number;
+    arrowOffsetY?: number;
+    onBubbleScaleChange?: (value: number) => void;
+    onEllipseScaleChange?: (value: number) => void;
+    onBubbleRatioChange?: (value: number) => void;
+}
 
 const PhasageBulle = ({
     groups,
@@ -37,7 +72,7 @@ const PhasageBulle = ({
     onBubbleScaleChange,
     onEllipseScaleChange,
     onBubbleRatioChange
-}) => {
+}: PhasageBulleProps) => {
     // Number of phases to display (2-6)
     const [phaseCount, setPhaseCount] = useState(initialCount);
 
@@ -93,16 +128,16 @@ const PhasageBulle = ({
     }, [initialTimes]);
 
     // Get group info for display
-    const getGroupInfo = (groupId) => {
+    const getGroupInfo = (groupId: number) => {
         const group = groups.find(g => g.id === groupId);
         return group ? { name: group.name, courant: group.courant || '' } : { name: '?', courant: '' };
     };
 
     // Check if time is within an action's time range (handles wrap-around)
-    const isTimeInRange = (time, start, end, effectiveCycleLength) => {
+    const isTimeInRange = (time: number, start: ActionMicro['deb'], end: ActionMicro['fin'], effectiveCycleLength: number) => {
         const normalizedTime = time % effectiveCycleLength;
-        const normalizedStart = parseInt(start);
-        const normalizedEnd = parseInt(end);
+        const normalizedStart = parseInt(String(start), 10);
+        const normalizedEnd = parseInt(String(end), 10);
 
         if (normalizedEnd > normalizedStart) {
             return normalizedTime >= normalizedStart && normalizedTime < normalizedEnd;
@@ -112,15 +147,24 @@ const PhasageBulle = ({
     };
 
     // Get the color for a group at a specific time
-    const getGroupColorAtTime = useCallback((groupId, time) => {
-        const groupsData = simulationResult?.simulatedGroups || groups;
-        const group = groupsData.find(g => g.id === groupId);
+    const getGroupColorAtTime = useCallback((groupId: number, time: number) => {
+        const effectiveCycleLength = simulationResult?.simulatedCycleLength || cycleLength;
+        let offset: number;
+        let greenDuration: number;
+        let group: Groupe | undefined;
+        if (simulationResult) {
+            const simule = simulationResult.simulatedGroups.find(g => g.id === groupId);
+            group = simule;
+            offset = simule ? (simule.simulatedOffset ?? simule.offset) : 0;
+            greenDuration = simule ? (simule.simulatedGreen ?? simule.durations?.green ?? 0) : 0;
+        } else {
+            group = groups.find(g => g.id === groupId);
+            offset = group ? group.offset : 0;
+            greenDuration = group?.durations?.green || 0;
+        }
 
         if (!group) return 'rgb(255, 0, 0)';
 
-        const effectiveCycleLength = simulationResult?.simulatedCycleLength || cycleLength;
-        const offset = simulationResult ? (group.simulatedOffset ?? group.offset) : group.offset;
-        const greenDuration = simulationResult ? (group.simulatedGreen ?? group.durations?.green ?? 0) : (group.durations?.green || 0);
         const orangeDuration = group.durations?.orange || 0;
 
         const normalizedTime = time % effectiveCycleLength;
@@ -209,7 +253,7 @@ const PhasageBulle = ({
      * flèche de longueur 2 s'y trouvait une fois et demie trop grande par
      * rapport au plan, alors qu'une flèche de longueur 1 était juste.
      */
-    const renderArrowSVG = (courant, color, size = 24, arrowLength = 1, turnLength = 1, ppAllume = false) => {
+    const renderArrowSVG = (courant: string, color: string, size = 24, arrowLength = 1, turnLength = 1, ppAllume = false) => {
         const strokeWidth = 2;
         const thinStrokeWidth = 1.5; // Thinner stroke for Piéton/Cycle
 
@@ -264,7 +308,7 @@ const PhasageBulle = ({
             const racineY = (8 + bottom) / 2;
                 const tipY = racineY - portee * ct;
                 // Barbes de la pointe, tournées du même angle que la branche.
-                const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
+                const barbe = (dx: number, dy: number) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
                 return (
                     <svg width={`${size}${unite}`} height={`${size}${unite}`} viewBox={`0 0 32 ${vb}`}>
                         <line x1="12" y1={bottom} x2="12" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
@@ -293,7 +337,7 @@ const PhasageBulle = ({
             const racineY = (8 + bottom) / 2;
                 const tipY = racineY - portee * ct;
                 // Barbes de la pointe, tournées du même angle que la branche.
-                const barbe = (dx, dy) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
+                const barbe = (dx: number, dy: number) => `${(tipX + dx * ct - dy * st).toFixed(2)},${(tipY + dx * st + dy * ct).toFixed(2)}`;
                 return (
                     <svg width={`${size}${unite}`} height={`${size}${unite}`} viewBox={`0 0 32 ${vb}`}>
                         <line x1="20" y1={bottom} x2="20" y2="8" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
@@ -315,9 +359,9 @@ const PhasageBulle = ({
                 const racineY = (8 + bottom) / 2;
                 // Une branche par côté : sens = +1 à droite, -1 à gauche. La branche
                 // étant horizontale, les barbes se déduisent sans rotation.
-                const branche = (sens) => {
+                const branche = (sens: number) => {
                     const tipX = 16 + portee * sens;
-                    const barbe = (dx, dy) => `${(tipX - dy * sens).toFixed(2)},${(racineY + dx * sens).toFixed(2)}`;
+                    const barbe = (dx: number, dy: number) => `${(tipX - dy * sens).toFixed(2)},${(racineY + dx * sens).toFixed(2)}`;
                     return { tipX: tipX.toFixed(2), pointe: `${barbe(-4, 4)} ${barbe(0, 0)} ${barbe(4, 4)}` };
                 };
                 return (
@@ -398,7 +442,7 @@ const PhasageBulle = ({
     // Calculate position on ellipse for each phase
     const ellipseFactor = echelleEllipse / 100;
     const ellipseFactorX = (ellipseScaleX ?? echelleEllipse) / 100;
-    const getPhasePosition = (index, total) => {
+    const getPhasePosition = (index: number, total: number) => {
         const { radiusX, radiusY, startAngle } = getEllipseConfig(total);
         const rx = radiusX * ellipseFactorX;
         const ry = radiusY * ellipseFactor;
@@ -414,7 +458,7 @@ const PhasageBulle = ({
     };
 
     // Get ellipse radii for SVG outline (uses same config)
-    const getEllipseRadii = (count) => {
+    const getEllipseRadii = (count: number) => {
         const config = getEllipseConfig(count);
         return { radiusX: config.radiusX * ellipseFactorX, radiusY: config.radiusY * ellipseFactor };
     };
@@ -440,7 +484,7 @@ const PhasageBulle = ({
      * coordonnées que celle-ci : le coin haut-gauche ou bas-droit du rectangle
      * circonscrit, donc toujours hors de l'ovale, jamais en conflit avec lui.
      */
-    const renderPhaseLabel = (index) => {
+    const renderPhaseLabel = (index: number) => {
         const time = phaseTimes[index];
         const position = getPhasePosition(index, phaseCount);
         const isLabelTopLeft = index === 0 ? true : (index === 2 || index === 3) ? false : position.y < 50;
@@ -476,10 +520,10 @@ const PhasageBulle = ({
     };
 
     // Render a phase bubble with label positioned based on vertical position
-    const renderPhaseBubble = (index) => {
+    const renderPhaseBubble = (index: number) => {
         const time = phaseTimes[index];
         const position = getPhasePosition(index, phaseCount);
-        const isSideLabel = (courant) => courant === 'Piéton' || courant === 'Cycle';
+        const isSideLabel = (courant: string) => courant === 'Piéton' || courant === 'Cycle';
 
         return (
             <div
@@ -561,15 +605,15 @@ const PhasageBulle = ({
                 <div className="phasage-controls">
                     <label className="phasage-slider-label">
                         Bulles
-                        <input type="range" min="50" max="150" value={bubbleScaleUser} onChange={(e) => { const v = parseInt(e.target.value); setBubbleScaleUser(v); onBubbleScaleChange?.(v); }} className="phasage-slider" />
+                        <input type="range" min="50" max="150" value={bubbleScaleUser} onChange={(e) => { const v = parseInt(e.target.value, 10); setBubbleScaleUser(v); onBubbleScaleChange?.(v); }} className="phasage-slider" />
                     </label>
                     <label className="phasage-slider-label">
                         H/L
-                        <input type="range" min="50" max="150" value={bubbleRatioUser} onChange={(e) => { const v = parseInt(e.target.value); setBubbleRatioUser(v); onBubbleRatioChange?.(v); }} className="phasage-slider" />
+                        <input type="range" min="50" max="150" value={bubbleRatioUser} onChange={(e) => { const v = parseInt(e.target.value, 10); setBubbleRatioUser(v); onBubbleRatioChange?.(v); }} className="phasage-slider" />
                     </label>
                     <label className="phasage-slider-label">
                         Ellipse
-                        <input type="range" min="50" max="150" value={ellipseScaleUser} onChange={(e) => { const v = parseInt(e.target.value); setEllipseScaleUser(v); onEllipseScaleChange?.(v); }} className="phasage-slider" />
+                        <input type="range" min="50" max="150" value={ellipseScaleUser} onChange={(e) => { const v = parseInt(e.target.value, 10); setEllipseScaleUser(v); onEllipseScaleChange?.(v); }} className="phasage-slider" />
                     </label>
                     <span className="phasage-info">Cycle: {cycleLength}s</span>
                 </div>

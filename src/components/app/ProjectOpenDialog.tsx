@@ -13,7 +13,7 @@ interface ProjectOpenDialogProps {
     selectedProject: string | null;
     onSelect: (name: string) => void;
     onOpen: (name: string | null) => void;
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
 }
 
 const formatDate = (isoString?: string | null) => {

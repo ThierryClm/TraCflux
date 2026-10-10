@@ -78,7 +78,7 @@ const useDialogState = () => {
     const [printType, setPrintType] = useState<TypeImpression | null>(null);
     const [dossierDialog, setDossierDialog] = useState(false);
     // Cases à cocher du dossier. Elles appartiennent au PROJET — cf. le
-    // branchement dans App.jsx : ce qu'on imprime dépend du carrefour, pas de
+    // branchement dans App.tsx : ce qu'on imprime dépend du carrefour, pas de
     // l'application. Elles étaient auparavant remises à zéro à chaque ouverture.
     const [dossierSections, setDossierSections] = useState<SectionsDossier>({});
 

@@ -43,7 +43,7 @@ interface BiCarrefourDialogModel extends BaseDialogModel {
 interface DiagramEditDialogsProps {
     groups: GroupOption[];
     cycleLength: number;
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
     slide: SlideDialogModel;
     insert: RangeDialogModel;
     reduce: RangeDialogModel;
@@ -73,7 +73,7 @@ function DialogActions({ onClose, confirmLabel, onConfirm, disabled }: DialogAct
 
 function SlideDialog({ groups, tip, dialog }: {
     groups: GroupOption[];
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
     dialog: SlideDialogModel;
 }) {
     return (
@@ -107,7 +107,7 @@ function SlideDialog({ groups, tip, dialog }: {
 
 function InsertDialog({ cycleLength, tip, dialog }: {
     cycleLength: number;
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
     dialog: RangeDialogModel;
 }) {
     return (
@@ -131,7 +131,7 @@ function InsertDialog({ cycleLength, tip, dialog }: {
 
 function ReduceDialog({ cycleLength, tip, dialog }: {
     cycleLength: number;
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
     dialog: RangeDialogModel;
 }) {
     return (
@@ -155,7 +155,7 @@ function ReduceDialog({ cycleLength, tip, dialog }: {
 
 function MoveGroupDialog({ groups, tip, dialog }: {
     groups: GroupOption[];
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
     dialog: MoveGroupDialogModel;
 }) {
     return (
@@ -184,7 +184,7 @@ function MoveGroupDialog({ groups, tip, dialog }: {
 
 function BiCarrefourDialog({ groups, tip, dialog }: {
     groups: GroupOption[];
-    tip: (label: string) => string;
+    tip: (label: string) => string | undefined;
     dialog: BiCarrefourDialogModel;
 }) {
     return (

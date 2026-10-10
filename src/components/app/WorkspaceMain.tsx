@@ -1,29 +1,26 @@
-import TimelineDiagramImplementation from '../TimelineDiagram';
-import PhasageBulleImplementation from '../PhasageBulle';
-import IntersectionImageImplementation from '../IntersectionImage';
-import ActionTableImplementation from '../ActionTable';
+import TimelineDiagram from '../TimelineDiagram';
+import type { TimelineDiagramProps } from '../TimelineDiagram';
+import type { PhasageBulleProps } from '../PhasageBulle';
+import type useUILayout from '../../hooks/useUILayout';
+import PhasageBulle from '../PhasageBulle';
+import IntersectionImage from '../IntersectionImage';
+import type { IntersectionImageProps } from '../IntersectionImage';
+import ActionTable from '../ActionTable';
+import type { ActionTableProps } from '../ActionTable';
 import { toast } from '../../utils/toast';
 import type {
-    ComponentType,
     CSSProperties,
     Dispatch,
     MutableRefObject,
     RefObject,
     SetStateAction,
 } from 'react';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
 import type { SimulationResult } from '../../utils/simulationCalculator';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../../hooks/useIntersectionDisplayOptions';
 
-type LooseComponent = ComponentType<Record<string, unknown>>;
-type Callback = (...args: unknown[]) => void;
 
-interface IntersectionArrow {
-    groupId: number;
-    x: number;
-    y: number;
-    [key: string]: unknown;
-}
+type IntersectionArrow = FlecheCarrefour;
 
 interface PhasageDraft {
     count: number;
@@ -31,39 +28,38 @@ interface PhasageDraft {
 }
 
 interface WorkspaceMainModel {
-    actionColWidths: Record<string, number>;
+    actionColWidths: NonNullable<ActionTableProps['actionColWidths']>;
     actionData: ActionMicro[];
     activePFId: number;
     activePfReadOnly: boolean;
-    addRecentDirectory: Callback;
+    addRecentDirectory: NonNullable<IntersectionImageProps['addRecentDirectory']>;
     biCarrefourSeparator: number | null;
     brouillonPhasage: PhasageDraft | null;
     conflictMatrix: Matrice;
     currentRemarques: string;
     cycleLength: number;
     cycleLengthInput: string;
-    cycleSimulationSpeed: number;
+    cycleSimulationSpeed: () => void;
     dependencyGap: number;
-    diagramAreaRef: RefObject<HTMLElement>;
+    diagramAreaRef: RefObject<HTMLElement | null>;
     diagramHeight: number | null;
-    displayConflicts: unknown[];
+    displayConflicts: TimelineDiagramProps['conflicts'];
     dossierReadOnly: boolean;
     draggedTabIndex: number | null;
-    endDrag: Callback;
-    getGroupState: (...args: unknown[]) => unknown;
+    endDrag: NonNullable<TimelineDiagramProps['endDrag']>;
     globalTime: number;
     groups: Groupe[];
-    handleActionPanelResize: Callback;
-    handleDiagramResizeStart: Callback;
-    handleResizeStart: Callback;
+    handleActionPanelResize: ReturnType<typeof useUILayout>['handleActionPanelResize'];
+    handleDiagramResizeStart: ReturnType<typeof useUILayout>['handleDiagramResizeStart'];
+    handleResizeStart: ReturnType<typeof useUILayout>['handleResizeStart'];
     helpZoneRef: MutableRefObject<string | null>;
     hoveredActionId: number | null;
     hoveredArrowGroupId: number | null;
     hoveredArrowGroupSaturated: boolean;
-    hoveredConflict: unknown;
+    hoveredConflict: TimelineDiagramProps['hoveredConflict'];
     hoveredDiagramTime: number | null;
     hoveredPhasageGroupId: number | null;
-    hoveredVUtile: unknown;
+    hoveredVUtile: TimelineDiagramProps['hoveredVUtile'];
     imageBrightness: number;
     imageContrast: number;
     imageFondClair: boolean;
@@ -74,7 +70,7 @@ interface WorkspaceMainModel {
     isPlayingSimulation: boolean;
     isResizing: boolean;
     isResizingDiagram: boolean;
-    lastImageDirectoryRef: MutableRefObject<unknown>;
+    lastImageDirectoryRef: NonNullable<IntersectionImageProps['lastImageDirectoryRef']>;
     microCustomFields: string[];
     pfTabs: PlanDeFeu[];
     phasageBubbleRatio: number;
@@ -88,44 +84,44 @@ interface WorkspaceMainModel {
     phasageEllipseScale: number;
     phasageModifie: boolean;
     pixelsPerSecond: number;
-    recentImageDirs: unknown[];
+    recentImageDirs: NonNullable<IntersectionImageProps['recentImageDirs']>;
     renamePF: (id: number, name: string) => void;
-    reorderActions: Callback;
+    reorderActions: NonNullable<ActionTableProps['reorderActions']>;
     reorderPF: (fromIndex: number, toIndex: number) => void;
-    resetDiagramHeight: Callback;
-    saveDirectoryHandle: Callback;
-    setActionColWidths: Callback;
+    resetDiagramHeight: () => void;
+    saveDirectoryHandle: NonNullable<IntersectionImageProps['saveDirectoryHandle']>;
+    setActionColWidths: NonNullable<ActionTableProps['setActionColWidths']>;
     setActivePFId: (id: number) => void;
     setBrouillonPhasage: Dispatch<SetStateAction<PhasageDraft | null>>;
-    setCycleLength: Callback;
-    setCycleLengthInput: Callback;
-    setDragConflictsFromDiagram: Callback;
+    setCycleLength: NonNullable<TimelineDiagramProps['setCycleLength']>;
+    setCycleLengthInput: NonNullable<TimelineDiagramProps['setCycleLengthInput']>;
+    setDragConflictsFromDiagram: NonNullable<TimelineDiagramProps['onDragConflicts']>;
     setDraggedTabIndex: (index: number | null) => void;
-    setHoveredActionId: Callback;
-    setHoveredArrowGroupId: Callback;
-    setHoveredDiagramTime: Callback;
-    setHoveredPhasageGroupId: Callback;
-    setImageBrightness: Callback;
-    setImageContrast: Callback;
-    setIntersectionArrows: Callback;
+    setHoveredActionId: ActionTableProps['setHoveredActionId'];
+    setHoveredArrowGroupId: NonNullable<IntersectionImageProps['setHoveredArrowGroupId']>;
+    setHoveredDiagramTime: (time: number | null) => void;
+    setHoveredPhasageGroupId: NonNullable<PhasageBulleProps['setHoveredGroupId']>;
+    setImageBrightness: NonNullable<IntersectionImageProps['setImageBrightness']>;
+    setImageContrast: NonNullable<IntersectionImageProps['setImageContrast']>;
+    setIntersectionArrows: IntersectionImageProps['onArrowsChange'];
     setIntersectionDisplayOption: (option: IntersectionDisplayOption, value: boolean) => void;
-    setIntersectionImage: Callback;
-    setIsPlayingSimulation: Callback;
-    setPhasageBubbleRatio: Callback;
-    setPhasageBubbleScale: Callback;
+    setIntersectionImage: IntersectionImageProps['onImageChange'];
+    setIsPlayingSimulation: NonNullable<IntersectionImageProps['setIsPlaying']>;
+    setPhasageBubbleRatio: NonNullable<PhasageBulleProps['onBubbleRatioChange']>;
+    setPhasageBubbleScale: NonNullable<PhasageBulleProps['onBubbleScaleChange']>;
     setPhasageBulleCount: (value: number) => void;
     setPhasageBulleEnabled: (value: boolean) => void;
     setPhasageBulleModal: (value: boolean) => void;
     setPhasageBulleTimes: (value: number[]) => void;
     setPhasageBulleVersion: Dispatch<SetStateAction<number>>;
-    setPhasageEllipseScale: Callback;
+    setPhasageEllipseScale: NonNullable<PhasageBulleProps['onEllipseScaleChange']>;
     setSelectedGroupId: (id: number) => void;
-    setShowFloatingConditions: Callback;
+    setShowFloatingConditions: ActionTableProps['setShowFloatingConditions'];
     setShowFloatingDiagram: (value: boolean) => void;
     openFloatingImage: () => void;
-    setShowFloatingVariables: Callback;
+    setShowFloatingVariables: ActionTableProps['setShowFloatingVariables'];
     setSidebarWidth: (value: number) => void;
-    setSimulationCurrentTime: Callback;
+    setSimulationCurrentTime: NonNullable<IntersectionImageProps['setCurrentTime']>;
     setSimulationEnabled: (value: boolean) => void;
     showActionDescription: boolean;
     showComments: boolean;
@@ -144,30 +140,26 @@ interface WorkspaceMainModel {
     simulationResult: SimulationResult | null;
     simulationSelectedActions: number[];
     simulationSpeed: number;
-    startDrag: Callback;
-    tip: (label: string) => string | undefined;
+    startDrag: NonNullable<TimelineDiagramProps['startDrag']>;
+    tip: (label: string) => string | undefined | undefined;
     tooltipPrefs: { diagram?: boolean; micro?: boolean };
-    updateActionRow: Callback;
-    updateGroupParams: Callback;
-    updateMicroCustomField: Callback;
-    updatePFRemarques: Callback;
+    updateActionRow: ActionTableProps['updateActionRow'];
+    updateGroupParams: TimelineDiagramProps['updateGroupParams'];
+    updateMicroCustomField: NonNullable<ActionTableProps['updateMicroCustomField']>;
+    updatePFRemarques: (remarques: string) => void;
 }
 
 interface WorkspaceMainProps {
     model: WorkspaceMainModel;
 }
 
-const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
-const PhasageBulle = PhasageBulleImplementation as unknown as LooseComponent;
-const IntersectionImage = IntersectionImageImplementation as unknown as LooseComponent;
-const ActionTable = ActionTableImplementation as unknown as LooseComponent;
 
 export default function WorkspaceMain({ model }: WorkspaceMainProps) {
     const {
         actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
         biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
         cycleLengthInput, cycleSimulationSpeed, dependencyGap, diagramAreaRef, diagramHeight,
-        displayConflicts, dossierReadOnly, draggedTabIndex, endDrag, getGroupState,
+        displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
         helpZoneRef, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict,
         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
@@ -308,7 +300,6 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 readOnly={dossierReadOnly || activePfReadOnly}
                                 groups={groups}
                                 globalTime={globalTime}
-                                getGroupState={getGroupState}
                                 onGroupClick={(g: Groupe) => setSelectedGroupId(g.id)}
                                 pixelsPerSecond={pixelsPerSecond}
                                 conflicts={displayConflicts}

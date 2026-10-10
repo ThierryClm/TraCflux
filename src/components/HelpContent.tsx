@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
- * Aide en ligne (menu Aide) — contenu partagé entre App.jsx et GreenWavePage.jsx.
+ * Aide en ligne (menu Aide) — contenu partagé entre App.tsx et GreenWavePage.tsx.
  *
  * Le composant gère lui-même :
  *  - la ref vers le conteneur scrollable (helpContentRef)
@@ -12,25 +12,34 @@ import React, { useState, useEffect, useRef } from 'react';
  *  - initialAnchor (string, optionnel) : si fourni, scrolle vers l'élément
  *    portant cet id 300 ms après le montage (utile pour l'ouverture via
  *    ?openHelp=ondeVerte qui doit cibler "help-onde-verte").
- *
- * @param {{ initialAnchor?: string | null }} props
  */
-const HelpContent = ({ initialAnchor = null }) => {
-    const helpContentRef = useRef(null);
-    const [helpToc, setHelpToc] = useState([]);
+export interface HelpContentProps {
+    initialAnchor?: string | null;
+}
+
+/** Entrée du sommaire : un chapitre (h3) et ses sections (h4). */
+interface ChapitreAide {
+    id: string;
+    title: string;
+    sections: { id: string; title: string }[];
+}
+
+const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
+    const helpContentRef = useRef<HTMLDivElement>(null);
+    const [helpToc, setHelpToc] = useState<ChapitreAide[]>([]);
 
     // Build the help TOC by scanning h3 (chapters) and h4 (sections) and assigning ids
     useEffect(() => {
         const root = helpContentRef.current;
         if (!root) return;
-        const slug = (s) => s.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').substring(0, 60);
-        const toc = [];
-        let currentChapter = null;
-        root.querySelectorAll('h3, h4').forEach(node => {
+        const slug = (s: string) => s.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').substring(0, 60);
+        const toc: ChapitreAide[] = [];
+        let currentChapter: ChapitreAide | null = null;
+        root.querySelectorAll<HTMLHeadingElement>('h3, h4').forEach(node => {
             // Remove any previously-injected "back to TOC" link before reading text
             const existing = node.querySelector('.back-to-toc');
             if (existing) existing.remove();
-            const text = node.textContent.trim();
+            const text = (node.textContent ?? '').trim();
             if (!node.id) node.id = slug(text);
             if (node.tagName === 'H3') {
                 currentChapter = { id: node.id, title: text, sections: [] };
@@ -74,8 +83,8 @@ const HelpContent = ({ initialAnchor = null }) => {
                                                 href={`#${s.id}`}
                                                 onClick={(e) => { e.preventDefault(); document.getElementById(s.id)?.scrollIntoView({ behavior: 'auto', block: 'start' }); }}
                                                 style={{ color: '#ccc', textDecoration: 'none' }}
-                                                onMouseEnter={(e) => e.target.style.color = '#fff'}
-                                                onMouseLeave={(e) => e.target.style.color = '#ccc'}
+                                                onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.color = '#ccc'; }}
                                             >
                                                 {s.title}
                                             </a>

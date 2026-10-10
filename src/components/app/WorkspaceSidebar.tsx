@@ -39,7 +39,7 @@ interface WorkspaceSidebarModel {
     setHoveredPhasageGroupId: (id: number | null) => void;
     togglePhasageBulleGroup: (id: number) => void;
     setPhasageBulleVisibleGroups: (ids: Set<number>) => void;
-    tip: (label: string) => string | undefined;
+    tip: (label: string) => string | undefined | undefined;
     simulationEnabled: boolean;
     actionData: ActionMicro[];
     simulationSelectedActions: number[];
@@ -64,7 +64,7 @@ interface WorkspaceSidebarModel {
     setHoveredArrowGroupSaturated: (saturated: boolean) => void;
     trafficDatasetNames: string[];
     trafficDatasetSourceNames: string[];
-    setHoveredVUtile: (value: unknown) => void;
+    setHoveredVUtile: (value: { groupId: number; vUtile: number; capacityValue: number | null } | null) => void;
     copyTrafficDataset: (source: string, target: string) => void;
     addCustomTrafficDataset: (name: string) => void;
     simulationResult: SimulationResult | null;

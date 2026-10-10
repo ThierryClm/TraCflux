@@ -22,7 +22,7 @@ import path from 'node:path';
  */
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
-const jsx = readFileSync(path.join(ici, 'TimelineDiagram.jsx'), 'utf8');
+const jsx = readFileSync(path.join(ici, 'TimelineDiagram.tsx'), 'utf8');
 const css = readFileSync(path.join(ici, 'TimelineDiagram.css'), 'utf8');
 
 // Familles dessinées en SVG : leur règle de surlignage nomme une balise, et

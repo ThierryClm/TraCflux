@@ -1,10 +1,10 @@
 import { cloneElement, Fragment } from 'react';
-import type { ComponentType, CSSProperties, RefObject } from 'react';
-import TimelineDiagramImplementation from '../TimelineDiagram';
-import TrafficTableImplementation from '../TrafficTable';
-import DiagnosticPanelImplementation from '../DiagnosticPanel';
-import DiagramLegendImplementation from '../DiagramLegend';
-import PhasageBulleImplementation from '../PhasageBulle';
+import type { CSSProperties, RefObject } from 'react';
+import TimelineDiagram from '../TimelineDiagram';
+import TrafficTable from '../TrafficTable';
+import DiagnosticPanel from '../DiagnosticPanel';
+import DiagramLegend from '../DiagramLegend';
+import PhasageBulle from '../PhasageBulle';
 import { APP_NAME, APP_VERSION } from '../../version';
 import { actionsSimulables, conflitsSimules } from '../../utils/simulationCalculator';
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
@@ -12,24 +12,14 @@ import { groupesInhibes } from '../../utils/trafficHelpers';
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
 import { ARROW_SIZE, BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
 import type { SimulationResult } from '../../utils/simulationCalculator';
 import type { ProjectProperties } from '../PropertiesPanel';
 
-type LooseComponent = ComponentType<Record<string, unknown>>;
 type PrintType = 'matrix' | 'form' | 'diagram' | 'dossier';
-type DossierSections = Record<string, boolean | undefined>;
+type DossierSections = Record<string, boolean>;
 
-interface IntersectionArrow {
-    id: string | number;
-    groupId?: string | number;
-    x: number;
-    y: number;
-    rotation?: number;
-    scale?: number;
-    length?: number;
-    turnLength?: number;
-}
+type IntersectionArrow = FlecheCarrefour;
 
 interface ImageDimensions {
     width: number;
@@ -74,14 +64,14 @@ interface PrintPreviewModalProps {
         imageNaturalDims: ImageDimensions | null;
     };
     print: {
-        printType: PrintType;
+        printType: PrintType | null;
         dossierSections: DossierSections;
         dossierPortrait: boolean;
         dossierPrintWidth: number;
         descriptionPrintStyle: CSSProperties | null;
         largeurConditionsImpression: number;
         microPrintStyle: CSSProperties | null;
-        printPreviewPageRef: RefObject<HTMLDivElement>;
+        printPreviewPageRef: RefObject<HTMLDivElement | null>;
         injectDossierFooterStyle: () => HTMLStyleElement | null;
     };
     actions: {
@@ -97,29 +87,6 @@ interface PrintedIntersectionArrow extends IntersectionArrow {
     printX: number;
     printY: number;
 }
-
-interface BubblePageFit {
-    bubbleScale: number;
-    ellipseScale: number;
-    ellipseScaleX: number;
-    arrowOffsetX: number;
-    arrowOffsetY: number;
-}
-
-const TimelineDiagram = TimelineDiagramImplementation as unknown as LooseComponent;
-const TrafficTable = TrafficTableImplementation as unknown as LooseComponent;
-const DiagnosticPanel = DiagnosticPanelImplementation as unknown as LooseComponent;
-const DiagramLegend = DiagramLegendImplementation as unknown as LooseComponent;
-const PhasageBulle = PhasageBulleImplementation as unknown as LooseComponent;
-const fitBubblesToPrintPage = fitBubblesToPage as unknown as (options: {
-    count: number;
-    ratio?: number;
-    ellipseScale?: number;
-    pageWidth: number;
-    pageHeight: number;
-    jeu?: number;
-    degagement?: number;
-}) => BubblePageFit;
 
 const PHASE_LABELS: Record<string, string> = {
     ESQ: 'Esquisse',
@@ -341,7 +308,6 @@ function PrintPreviewModal({
                                                 hoveredActionId={null}
                                                 setHoveredActionId={() => {}}
                                                 planName={pfTabs.find(pf => pf.id === activePFId)?.name || 'PF1'}
-                                                isPrintMode={true}
                                             tooltipsEnabled={tooltipPrefs.diagram}
                                             />
                                         </div>
@@ -982,7 +948,6 @@ function PrintPreviewModal({
                                                         hoveredActionId={null}
                                                         setHoveredActionId={() => {}}
                                                         planName={pf.name}
-                                                        isPrintMode={true}
                                                         /* La colonne des commentaires et le bloc des remarques
                                                            n'étaient pas désactivés : invisibles à l'impression,
                                                            ils occupaient tout de même 270 px de large. La mise en
@@ -1123,7 +1088,7 @@ function PrintPreviewModal({
                                             // croit dans le rendu d'impression.
                                             const PAGE_W = PAGE_MM_W;
                                             const PAGE_H = PAGE_MM_H;
-                                            const dessin = fitBubblesToPrintPage({
+                                            const dessin = fitBubblesToPage({
                                                 count: bulleCount,
                                                 ratio: pf.phasageBubbleRatio ?? 100,
                                                 ellipseScale: pf.phasageEllipseScale ?? 100,
@@ -1305,7 +1270,6 @@ function PrintPreviewModal({
                                                             simulationFilter={new Set(simulationSelectedActions)}
                                                             simulationResult={simu}
                                                             planName={simPfName}
-                                                            isPrintMode={true}
                                                             showComments={false}
                                                             showRemarks={false}
                                                             tooltipsEnabled={tooltipPrefs.diagram}

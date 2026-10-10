@@ -402,7 +402,7 @@ export const deepCopyMatrix = (m: Matrice): Matrice =>
  * @returns {number}
  */
 export const cycleDuPlanActif = (
-    state: Partial<Projet> | null | undefined,
+    state: Pick<Partial<Projet>, 'pfTabs' | 'activePFId' | 'cycleLength'> | null | undefined,
     defaut: number
 ): number => {
     const plans = Array.isArray(state?.pfTabs) ? state.pfTabs : [];
