@@ -128,11 +128,11 @@ export const calculateSimulatedDiagram = (
     // Projette un instant du plan d'origine dans le temps transformé vu par la
     // ligne du groupe groupId (null : les seules opérations communes à toutes
     // les lignes).
-    const projeter = (time: number, groupId: number | null) => {
+    const projeter = (time: number, groupId: number | null, contractionsSeules = false) => {
         let t = time;
         for (const op of journal) {
             if (op.kind === 'repos') {
-                if (t >= op.t) t += op.duree;
+                if (!contractionsSeules && t >= op.t) t += op.duree;
                 continue;
             }
             if (op.partiel && (groupId === null || groupId < (op.plage1 as number) || groupId > (op.plage2 as number))) continue;
@@ -666,6 +666,15 @@ export const calculateSimulatedDiagram = (
         // Record this contraction for subsequent escamotage de phase actions
         contractions.push({ deb, fin, source: 'Escamotage de phase' });
         journal.push({ kind: 'contraction', deb: debCommun, fin: finCommun, partiel: false });
+    });
+
+    // Position affichée de chaque point de repos : son instant (déjà placé
+    // après les repos précédents), ramené par les contractions appliquées
+    // ensuite, vues depuis la première ligne de sa plage.
+    restPoints.forEach(restPoint => {
+        const action = selectedActions.find(a => a.id === restPoint.actionId);
+        const plage1 = action ? toInt(action.plage1) : NaN;
+        restPoint.deb = projeter(restPoint.deb, !isNaN(plage1) && plage1 > 0 ? plage1 : null, true);
     });
 
     // Calculate conflicts on simulated diagram

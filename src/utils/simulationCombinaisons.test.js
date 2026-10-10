@@ -65,3 +65,27 @@ describe('Simulation — escamotage de phase après un adaptatif partiel', () =>
         expect(r.simulatedCycleLength).toBe(58);
     });
 });
+
+describe('Simulation — zone hachurée du point de repos après une contraction', () => {
+    const POINT_REPOS_GF1 = 4;      // 65 s, sans plage
+    const POINT_REPOS_GF9 = 10;     // 60 s, plage à partir de GF9
+    const ADAPTATIF_GF8 = 8;        // 7-11 s, plage GF8 à GF13
+
+    const repos = (resultat, id) => resultat.restPoints.find(rp => rp.actionId === id).deb;
+
+    it("seul, le repos démarre à sa seconde", () => {
+        expect(repos(simuler([POINT_REPOS_GF1]), POINT_REPOS_GF1)).toBe(65);
+    });
+
+    it("après l'escamotage de phase (12 s retirées avant lui), il démarre à 53 s", () => {
+        expect(repos(simuler([ESCAMOTAGE_PHASE, POINT_REPOS_GF1]), POINT_REPOS_GF1)).toBe(53);
+    });
+
+    it("un adaptatif partiel de sa plage le ramène de sa durée", () => {
+        expect(repos(simuler([ADAPTATIF_GF8, POINT_REPOS_GF9]), POINT_REPOS_GF9)).toBe(56);
+    });
+
+    it("un adaptatif partiel d'une autre plage ne le déplace pas", () => {
+        expect(repos(simuler([ADAPTATIF_GF2, POINT_REPOS_GF9]), POINT_REPOS_GF9)).toBe(60);
+    });
+});
