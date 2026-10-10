@@ -11,7 +11,7 @@ interface IncrustationEscamotageDePhaseProps {
 
 /** Cadres des escamotages de phase. */
 const IncrustationEscamotageDePhase = ({ ctx, escamotageActions, morceauxPleineLargeur }: IncrustationEscamotageDePhaseProps) => {
-    const { groups, pixelsPerSecond, cycleLength, RULER_HEIGHT, ROW_TOTAL_HEIGHT, hoveredActionId, setHoveredActionId, dragState, handleActionDragStart } = ctx;
+    const { groups, pixelsPerSecond, effectiveCycleLength, RULER_HEIGHT, ROW_TOTAL_HEIGHT, hoveredActionId, setHoveredActionId, dragState, handleActionDragStart } = ctx;
 
     return (
         <>
@@ -45,7 +45,7 @@ const IncrustationEscamotageDePhase = ({ ctx, escamotageActions, morceauxPleineL
                             const wrapsAround = deb > fin;
 
                             if (wrapsAround) {
-                                const firstPartWidth = (cycleLength - deb) * pixelsPerSecond;
+                                const firstPartWidth = (effectiveCycleLength - deb) * pixelsPerSecond;
                                 const secondPartWidth = Math.max(0, fin) * pixelsPerSecond;
                                 return (
                                     <React.Fragment key={`escamotage-${idx}-${mIdx}`}>

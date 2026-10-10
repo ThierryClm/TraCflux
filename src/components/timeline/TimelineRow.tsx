@@ -568,7 +568,7 @@ const TimelineRow = ({ ctx, group, TIME_WINDOW, activeConflicts, biCarrefourSepa
                             const lucarneOrangeClass = isPedestrian ? 'pedestrian-orange' : isCyclist ? 'cyclist-orange' : 'orange';
                             const wrapsAround = deb > fin;
                             if (wrapsAround) {
-                                const firstPartWidth = (cycleLength - deb) * pixelsPerSecond;
+                                const firstPartWidth = (effectiveCycleLength - deb) * pixelsPerSecond;
                                 const secondPartWidth = fin * pixelsPerSecond;
                                 return (
                                     <React.Fragment>
@@ -713,7 +713,7 @@ const TimelineRow = ({ ctx, group, TIME_WINDOW, activeConflicts, biCarrefourSepa
                         {action.action === 'Ouverture anticipée' && (() => {
                             const wrapsAround = deb > fin;
                             if (wrapsAround) {
-                                const firstPartWidth = (cycleLength - deb) * pixelsPerSecond;
+                                const firstPartWidth = (effectiveCycleLength - deb) * pixelsPerSecond;
                                 const secondPartWidth = fin * pixelsPerSecond;
                                 return (
                                     <React.Fragment>

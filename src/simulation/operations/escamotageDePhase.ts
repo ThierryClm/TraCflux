@@ -1,3 +1,4 @@
+import type { ActionMicro } from '../../types/projet';
 import type { EtatSimulation } from '../types';
 import { toInt } from '../outils';
 import { projeter, adjustForContractions } from '../journal';
@@ -14,10 +15,8 @@ export const appliquerEscamotagesDePhase = (etat: EtatSimulation): void => {
         a.fin !== ''
     );
 
-    escamotagePhaseActions.forEach(action => {
-        const rawDeb = toInt(action.deb) || 0;
-        const rawFin = toInt(action.fin) || 0;
-
+    // Retire la zone [rawDeb, rawFin] (instants du plan d'origine) du cycle.
+    const retirerZone = (action: ActionMicro, rawDeb: number, rawFin: number) => {
         // Adjust deb/fin based on previous contractions (so we work on the virtual timeline)
         const deb = adjustForContractions(contractions, rawDeb);
         const fin = adjustForContractions(contractions, rawFin);
@@ -126,5 +125,25 @@ export const appliquerEscamotagesDePhase = (etat: EtatSimulation): void => {
         // Record this contraction for subsequent escamotage de phase actions
         contractions.push({ deb, fin, source: 'Escamotage de phase' });
         journal.push({ kind: 'contraction', deb: debCommun, fin: finCommun, partiel: false });
+    };
+
+    escamotagePhaseActions.forEach(action => {
+        const rawDeb = toInt(action.deb) || 0;
+        const rawFin = toInt(action.fin) || 0;
+
+        if (rawFin >= rawDeb) {
+            retirerZone(action, rawDeb, rawFin);
+            return;
+        }
+
+        // Zone qui chevauche la fin du cycle (ex. 102-8 sur 120 s) : retirée
+        // en deux temps, la fin du cycle puis son début.
+        retirerZone(action, rawDeb, etat.cycleOrigine);
+        // Le cycle a raccourci : un vert qui commençait dans la partie retirée
+        // a été ramené à la nouvelle fin du cycle, il reprend donc à 0.
+        simulatedGroups.forEach(g => {
+            if (g.simulatedOffset >= etat.simulatedCycleLength) g.simulatedOffset -= etat.simulatedCycleLength;
+        });
+        retirerZone(action, 0, rawFin);
     });
 };

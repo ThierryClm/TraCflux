@@ -39,6 +39,7 @@ export const calculateSimulatedDiagram = (
             greenCuts: [] // Array of {deb, fin} for periods where green is hidden (used by Escamotage only)
         })),
         simulatedCycleLength: cycleLength,
+        cycleOrigine: cycleLength,
         removedPeriods: [],
         timeShifts: [],
         contractions: [],
