@@ -94,4 +94,33 @@ describe('createTimelineSimulation', () => {
         expect(model.getShiftedActionPosition(25, 30, null, 'Adaptatif vertical', null, 9))
             .toEqual({ deb: 25, fin: 30, hidden: false });
     });
+
+    // Plan ACTUEL du projet exemple : GF4 vert de 0 à 28 s, Fermeture
+    // anticipée 16-28 s, Escamotage de phase 20-32 s coché (cycle 70 → 58 s).
+    describe("Fermeture anticipée coupée par un escamotage de phase", () => {
+        const gf4 = [{ id: 4, offset: 0, durations: { green: 28 } }];
+        const model = createTimelineSimulation({
+            groups: gf4,
+            cycleLength: 70,
+            simulationResult: {
+                simulatedCycleLength: 58,
+                simulatedGroups: [{ id: 4, simulatedOffset: 0, simulatedGreen: 20 }],
+                timeShifts: [{ from: 32, amount: 12, isPartial: false }]
+            }
+        });
+
+        it('garde son début et finit là où commence la contraction', () => {
+            expect(model.getShiftedActionPosition(16, 28, 4, 'Fermeture anticipée'))
+                .toEqual({ deb: 16, fin: 20, hidden: false });
+        });
+
+        it('fait de même quand elle finit avant la fin de vert', () => {
+            expect(model.getShiftedActionPosition(16, 26, 4, 'Fermeture anticipée'))
+                .toEqual({ deb: 16, fin: 20, hidden: false });
+        });
+
+        it('reste masquée si elle est entièrement dans la contraction', () => {
+            expect(model.getShiftedActionPosition(22, 28, 4, 'Fermeture anticipée').hidden).toBe(true);
+        });
+    });
 });
