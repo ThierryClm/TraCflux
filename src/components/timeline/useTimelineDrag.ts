@@ -3,7 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { ActionMicro, CaseMatrice, Groupe } from '../../types/projet';
 import type { TrafficConflict } from '../../utils/conflictUtils';
 
-type DragHandleType = 'start' | 'end';
+export type DragHandleType = 'start' | 'end';
 export type ActionTimeField = 'deb' | 'fin';
 type ConflictCell = CaseMatrice | null | undefined;
 
