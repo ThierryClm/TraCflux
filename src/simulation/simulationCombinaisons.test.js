@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { calculateSimulatedDiagram } from './simulationCalculator';
+import { calculateSimulatedDiagram } from '.';
 
 /**
  * Combinaisons d'actions de micro-régulation, plan ACTUEL du projet exemple.

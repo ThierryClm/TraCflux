@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import DiagnosticPanel from './DiagnosticPanel';
 import { groupesInhibes } from '../utils/trafficHelpers';
-import { actionsSimulables, conflitsSimules } from '../utils/simulationCalculator';
+import { actionsSimulables, conflitsSimules } from '../simulation';
 
 /**
  * Deux tableaux voisins, une seule lecture des mêmes règles.

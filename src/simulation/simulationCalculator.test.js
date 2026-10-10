@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateSimulatedDiagram } from './simulationCalculator';
+import { calculateSimulatedDiagram } from '.';
 
 // Helper: create a minimal group
 const makeGroup = (id, offset, green, orange = 3, red = 10, type = 'VL') => ({

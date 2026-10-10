@@ -7,7 +7,7 @@ import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
 import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
-import type { SimulationResult } from '../utils/simulationCalculator';
+import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
 import './IntersectionImage.css';
 

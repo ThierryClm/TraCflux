@@ -28,7 +28,7 @@ import LoginModal from './components/LoginModal';
 import UserManagerModal from './components/UserManagerModal';
 import ExternalLinksModal from './components/ExternalLinksModal';
 import PropertiesPanel from './components/PropertiesPanel';
-import { calculateSimulatedDiagram } from './utils/simulationCalculator';
+import { calculateSimulatedDiagram } from './simulation';
 import usePopupWindow from './hooks/usePopupWindow';
 import useFloatingLegend from './hooks/useFloatingLegend';
 import useFloatingMatrix from './hooks/useFloatingMatrix';

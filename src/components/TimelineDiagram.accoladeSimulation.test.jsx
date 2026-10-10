@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import TimelineDiagram from './TimelineDiagram';
-import { calculateSimulatedDiagram } from '../utils/simulationCalculator';
+import { calculateSimulatedDiagram } from '../simulation';
 
 /**
  * Accolade d'une fermeture anticipée en simulation, quand un adaptatif

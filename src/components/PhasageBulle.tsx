@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useId } from 'react';
 import { isPPLit } from '../utils/groupColorAtTime';
 import { getEllipseConfig, computeBubbleBox, ARROW_OUTER_OFFSET, planFrameForBubble } from '../utils/phasageLayout';
 import type { ActionMicro, FlecheCarrefour, Groupe } from '../types/projet';
-import type { SimulationResult } from '../utils/simulationCalculator';
+import type { SimulationResult } from '../simulation';
 import './PhasageBulle.css';
 
 /** Unité des longueurs émises : pixels à l'écran, millimètres sur la feuille. */

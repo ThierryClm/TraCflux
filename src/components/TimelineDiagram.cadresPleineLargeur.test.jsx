@@ -3,7 +3,7 @@ import { render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import TimelineDiagram from './TimelineDiagram';
-import { calculateSimulatedDiagram } from '../utils/simulationCalculator';
+import { calculateSimulatedDiagram } from '../simulation';
 
 /**
  * Cadres pleine largeur (escamotage de phase, adaptatif sans plage) en
