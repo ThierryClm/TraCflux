@@ -114,6 +114,34 @@ export const calculateSimulatedDiagram = (
         return adjusted;
     };
 
+    // Journal des opérations qui transforment le temps, dans l'ordre où elles
+    // sont appliquées. Chaque action est lue dans le temps déjà transformé par
+    // les précédentes, ligne par ligne : un point de repos décale les instants
+    // suivants de sa durée pour tous les groupes ; une contraction (adaptatif,
+    // escamotage de phase) les ramène en arrière, mais un adaptatif partiel ne
+    // le fait que pour les groupes de sa plage.
+    type OperationTemps =
+        | { kind: 'repos'; t: number; duree: number }
+        | { kind: 'contraction'; deb: number; fin: number; plage1?: number; plage2?: number; partiel: boolean };
+    const journal: OperationTemps[] = [];
+
+    // Projette un instant du plan d'origine dans le temps transformé vu par la
+    // ligne du groupe groupId (null : les seules opérations communes à toutes
+    // les lignes).
+    const projeter = (time: number, groupId: number | null) => {
+        let t = time;
+        for (const op of journal) {
+            if (op.kind === 'repos') {
+                if (t >= op.t) t += op.duree;
+                continue;
+            }
+            if (op.partiel && (groupId === null || groupId < (op.plage1 as number) || groupId > (op.plage2 as number))) continue;
+            if (t >= op.fin) t -= op.fin - op.deb;
+            else if (t > op.deb) t = op.deb;
+        }
+        return t;
+    };
+
     // Get selected actions
     const selectedActions = actionData.filter(a => selectedActionIds.includes(a.id));
 
@@ -231,6 +259,7 @@ export const calculateSimulatedDiagram = (
         });
 
         simulatedCycleLength += REST_DURATION;
+        journal.push({ kind: 'repos', t, duree: REST_DURATION });
         restPoints.push({ deb: t, originalDeb: rawDeb, duration: REST_DURATION, actionId: id });
     });
 
@@ -400,6 +429,13 @@ export const calculateSimulatedDiagram = (
         const plage1 = hasPlageRange ? (toInt(action.plage1) || 1) : 1;
         const plage2 = hasPlageRange ? (toInt(action.plage2) || totalGroups) : totalGroups;
 
+        // Zone de l'adaptatif vue par chaque ligne (temps transformé par les
+        // actions précédentes : points de repos, adaptatifs partiels).
+        const zoneDuGroupe = new Map<number, { deb: number; fin: number }>();
+        simulatedGroups.forEach(g => {
+            zoneDuGroupe.set(g.id, { deb: projeter(rawDeb, g.id), fin: projeter(rawFin, g.id) });
+        });
+
         // Record removed period and time shift for action overlays (use adjusted values)
         removedPeriods.push({ deb, fin, source: 'Adaptatif vertical', actionId: action.id });
         timeShifts.push({
@@ -421,6 +457,8 @@ export const calculateSimulatedDiagram = (
             const isInPlageRange = g.id >= plage1 && g.id <= plage2;
 
             if (isInPlageRange) {
+                const { deb, fin } = zoneDuGroupe.get(g.id)!;
+                const shiftAmount = fin > deb ? fin - deb : 0;
                 const offset = g.simulatedOffset;
                 const greenEnd = offset + g.simulatedGreen;
 
@@ -482,6 +520,8 @@ export const calculateSimulatedDiagram = (
             // Shift ALL groups that start at or after 'fin' by -shiftAmount
             simulatedGroups.forEach(g => {
                 if (g.isEscamoted) return;
+                const { deb, fin } = zoneDuGroupe.get(g.id)!;
+                const shiftAmount = fin > deb ? fin - deb : 0;
 
                 if (g.simulatedOffset >= fin) {
                     // Group starts after the adaptatif zone - shift left by full amount
@@ -496,6 +536,14 @@ export const calculateSimulatedDiagram = (
             // Record this contraction for subsequent actions
             contractions.push({ deb, fin, source: 'Adaptatif vertical' });
         }
+        journal.push({
+            kind: 'contraction',
+            deb: projeter(rawDeb, hasPlageRange ? plage1 : null),
+            fin: projeter(rawFin, hasPlageRange ? plage1 : null),
+            plage1,
+            plage2,
+            partiel: hasPlageRange
+        });
     });
 
     // 5. Escamotage de phase - remove the phase and reduce cycle (traité EN DERNIER)
@@ -517,12 +565,24 @@ export const calculateSimulatedDiagram = (
 
         if (duration <= 0) return;
 
+        // Zone de l'escamotage vue par chaque ligne (temps transformé par les
+        // actions précédentes : points de repos, adaptatifs partiels).
+        const zoneDuGroupe = new Map<number, { deb: number; fin: number }>();
+        simulatedGroups.forEach(g => {
+            zoneDuGroupe.set(g.id, { deb: projeter(rawDeb, g.id), fin: projeter(rawFin, g.id) });
+        });
+        // Largeur retirée au cycle : celle vue en commun par toutes les lignes.
+        const debCommun = projeter(rawDeb, null);
+        const finCommun = projeter(rawFin, null);
+        const largeurRetiree = finCommun > debCommun ? finCommun - debCommun : 0;
+
         // If GF is specified, only mark as escamoted if the group's green actually overlaps [deb, fin]
         if (action.gf) {
             const gfId = toInt(action.gf);
             const groupIndex = simulatedGroups.findIndex(g => g.id === gfId);
             if (groupIndex !== -1) {
                 const g = simulatedGroups[groupIndex];
+                const { deb, fin } = zoneDuGroupe.get(g.id)!;
                 const greenEnd = g.simulatedOffset + g.simulatedGreen;
                 // Check if the group's green overlaps with [deb, fin]
                 const overlaps = fin > deb && (
@@ -547,6 +607,7 @@ export const calculateSimulatedDiagram = (
         simulatedGroups.forEach(g => {
             if (g.isEscamoted) return;
 
+            const { deb, fin } = zoneDuGroupe.get(g.id)!;
             const offset = g.simulatedOffset;
             const greenEnd = offset + g.simulatedGreen;
 
@@ -587,11 +648,13 @@ export const calculateSimulatedDiagram = (
         });
 
         // Reduce cycle length
-        simulatedCycleLength -= duration;
+        simulatedCycleLength -= largeurRetiree;
 
         // Shift all groups that start at or after 'fin' by -duration
         // (after the removed period, everything shifts left)
         simulatedGroups.forEach(g => {
+            const { deb, fin } = zoneDuGroupe.get(g.id)!;
+            const duration = fin > deb ? fin - deb : 0;
             if (!g.isEscamoted && g.simulatedOffset >= fin) {
                 g.simulatedOffset = Math.max(0, g.simulatedOffset - duration);
             } else if (!g.isEscamoted && g.simulatedOffset >= deb) {
@@ -602,6 +665,7 @@ export const calculateSimulatedDiagram = (
 
         // Record this contraction for subsequent escamotage de phase actions
         contractions.push({ deb, fin, source: 'Escamotage de phase' });
+        journal.push({ kind: 'contraction', deb: debCommun, fin: finCommun, partiel: false });
     });
 
     // Calculate conflicts on simulated diagram
