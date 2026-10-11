@@ -2691,7 +2691,6 @@ function App() {
                 selectedProject={selectedProject}
                 onSelect={setSelectedProject}
                 onOpen={handleOpenProject}
-                tip={tip}
             />
 
             <DiagramEditDialogs
