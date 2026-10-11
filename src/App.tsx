@@ -1278,6 +1278,13 @@ function App() {
                     projectName: data.projectName || data.intersectionName || 'Carrefour exemple',
                     ...data
                 });
+                // L'exemple tout juste ouvert n'a aucune modification : même
+                // remise à zéro que la réouverture depuis le cache (cf.
+                // openSavedProject). Sans elle, l'installation de ses données
+                // comptait comme une modification et l'astérisque apparaissait.
+                setProjectModified(true);
+                projectModifiedSkip.current = false;
+                setHasUnsavedChanges(false);
                 setFloatingCrop(data.floatingCrop !== undefined ? data.floatingCrop : { ...DEFAULT_CROP });
                 setFloatingZoom(data.floatingZoom !== undefined ? data.floatingZoom : DEFAULT_ZOOM);
                 markLegacyCrop(data.floatingCrop !== undefined && data.floatingCropBasis !== CROP_BASIS);
