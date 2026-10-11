@@ -1,10 +1,13 @@
 import type { CadrageImage, OptionsMiseEnPage, Projet } from '../types/projet';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from './floatingImageBox';
+import { booleenDuMode, lireModeAffichage, modeDuBooleen, texteRenseigne, type ModeAffichage } from './modeAffichage';
 
 /** Réglages de mise en page persistants d'un projet. */
 type DirectoryKey = 'open' | 'save' | 'import' | 'image' | 'greenWave';
 
-interface LayoutValues extends OptionsMiseEnPage {
+interface LayoutValues extends Omit<OptionsMiseEnPage, 'showComments' | 'showRemarks'> {
+    commentsMode: ModeAffichage;
+    remarksMode: ModeAffichage;
     diagramHeight?: number | null;
     floatingCrop?: CadrageImage;
     floatingZoom?: number;
@@ -25,8 +28,8 @@ interface LayoutSetters {
     setFloatingZoom?: (zoom: number) => void;
     markLegacyCrop?: (legacy: boolean) => void;
     setSidebarVisible?: SetterBooleen;
-    setShowComments?: SetterBooleen;
-    setShowRemarks?: SetterBooleen;
+    setCommentsMode?: (mode: ModeAffichage) => void;
+    setRemarksMode?: (mode: ModeAffichage) => void;
     setShowActionDescription?: SetterBooleen;
     setShowFloatingForm?: SetterBooleen;
     setShowFloatingMatrix?: SetterBooleen;
@@ -63,8 +66,11 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
     floatingZoom: v.floatingZoom,
     layoutOptions: {
         showParameters: v.sidebarVisible,
-        showComments: v.showComments,
-        showRemarks: v.showRemarks,
+        // Le mode, et le booléen pour les versions qui ne le connaissent pas.
+        commentsMode: v.commentsMode,
+        remarksMode: v.remarksMode,
+        showComments: booleenDuMode(v.commentsMode),
+        showRemarks: booleenDuMode(v.remarksMode),
         showActionDescription: v.showActionDescription,
         showFloatingForm: v.showFloatingForm,
         showFloatingMatrix: v.showFloatingMatrix,
@@ -93,15 +99,15 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
  */
 export const affichageCommentairesRemarques = (
     data: DonneesMiseEnPage
-): { showComments: boolean; showRemarks: boolean } => {
+): { commentsMode: ModeAffichage; remarksMode: ModeAffichage } => {
     const lo = data.layoutOptions || {};
     const plans = data.pfTabs || [];
-    const aDesCommentaires = !!(data.groups?.some(g => g.comment && g.comment.trim() !== '')
-        || plans.some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== '')));
-    const aDesRemarques = plans.some(pf => pf.remarques && pf.remarques.trim() !== '');
+    const aDesCommentaires = !!(data.groups?.some(g => texteRenseigne(g.comment))
+        || plans.some(pf => pf.diagram?.some(d => texteRenseigne(d.comment))));
+    const aDesRemarques = plans.some(pf => texteRenseigne(pf.remarques));
     return {
-        showComments: typeof lo.showComments === 'boolean' ? lo.showComments : aDesCommentaires,
-        showRemarks: typeof lo.showRemarks === 'boolean' ? lo.showRemarks : aDesRemarques
+        commentsMode: lireModeAffichage(lo, 'comments') ?? modeDuBooleen(aDesCommentaires),
+        remarksMode: lireModeAffichage(lo, 'remarks') ?? modeDuBooleen(aDesRemarques)
     };
 };
 
@@ -124,8 +130,6 @@ export const appliquerMiseEnPage = (
 
     const poseurs: Partial<Record<keyof OptionsMiseEnPage, SetterBooleen>> = {
         showParameters: s.setSidebarVisible,
-        showComments: s.setShowComments,
-        showRemarks: s.setShowRemarks,
         showActionDescription: s.setShowActionDescription,
         showFloatingForm: s.setShowFloatingForm,
         showFloatingMatrix: s.setShowFloatingMatrix,
@@ -142,14 +146,18 @@ export const appliquerMiseEnPage = (
     if (data.layoutOptions && typeof data.layoutOptions === 'object') {
         const lo = data.layoutOptions;
         s.setSidebarVisible?.(typeof lo.showParameters === 'boolean' ? lo.showParameters : true);
+        const modeCommentaires = lireModeAffichage(lo, 'comments');
+        const modeRemarques = lireModeAffichage(lo, 'remarks');
+        if (modeCommentaires) s.setCommentsMode?.(modeCommentaires);
+        if (modeRemarques) s.setRemarksMode?.(modeRemarques);
         DRAPEAUX_MISE_EN_PAGE.forEach(nom => {
             if (nom === 'showParameters') return;
             if (typeof lo[nom] === 'boolean') poseurs[nom]?.(lo[nom]);
         });
     } else {
         const affichage = affichageCommentairesRemarques(data);
-        s.setShowComments?.(affichage.showComments);
-        s.setShowRemarks?.(affichage.showRemarks);
+        s.setCommentsMode?.(affichage.commentsMode);
+        s.setRemarksMode?.(affichage.remarksMode);
         s.setSidebarVisible?.(true);
         DRAPEAUX_MISE_EN_PAGE
             .filter(nom => nom.startsWith('showFloating'))

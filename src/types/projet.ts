@@ -5,6 +5,8 @@
  * couvre à la fois les fichiers JSON et le cache du navigateur.
  */
 
+import type { ModeAffichage } from '../utils/modeAffichage';
+
 /** Durées d'un groupe de feu, en secondes. Leur somme vaut le cycle. */
 export interface Durees {
     green: number;
@@ -148,6 +150,10 @@ export interface OptionsMiseEnPage {
     showParameters?: boolean;
     showComments?: boolean;
     showRemarks?: boolean;
+    /** Afficher / masquer / automatique ; prime sur showComments. */
+    commentsMode?: ModeAffichage;
+    /** Afficher / masquer / automatique ; prime sur showRemarks. */
+    remarksMode?: ModeAffichage;
     showActionDescription?: boolean;
     showFloatingForm?: boolean;
     showFloatingMatrix?: boolean;
