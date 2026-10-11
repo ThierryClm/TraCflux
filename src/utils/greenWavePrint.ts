@@ -16,6 +16,7 @@
 
 import { buildExportFilename } from './exportFilename';
 import { toast } from './toast';
+import { documentImpression, echapperHtml, ouvrirOngletImpression } from './ongletImpression';
 import type { BandwidthData } from './greenWaveBandwidth';
 
 const PRINT_ID_SUFFIX = '-print';
@@ -102,23 +103,6 @@ export interface GreenWavePrintOptions {
     pdf?: boolean;
 }
 
-/** Échappe un texte inséré dans le document d'impression. */
-const echapperHtml = (texte: string): string =>
-    texte.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
-
-/**
- * Règles CSS de la page : le diagramme garde ses polices et ses classes dans
- * l'onglet d'impression. Une feuille illisible (autre origine) est importée.
- */
-const cssDuDocument = (doc: Document): string =>
-    Array.from(doc.styleSheets).map((feuille) => {
-        try {
-            return Array.from(feuille.cssRules).map(regle => regle.cssText).join('\n');
-        } catch {
-            return feuille.href ? `@import url("${feuille.href}");` : '';
-        }
-    }).join('\n');
-
 export interface GreenWavePrintDocumentOptions extends GreenWavePrintOptions {
     /** Document d'où viennent le diagramme, les styles et l'adresse de base. */
     source?: Document;
@@ -158,50 +142,38 @@ export const buildGreenWavePrintDocument = ({
 
     const nom = greenWaveName ? echapperHtml(greenWaveName) : '';
     // Le titre du document sert de nom de fichier proposé pour le PDF.
-    const titre = echapperHtml(pdf
+    const titre = pdf
         ? buildExportFilename('Onde verte', greenWaveName)
-        : `Onde verte${greenWaveName ? ' - ' + greenWaveName : ''}`);
-    // Mêmes classes que la page d'origine : thème et règles d'impression
-    // de GreenWaveViewer.css s'appliquent comme avant.
-    const classes = echapperHtml(`${source.body.className} print-greenwave`.trim());
+        : `Onde verte${greenWaveName ? ' - ' + greenWaveName : ''}`;
 
-    return '<!DOCTYPE html>\n'
-        + `<html lang="fr"><head><meta charset="utf-8"><base href="${echapperHtml(source.baseURI)}"><title>${titre}</title>`
-        + `<style>${cssDuDocument(source).replace(/<\/style/gi, '<\\/style')}</style>`
-        + '<style>@page { size: A4 landscape; margin: 5mm 10mm; }'
-        + ' html, body { background: #fff !important; margin: 0; }'
-        + ' #gw-print-area { background: #fff; padding: 8px; }</style>'
-        + `</head><body class="${classes}"><div id="gw-print-area">`
+    return documentImpression(
+        '<div id="gw-print-area">'
         + `<h1 style="font-size:14pt;margin:0 0 4px 0;font-family:Arial,sans-serif;color:#000;">Onde Verte${nom ? ' - ' + nom : ''}</h1>`
         + `<div style="display:flex;flex-wrap:nowrap;gap:12px;font-size:7.5pt;margin-bottom:6px;font-family:Arial,sans-serif;white-space:nowrap;">${legendItems.join('')}</div>`
         + new XMLSerializer().serializeToString(clone)
-        + '</div><script>'
-        + "window.addEventListener('afterprint', function () { window.close(); });"
-        + "window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });"
-        + '</script></body></html>';
+        + '</div>',
+        {
+            titre,
+            // Mêmes classes que la page d'origine : thème et règles
+            // d'impression de GreenWaveViewer.css s'appliquent comme avant.
+            classesBody: `${source.body.className} print-greenwave`.trim(),
+            styleSupplementaire: '@page { size: A4 landscape; margin: 5mm 10mm; }'
+                + ' html, body { background: #fff !important; margin: 0; }'
+                + ' #gw-print-area { background: #fff; padding: 8px; }',
+            source
+        }
+    );
 };
 
 /**
- * Imprime l'onde verte dans un onglet indépendant. « Imprimer… » et
+ * Imprime l'onde verte dans un onglet indépendant (cf. utils/ongletImpression) :
+ * TraCflux reste utilisable pendant l'impression. « Imprimer… » et
  * « Exporter PDF… » partagent ce rendu.
- *
- * window.print() bloque la page qui l'appelle tant que la boîte d'impression
- * est ouverte — et, avec elle, les fenêtres qu'elle a détachées. L'onglet
- * d'impression est donc ouvert sans lien avec TraCflux (noopener), sur une
- * copie figée du diagramme : le navigateur le place dans un processus à
- * part, et TraCflux reste utilisable pendant l'impression.
  */
 export const printGreenWave = (options: GreenWavePrintOptions): void => {
     const html = buildGreenWavePrintDocument(options);
     if (!html) return;
-
-    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-    // Ouvert dans le geste de l'utilisateur, sans délai : sinon le bloqueur
-    // de fenêtres surgissantes l'arrêterait.
-    window.open(url, '_blank', 'noopener');
-    // Laisse à l'onglet le temps de charger le document avant de libérer l'adresse.
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-
+    ouvrirOngletImpression(html);
     if (options.pdf) {
         toast.info('Dans la boîte d\'impression, sélectionnez « Enregistrer au format PDF »');
     }
