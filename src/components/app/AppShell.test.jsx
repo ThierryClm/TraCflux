@@ -71,7 +71,7 @@ const buildPreviewProps = (overrides = {}) => ({
         largeurConditionsImpression: 100,
         microPrintStyle: {},
         printPreviewPageRef: { current: null },
-        injectDossierFooterStyle: vi.fn(),
+        imprimerApercu: vi.fn(),
     },
     actions: { actionData: [], microCustomFields: [] },
     preferences: { tooltipPrefs: {} },
@@ -196,13 +196,15 @@ describe('PrintPreviewModal', () => {
         expect(props.onClose).toHaveBeenCalledOnce();
     });
 
-    it('encadre window.print avec la classe correspondant au type', () => {
+    it('imprime l’aperçu dans un onglet indépendant, sans appeler window.print', () => {
         const print = vi.spyOn(window, 'print').mockImplementation(() => {});
-        render(<PrintPreviewModal {...buildPreviewProps()} />);
+        const props = buildPreviewProps();
+        render(<PrintPreviewModal {...props} />);
 
         fireEvent.click(screen.getByRole('button', { name: 'Imprimer' }));
 
-        expect(print).toHaveBeenCalledOnce();
+        expect(props.print.imprimerApercu).toHaveBeenCalledWith('matrix');
+        expect(print).not.toHaveBeenCalled();
         expect(document.body).not.toHaveClass('print-matrix');
         print.mockRestore();
     });

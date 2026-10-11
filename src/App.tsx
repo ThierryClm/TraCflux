@@ -70,6 +70,7 @@ import './components/IntergreenMatrix.css';
 import './App.css';
 import { lireMiseEnPage, appliquerMiseEnPage, affichageCommentairesRemarques } from './utils/miseEnPageProjet';
 import { entier } from './utils/entier';
+import { copieAvecAncetres, documentImpression, ouvrirOngletImpression } from './utils/ongletImpression';
 import type { ChampsProjet, EtatProjet } from './hooks/useTrafficLight';
 import type { Projet } from './types/projet';
 import type { GreenWaveProjectSource, SavedGreenWave } from './types/greenWave';
@@ -1341,20 +1342,38 @@ function App() {
         return style;
     };
 
+    // Imprime l'aperçu affiché dans un onglet indépendant (cf.
+    // utils/ongletImpression) : une copie figée, avec les classes print-* et
+    // le pied de page du dossier, que les règles @media print attendent.
+    // window.print() appelé ici figeait TraCflux et ses fenêtres détachées
+    // tant que la boîte d'impression restait ouverte.
+    const imprimerApercu = (type: string) => {
+        const apercu = document.querySelector('.print-preview-overlay');
+        if (!apercu) return;
+        const footerStyle = type === 'dossier' ? injectDossierFooterStyle() : null;
+        const classesBody = [
+            document.body.className,
+            `print-${type}`,
+            type === 'dossier' && dossierPortrait ? 'print-portrait' : ''
+        ].filter(Boolean).join(' ');
+        const html = documentImpression(copieAvecAncetres(apercu), {
+            titre: document.title.replace(/^\* /, ''),
+            classesBody
+        });
+        footerStyle?.remove();
+        ouvrirOngletImpression(html);
+    };
+
     // Handler confirmation impression dossier (Imprimer)
-    // Ouvre la modale d'aperçu (hors écran) puis déclenche window.print()
+    // Ouvre la modale d'aperçu (hors écran), le temps qu'elle se dessine, puis
+    // l'imprime dans un onglet indépendant. 500 ms restent dans le délai où le
+    // navigateur rattache encore l'ouverture de l'onglet au clic.
     const handleDossierConfirm = () => {
         setDossierDialog(false);
         setPrintType('dossier');
         setPrintPreviewModal(true);
         setTimeout(() => {
-            document.body.classList.add('print-dossier');
-            if (dossierPortrait) document.body.classList.add('print-portrait');
-            const footerStyle = injectDossierFooterStyle();
-            window.print();
-            footerStyle.remove();
-            document.body.classList.remove('print-dossier');
-            document.body.classList.remove('print-portrait');
+            imprimerApercu('dossier');
             setPrintPreviewModal(false);
             setPrintType(null);
         }, 500);
@@ -1369,13 +1388,7 @@ function App() {
         setPrintPreviewModal(true);
         toast.info('Dans la boîte d\'impression, sélectionnez « Enregistrer au format PDF »');
         setTimeout(() => {
-            document.body.classList.add('print-dossier');
-            if (dossierPortrait) document.body.classList.add('print-portrait');
-            const footerStyle = injectDossierFooterStyle();
-            window.print();
-            footerStyle.remove();
-            document.body.classList.remove('print-dossier');
-            document.body.classList.remove('print-portrait');
+            imprimerApercu('dossier');
             setPrintPreviewModal(false);
             setPrintType(null);
         }, 500);
@@ -2860,7 +2873,7 @@ function App() {
                     largeurConditionsImpression,
                     microPrintStyle,
                     printPreviewPageRef,
-                    injectDossierFooterStyle,
+                    imprimerApercu,
                 }}
                 actions={{ actionData, microCustomFields }}
                 preferences={{ tooltipPrefs }}
