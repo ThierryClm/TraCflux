@@ -6,8 +6,8 @@ const etatCourant = {
     floatingCrop: { top: 4, bottom: 8, left: 2, right: 6 },
     floatingZoom: 1.4,
     sidebarVisible: false,
-    showComments: true,
-    showRemarks: false,
+    commentsMode: 'auto',
+    remarksMode: 'masquer',
     showActionDescription: true,
     showFloatingForm: true,
     showFloatingMatrix: false,
@@ -35,8 +35,8 @@ const poseurs = () => {
             setFloatingZoom: espion('zoom'),
             markLegacyCrop: espion('cropAncien'),
             setSidebarVisible: espion('panneau'),
-            setShowComments: espion('commentaires'),
-            setShowRemarks: espion('remarques'),
+            setCommentsMode: espion('commentaires'),
+            setRemarksMode: espion('remarques'),
             setShowActionDescription: espion('description'),
             setShowFloatingForm: espion('formulaire'),
             setShowFloatingMatrix: espion('matrice'),
@@ -63,8 +63,8 @@ describe('miseEnPageProjet — aller-retour', () => {
         expect(vus.crop).toEqual({ top: 4, bottom: 8, left: 2, right: 6 });
         expect(vus.zoom).toBe(1.4);
         expect(vus.panneau).toBe(false);
-        expect(vus.commentaires).toBe(true);
-        expect(vus.remarques).toBe(false);
+        expect(vus.commentaires).toBe('auto');
+        expect(vus.remarques).toBe('masquer');
         expect(vus.description).toBe(true);
         expect(vus.formulaire).toBe(true);
         expect(vus.matrice).toBe(false);
@@ -98,7 +98,15 @@ describe('miseEnPageProjet — projets antérieurs', () => {
     it('sans layoutOptions, devine les commentaires d\'après leur présence', () => {
         const { vus, s } = poseurs();
         appliquerMiseEnPage({ groups: [{ comment: 'à vérifier' }], pfTabs: [] }, s);
-        expect(vus.commentaires).toBe(true);
+        expect(vus.commentaires).toBe('afficher');
+        expect(vus.remarques).toBe('masquer');
+    });
+
+    it('un ancien booléen enregistré vaut Afficher ou Masquer', () => {
+        const { vus, s } = poseurs();
+        appliquerMiseEnPage({ layoutOptions: { showComments: false, showRemarks: true } }, s);
+        expect(vus.commentaires).toBe('masquer');
+        expect(vus.remarques).toBe('afficher');
     });
 
     it('sans hauteur de diagramme, efface celle du projet précédent', () => {
@@ -118,6 +126,16 @@ describe('miseEnPageProjet — projets antérieurs', () => {
         const { vus, s } = poseurs();
         appliquerMiseEnPage({ layoutOptions: { showComments: false } }, s);
         expect(vus.panneau).toBe(true);
+    });
+});
+
+describe('miseEnPageProjet — mode des commentaires et remarques', () => {
+    it("enregistre le mode et le booléen lu par les versions antérieures", () => {
+        const { layoutOptions } = lireMiseEnPage(etatCourant);
+        expect(layoutOptions).toMatchObject({
+            commentsMode: 'auto', showComments: true,
+            remarksMode: 'masquer', showRemarks: false
+        });
     });
 });
 
@@ -155,33 +173,47 @@ describe("affichageCommentairesRemarques — ouverture d'un projet", () => {
         expect(affichageCommentairesRemarques({
             ...avecContenu,
             layoutOptions: { showComments: false, showRemarks: false }
-        })).toEqual({ showComments: false, showRemarks: false });
+        })).toEqual({ commentsMode: 'masquer', remarksMode: 'masquer' });
     });
 
     it('reprend le réglage enregistré, même sans contenu', () => {
         expect(affichageCommentairesRemarques({
             groups: [], pfTabs: [],
             layoutOptions: { showComments: true, showRemarks: true }
-        })).toEqual({ showComments: true, showRemarks: true });
+        })).toEqual({ commentsMode: 'afficher', remarksMode: 'afficher' });
     });
 
     it('sans réglage enregistré, affiche ce qui a du contenu', () => {
         expect(affichageCommentairesRemarques(avecContenu))
-            .toEqual({ showComments: true, showRemarks: true });
+            .toEqual({ commentsMode: 'afficher', remarksMode: 'afficher' });
         expect(affichageCommentairesRemarques({ groups: [], pfTabs: [{ remarques: '  ' }] }))
-            .toEqual({ showComments: false, showRemarks: false });
+            .toEqual({ commentsMode: 'masquer', remarksMode: 'masquer' });
     });
 
     it("trouve les commentaires portés par un plan de feux", () => {
         expect(affichageCommentairesRemarques({
             groups: [], pfTabs: [{ diagram: [{ comment: 'G2' }] }]
-        }).showComments).toBe(true);
+        }).commentsMode).toBe('afficher');
     });
 
     it('traite chaque case séparément', () => {
         expect(affichageCommentairesRemarques({
             ...avecContenu,
             layoutOptions: { showComments: false }
-        })).toEqual({ showComments: false, showRemarks: true });
+        })).toEqual({ commentsMode: 'masquer', remarksMode: 'afficher' });
+    });
+
+    it('le mode enregistré prime sur l\'ancien booléen', () => {
+        expect(affichageCommentairesRemarques({
+            ...avecContenu,
+            layoutOptions: { commentsMode: 'auto', showComments: true, remarksMode: 'masquer', showRemarks: true }
+        })).toEqual({ commentsMode: 'auto', remarksMode: 'masquer' });
+    });
+
+    it('un mode inconnu est ignoré au profit du booléen', () => {
+        expect(affichageCommentairesRemarques({
+            groups: [], pfTabs: [],
+            layoutOptions: { commentsMode: 'parfois', showComments: true }
+        }).commentsMode).toBe('afficher');
     });
 });
