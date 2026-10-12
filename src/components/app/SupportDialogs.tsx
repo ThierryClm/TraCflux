@@ -1,6 +1,6 @@
 import Modal from '../Modal';
 import MicroVariablesDialog from '../MicroVariablesDialog';
-import HelpContent from '../HelpContent';
+import HelpContent from '../HelpContentDiffere';
 import { APP_VERSION, APP_NAME, APP_DESCRIPTION } from '../../version';
 import {
     buildDiagnosticReport,
