@@ -33,7 +33,7 @@ interface TimelineRowProps {
  * d'escamotage) et les actions qui lui sont rattachées (seconde lucarne,
  * accolade de fermeture anticipée, ouverture anticipée...).
  */
-const TimelineRow = ({ ctx, group, TIME_WINDOW, activeConflicts, biCarrefourSeparator, braceZoneRanges, conflictMatrix, getActionsForGroup, getSimulatedGroup, handleDragStart, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredVUtile, onGroupClick, selectedEscamotageGroup, setHoveredGroupId, simulationResult }: TimelineRowProps) => {
+const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZoneRanges, conflictMatrix, getActionsForGroup, getSimulatedGroup, handleDragStart, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredVUtile, onGroupClick, selectedEscamotageGroup, setHoveredGroupId, simulationResult }: TimelineRowProps) => {
     const { groups, pixelsPerSecond, cycleLength, effectiveCycleLength, hoveredActionId, setHoveredActionId, dragState, handleActionDragStart, getShiftedActionPosition } = ctx;
 
     const groupActions = getActionsForGroup(group.id);
@@ -93,8 +93,6 @@ const TimelineRow = ({ ctx, group, TIME_WINDOW, activeConflicts, biCarrefourSepa
     const hasPhase = !isEscamoted && greenDuration > 0;
 
     // Calculate base bars from group offset/duration
-    const totalDuration = group.durations.green + group.durations.orange + group.durations.red;
-    const cyclesToRender = Math.ceil(TIME_WINDOW / totalDuration) + 1;
 
     const isHighlightedByArrow = hoveredArrowGroupId === group.id;
     const arrowHighlightClass = isHighlightedByArrow ? (hoveredArrowGroupSaturated ? 'arrow-highlighted arrow-saturated' : 'arrow-highlighted') : '';

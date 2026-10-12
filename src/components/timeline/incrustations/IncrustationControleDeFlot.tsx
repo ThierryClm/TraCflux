@@ -20,7 +20,6 @@ const IncrustationControleDeFlot = ({ ctx, controleFlotActions }: IncrustationCo
                 const gf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
                 const deb = entier(action.deb) || 0;
                 const fin = entier(action.fin) || 0;
-                const abrv = action.abrv || '';
                 const isHighlighted = hoveredActionId === action.id;
 
                 // Find group and get minGreen and orange duration

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent } from 'react';
 import EmptyState from './EmptyState';
 import type { ActionMicro, CaseMatrice, Groupe, Matrice, PlanDeFeu } from '../types/projet';
@@ -161,7 +161,6 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
         secondesLucarnes.forEach(sl => {
             const slStart = sl.deb;
             const slEnd = sl.fin;
-            const slDuration = slEnd >= slStart ? slEnd - slStart : cycle - slStart + slEnd;
 
             // Check against all other groups
             for (let otherIdx = 0; otherIdx < groups.length; otherIdx++) {

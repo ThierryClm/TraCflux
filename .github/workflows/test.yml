@@ -34,6 +34,12 @@ jobs:
       - name: Type check (JSDoc)
         run: npm run types
 
+      # Oxlint plutôt qu'ESLint : typescript-eslint ne prend pas encore en
+      # charge TypeScript 7. Les erreurs bloquent, les avertissements
+      # (dépendances des hooks, règles du React Compiler) restent à résorber.
+      - name: Lint (Oxlint)
+        run: npm run lint
+
       - name: Run Vitest suite with coverage guard
         run: npm run test:coverage
 

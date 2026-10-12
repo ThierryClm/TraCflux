@@ -24,8 +24,8 @@ describe('luminanceMoyenne', () => {
 
     it('ignore les pixels transparents plutôt que de les compter en noir', () => {
         const moitie = new Uint8ClampedArray([
-            ...[255, 255, 255, 255],
-            ...[0, 0, 0, 0],
+            255, 255, 255, 255, // pixel blanc opaque
+            0, 0, 0, 0,         // pixel transparent
         ]);
         expect(luminanceMoyenne(moitie)).toBeCloseTo(255, 5);
     });

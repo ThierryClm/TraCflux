@@ -3,7 +3,7 @@ import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { toast } from '../utils/toast';
 import type { EtatProjet } from './useTrafficLight';
 import type { ChangeEvent, Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { ActionMicro, Groupe, JeuTrafic, Matrice, PlanDeFeu, Projet } from '../types/projet';
+import type { ActionMicro, Groupe, JeuTrafic, Matrice, PlanDeFeu } from '../types/projet';
 import type { RecentDirectory, RecentDirectoryType } from './useRecentDirectories';
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
@@ -129,7 +129,7 @@ const useImportOperations = ({
                     // Ajouter aux répertoires récents
                     addRecentDirectory('import', dirHandle.name, dirHandle);
                 }
-            } catch (e) {
+            } catch {
                 // getParent n'est pas toujours disponible
             }
 
@@ -212,7 +212,7 @@ const useImportOperations = ({
                     await saveDirectoryHandle('lastImportDirectory', dirHandle);
                     addRecentDirectory('import', dirHandle.name, dirHandle);
                 }
-            } catch (e) {
+            } catch {
                 // getParent n'est pas toujours disponible
             }
 
@@ -286,7 +286,7 @@ const useImportOperations = ({
                 // Apply traffic data if available
                 if (importedData.trafficData && Object.keys(importedData.trafficData).length > 0) {
                     // Update groups with traffic courant
-                    importedData.groups.forEach((group, idx) => {
+                    importedData.groups.forEach((group) => {
                         const trafficInfo = importedData.trafficData[group.id];
                         if (trafficInfo && trafficInfo.courant) {
                             updateGroupParams(group.id, { courant: trafficInfo.courant });

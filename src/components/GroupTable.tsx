@@ -22,20 +22,6 @@ interface GroupTableProps {
 const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }: GroupTableProps) => {
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
-    const handleStartChange = (id: number, value: string) => {
-        updateGroupParams(id, { offset: parseInt(value) || 0 });
-    };
-
-    const handleDurationChange = (id: number, value: string) => {
-        updateGroupParams(id, { durations: { green: parseInt(value) || 0 } });
-    };
-
-    const handleEndChange = (id: number, endValue: string, startValue: number) => {
-        let duration = (parseInt(endValue) || 0) - startValue;
-        if (duration < 0) duration += cycleLength;
-        updateGroupParams(id, { durations: { green: Math.max(0, duration) } });
-    };
-
     const handleTypeChange = (id: number, value: TypeGroupe) => {
         const updates: GroupUpdates = { type: value };
         if (value === 'P') {
@@ -93,10 +79,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                     </tr>
                 </thead>
                 <tbody>
-                    {groups.map((g, index) => {
-                        const start = g.offset % cycleLength;
-                        const duration = g.durations.green;
-                        const end = (start + duration) % cycleLength;
+                    {groups.map((g) => {
 
                         return (
                             <tr key={g.id} className={hoveredGroupId === g.id ? 'form-hovered-row' : ''}>

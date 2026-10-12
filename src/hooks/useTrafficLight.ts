@@ -4,10 +4,8 @@ import {
     DEFAULT_CYCLE,
     MAX_PF,
     MAX_GROUPS,
-    createEmptyActionRow,
     createEmptyActionData,
     buildDiagramFromGroups,
-    buildEmptyMatrix,
     createEmptyPF,
     ensurePFIntegrity,
     cycleDuPlanActif
@@ -783,50 +781,6 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         }
     };
 
-    const updateGroupParams = (id: number, params: ParametresGroupe) => {
-        if (isEditLocked()) return;
-        setGroups(prev => prev.map(g => {
-            if (g.id !== id) return g;
-
-            // Handle nested durations update specifically if needed, or spread top level
-            // params can contain { type, minGreen, durations: { ... }, offset }
-
-            let newG: Groupe = { ...g, ...params, durations: g.durations };
-
-            // If durations or cycle changed, recalc Red
-            if (params.durations || params.offset !== undefined) {
-                // Merge durations carefully
-                const mergedDurations = { ...g.durations, ...(params.durations || {}) };
-
-                const currentGreen = mergedDurations.green;
-                const currentOrange = mergedDurations.orange;
-
-                const newRed = Math.max(0, cycleLength - currentGreen - currentOrange);
-
-                newG.durations = {
-                    green: currentGreen,
-                    orange: currentOrange,
-                    red: newRed
-                };
-            }
-            return newG;
-        }));
-    };
-
-    const setMatrixValue = (fromId: number, toId: number, value: CaseMatrice) => {
-        if (isEditLocked()) return;
-        setConflictMatrix(prev => {
-            const next = prev.map(row => [...row]);
-            // Guard against out of bounds if resizing happened async
-            if (next[fromId - 1]) {
-                // Keep empty string if value is empty, otherwise parse as integer
-                const parsedValue = value === '' ? NaN : entier(value);
-                next[fromId - 1][toId - 1] = isNaN(parsedValue) ? '' : parsedValue;
-            }
-            return next;
-        });
-    };
-
     const getGroupState = useCallback((group: Groupe, time: number) => {
         const { durations, offset } = group;
         const totalDuration = cycleLength;
@@ -1213,7 +1167,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
                         try {
                             const data = JSON.parse(raw);
                             savedAt = data.savedAt || null;
-                        } catch (e) {
+                        } catch {
                             // Ignore parse errors
                         }
                     }
@@ -1500,7 +1454,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         capacityCompareDataset,
         projectProperties,
         // Champs de projet portés par d'autres modules (cf. champsProjetRef).
-        ...(champsProjetRef?.current?.lire?.() || {})
+        ...champsProjetRef?.current?.lire?.()
         // L'onglet Simulation ouvert ou non ne s'enregistre pas : c'est un état
         // de session. Le SCÉNARIO, lui — son nom et les actions cochées — voyage
         // avec son plan de feu, dans pfTabs.
@@ -2556,7 +2510,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         setTrafficDatasets(prev => {
             const source = prev[sourceDataset];
             if (!source || sourceDataset === targetDataset) return prev;
-            const target = { ...(prev[targetDataset] || {}) };
+            const target = { ...prev[targetDataset] };
             Object.keys(source).forEach(groupId => {
                 target[groupId] = { ...source[groupId] };
             });
@@ -2828,7 +2782,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             let newG: Groupe = { ...g, ...params, durations: g.durations };
 
             if (params.durations || params.offset !== undefined) {
-                const mergedDurations = { ...g.durations, ...(params.durations || {}) };
+                const mergedDurations = { ...g.durations, ...params.durations };
                 const currentGreen = mergedDurations.green;
                 const currentOrange = mergedDurations.orange;
                 const newRed = Math.max(0, cycleLength - currentGreen - currentOrange);

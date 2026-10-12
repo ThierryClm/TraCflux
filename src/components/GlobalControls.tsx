@@ -12,7 +12,7 @@ interface GlobalControlsProps {
     updateGroupOffset: (groupId: number, value: string) => void;
 }
 
-const GlobalControls = ({ isPlaying, setIsPlaying, reset, onEditGroup, selectedGroup, updateGroupDuration, updateGroupOffset }: GlobalControlsProps) => {
+const GlobalControls = ({ isPlaying, setIsPlaying, reset, selectedGroup, updateGroupDuration, updateGroupOffset }: GlobalControlsProps) => {
     return (
         <div className="controls-panel">
 

@@ -62,7 +62,7 @@ export const appliquerPointsDeRepos = (etat: EtatSimulation): void => {
 
 /** Position affichée des points de repos, une fois toutes les contractions appliquées. */
 export const placerZonesDeRepos = (etat: EtatSimulation): void => {
-    const { selectedActions, contractions, restPoints, journal } = etat;
+    const { selectedActions, restPoints, journal } = etat;
 
     // Position affichée de chaque point de repos : son instant (déjà placé
     // après les repos précédents), ramené par les contractions appliquées

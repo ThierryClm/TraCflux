@@ -60,7 +60,7 @@ const LoginModal = ({ onLogin, onCreateUser, hasUsers, isLoading }: LoginModalPr
                     setError(result.error);
                 }
             }
-        } catch (err) {
+        } catch {
             setError('Une erreur est survenue');
         }
 

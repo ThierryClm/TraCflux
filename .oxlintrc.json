@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "unicorn", "import", "vitest"],
+  "env": { "browser": true, "es2024": true },
+  "categories": { "correctness": "error" },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/set-state-in-effect": "warn",
+    "react/refs": "warn",
+    "react/immutability": "warn",
+    "no-unused-expressions": ["error", { "allowShortCircuit": true, "allowTernary": true }],
+    "unicorn/no-new-array": "off",
+    "vitest/valid-expect": ["error", { "maxArgs": 2 }],
+    "vitest/require-mock-type-parameters": "off"
+  },
+  "ignorePatterns": ["dist/**", "coverage/**"]
+}

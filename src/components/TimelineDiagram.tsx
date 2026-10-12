@@ -100,8 +100,7 @@ export interface TimelineDiagramProps {
     titreEnBandeau?: boolean;
 }
 
-const TimelineDiagram = ({ groups, globalTime, onGroupClick = () => {}, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId = () => {}, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }: TimelineDiagramProps) => {
-    const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
+const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId = () => {}, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }: TimelineDiagramProps) => {
     const { names: microVariableNames } = useMicroVariables();
     const containerRef = useRef<HTMLDivElement>(null);
     const activeCommentRef = useRef<HTMLElement | null>(null);
@@ -318,25 +317,6 @@ const TimelineDiagram = ({ groups, globalTime, onGroupClick = () => {}, pixelsPe
     };
 
     // Helper to check if a time range overlaps with any selected Escamotage de phase only
-    const isWithinSelectedEscamotage = (deb: number, fin: number) => {
-        if (selectedEscamotageDePhase.length === 0) return false;
-        for (const escamotage of selectedEscamotageDePhase) {
-            const escDeb = entier(escamotage.deb) || 0;
-            const escFin = entier(escamotage.fin) || 0;
-            // Check if ranges overlap (handling wrap-around)
-            if (escDeb <= escFin) {
-                // Normal case: escamotage doesn't wrap
-                if (deb >= escDeb && deb < escFin) return true;
-                if (fin > escDeb && fin <= escFin) return true;
-                if (deb <= escDeb && fin >= escFin) return true;
-            } else {
-                // Escamotage wraps around cycle
-                if (deb >= escDeb || deb < escFin) return true;
-                if (fin > escDeb || fin <= escFin) return true;
-            }
-        }
-        return false;
-    };
 
     // Get all "Adaptatif vertical" actions
     // In simulation mode: show overlay when action is UNCHECKED (inverted logic)

@@ -21,7 +21,6 @@ const FlechesFinBandePassante = ({ ctx, dashedPath, finBandeActions }: FlechesFi
                 const rawDeb = entier(action.deb) || 0;
                 const rawFin = entier(action.fin) || 0;
                 const actGf1 = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                const abrv = action.abrv || '';
                 const isHighlighted = hoveredActionId === action.id;
 
                 // Find group indices

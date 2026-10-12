@@ -55,7 +55,7 @@ describe('ProjectOpenDialog — bouton info', () => {
         expect(screen.getByText('Ouvrir un projet')).toBeInTheDocument();
         const bouton = screen.getByRole('img', { name: INFO_RESTAURATION });
         fireEvent.mouseEnter(bouton);
-        const infobulle = await screen.findByText(/dernières versions enregistrées automatiquement sur ce poste/);
+        expect(await screen.findByText(/dernières versions enregistrées automatiquement sur ce poste/)).toBeInTheDocument();
         expect(screen.getByText(/modifié entre-temps par un autre utilisateur/)).toBeInTheDocument();
     });
 });
