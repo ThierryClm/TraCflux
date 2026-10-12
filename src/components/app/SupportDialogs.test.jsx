@@ -76,9 +76,11 @@ describe('SupportDialogs', () => {
         expect(model.setOptionsModal).toHaveBeenCalledWith(false);
     });
 
-    it('affiche l’aide à l’ancre demandée', () => {
+    it('affiche l’aide à l’ancre demandée, chargée à l’ouverture', async () => {
         render(<SupportDialogs model={buildModel({ helpModal: true })} />);
-        expect(screen.getByText('Aide diagramme')).toBeInTheDocument();
+        expect(screen.getByText('Chargement de l’aide…')).toBeInTheDocument();
+        expect(await screen.findByText('Aide diagramme')).toBeInTheDocument();
+        expect(screen.queryByText('Chargement de l’aide…')).toBeNull();
     });
 
     it('explique la mesure d’audience sans collecte des projets', () => {
