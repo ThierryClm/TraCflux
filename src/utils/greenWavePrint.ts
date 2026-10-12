@@ -6,16 +6,17 @@
  * attribut SVG `fill`/`stroke`, d'où un style inline pour imposer la palette
  * d'impression (fond blanc, traits sombres).
  *
- * Pendant l'impression, l'application (#root) est masquée par `display: none`.
- * Le clone porte pourtant les mêmes identifiants que l'original : une
- * référence `url(#bars-clip)` pointe alors sur le clipPath masqué, que le
- * navigateur ignore. Les barres de vert et les bandes passantes débordaient
- * ainsi sur les noms des groupes de feux. Tous les identifiants du clone sont
- * donc renommés, et leurs références réécrites.
+ * Quand le clone était imprimé dans la page même, l'application (#root) était
+ * masquée par `display: none` alors que le clone portait les mêmes
+ * identifiants : une référence `url(#bars-clip)` pointait sur le clipPath
+ * masqué, que le navigateur ignore, et les barres de vert débordaient sur les
+ * noms des groupes de feux. L'impression se fait désormais dans un onglet à
+ * part ; les identifiants du clone restent renommés, ce qui le garde autonome.
  */
 
 import { buildExportFilename } from './exportFilename';
 import { toast } from './toast';
+import { documentImpression, echapperHtml, ouvrirOngletImpression } from './ongletImpression';
 import type { BandwidthData } from './greenWaveBandwidth';
 
 const PRINT_ID_SUFFIX = '-print';
@@ -102,16 +103,22 @@ export interface GreenWavePrintOptions {
     pdf?: boolean;
 }
 
+export interface GreenWavePrintDocumentOptions extends GreenWavePrintOptions {
+    /** Document d'où viennent le diagramme, les styles et l'adresse de base. */
+    source?: Document;
+}
+
 /**
- * Imprime l'onde verte via window.print(). « Imprimer… » et « Exporter PDF… »
- * partagent ce rendu : titre, légende, puis le diagramme réduit à une page A4
- * paysage.
+ * Document HTML autonome de l'impression : titre, légende, puis le diagramme
+ * réduit à une page A4 paysage. Il lance lui-même l'impression une fois
+ * chargé et se ferme ensuite. Null si l'onde verte n'est pas affichée.
  */
-export const printGreenWave = ({
-    diagramWidth, diagramHeight, speedUp, speedDown, bandwidthData, greenWaveName, pdf = false
-}: GreenWavePrintOptions): void => {
-    const svgEl = document.querySelector<SVGSVGElement>('.green-wave-svg');
-    if (!svgEl) return;
+export const buildGreenWavePrintDocument = ({
+    diagramWidth, diagramHeight, speedUp, speedDown, bandwidthData, greenWaveName, pdf = false,
+    source = document
+}: GreenWavePrintDocumentOptions): string | null => {
+    const svgEl = source.querySelector<SVGSVGElement>('.green-wave-svg');
+    if (!svgEl) return null;
 
     const clone = buildGreenWavePrintClone(svgEl);
 
@@ -133,30 +140,41 @@ export const printGreenWave = ({
     li('<span style="width:14px;height:9px;background:#2E7D32;border:1px solid #4CAF50;border-radius:2px;display:inline-block"></span>', '2nde lucarne');
     li('<span style="width:14px;height:9px;background:repeating-linear-gradient(45deg,transparent,transparent 2px,#4CAF50 2px,#4CAF50 4px);border:1px solid #4CAF50;border-radius:2px;display:inline-block"></span>', 'Ouv. anticipée');
 
-    const printDiv = document.createElement('div');
-    printDiv.id = 'gw-print-area';
-    printDiv.innerHTML = `<h1 style="font-size:14pt;margin:0 0 4px 0;font-family:Arial,sans-serif;color:#000;">Onde Verte${greenWaveName ? ' - ' + greenWaveName : ''}</h1>` +
-        `<div style="display:flex;flex-wrap:nowrap;gap:12px;font-size:7.5pt;margin-bottom:6px;font-family:Arial,sans-serif;white-space:nowrap;">${legendItems.join('')}</div>`;
-    printDiv.appendChild(clone);
-    document.body.appendChild(printDiv);
-
-    const pageStyle = document.createElement('style');
-    pageStyle.textContent = '@page { size: A4 landscape; margin: 5mm 10mm; }';
-    document.head.appendChild(pageStyle);
-
+    const nom = greenWaveName ? echapperHtml(greenWaveName) : '';
     // Le titre du document sert de nom de fichier proposé pour le PDF.
-    const previousTitle = document.title;
-    if (pdf) {
-        document.title = buildExportFilename('Onde verte', greenWaveName);
+    const titre = pdf
+        ? buildExportFilename('Onde verte', greenWaveName)
+        : `Onde verte${greenWaveName ? ' - ' + greenWaveName : ''}`;
+
+    return documentImpression(
+        '<div id="gw-print-area">'
+        + `<h1 style="font-size:14pt;margin:0 0 4px 0;font-family:Arial,sans-serif;color:#000;">Onde Verte${nom ? ' - ' + nom : ''}</h1>`
+        + `<div style="display:flex;flex-wrap:nowrap;gap:12px;font-size:7.5pt;margin-bottom:6px;font-family:Arial,sans-serif;white-space:nowrap;">${legendItems.join('')}</div>`
+        + new XMLSerializer().serializeToString(clone)
+        + '</div>',
+        {
+            titre,
+            // Mêmes classes que la page d'origine : thème et règles
+            // d'impression de GreenWaveViewer.css s'appliquent comme avant.
+            classesBody: `${source.body.className} print-greenwave`.trim(),
+            styleSupplementaire: '@page { size: A4 landscape; margin: 5mm 10mm; }'
+                + ' html, body { background: #fff !important; margin: 0; }'
+                + ' #gw-print-area { background: #fff; padding: 8px; }',
+            source
+        }
+    );
+};
+
+/**
+ * Imprime l'onde verte dans un onglet indépendant (cf. utils/ongletImpression) :
+ * TraCflux reste utilisable pendant l'impression. « Imprimer… » et
+ * « Exporter PDF… » partagent ce rendu.
+ */
+export const printGreenWave = (options: GreenWavePrintOptions): void => {
+    const html = buildGreenWavePrintDocument(options);
+    if (!html) return;
+    ouvrirOngletImpression(html);
+    if (options.pdf) {
         toast.info('Dans la boîte d\'impression, sélectionnez « Enregistrer au format PDF »');
     }
-
-    document.body.classList.add('print-greenwave');
-    setTimeout(() => {
-        window.print();
-        document.title = previousTitle;
-        document.body.classList.remove('print-greenwave');
-        document.head.removeChild(pageStyle);
-        document.body.removeChild(printDiv);
-    }, 500);
 };

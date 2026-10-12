@@ -72,7 +72,8 @@ interface PrintPreviewModalProps {
         largeurConditionsImpression: number;
         microPrintStyle: CSSProperties | null;
         printPreviewPageRef: RefObject<HTMLDivElement | null>;
-        injectDossierFooterStyle: () => HTMLStyleElement | null;
+        /** Imprime l'aperçu affiché dans un onglet indépendant. */
+        imprimerApercu: (type: string) => void;
     };
     actions: {
         actionData: ActionMicro[];
@@ -152,7 +153,7 @@ function PrintPreviewModal({
         largeurConditionsImpression,
         microPrintStyle,
         printPreviewPageRef,
-        injectDossierFooterStyle,
+        imprimerApercu,
     } = print;
     const { actionData, microCustomFields } = actions;
     const { tooltipPrefs } = preferences;
@@ -1404,15 +1405,9 @@ function PrintPreviewModal({
                             <button
                                 className="btn-confirm"
                                 onClick={() => {
-                                    // Ajouter la classe pour l'impression AVANT d'imprimer
-                                    document.body.classList.add(`print-${printType}`);
-                                    // Injecter le footer dynamique si dossier
-                                    const footerStyle = printType === 'dossier' ? injectDossierFooterStyle() : null;
-                                    // Imprimer avec le modal ouvert
-                                    window.print();
-                                    // Retirer le footer dynamique et la classe après l'impression
-                                    if (footerStyle) footerStyle.remove();
-                                    document.body.classList.remove(`print-${printType}`);
+                                    // L'aperçu reste ouvert : l'impression se fait
+                                    // dans un onglet indépendant.
+                                    if (printType) imprimerApercu(printType);
                                 }}
                             >
                                 Imprimer

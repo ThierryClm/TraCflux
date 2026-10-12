@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ModeAffichage } from '../utils/modeAffichage';
 
 export type ThemeCouleur =
     | 'dark'
@@ -38,8 +39,10 @@ const useDarkMode = () => {
     const darkMode = colorTheme !== 'light' && colorTheme !== 'sepia';
     const setDarkMode = (val: boolean) => setColorTheme(val ? 'dark' : 'light');
 
-    const [showComments, setShowComments] = useState(true);
-    const [showRemarks, setShowRemarks] = useState(true);
+    // Commentaires et remarques du diagramme : afficher / masquer / auto
+    // (cf. utils/modeAffichage). Réglage du projet, enregistré avec lui.
+    const [commentsMode, setCommentsMode] = useState<ModeAffichage>('afficher');
+    const [remarksMode, setRemarksMode] = useState<ModeAffichage>('afficher');
     // Les noms de GF sont persistés au niveau application (localStorage) :
     // c'est une préférence de lecture qui voyage entre projets, pas une
     // configuration spécifique à un projet précis.
@@ -90,8 +93,8 @@ const useDarkMode = () => {
     return {
         darkMode, setDarkMode,
         colorTheme, setColorTheme,
-        showComments, setShowComments,
-        showRemarks, setShowRemarks,
+        commentsMode, setCommentsMode,
+        remarksMode, setRemarksMode,
         showGroupNamesForm, setShowGroupNamesForm,
         showGroupNamesMatrix, setShowGroupNamesMatrix,
         showGroupNamesDiagram, setShowGroupNamesDiagram,
