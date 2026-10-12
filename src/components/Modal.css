@@ -309,3 +309,32 @@ body.sepia-mode .modal-header {
 .modal-overlay.modal-phasage-bulle-overlay .modal-actions {
     padding: 8px 16px;
 }
+
+/* Bouton « i » d'un titre de fenêtre : son infobulle donne une précision sur
+   le contenu de la fenêtre. */
+.titre-avec-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bouton-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    font: bold italic 10px Georgia, serif;
+    line-height: 1;
+    cursor: help;
+    opacity: .85;
+}
+
+.bouton-info:hover,
+.bouton-info:focus-visible {
+    opacity: 1;
+    outline: none;
+    background: rgba(255, 255, 255, .2);
+}

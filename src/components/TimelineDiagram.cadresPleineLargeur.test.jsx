@@ -149,3 +149,30 @@ describe('Cadre qui chevauche la fin du cycle, cycle réduit par des adaptatifs'
         expect(parties).toEqual(['86-104', '0-8']);
     });
 });
+
+describe('Adaptatif qui chevauche la fin du cycle', () => {
+    // PF1_120, adaptatif GF8 déplacé à 115-5 s et coché (cycle 110) : le cadre
+    // de l'escamotage 102-8, non coché, recule de 5 s et s'arrête à 110 s.
+    it("le cadre de l'escamotage va de 97 à 110 s, puis de 0 à 3 s", () => {
+        const pf1 = exemple.pfTabs.find(pf => pf.name === 'PF1_120');
+        const groupesPf1 = exemple.groups.map(g => {
+            const ligne = pf1.diagram.find(d => d.groupId === g.id);
+            return { ...g, offset: ligne.offset, durations: { ...g.durations, green: ligne.greenDuration } };
+        });
+        const actions = pf1.data.map(a => (a.id === 10 ? { ...a, deb: '115', fin: '5' } : a));
+        const simulationResult = calculateSimulatedDiagram(groupesPf1, actions, [10], pf1.cycleLength, pf1.conflictMatrix);
+        const { container } = render(
+            <TimelineDiagram groups={groupesPf1} cycleLength={pf1.cycleLength} pixelsPerSecond={PPS} conflicts={[]}
+                conflictMatrix={pf1.conflictMatrix} actionData={actions} simulationResult={simulationResult}
+                simulationFilter={new Set([10])} biCarrefourSeparator={null}
+                cycleLengthInput="120" setCycleLengthInput={() => {}} setCycleLength={() => {}}
+                onGroupClick={() => {}} updateGroupParams={() => {}} updateActionRow={() => {}}
+                setHoveredActionId={() => {}} startDrag={() => {}} endDrag={() => {}} />
+        );
+        const parties = [...container.querySelectorAll('.escamotage-overlay')].map(el => {
+            const deb = parseFloat(el.style.left) / PPS;
+            return `${deb}-${deb + parseFloat(el.style.width) / PPS}`;
+        });
+        expect(parties).toEqual(['97-110', '0-3']);
+    });
+});
