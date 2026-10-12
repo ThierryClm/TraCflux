@@ -8,6 +8,7 @@ import { selectPfSubset } from '../utils/pfHelpers';
 import { stampReadOnly } from '../utils/dossierLock';
 import { bringAllPopupsToFront } from './usePopupWindow';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
+import { booleenDuMode, lireModeAffichage, modeDuBooleen, type ModeAffichage } from '../utils/modeAffichage';
 import type { CadrageImage, OptionsMiseEnPage, Projet } from '../types/projet';
 import type { EtatProjet } from './useTrafficLight';
 import type { RecentDirectory, RecentDirectoryType } from './useRecentDirectories';
@@ -39,11 +40,11 @@ interface UseFileOperationsOptions {
     setFloatingCrop: (crop: CadrageImage) => void;
     setFloatingZoom: StateSetter<number>;
     markLegacyCrop?: (legacy: boolean) => void;
-    setShowComments: StateSetter<boolean>;
-    setShowRemarks: StateSetter<boolean>;
+    setCommentsMode: (mode: ModeAffichage) => void;
+    setRemarksMode: (mode: ModeAffichage) => void;
     setIntersectionName: StateSetter<string>;
-    showComments: boolean;
-    showRemarks: boolean;
+    commentsMode: ModeAffichage;
+    remarksMode: ModeAffichage;
     showActionDescription: boolean;
     sidebarVisible: boolean;
     setShowActionDescription: StateSetter<boolean>;
@@ -98,9 +99,9 @@ const useFileOperations = ({
     projectModifiedSkip, hasUnsavedChanges, setHasUnsavedChanges,
     isDirty,
     setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
-    setShowComments, setShowRemarks, setIntersectionName,
+    setCommentsMode, setRemarksMode, setIntersectionName,
     // Options de mise en page sauvegardées dans le projet
-    showComments, showRemarks, showActionDescription, sidebarVisible,
+    commentsMode, remarksMode, showActionDescription, sidebarVisible,
     setShowActionDescription, setSidebarVisible,
     // Flags de détachement de fenêtres (niveau projet)
     showFloatingForm, setShowFloatingForm,
@@ -248,8 +249,10 @@ const useFileOperations = ({
                 // Absent d'un projet enregistré avant que l'option n'existe :
                 // panneau affiché, comme pour un projet neuf.
                 setSidebarVisible(typeof lo.showParameters === 'boolean' ? lo.showParameters : true);
-                if (typeof lo.showComments === 'boolean') setShowComments(lo.showComments);
-                if (typeof lo.showRemarks === 'boolean') setShowRemarks(lo.showRemarks);
+                const modeCommentaires = lireModeAffichage(lo, 'comments');
+                const modeRemarques = lireModeAffichage(lo, 'remarks');
+                if (modeCommentaires) setCommentsMode(modeCommentaires);
+                if (modeRemarques) setRemarksMode(modeRemarques);
                 if (typeof lo.showActionDescription === 'boolean') setShowActionDescription(lo.showActionDescription);
 
                 // Détachements de fenêtres : on applique directement les
@@ -265,10 +268,10 @@ const useFileOperations = ({
                 if (typeof lo.showFloatingRemarks === 'boolean') setShowFloatingRemarks(lo.showFloatingRemarks);
             } else {
                 const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
-                setShowComments(!!hasComments);
+                setCommentsMode(modeDuBooleen(!!hasComments));
                 const pfList = data.pfTabs || [];
                 const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
-                setShowRemarks(!!hasRemarks);
+                setRemarksMode(modeDuBooleen(!!hasRemarks));
 
                 // Projet ancien sans layoutOptions : on décoche tous les
                 // détachements pour repartir d'un espace de travail propre.
@@ -427,8 +430,10 @@ const useFileOperations = ({
                 // Absent d'un projet enregistré avant que l'option n'existe :
                 // panneau affiché, comme pour un projet neuf.
                 setSidebarVisible(typeof lo.showParameters === 'boolean' ? lo.showParameters : true);
-                if (typeof lo.showComments === 'boolean') setShowComments(lo.showComments);
-                if (typeof lo.showRemarks === 'boolean') setShowRemarks(lo.showRemarks);
+                const modeCommentaires = lireModeAffichage(lo, 'comments');
+                const modeRemarques = lireModeAffichage(lo, 'remarks');
+                if (modeCommentaires) setCommentsMode(modeCommentaires);
+                if (modeRemarques) setRemarksMode(modeRemarques);
                 if (typeof lo.showActionDescription === 'boolean') setShowActionDescription(lo.showActionDescription);
 
                 // Détachements de fenêtres : on applique directement les
@@ -444,10 +449,10 @@ const useFileOperations = ({
                 if (typeof lo.showFloatingRemarks === 'boolean') setShowFloatingRemarks(lo.showFloatingRemarks);
             } else {
                 const hasComments = data.groups?.some(g => g.comment && g.comment.trim() !== '') || (data.pfTabs || []).some(pf => pf.diagram?.some(d => d.comment && d.comment.trim() !== ''));
-                setShowComments(!!hasComments);
+                setCommentsMode(modeDuBooleen(!!hasComments));
                 const pfList = data.pfTabs || [];
                 const hasRemarks = pfList.some(pf => pf.remarques && pf.remarques.trim() !== '');
-                setShowRemarks(!!hasRemarks);
+                setRemarksMode(modeDuBooleen(!!hasRemarks));
 
                 // Projet ancien sans layoutOptions : on décoche tous les
                 // détachements pour repartir d'un espace de travail propre.
@@ -576,7 +581,7 @@ const useFileOperations = ({
     }, [projectName, getFullState, setIntersectionName, saveProject, saveDirectoryHandle, addRecentDirectory, recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
         // Layout options sauvegardées dans le projet — sans ces deps, le
         // callback memoisé garde les valeurs périmées du premier rendu.
-        sidebarVisible, showComments, showRemarks, showActionDescription,
+        sidebarVisible, commentsMode, remarksMode, showActionDescription,
         showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
         showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -670,7 +675,7 @@ const useFileOperations = ({
             }
         }
     }, [recentSaveDirs, projectName, loadDirectoryHandle, saveDirectoryHandle, addRecentDirectory, getFullState, setIntersectionName, saveProject, recentOpenDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
-        sidebarVisible, showComments, showRemarks, showActionDescription,
+        sidebarVisible, commentsMode, remarksMode, showActionDescription,
         showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
         showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -694,7 +699,10 @@ const useFileOperations = ({
                 // Options portées par le projet hors de ce hook (cases de l'image du carrefour…)
                 ...subset.layoutOptions,
                 showParameters: sidebarVisible,
-                showComments, showRemarks, showActionDescription,
+                commentsMode, remarksMode,
+                showComments: booleenDuMode(commentsMode),
+                showRemarks: booleenDuMode(remarksMode),
+                showActionDescription,
                 showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
                 showFloatingConditions, showFloatingVariables, showFloatingRemarks
             }
@@ -731,7 +739,7 @@ const useFileOperations = ({
             }
         }
     }, [getFullState, projectName, diagramHeight, floatingCrop, floatingZoom, dossierSections,
-        sidebarVisible, showComments, showRemarks, showActionDescription,
+        sidebarVisible, commentsMode, remarksMode, showActionDescription,
         showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
         showFloatingConditions, showFloatingVariables, showFloatingRemarks,
         lastSaveDirectoryRef, alertFn]);

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import type { PermissionFlag } from '../hooks/useAuth';
+import type { ModeAffichage } from '../utils/modeAffichage';
 import './MenuBar.css';
 
 /** Une entrée de menu : action, case à cocher, séparateur, en-tête, sous-menu ou curseur. */
@@ -50,6 +51,8 @@ export interface OptionsMenuBar {
     showParameters?: boolean;
     showComments?: boolean;
     showRemarks?: boolean;
+    commentsMode?: ModeAffichage;
+    remarksMode?: ModeAffichage;
     showActionDescription?: boolean;
     showCapacityReserve?: boolean;
     showGroupNamesForm?: boolean;
@@ -441,8 +444,26 @@ const MenuBar = ({
             disabled: !hasActiveProject,
             items: [
                 { label: 'Affichage des paramètres', action: 'toggleParameters', toggle: true, checked: layoutOptions.showParameters, keepSubmenuOpen: true },
-                { label: 'Commentaires du diagramme', action: 'toggleComments', toggle: true, checked: layoutOptions.showComments, keepSubmenuOpen: true },
-                { label: 'Remarques du diagramme', action: 'toggleRemarks', toggle: true, checked: layoutOptions.showRemarks, keepSubmenuOpen: true },
+                {
+                    label: 'Commentaires du diagramme',
+                    type: 'submenu',
+                    submenuId: 'commentaires',
+                    submenu: [
+                        { label: 'Afficher', action: 'commentsShow', checked: layoutOptions.commentsMode === 'afficher', keepSubmenuOpen: true },
+                        { label: 'Masquer', action: 'commentsHide', checked: layoutOptions.commentsMode === 'masquer', keepSubmenuOpen: true },
+                        { label: 'Automatique (plans qui en ont)', action: 'commentsAuto', checked: layoutOptions.commentsMode === 'auto', keepSubmenuOpen: true }
+                    ]
+                },
+                {
+                    label: 'Remarques du diagramme',
+                    type: 'submenu',
+                    submenuId: 'remarques',
+                    submenu: [
+                        { label: 'Afficher', action: 'remarksShow', checked: layoutOptions.remarksMode === 'afficher', keepSubmenuOpen: true },
+                        { label: 'Masquer', action: 'remarksHide', checked: layoutOptions.remarksMode === 'masquer', keepSubmenuOpen: true },
+                        { label: 'Automatique (plans qui en ont)', action: 'remarksAuto', checked: layoutOptions.remarksMode === 'auto', keepSubmenuOpen: true }
+                    ]
+                },
                 { label: 'Description des conditions micro', action: 'toggleActionDescription', toggle: true, checked: layoutOptions.showActionDescription, keepSubmenuOpen: true },
                 { label: 'Panneau Réserve de capacité', action: 'toggleCapacityReserve', toggle: true, checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true },
                 { type: 'separator' },

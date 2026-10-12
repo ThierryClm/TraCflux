@@ -36,6 +36,7 @@ const etatComplet = () => ({
     floatingZoom: 1.4,
     layoutOptions: {
         showParameters: false, showComments: true, showRemarks: false,
+        commentsMode: 'afficher', remarksMode: 'masquer',
         showActionDescription: true, showFloatingForm: true, showFloatingMatrix: false,
         showFloatingTraffic: true, showFloatingImage: false, showFloatingConditions: true,
         showFloatingVariables: false, showFloatingRemarks: true
@@ -52,8 +53,8 @@ const proprietes = (sur = {}) => {
         diagramHeight: 640,
         floatingCrop: { top: 4, bottom: 8, left: 2, right: 6 },
         floatingZoom: 1.4,
-        showComments: true,
-        showRemarks: false,
+        commentsMode: 'afficher',
+        remarksMode: 'masquer',
         showActionDescription: true,
         sidebarVisible: false,
         showFloatingForm: true,
@@ -89,7 +90,7 @@ const proprietes = (sur = {}) => {
     // Tous les poseurs d'état : inertes, mais ils doivent exister.
     ['setSelectedProject', 'setOpenModal', 'setCurrentProjectPath', 'setProjectModified',
         'setHasUnsavedChanges', 'setDiagramHeight', 'resetDiagramHeight', 'setFloatingCrop',
-        'setFloatingZoom', 'markLegacyCrop', 'setShowComments', 'setShowRemarks',
+        'setFloatingZoom', 'markLegacyCrop', 'setCommentsMode', 'setRemarksMode',
         'setIntersectionName', 'setShowActionDescription', 'setSidebarVisible',
         'setShowFloatingForm', 'setShowFloatingMatrix', 'setShowFloatingTraffic',
         'setShowFloatingImage', 'setShowFloatingConditions', 'setShowFloatingVariables',
