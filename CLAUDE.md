@@ -43,7 +43,7 @@ server. That origin is served by `vite preview` from `dist/`, so a source change
 is invisible until `dist/` is rebuilt — the PWA would keep showing the cached
 build indefinitely.
 
-**After any change to `src/`, `index.html`, `public/` or `vite.config.js`, run
+**After any change to `src/`, `index.html`, `public/` or `vite.config.ts`, run
 `npm run serve` before reporting the work as testable**, then tell the user to
 press Ctrl+R in the TraCflux window and click « Recharger » on the banner.
 
@@ -87,57 +87,150 @@ item, not a new finding.
 
 ## Architecture
 
-Traffic light intersection diagram tool built with React + Vite.
+Traffic signal timing tool (« diagramme de feux ») built with React 18,
+TypeScript (strict) and Vite, shipped as an installable PWA. All application
+code is `.ts` / `.tsx`; part of the tests are still `.js` / `.jsx`
+(`allowJs`, `checkJs: false`). Identifiers and comments mix English and
+French: the business vocabulary (plan de feu, groupe, temps interverts,
+escamotage, adaptatif…) stays in French.
 
-### State Management
+### Entry points
 
-All application state is centralized in `src/hooks/useTrafficLight.js`:
-- Groups (traffic light phases), cycle length, intersection name
-- Conflict matrix (intergreen times between groups)
-- Computed conflicts (validates timing constraints)
-- Action table data
-- Auto-saves to localStorage, with named project save/load
+`src/main.tsx` wraps everything in `ConfirmProvider` and
+`MicroVariablesProvider`, then renders:
+- `App.tsx` — the intersection editor (default);
+- `GreenWavePage.tsx` — the green wave (« onde verte ») editor, when the URL
+  carries `?greenwave`. It reads intersections saved by the editor.
 
-### Key Data Structures
+`ReloadPrompt` (service worker update banner) is mounted on both.
 
-**Group** - A traffic light phase:
-```js
-{
-  id, name, type: 'VL'|'TC'|'Cycliste'|'Piéton',
-  minGreen, offset,
-  durations: { green, orange, red }
-}
+### Data model
+
+The persisted contract lives in `src/types/projet.ts`; any field added to a
+saved project must be declared there. Main types:
+
+- **`Groupe`** — one signal group, one row of the diagram:
+  `{ id, name, type, minGreen, offset, durations: { green, orange, red }, … }`
+  plus optional comment and traffic fields. `type` is `'VL'`, `'TC'`,
+  `'P'`/`'Piéton'`, `'CY'`/`'Cycliste'`, `'FL'`, `'PP'`…
+- **`Matrice`** — intergreen matrix (« temps interverts »):
+  `matrice[from][to]` = minimum time in seconds between the end of `from`'s
+  green and the start of `to`'s green. A cell is a number or `''` (no
+  constraint).
+- **`PlanDeFeu`** (PF) — one timing plan, shown as a tab: its micro-regulation
+  action table (`data: ActionMicro[]`), its diagram (`LigneDiagramme[]`),
+  optionally its own matrix and cycle, remarks, simulation scenario, phasing
+  bubble settings. Up to `MAX_PF` plans per project.
+- **`ActionMicro`** — one row of the action table (« Seconde lucarne »,
+  « Escamotage », « Flèche d'anticipation », « Adaptatif vertical »…), with
+  `gf` (group), `deb` / `fin` (seconds in the cycle) and action-specific fields.
+- **`Projet`** — the whole saved file: groups, matrix, `pfTabs`, intersection
+  image and arrows, traffic datasets (HPM, HPS, HC…), properties, layout
+  options (`OptionsMiseEnPage`).
+
+`src/types/greenWave.ts` holds the green wave model.
+
+### State management
+
+`src/hooks/useTrafficLight.ts` is the single source of truth for the project
+(about 3,000 lines): groups, cycle, matrix, plans and active plan, action
+table, traffic datasets, image, properties, undo/redo history (50 steps),
+computed `conflicts`, save/load (`getFullState` / `loadFullState`) and
+autosave. `utils/pfHelpers.ts` holds the plan helpers it relies on
+(`createEmptyPF`, `ensurePFIntegrity`, `buildDiagramFromGroups`…).
+
+`App.tsx` (also about 3,000 lines) calls `useTrafficLight` and composes the UI
+state from smaller hooks in `src/hooks/`: `useFileOperations` (open/save
+through the File System Access API), `useImportOperations` (Diagfeux, Excel,
+HTM), `useUILayout`, `useDialogState`, `useSimulationUI`, `usePhasageBulleUI`,
+`useProjectModification` (the « * » dirty flag), and the `useFloating*` hooks
+(each detachable panel). `usePopupWindow` renders a panel into a separate
+browser window and remembers its position per screen.
+
+Both files are known to be too large; when touching them, prefer extracting
+a cohesive piece into a hook or a `utils/` module over growing them.
+
+### Persistence
+
+- **Files** — projects are saved as JSON through the File System Access API
+  (`useFileOperations`, `writeFileHandle`, `useDirectoryHandles`); `dossierLock`
+  stamps exported projects as read-only (a convention, not a protection).
+- **Browser cache** — every project is autosaved to `localStorage` under
+  `traffic_project_<name>` (+ `_backup`), ordered by `traffic_project_order`;
+  this feeds « Restaurer un projet récent ». UI preferences (floating panel
+  visibility, tooltips, toasts, window positions…) are also in `localStorage`;
+  they belong to the workstation, not to the project.
+- `projectValidator` checks and repairs loaded files; old formats are
+  normalised on load (see `ProjetEnregistre` in `useTrafficLight.ts`).
+
+### Component layout
+
+```
+App.tsx
+├── MenuBar, LoginModal
+├── WelcomeScreen                       (no project open)
+├── ProjectHeader                       (name, group count, undo/redo, plan, account)
+├── WorkspaceSidebar                    (components/app/)
+│   ├── GroupTable        — group timing parameters
+│   ├── IntergreenMatrix  — intergreen matrix
+│   ├── TrafficTable      — traffic volumes and capacity
+│   ├── ConflictList, DiagnosticPanel
+│   ├── SimulationPanel
+│   └── PropertiesPanel
+├── WorkspaceMain                       (components/app/)
+│   ├── TimelineDiagram   — the timing diagram (components/timeline/)
+│   ├── ActionTable       — micro-regulation actions of the active plan
+│   ├── IntersectionImage — intersection photo with group arrows
+│   └── PhasageBulle      — phasing bubble diagram
+└── Dialogs: ProjectOpenDialog, DiagramEditDialogs, ImportDialogs,
+    GreenWaveDialogs, DossierPrintDialog, PrintPreviewModal, SupportDialogs…
 ```
 
-**Conflict Matrix** - 2D array where `matrix[from][to]` = minimum intergreen time (seconds) required between end of group `from` green and start of group `to` green.
+`components/timeline/` splits the diagram into header, sidebar, rows, grid,
+drag handling (`useTimelineDrag`), geometry (`timelineGeometry`) and the
+`incrustations/` overlays (arrows and bars drawn for each action type).
 
-### Component Layout
+### Timeline rendering
 
-```
-App.jsx
-├── Header (intersection name, group count, cycle length, zoom slider)
-├── Sidebar (tabbed: Projects | Configuration | Traffic)
-│   ├── GroupTable - edit group timing parameters
-│   ├── IntergreenMatrix - edit conflict matrix
-│   ├── TrafficTable - traffic engineering data
-│   └── ProjectManager - save/load projects
-└── Diagram Area
-    ├── TimelineDiagram - horizontal timeline showing phases
-    └── ActionTable - action sequence table
-```
+`TimelineDiagram.tsx` draws the plan horizontally over one cycle: width =
+`cycleLength * pixelsPerSecond`, phase bars positioned with `left`, ruler ticks
+every 5 s, a playhead at the current time. Actions of the active plan add
+overlays; in simulation mode the simulated diagram replaces the original one.
 
-### Timeline Rendering
+### Conflict detection
 
-`TimelineDiagram.jsx` renders phases horizontally:
-- Time window = cycle length
-- Width = `cycleLength * pixelsPerSecond`
-- Phase bars positioned with `left` CSS property
-- Ruler ticks at 5-second intervals
-- Playhead shows current global time
+The `conflicts` memo in `useTrafficLight.ts` checks every non-empty
+`matrice[from][to]`: if the actual gap between the end of `from`'s green and
+the start of `to`'s green (modulo the cycle) is below the required intergreen,
+it records a conflict. It accounts for « Seconde lucarne » (extra green
+windows), « Escamotage » between the two groups (managed overlap) and
+« Flèche d'anticipation » (timings replaced by the arrow's).
+`utils/conflictUtils.ts` provides the shared types and helpers;
+`utils/matrixDelayConflict.ts` and `utils/diagnostics.ts` add further checks.
 
-### Conflict Detection
+### Simulation
 
-In `useTrafficLight.js`, the `conflicts` memo calculates violations:
-- For each non-zero matrix entry `matrix[from][to]`
-- Computes actual gap between end of `from` green and start of `to` green
-- If actual gap < required intergreen time, adds to conflicts list
+`src/simulation/` computes the diagram as it would run once selected actions
+apply (`calculateSimulatedDiagram`). Each action type is one operation in
+`simulation/operations/` (adaptatif vertical, escamotage de phase / de groupe,
+fermeture / ouverture anticipée, point de repos), applied in order on a shared
+`EtatSimulation` with a journal of time contractions (`journal.ts`).
+`conflitsSimules` re-runs conflict detection on the simulated diagram.
+
+### Other modules
+
+- `GreenWavePage.tsx` + `components/greenwave/`, `utils/greenWave*.ts` —
+  green wave editor, bandwidth computation, print.
+- `utils/excelImporter.ts`, `diagfeuxImporter.ts`, `parseHTMFile.ts` — imports.
+- `utils/exportHelpers.ts`, `ongletImpression.ts` — PNG/PDF export and printing
+  in a separate tab.
+- `utils/capacityCalc.ts`, `trafficHelpers.ts` — capacity and traffic.
+
+### Tests
+
+Vitest + Testing Library in jsdom; tests sit next to the code they cover
+(`*.test.js|jsx|ts|tsx`), shared setup in `src/tests/setup.js`. Coverage
+floors are set in `vite.config.ts` (`test.coverage.thresholds`): raise them
+when coverage grows, never lower them. CI (`.github/workflows/test.yml`) runs
+`npm run types`, `npm run test:coverage` and `npm run build` on pushes and
+pull requests targeting `master`.
