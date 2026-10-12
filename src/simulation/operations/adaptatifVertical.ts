@@ -1,3 +1,4 @@
+import type { ActionMicro } from '../../types/projet';
 import type { EtatSimulation } from '../types';
 import { toInt } from '../outils';
 import { projeter, adjustForContractions } from '../journal';
@@ -18,10 +19,9 @@ export const appliquerAdaptatifsVerticaux = (etat: EtatSimulation): void => {
 
     const totalGroups = simulatedGroups.length;
 
-    adaptatifActions.forEach(action => {
-        const rawDeb = toInt(action.deb) || 0;
-        const rawFin = toInt(action.fin) || 0;
-
+    // Retire la zone [rawDeb, rawFin] (instants du plan d'origine) : du cycle
+    // pour un adaptatif sans plage, des seules lignes de sa plage sinon.
+    const retirerZone = (action: ActionMicro, rawDeb: number, rawFin: number) => {
         // Adjust deb/fin based on previous contractions (so we work on the virtual timeline)
         const deb = adjustForContractions(contractions, rawDeb);
         const fin = adjustForContractions(contractions, rawFin);
@@ -150,5 +150,25 @@ export const appliquerAdaptatifsVerticaux = (etat: EtatSimulation): void => {
             plage2,
             partiel: hasPlageRange
         });
+    };
+
+    adaptatifActions.forEach(action => {
+        const rawDeb = toInt(action.deb) || 0;
+        const rawFin = toInt(action.fin) || 0;
+
+        if (rawFin >= rawDeb) {
+            retirerZone(action, rawDeb, rawFin);
+            return;
+        }
+
+        // Zone qui chevauche la fin du cycle (ex. 115-5 sur 120 s) : retirée
+        // en deux temps, la fin du cycle puis son début.
+        retirerZone(action, rawDeb, etat.cycleOrigine);
+        // Un vert ramené au début de la partie retirée, désormais la fin du
+        // cycle, reprend à 0.
+        simulatedGroups.forEach(g => {
+            if (g.simulatedOffset >= etat.simulatedCycleLength) g.simulatedOffset -= etat.simulatedCycleLength;
+        });
+        retirerZone(action, 0, rawFin);
     });
 };
