@@ -50,7 +50,7 @@ const SAMPLE_PIETON = `<?xml version="1.0" standalone="yes"?>
 </DataSetDiagfeux>`;
 
 describe('diagfeuxImporter — import valide', () => {
-    const { state, warnings, error } = parseDiagfeux(SAMPLE);
+    const { state, error } = parseDiagfeux(SAMPLE);
 
     it('parse sans erreur', () => {
         expect(error).toBeUndefined();

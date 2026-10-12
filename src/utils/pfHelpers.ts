@@ -339,9 +339,9 @@ export const mergePfFromProject = (
     });
 
     // Rapatriement des jeux de données trafic référencés par les PF importés.
-    const trafficDatasets: Record<string, JeuTrafic> = { ...(current.trafficDatasets || {}) };
+    const trafficDatasets: Record<string, JeuTrafic> = { ...current.trafficDatasets };
     const customNames = new Set<string>(current.customTrafficDatasetNames || []);
-    const pfTrafficDatasetMap: Record<string, string> = { ...(current.pfTrafficDatasetMap || {}) };
+    const pfTrafficDatasetMap: Record<string, string> = { ...current.pfTrafficDatasetMap };
     newPfs.forEach(({ source, clone }) => {
         const dsName = imported.pfTrafficDatasetMap && imported.pfTrafficDatasetMap[source.id];
         if (!dsName) return;

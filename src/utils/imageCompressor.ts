@@ -88,7 +88,7 @@ export async function compressImageDataUrl(dataUrl: string): Promise<CompressedI
                 } else {
                     resolve({ dataUrl: out, compressed: true });
                 }
-            } catch (e) {
+            } catch {
                 resolve({ dataUrl, compressed: false });
             }
         };

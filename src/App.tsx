@@ -21,7 +21,6 @@ import MenuBar from './components/MenuBar';
 import { useConfirm, useAlert } from './components/ConfirmProvider';
 import { APP_VERSION, APP_NAME } from './version';
 import { buildExportFilename } from './utils/exportFilename';
-import { safeShowOpenFilePicker } from './utils/filePicker';
 import { isInviteVisible, noteWelcomeView, noteProjectSeen } from './utils/welcomeInvite';
 import { isExampleSession, exitExampleSession } from './utils/exampleMode';
 import LoginModal from './components/LoginModal';
@@ -120,7 +119,6 @@ function App() {
         loadProject,
         getAllSaves,
         getProjectData,
-        deleteSave,
         getFullState,
         loadFullState: loadFullStateRaw,
         resetToNewProject,
@@ -252,13 +250,6 @@ function App() {
     }, [conflicts, simulationEnabled, simulationSelectedActions, actionData]);
 
     // Further filter: separate conflicts involving groups with phaseFlag (aiguillage/escamotage)
-    const activeConflicts = useMemo(() => {
-        return filteredConflicts.filter(c => {
-            const fromGroup = groups.find(g => g.id === c.from);
-            const toGroup = groups.find(g => g.id === c.to);
-            return !fromGroup?.phaseFlag;
-        });
-    }, [filteredConflicts, groups]);
 
     // During drag, use drag conflicts from TimelineDiagram; otherwise use normal conflicts
     const displayConflicts = dragConflictsFromDiagram || filteredConflicts;
@@ -299,7 +290,7 @@ function App() {
     // État pour le modal de gestion des utilisateurs
     const [showUserManager, setShowUserManager] = useState(false);
 
-    const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+    const [, setSelectedGroupId] = useState<number | null>(null);
     const {
         pixelsPerSecond, setPixelsPerSecond,
         activeTab, setActiveTab,
@@ -433,8 +424,7 @@ function App() {
     const [isSaving, setIsSaving] = useState(false);
 
     const {
-        darkMode, setDarkMode,
-        colorTheme, setColorTheme,
+        darkMode, colorTheme, setColorTheme,
         commentsMode, setCommentsMode,
         remarksMode, setRemarksMode,
         showGroupNamesForm, setShowGroupNamesForm,
@@ -453,7 +443,7 @@ function App() {
     const { intersectionDisplay, setIntersectionDisplayOption } = useIntersectionDisplayOptions();
 
     // Track whether project has been modified (for "Nouveau projet" menu)
-    const { projectModified, setProjectModified, resetModified: resetProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
+    const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
         useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, intersectionDisplay,
             // Enregistrés dans le projet : les changer est une modification.
             commentsMode, remarksMode]);
@@ -934,7 +924,7 @@ function App() {
         setCycleLengthInput(cycleLength.toString());
     }, [cycleLength]);
 
-    const { recentFiles, setRecentFiles, addToRecentFiles, getRecentDirectories, getRecentDirectoriesForMenu } = useRecentFiles();
+    const { recentFiles, addToRecentFiles, getRecentDirectories, getRecentDirectoriesForMenu } = useRecentFiles();
     const [selectedProject, setSelectedProject] = useState<string | null>(null);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importError, setImportError] = useState('');
@@ -1032,10 +1022,10 @@ function App() {
     // Green wave data states
     const [selectedGreenWave, setSelectedGreenWave] = useState<string | null>(null);
     const [greenWaveData, setGreenWaveData] = useState<ViewerIntersection[] | null>(null);
-    const [greenWaveListKey, setGreenWaveListKey] = useState(0);
+    const [, setGreenWaveListKey] = useState(0);
 
     // Project path
-    const [currentProjectPath, setCurrentProjectPath] = useState<string | null>('');
+    const [, setCurrentProjectPath] = useState<string | null>('');
 
     // Modal and dialog states
     const {
@@ -1215,7 +1205,7 @@ function App() {
                 hour: '2-digit',
                 minute: '2-digit'
             });
-        } catch (e) {
+        } catch {
             return '';
         }
     };
@@ -2049,7 +2039,7 @@ function App() {
 
         try {
             sessionStorage.setItem(`greenwave_${greenWaveId}`, JSON.stringify(intersections));
-        } catch (e) {
+        } catch {
             // Quota dépassé : fallback IndexedDB
             await saveGreenWaveToIDB(`greenwave_${greenWaveId}`, intersections);
             useIDB = true;
@@ -2085,7 +2075,7 @@ function App() {
                             pixelsPerSecond: greenWaveData.pixelsPerSecond,
                             pixelsPerMeter: greenWaveData.pixelsPerMeter
                         }));
-                    } catch (e) {
+                    } catch {
                         await saveGreenWaveToIDB(`greenwave_${greenWaveId}`, greenWaveData.intersections);
                         await saveGreenWaveToIDB(`greenwave_settings_${greenWaveId}`, {
                             name: greenWaveName,
@@ -2112,99 +2102,6 @@ function App() {
     };
 
     // Handle opening green wave from file system
-    const handleOpenGreenWaveFromFile = async () => {
-        if (!window.showOpenFilePicker) {
-            showAlert({ title: 'Navigateur non compatible', message: 'Votre navigateur ne supporte pas l\'ouverture de fichiers. Utilisez « Ouvrir une onde verte... » pour charger depuis le cache navigateur.' });
-            return;
-        }
-
-        try {
-            const options = {
-                types: [{
-                    description: 'Fichier Onde Verte JSON',
-                    accept: { 'application/json': ['.json'] }
-                }],
-                multiple: false
-            };
-
-            const [fileHandle] = await safeShowOpenFilePicker(options);
-            const file = await fileHandle.getFile();
-            const content = await file.text();
-
-            // Validation du contenu avant parsing
-            if (!content || content.trim() === '') {
-                showAlert({ title: 'Fichier vide', message: 'Le fichier est vide.' });
-                return;
-            }
-
-            let greenWaveData;
-            try {
-                greenWaveData = JSON.parse(content);
-            } catch (parseError) {
-                console.error('Erreur parsing JSON:', parseError);
-                showAlert({
-                    title: 'Fichier JSON invalide',
-                    message: 'Le fichier JSON est invalide ou corrompu.\n\nDétails : ' + parseError.message + '\n\nEssayez d\'ouvrir le fichier dans un éditeur de texte pour vérifier sa structure.'
-                });
-                return;
-            }
-
-            if (greenWaveData && greenWaveData.intersections) {
-                const greenWaveId = Date.now().toString();
-                let useIDB = false;
-
-                try {
-                    sessionStorage.setItem(`greenwave_${greenWaveId}`, JSON.stringify(greenWaveData.intersections));
-                    sessionStorage.setItem(`greenwave_settings_${greenWaveId}`, JSON.stringify({
-                        name: greenWaveData.name || file.name.replace(/\.json$/i, ''),
-                        // Nom du fichier d'origine sur disque, conservé pour
-                        // que la sauvegarde re-suggère exactement le même nom
-                        // (préserve le préfixe « Onde verte - » s'il y était).
-                        loadedFileName: file.name.replace(/\.json$/i, ''),
-                        speed: greenWaveData.speed,
-                        speedUp: greenWaveData.speedUp,
-                        speedDown: greenWaveData.speedDown,
-                        speedLineOffsetUp: greenWaveData.speedLineOffsetUp,
-                        speedLineOffsetDown: greenWaveData.speedLineOffsetDown,
-                        showSpeedLines: greenWaveData.showSpeedLines,
-                        pfParams: greenWaveData.pfParams,
-                        pixelsPerSecond: greenWaveData.pixelsPerSecond,
-                        pixelsPerMeter: greenWaveData.pixelsPerMeter,
-                        displayCycles: greenWaveData.displayCycles
-                    }));
-                } catch (e) {
-                    await saveGreenWaveToIDB(`greenwave_${greenWaveId}`, greenWaveData.intersections);
-                    await saveGreenWaveToIDB(`greenwave_settings_${greenWaveId}`, {
-                        name: greenWaveData.name || file.name.replace(/\.json$/i, ''),
-                        // Nom du fichier d'origine sur disque, conservé pour
-                        // que la sauvegarde re-suggère exactement le même nom
-                        // (préserve le préfixe « Onde verte - » s'il y était).
-                        loadedFileName: file.name.replace(/\.json$/i, ''),
-                        speed: greenWaveData.speed,
-                        speedUp: greenWaveData.speedUp,
-                        speedDown: greenWaveData.speedDown,
-                        speedLineOffsetUp: greenWaveData.speedLineOffsetUp,
-                        speedLineOffsetDown: greenWaveData.speedLineOffsetDown,
-                        showSpeedLines: greenWaveData.showSpeedLines,
-                        pfParams: greenWaveData.pfParams,
-                        pixelsPerSecond: greenWaveData.pixelsPerSecond,
-                        pixelsPerMeter: greenWaveData.pixelsPerMeter,
-                        displayCycles: greenWaveData.displayCycles
-                    });
-                    useIDB = true;
-                }
-
-                openOrFocusGreenWave(`${window.location.origin}${window.location.pathname}?greenwave&id=${greenWaveId}${useIDB ? '&idb=1' : ''}`);
-            } else {
-                showAlert({ title: 'Fichier invalide', message: "Le fichier ne contient pas de données d'onde verte valides." });
-            }
-        } catch (e) {
-            if (e.name !== 'AbortError') {
-                console.error('Erreur ouverture fichier onde verte:', e);
-                showAlert({ title: 'Erreur', message: "Erreur lors de l'ouverture du fichier : " + e.message });
-            }
-        }
-    };
 
     const openSavedProject = async (projectNameToOpen: string | null, confirmationMessage: string) => {
         if (!projectNameToOpen) return;

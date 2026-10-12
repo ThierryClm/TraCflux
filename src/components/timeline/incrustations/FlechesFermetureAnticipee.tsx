@@ -17,7 +17,7 @@ interface FlechesFermetureAnticipeeProps {
 
 /** Flèches des fermetures anticipées, du groupe source vers les groupes visés. */
 const FlechesFermetureAnticipee = ({ ctx, doesGroupWrap, fermetureActions, getGroupEndPos, getGroupRowY, getGroupStartPos, getSimulatedGroup, simulationResult }: FlechesFermetureAnticipeeProps) => {
-    const { groups, pixelsPerSecond, cycleLength, effectiveCycleLength, svgHeight, totalWidth, getShiftedActionPosition } = ctx;
+    const { groups, pixelsPerSecond, effectiveCycleLength, svgHeight, totalWidth, getShiftedActionPosition } = ctx;
 
     return (
         <>
@@ -76,7 +76,6 @@ const FlechesFermetureAnticipee = ({ ctx, doesGroupWrap, fermetureActions, getGr
 
                     // Check if target group's green overlaps with source group's green
                     // Overlap occurs if target's green period intersects with source's green period
-                    const cycle = simulationResult ? effectiveCycleLength : cycleLength;
                     let groupsOverlap = false;
 
                     if (sourceStart !== null && sourceEnd !== null && targetEnd !== null) {

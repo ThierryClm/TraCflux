@@ -65,7 +65,7 @@ const useDialogState = () => {
         try {
             const saved = localStorage.getItem('importedHTMFiles');
             return saved ? JSON.parse(saved) as FichierHTMImporte[] : [];
-        } catch (e) {
+        } catch {
             return [];
         }
     });

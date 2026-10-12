@@ -20,7 +20,6 @@ const BarreFlecheAnticipation = ({ ctx, flecheAnticipationActions }: BarreFleche
                 const gf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
                 const rawDeb = entier(action.deb) || 0;
                 const rawFin = entier(action.fin) || 0;
-                const abrv = action.abrv || '';
                 const isHighlighted = hoveredActionId === action.id;
 
                 // Find group index in array

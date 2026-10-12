@@ -9,8 +9,6 @@ import {
     maxEllipseScaleX,
     fitArrowOffset,
     fitTangentEllipse,
-    getEllipseConfig as configEllipse,
-    ARROW_OUTER_OFFSET,
     MIN_ARROW_OFFSET
 } from './phasageLayout';
 

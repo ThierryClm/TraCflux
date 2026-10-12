@@ -254,46 +254,6 @@ function colNameToIndex(colName: string): number {
 }
 
 /**
- * Helper function to get cell value, handling merged cells
- * @param {Object} sheet - The worksheet object
- * @param {number} row - 0-based row index
- * @param {number} col - 0-based column index
- * @returns {any} - The cell value or empty string
- */
-function getCellValue(sheet: XLSX.WorkSheet, row: number, col: number): Cell {
-    try {
-        // Convert to Excel cell address (e.g., A1, B2, etc.)
-        const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-        const cell = sheet[cellAddress];
-
-        if (cell && typeof cell === 'object') {
-            return cell.v !== undefined ? cell.v : '';
-        }
-
-        // If cell is empty, check if it's part of a merged range
-        if (sheet['!merges'] && Array.isArray(sheet['!merges'])) {
-            for (const merge of sheet['!merges']) {
-                if (!merge || !merge.s || !merge.e) continue;
-                // Check if this cell is within the merged range
-                if (row >= merge.s.r && row <= merge.e.r && col >= merge.s.c && col <= merge.e.c) {
-                    // Get value from the top-left cell of the merge
-                    const mergeAddress = XLSX.utils.encode_cell({ r: merge.s.r, c: merge.s.c });
-                    const mergeCell = sheet[mergeAddress];
-                    if (mergeCell && typeof mergeCell === 'object') {
-                        return mergeCell.v !== undefined ? mergeCell.v : '';
-                    }
-                }
-            }
-        }
-
-        return '';
-    } catch (err) {
-        console.warn(`Error getting cell value at row ${row}, col ${col}:`, err);
-        return '';
-    }
-}
-
-/**
  * Import Excel file and parse it into project structure
  * Expected Excel structure:
  * - Sheet "Groupes" or "Configuration": Groups data (GF, Nom, Type, Décalage, Vert, Orange, Vert Min)
@@ -614,7 +574,6 @@ function parseGroupsSheet(sheetData: SheetData, result: ExcelImportResult, sheet
     // Groups are at rows 6, 8, 10... (every 2 rows, with blank line between)
     const groups: ImportedGroup[] = [];
     let currentRow = 5; // Start at row 6 (index 5)
-    let groupId = 1; // Compteur de groupe de feu
 
     console.log('Starting to parse groups from row 6...');
 
@@ -1229,175 +1188,6 @@ function parseAdditionalPFSheet(sheetData: SheetData, result: ExcelImportResult,
 }
 
 /**
- * Parse PF sheet (contains both diagram and action table below)
- * - AL3 (column 37, row 2): Cycle duration
- * - Rows 6-15: Diagram with merged cells (green/orange phases)
- * - Below diagram: Action table
- */
-function parsePFSheet(sheetData: SheetData, result: ExcelImportResult, pfNumber: number): void {
-    console.log(`Parsing PF${pfNumber} sheet, sheetData length:`, sheetData.length);
-
-    if (sheetData.length < 2) return;
-
-    // Extract cycle duration from AL3 (row 2, column 37 - AL is column 38 in 1-indexed, 37 in 0-indexed)
-    // AL = A(1) + L(12) = column 38 (1-indexed) = index 37 (0-indexed)
-    if (sheetData[2] && sheetData[2][37]) {
-        const cycle = parseNumber(sheetData[2][37], null);
-        console.log(`Cycle length from AL3 in PF${pfNumber}:`, cycle);
-        if (cycle && cycle >= 30 && cycle <= 300) {
-            result.cycleLength = cycle;
-            console.log('Cycle length set to:', cycle);
-        }
-    }
-
-    // A PF sheet contains:
-    // 1. A diagram at the top (rows 6-15, visual representation with merged cells)
-    // 2. An action table below the diagram
-
-    // Find the action table by looking for header row with "GF", "Action", "Description" etc.
-    let actionTableStartRow = -1;
-    for (let i = 0; i < sheetData.length; i++) {
-        const row = sheetData[i].map(cell => String(cell).toLowerCase().trim());
-        if (row.some(cell => cell.includes('gf') || cell.includes('action')) &&
-            row.some(cell => cell.includes('description') || cell.includes('deb'))) {
-            actionTableStartRow = i;
-            break;
-        }
-    }
-
-    // If no action table found, create empty PF tab
-    if (actionTableStartRow === -1) {
-        result.pfTabs.push({
-            id: pfNumber,
-            name: `PF${pfNumber}`,
-            data: []
-        });
-        return;
-    }
-
-    // Parse actions from this table
-    const headerRow = sheetData[actionTableStartRow].map(cell => String(cell).toLowerCase().trim());
-
-    // Find column indices
-    const colIdx = {
-        gf: findColumnIndex(headerRow, ['gf', 'groupe']),
-        action: findColumnIndex(headerRow, ['action', 'type']),
-        description: findColumnIndex(headerRow, ['description', 'desc', 'libellé', 'libelle']),
-        deb: findColumnIndex(headerRow, ['deb', 'début', 'debut', 'start']),
-        fin: findColumnIndex(headerRow, ['fin', 'end']),
-        abrv: findColumnIndex(headerRow, ['abrv', 'abrev', 'abréviation']),
-        actionMicro: findColumnIndex(headerRow, ['action_micro', 'actionmicro', 'micro']),
-        plage1: findColumnIndex(headerRow, ['plage1', 'plage 1']),
-        plage2: findColumnIndex(headerRow, ['plage2', 'plage 2']),
-        actionGf1: findColumnIndex(headerRow, ['action gf 1', 'actiongf1', 'gf1']),
-        actionGf2: findColumnIndex(headerRow, ['action gf 2', 'actiongf2', 'gf2']),
-        actionGf3: findColumnIndex(headerRow, ['action gf 3', 'actiongf3', 'gf3']),
-        actionGf4: findColumnIndex(headerRow, ['action gf 4', 'actiongf4', 'gf4'])
-    };
-
-    // Parse actions
-    const actions: LegacyImportedAction[] = [];
-    for (let i = actionTableStartRow + 1; i < sheetData.length; i++) {
-        const row = sheetData[i];
-        if (!row || row.length === 0) continue;
-
-        // Skip completely empty rows
-        const hasData = row.some(cell => cell !== '' && cell !== null && cell !== undefined);
-        if (!hasData) continue;
-
-        const action: LegacyImportedAction = {
-            id: actions.length + 1,
-            gf: parseNumber(row[colIdx.gf], ''),
-            action: String(row[colIdx.action] || '').trim(),
-            description: String(row[colIdx.description] || '').trim(),
-            deb: parseNumber(row[colIdx.deb], ''),
-            fin: parseNumber(row[colIdx.fin], ''),
-            abrv: String(row[colIdx.abrv] || '').trim(),
-            action_Micro: String(row[colIdx.actionMicro] || '').trim(),
-            plage1: parseNumber(row[colIdx.plage1], ''),
-            plage2: parseNumber(row[colIdx.plage2], ''),
-            actionGf1: parseNumber(row[colIdx.actionGf1], ''),
-            actionGf2: parseNumber(row[colIdx.actionGf2], ''),
-            actionGf3: parseNumber(row[colIdx.actionGf3], ''),
-            actionGf4: parseNumber(row[colIdx.actionGf4], '')
-        };
-
-        actions.push(action);
-    }
-
-    // Add this PF tab with its actions
-    result.pfTabs.push({
-        id: pfNumber,
-        name: `PF${pfNumber}`,
-        data: actions
-    });
-}
-
-/**
- * Parse actions sheet (standalone - not used with new structure but kept for compatibility)
- */
-function parseActionsSheet(sheetData: SheetData, result: ExcelImportResult): void {
-    if (sheetData.length < 2) return;
-
-    // Find header row
-    let headerRowIdx = 0;
-    for (let i = 0; i < Math.min(5, sheetData.length); i++) {
-        const row = sheetData[i].map(cell => String(cell).toLowerCase().trim());
-        if (row.some(cell => cell.includes('gf') || cell.includes('action') || cell.includes('description'))) {
-            headerRowIdx = i;
-            break;
-        }
-    }
-
-    const headerRow = sheetData[headerRowIdx].map(cell => String(cell).toLowerCase().trim());
-
-    // Find column indices
-    const colIdx = {
-        gf: findColumnIndex(headerRow, ['gf', 'groupe']),
-        action: findColumnIndex(headerRow, ['action', 'type']),
-        description: findColumnIndex(headerRow, ['description', 'desc', 'libellé']),
-        deb: findColumnIndex(headerRow, ['deb', 'début', 'debut', 'start']),
-        fin: findColumnIndex(headerRow, ['fin', 'end']),
-        abrv: findColumnIndex(headerRow, ['abrv', 'abrev', 'abréviation']),
-        actionMicro: findColumnIndex(headerRow, ['action_micro', 'actionmicro', 'micro']),
-        plage1: findColumnIndex(headerRow, ['plage1', 'plage 1']),
-        plage2: findColumnIndex(headerRow, ['plage2', 'plage 2']),
-        actionGf1: findColumnIndex(headerRow, ['action gf 1', 'actiongf1', 'gf1']),
-        actionGf2: findColumnIndex(headerRow, ['action gf 2', 'actiongf2', 'gf2']),
-        actionGf3: findColumnIndex(headerRow, ['action gf 3', 'actiongf3', 'gf3']),
-        actionGf4: findColumnIndex(headerRow, ['action gf 4', 'actiongf4', 'gf4'])
-    };
-
-    // Parse actions
-    const actions: LegacyImportedAction[] = [];
-    for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
-        const row = sheetData[i];
-        if (!row || row.length === 0) continue;
-
-        const action: LegacyImportedAction = {
-            id: actions.length + 1,
-            gf: parseNumber(row[colIdx.gf], ''),
-            action: String(row[colIdx.action] || '').trim(),
-            description: String(row[colIdx.description] || '').trim(),
-            deb: parseNumber(row[colIdx.deb], ''),
-            fin: parseNumber(row[colIdx.fin], ''),
-            abrv: String(row[colIdx.abrv] || '').trim(),
-            action_Micro: String(row[colIdx.actionMicro] || '').trim(),
-            plage1: parseNumber(row[colIdx.plage1], ''),
-            plage2: parseNumber(row[colIdx.plage2], ''),
-            actionGf1: parseNumber(row[colIdx.actionGf1], ''),
-            actionGf2: parseNumber(row[colIdx.actionGf2], ''),
-            actionGf3: parseNumber(row[colIdx.actionGf3], ''),
-            actionGf4: parseNumber(row[colIdx.actionGf4], '')
-        };
-
-        actions.push(action);
-    }
-
-    result.actionData = actions;
-}
-
-/**
  * Parse traffic sheet - "Trafic" sheet with specific cell positions
  * Groups (Grp) and names (Nom) are copied from the Formulaire sheet (already in result.groups)
  * Import from Excel:
@@ -1500,21 +1290,6 @@ function parseTrafficSheet(sheetData: SheetData, result: ExcelImportResult, colO
         laneCoef: g.laneCoef
     })));
     console.log('Traffic datasets:', trafficDatasets);
-}
-
-/**
- * Find column index by possible names
- */
-function findColumnIndex(headerRow: string[], possibleNames: string[]): number {
-    for (let i = 0; i < headerRow.length; i++) {
-        const cellValue = headerRow[i].toLowerCase().trim();
-        for (const name of possibleNames) {
-            if (cellValue.includes(name)) {
-                return i;
-            }
-        }
-    }
-    return -1;
 }
 
 /**

@@ -62,7 +62,6 @@ const IntersectionImage = ({
     // Animation state (lifted to parent)
     isPlaying,
     playbackSpeed = 1,
-    setIsPlaying,
     currentTime,
     setCurrentTime,
     // Hover state for diagram highlighting
@@ -204,7 +203,7 @@ const IntersectionImage = ({
                             addRecentDirectory('image', dirHandle.name);
                         }
                     }
-                } catch (err) {
+                } catch {
                     // getParent not always available
                 }
 
@@ -526,8 +525,6 @@ const IntersectionImage = ({
         const strokeWidth = 3;
         const thinStrokeWidth = 2; // Thinner stroke for Piéton/Cycle
         const size = 32;
-        // Calculate vertical part length reduction for turn arrows (1 = full, 0.5 = half)
-        const verticalReduction = 12 * (1 - turnLength); // Reduce from bottom
 
         switch (courant) {
             case 'TD': // Tout droit

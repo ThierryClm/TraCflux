@@ -98,7 +98,9 @@ describe('Réserve de capacité — un groupe inhibé ne montre plus de chiffres
         // doit désigner GF3 et non un groupe dont on n'affiche aucun chiffre.
         const { container } = dessiner(new Set([1]));
         const synthese = container.querySelector('.diagnostic-carrefour');
-        if (synthese) expect(synthese.textContent).not.toContain('GF1');
+        expect(synthese).not.toBeNull();
+        expect(synthese.textContent).not.toContain('GF1');
+        expect(synthese.textContent).toContain('GF3');
     });
 
     it('la ligne inhibée reste identifiable', () => {

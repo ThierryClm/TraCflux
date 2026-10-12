@@ -431,7 +431,6 @@ function PrintPreviewModal({
                                     // Plafond à 1,5 : au-delà, un tableau étroit à l'écran
                                     // deviendrait démesuré sur la feuille.
                                     const zoomConditions = Math.min(1.5, dossierUsableWidth / largeurConditionsImpression);
-                                    const availableWidth = dossierUsableWidth - dossierSidebarReal;
                                     // Cycle de référence de l'échelle homogène, propre au format.
                                     //
                                     // La règle ne change pas : en deçà du cycle de référence, une
@@ -441,92 +440,8 @@ function PrintPreviewModal({
                                     // paysage contre 190 en portrait, où l'on vise donc des cycles
                                     // plus courts.
                                     const refCycle = dossierPortrait ? 80 : 120;
-                                    const basePPS = cycleLength <= refCycle
-                                        ? availableWidth / refCycle
-                                        : availableWidth / cycleLength;
 
                                     // Fonctions de calcul trafic (dupliquées de TrafficTable)
-                                    const getTotalGreenTime = (groupId: number, mainGreenTime: number) => {
-                                        if (!mainGreenTime) return 0;
-                                        const lucarneActions = actionData.filter(
-                                            action => action.action === 'Seconde lucarne' &&
-                                                     parseInt(String(action.gf ?? '')) === groupId &&
-                                                     action.deb !== '' && action.deb !== null &&
-                                                     action.fin !== '' && action.fin !== null
-                                        );
-                                        let lucarneDuration = 0;
-                                        lucarneActions.forEach(lucarne => {
-                                            const deb = parseFloat(String(lucarne.deb ?? ''));
-                                            const fin = parseFloat(String(lucarne.fin ?? ''));
-                                            if (!isNaN(deb) && !isNaN(fin)) {
-                                                let duration = fin - deb;
-                                                if (duration < 0) duration += cycleLength;
-                                                lucarneDuration += duration;
-                                            }
-                                        });
-                                        return mainGreenTime + lucarneDuration;
-                                    };
-                                    const calcVUtile = (trafficVol: number, laneCoef: number) => {
-                                        if (!trafficVol || !laneCoef || !cycleLength || laneCoef === 0) return null;
-                                        return Math.round(trafficVol / (1800 * laneCoef / cycleLength));
-                                    };
-                                    const calcCapacity = (greenTime: number, vUtile: number) => {
-                                        if (!greenTime || !vUtile || greenTime === 0) return null;
-                                        return Math.round((vUtile / greenTime) * 100);
-                                    };
-                                    const calcDelay = (
-                                        greenTime: number,
-                                        trafficVol: number,
-                                        laneCoef: number,
-                                        groupId: number,
-                                        groupOffset: number | null | undefined,
-                                    ) => {
-                                        const bandeAction = actionData.find(
-                                            action => action.action === 'Début de bande passante' &&
-                                                     parseInt(String(action.actGf1 ?? '')) === groupId &&
-                                                     action.fin !== '' && action.fin !== null && action.fin !== undefined
-                                        );
-                                        if (bandeAction) {
-                                            const finValue = parseFloat(String(bandeAction.fin ?? ''));
-                                            if (!isNaN(finValue) && groupOffset !== undefined && groupOffset !== null) {
-                                                return Math.max(0, Math.round(groupOffset - finValue));
-                                            }
-                                        }
-                                        if (!greenTime || !trafficVol || !laneCoef || !cycleLength || laneCoef === 0) return null;
-                                        const ratio = trafficVol / (1800 * laneCoef);
-                                        if (ratio >= 1) return null;
-                                        const denominator = 2 * cycleLength * (1 - ratio);
-                                        if (denominator === 0) return null;
-                                        const redTime = cycleLength - greenTime;
-                                        return Math.round((redTime * redTime) / denominator);
-                                    };
-                                    const calcQueue = (
-                                        greenTime: number,
-                                        trafficVol: number,
-                                        laneCoef: number,
-                                        groupId: number,
-                                        groupOffset: number | null | undefined,
-                                    ) => {
-                                        const bandeAction = actionData.find(
-                                            action => action.action === 'Début de bande passante' &&
-                                                     parseInt(String(action.actGf1 ?? '')) === groupId &&
-                                                     action.fin !== '' && action.fin !== null && action.fin !== undefined
-                                        );
-                                        if (bandeAction) {
-                                            const finValue = parseFloat(String(bandeAction.fin ?? ''));
-                                            if (!isNaN(finValue) && groupOffset !== undefined && groupOffset !== null) {
-                                                return Math.max(0, Math.round(groupOffset - finValue));
-                                            }
-                                        }
-                                        if (!greenTime || !trafficVol || !laneCoef || !cycleLength || laneCoef === 0) return null;
-                                        const redTime = cycleLength - greenTime;
-                                        const innerValue = trafficVol * redTime / 3600 / laneCoef;
-                                        return (Math.floor(innerValue) + 1) * 6;
-                                    };
-                                    const parseTrafficVol = (val: unknown) => {
-                                        if (!val) return 0;
-                                        return parseInt(String(val).replace(/c$/i, '')) || 0;
-                                    };
 
                                     const dossierSmallLogos = (projectProperties.logoMoa || projectProperties.logoMoe) ? (
                                         <span className="dossier-header-logos">
@@ -875,9 +790,6 @@ function PrintPreviewModal({
                                                 || (trafficDatasetNames.includes(pf.name) ? pf.name : activeTrafficDataset);
                                             const pfMicroFields = pf.id === activePFId ? microCustomFields : (pf.microCustomFields || []);
                                             // PPS de base pour ce PF (basé sur son propre cycleLength)
-                                            const pfBasePPS = pfCycleLength <= refCycle
-                                                ? availableWidth / refCycle
-                                                : availableWidth / pfCycleLength;
                                             // Calcul du scale optimisé pour remplir la page
                                             const diagramPageHeight = 648;
                                             // Sans le titre interne (display:none): RULER_HEIGHT(50) + 1px border + groups*31 + 30px grid-bottom + SVG labels/flèches en bas + marge
@@ -915,7 +827,6 @@ function PrintPreviewModal({
                                                 ? timelineDispo / refCycle
                                                 : timelineDispo / pfCycleLength; // cycle long : réduit pour tenir
                                             const pfPPS = ppsVisuel / combinedScale;
-                                            const targetWidth = largeurColonneVisuelle + pfCycleLength * ppsVisuel;
                                             return (
                                         <Fragment key={pf.id}>
                                         {/* Diagramme */}

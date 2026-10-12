@@ -9,18 +9,9 @@ interface CycleDiagramProps {
     isPlaying: boolean;
 }
 
-const CycleDiagram = ({ durations, currentPhase, elapsedTime, isPlaying }: CycleDiagramProps) => {
+const CycleDiagram = ({ durations, currentPhase, elapsedTime }: CycleDiagramProps) => {
     const { red, orange, green } = durations;
     const totalDuration = red + orange + green;
-
-    const getPhaseColor = (phase: keyof Durees) => {
-        switch (phase) {
-            case 'red': return '#e74c3c';
-            case 'orange': return '#f1c40f';
-            case 'green': return '#2ecc71';
-            default: return '#ccc';
-        }
-    };
 
     const conicGradient = useMemo(() => {
         if (totalDuration === 0) return 'gray';
@@ -33,7 +24,6 @@ const CycleDiagram = ({ durations, currentPhase, elapsedTime, isPlaying }: Cycle
 
         const greenDeg = (green / totalDuration) * 360;
         const orangeDeg = (orange / totalDuration) * 360;
-        const redDeg = (red / totalDuration) * 360;
 
         // We start at 0deg (top)
         // Green from 0 to greenDeg

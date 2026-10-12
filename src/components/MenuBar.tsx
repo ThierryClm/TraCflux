@@ -115,10 +115,7 @@ const MenuBar = ({
     onAction,
     arrowStyle,
     onArrowStyleChange,
-    importedFiles = [],
-    recentDirectories = [],
     recentOpenDirs = [],
-    recentImportDirs = [],
     recentSaveDirs = [],
     currentUser = null,
     hasPermission = () => true,
@@ -236,31 +233,8 @@ const MenuBar = ({
     };
 
     // Build imported files submenu dynamically
-    const importedFilesSubmenu: ElementMenu[] = importedFiles.length > 0
-        ? [
-            { label: 'Fichiers HTM disponibles', type: 'header' },
-            ...importedFiles.map(file => ({
-                label: file.name,
-                action: `openImportedFile:${file.id}`
-            }))
-        ]
-        : [{ label: '(Aucun fichier)', type: 'header' }];
 
     // Build recent directories submenu dynamically
-    const recentDirsSubmenu: ElementMenu[] = [
-        { label: 'Parcourir...', action: 'browseImport' },
-        { type: 'separator' },
-        ...(recentDirectories.length > 0
-            ? [
-                { label: 'Répertoires récents', type: 'header' },
-                ...recentDirectories.map((dir, idx) => ({
-                    label: dir.name || dir.path,
-                    action: `importFromDir:${idx}`
-                }))
-            ]
-            : [{ label: '(Aucun répertoire récent)', type: 'header', disabled: true }]
-        )
-    ];
 
     // Build recent open directories submenu
     const recentOpenDirsSubmenu: ElementMenu[] = [
@@ -276,17 +250,6 @@ const MenuBar = ({
     ];
 
     // Build recent import directories submenu
-    const recentImportDirsSubmenu: ElementMenu[] = [
-        { label: 'Parcourir...', action: 'import' },
-        ...(recentImportDirs.length > 0 ? [
-            { type: 'separator' },
-            { label: 'Répertoires récents', type: 'header' },
-            ...recentImportDirs.map((dir, idx) => ({
-                label: dir.name,
-                action: `importFromRecentDir:${idx}`
-            }))
-        ] : [])
-    ];
 
     // Build recent save directories submenu
     const recentSaveDirsSubmenu: ElementMenu[] = [

@@ -98,7 +98,7 @@ export const tokenizeMicroText = (
     return (text || '').split(splitRe).map((part) => {
         if (!part) return { text: '', type: 'text' };
         if (/\w/.test(part) && keywordRe.test(part)) return { text: part, type: 'keyword' };
-        if (/^[{}\[\]()]$/.test(part) || /^(et|ou)$/.test(part)) return { text: part, type: 'bold' };
+        if (/^[{}[\]()]$/.test(part) || /^(et|ou)$/.test(part)) return { text: part, type: 'bold' };
         return { text: part, type: 'text' };
     });
 };

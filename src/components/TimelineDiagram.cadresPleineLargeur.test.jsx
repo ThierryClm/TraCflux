@@ -30,7 +30,6 @@ const groupes = exemple.groups.map(g => {
 const ESCAMOTAGE_PHASE = 1;     // 20-32 s, tous les groupes
 const ADAPTATIF_GF2 = 5;        // 11-15 s, plage GF1 à GF7
 const ADAPTATIF_GF8 = 8;        // 7-11 s, plage GF8 à GF13
-const ADAPTATIF_GF10 = 11;      // 44-48 s, sans plage
 
 /** Morceaux du cadre, de haut en bas : « deb-fin » en secondes. */
 const cadres = (selecteur, cochees, separateur) => {

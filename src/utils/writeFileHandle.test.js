@@ -50,6 +50,9 @@ describe('writeTextToFileHandle', () => {
         vi.useFakeTimers();
         const { handle } = makeHandle(2);
         const pending = writeTextToFileHandle(handle, 'contenu');
+        // L'assertion est attendue plus bas : elle doit être posée avant
+        // d'avancer les minuteries, sinon le rejet passerait inaperçu.
+        // oxlint-disable-next-line vitest/valid-expect
         const assertion = expect(pending).rejects.toThrow(FILE_CHANGED_MESSAGE);
         await vi.runAllTimersAsync();
         await assertion;

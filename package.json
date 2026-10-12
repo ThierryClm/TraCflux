@@ -13,6 +13,7 @@
     "scripts": {
         "dev": "vite",
         "types": "tsc --noEmit",
+        "lint": "npx --yes oxlint@1.87.0 -c .oxlintrc.json src",
         "build": "vite build",
         "preview": "vite preview",
         "preview:deploy": "node scripts/deploy-preview.mjs",

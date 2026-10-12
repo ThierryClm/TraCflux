@@ -52,7 +52,7 @@ interface PropertiesPanelProps {
     tooltipsEnabled?: boolean;
 }
 
-const LogoBox = ({ logoPath, onSelect, label }: LogoBoxProps) => {
+const LogoBox = ({ logoPath, onSelect }: LogoBoxProps) => {
     const fileRef = useRef<HTMLInputElement>(null);
 
     const handleClick = () => {

@@ -9,7 +9,7 @@ import { stampReadOnly } from '../utils/dossierLock';
 import { bringAllPopupsToFront } from './usePopupWindow';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from '../utils/floatingImageBox';
 import { booleenDuMode, lireModeAffichage, modeDuBooleen, type ModeAffichage } from '../utils/modeAffichage';
-import type { CadrageImage, OptionsMiseEnPage, Projet } from '../types/projet';
+import type { CadrageImage, Projet } from '../types/projet';
 import type { EtatProjet } from './useTrafficLight';
 import type { RecentDirectory, RecentDirectoryType } from './useRecentDirectories';
 
@@ -96,7 +96,7 @@ interface UseFileOperationsOptions {
 const useFileOperations = ({
     projectName, diagramHeight, floatingCrop, floatingZoom,
     setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
-    projectModifiedSkip, hasUnsavedChanges, setHasUnsavedChanges,
+    projectModifiedSkip, setHasUnsavedChanges,
     isDirty,
     setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
     setCommentsMode, setRemarksMode, setIntersectionName,
@@ -114,8 +114,7 @@ const useFileOperations = ({
     setHasActiveProject,
     loadFullState, getFullState, saveProject,
     dossierSections, setDossierSections,
-    lastOpenDirectoryRef, lastSaveDirectoryRef, lastImportDirectoryRef,
-    lastImageDirectoryRef,
+    lastOpenDirectoryRef, lastSaveDirectoryRef,
     saveDirectoryHandle, loadDirectoryHandle,
     recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
     addRecentDirectory,
@@ -201,7 +200,7 @@ const useFileOperations = ({
                     // Ajouter aux répertoires récents
                     addRecentDirectory('open', dirHandle.name, dirHandle);
                 }
-            } catch (e) {
+            } catch {
                 // getParent n'est pas toujours disponible
             }
 
@@ -386,7 +385,7 @@ const useFileOperations = ({
                     await saveDirectoryHandle('lastOpenDirectory', dirHandle);
                     addRecentDirectory('open', dirHandle.name, dirHandle);
                 }
-            } catch (e) {
+            } catch {
                 // getParent n'est pas toujours disponible
             }
 
@@ -553,7 +552,7 @@ const useFileOperations = ({
                     // Ajouter aux répertoires récents d'enregistrement
                     addRecentDirectory('save', dirHandle.name, dirHandle);
                 }
-            } catch (e) {
+            } catch {
                 // getParent n'est pas toujours disponible
             }
 
@@ -649,7 +648,7 @@ const useFileOperations = ({
                     await saveDirectoryHandle('lastSaveDirectory', dirHandle);
                     addRecentDirectory('save', dirHandle.name, dirHandle);
                 }
-            } catch (e) {
+            } catch {
                 // getParent n'est pas toujours disponible
             }
 
