@@ -95,13 +95,13 @@ export default defineConfig({
       reporter: ['text', 'html', 'json-summary'],
       include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: ['src/**/*.{test,spec}.*', 'src/tests/**'],
-      // Plancher initial : il empêche une régression globale tout en laissant
-      // la consolidation progresser par lots sur cette application historique.
+      // Plancher : il empêche une régression globale tout en laissant la
+      // consolidation progresser par lots. À relever quand la couverture monte.
       thresholds: {
-        statements: 30,
-        branches: 26,
-        functions: 25,
-        lines: 31
+        statements: 46,
+        branches: 42,
+        functions: 43,
+        lines: 48
       }
     }
   }
