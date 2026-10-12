@@ -1,3 +1,4 @@
+import CustomTooltip from '../CustomTooltip';
 import Modal from '../Modal';
 
 interface SavedProjectSummary {
@@ -13,8 +14,16 @@ interface ProjectOpenDialogProps {
     selectedProject: string | null;
     onSelect: (name: string) => void;
     onOpen: (name: string | null) => void;
-    tip: (label: string) => string | undefined;
 }
+
+// Les projets listés sont les sauvegardes automatiques du navigateur : elles
+// reflètent le dernier travail fait sur ce poste, pas forcément la version
+// partagée du projet.
+export const INFO_RESTAURATION =
+    'Ces projets sont les dernières versions enregistrées automatiquement sur ce poste, ' +
+    'issues de votre propre travail.\n' +
+    'Avant de reprendre l\'un d\'eux, vérifiez qu\'il n\'a pas été modifié entre-temps ' +
+    'par un autre utilisateur (par exemple dans la version partagée sur le réseau).';
 
 const formatDate = (isoString?: string | null) => {
     if (!isoString) return '-';
@@ -40,10 +49,22 @@ export default function ProjectOpenDialog({
     selectedProject,
     onSelect,
     onOpen,
-    tip,
 }: ProjectOpenDialogProps) {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={tip('Ouvrir un projet')} overlayClassName="modal-menu-overlay">
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={(
+                <span className="titre-avec-info">
+                    Ouvrir un projet
+                    {/* Affichée même infobulles désactivées : on survole ce bouton pour la lire. */}
+                    <CustomTooltip text={INFO_RESTAURATION}>
+                        <span className="bouton-info" role="img" aria-label={INFO_RESTAURATION} tabIndex={0}>i</span>
+                    </CustomTooltip>
+                </span>
+            )}
+            overlayClassName="modal-menu-overlay"
+        >
             {projects.length > 0 ? (
                 <>
                     <div className="project-list-container">

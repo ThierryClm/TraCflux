@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import ProjectOpenDialog from './ProjectOpenDialog';
+import ProjectOpenDialog, { INFO_RESTAURATION } from './ProjectOpenDialog';
 
 const buildProps = (overrides = {}) => ({
     isOpen: true,
@@ -12,7 +12,6 @@ const buildProps = (overrides = {}) => ({
     selectedProject: null,
     onSelect: vi.fn(),
     onOpen: vi.fn(),
-    tip: (value) => value,
     ...overrides,
 });
 
@@ -47,5 +46,16 @@ describe('ProjectOpenDialog', () => {
         expect(screen.getByText('Aucun projet sauvegardé')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Fermer' }));
         expect(props.onClose).toHaveBeenCalledOnce();
+    });
+});
+
+describe('ProjectOpenDialog — bouton info', () => {
+    it('le titre porte un bouton « i » dont l\'infobulle met en garde', async () => {
+        render(<ProjectOpenDialog {...buildProps()} />);
+        expect(screen.getByText('Ouvrir un projet')).toBeInTheDocument();
+        const bouton = screen.getByRole('img', { name: INFO_RESTAURATION });
+        fireEvent.mouseEnter(bouton);
+        const infobulle = await screen.findByText(/dernières versions enregistrées automatiquement sur ce poste/);
+        expect(screen.getByText(/modifié entre-temps par un autre utilisateur/)).toBeInTheDocument();
     });
 });
