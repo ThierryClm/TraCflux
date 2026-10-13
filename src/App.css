@@ -2477,7 +2477,8 @@ body.amber-mode .help-back-to-top {
 .print-comparatif-scenarios .capacity-orange { color: #e08a00; }
 .print-comparatif-scenarios .capacity-red,
 .print-comparatif-scenarios .comparatif-alerte { color: #c62828; font-weight: bold; }
-.print-comparatif-scenarios .capacity-black {
+/* td.… : l'emporte sur le fond de la ligne de référence. */
+.print-comparatif-scenarios td.capacity-black {
     color: #000;
     background-color: #ff6b6b;
     font-weight: bold;
