@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
     scenariosDuPlan, scenarioChoisi, scenarioModifie, titreScenarioRefuse,
-    creerScenario, enregistrerScenario, supprimerScenario, choisirScenario, quitterScenario
+    creerScenario, enregistrerScenario, supprimerScenario, choisirScenario, quitterScenario,
+    scenariosFixes, TOUT_COCHE, TOUT_DECOCHE
 } from './scenarios';
 
 const actions = [
@@ -74,5 +75,30 @@ describe('Scénarios de simulation', () => {
         });
         expect(scenarioChoisi(plan())).toBeNull();
         expect(supprimerScenario(plan())).toBeNull();
+    });
+
+    it('Tout coché et Tout décoché : composés du tableau, hors simulation exclue', () => {
+        expect(scenariosFixes(actions)).toEqual([
+            { nom: TOUT_COCHE, actions: [1, 2, 4] },
+            { nom: TOUT_DECOCHE, actions: [] }
+        ]);
+        expect(choisirScenario(plan({ simulationActions: [2] }), 'Tout coché'))
+            .toMatchObject({ simulationName: TOUT_COCHE, simulationActions: [1, 2, 4] });
+        expect(choisirScenario(plan({ simulationActions: [2] }), 'Tout décoché'))
+            .toMatchObject({ simulationName: TOUT_DECOCHE, simulationActions: [] });
+    });
+
+    it('un scénario fixe ne s\'enregistre ni ne se supprime', () => {
+        const pf = plan({ simulationName: TOUT_COCHE, simulationActions: [1] });
+        expect(scenarioChoisi(pf).nom).toBe(TOUT_COCHE);
+        expect(enregistrerScenario(pf, TOUT_COCHE)).toBeNull();
+        expect(supprimerScenario(pf)).toBeNull();
+        expect(scenariosDuPlan(pf), "n'entre pas dans la liste enregistrée").toEqual([]);
+        expect(titreScenarioRefuse('TOUT DÉCOCHÉ', [])).toMatch(/réservé/);
+    });
+
+    it('un scénario déjà enregistré sous un titre réservé est gardé, renommé', () => {
+        const pf = plan({ simulationScenarios: [{ nom: 'tout coché', actions: [1] }] });
+        expect(scenariosDuPlan(pf)).toEqual([{ nom: 'tout coché (2)', actions: [1] }]);
     });
 });

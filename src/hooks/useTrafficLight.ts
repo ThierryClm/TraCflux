@@ -11,7 +11,7 @@ import {
     cycleDuPlanActif
 } from '../utils/pfHelpers';
 import {
-    ACTIONS_HORS_SIMULATION, actionsSimulables, scenariosDuPlan,
+    scenariosDuPlan,
     choisirScenario, quitterScenario, creerScenario, enregistrerScenario, supprimerScenario
 } from '../simulation';
 import { isExampleSession } from '../utils/exampleMode';
@@ -2016,22 +2016,6 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         }));
     }, [ecrireScenario]);
 
-    const selectAllSimulationActions = useCallback(() => {
-        ecrireScenario(() => ({ simulationActions: actionsSimulables(actionData).map(a => a.id) }));
-    }, [ecrireScenario, actionData]);
-
-    const deselectAllSimulationActions = useCallback(() => {
-        // Les familles hors simulation ne sont pas affichées : on ne les décoche
-        // pas, faute de quoi elles disparaîtraient d'un scénario sans que rien
-        // ne l'ait demandé.
-        ecrireScenario(actuelles => ({
-            simulationActions: actuelles.filter(id => {
-                const action = actionData.find(a => a.id === id);
-                return action && ACTIONS_HORS_SIMULATION.includes(action.action);
-            })
-        }));
-    }, [ecrireScenario, actionData]);
-
     // Save project - defined after all state declarations to capture current values
     const saveProject = useCallback(async (name: string) => {
         if (!name) return false;
@@ -3105,8 +3089,6 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         enregistrerScenarioSimulation,
         supprimerScenarioSimulation,
         toggleSimulationAction,
-        selectAllSimulationActions,
-        deselectAllSimulationActions,
         // Intersection image
         intersectionImage,
         setIntersectionImage,

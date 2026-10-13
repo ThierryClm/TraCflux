@@ -44,8 +44,6 @@ interface WorkspaceSidebarModel {
     actionData: ActionMicro[];
     simulationSelectedActions: number[];
     toggleSimulationAction: (id: number) => void;
-    selectAllSimulationActions: () => void;
-    deselectAllSimulationActions: () => void;
     cycleLength: number;
     conflictMatrix: Matrice;
     setMatrixValue: (from: number, to: number, value: string) => void;
@@ -134,8 +132,6 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         actionData,
         simulationSelectedActions,
         toggleSimulationAction,
-        selectAllSimulationActions,
-        deselectAllSimulationActions,
         cycleLength,
         conflictMatrix,
         setMatrixValue,
@@ -260,8 +256,6 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 actionData={actionData}
                                 selectedActions={simulationSelectedActions}
                                 onToggle={toggleSimulationAction}
-                                onSelectAll={selectAllSimulationActions}
-                                onDeselectAll={deselectAllSimulationActions}
                                 groups={groups}
                                 cycleLength={cycleLength}
                                 conflictMatrix={conflictMatrix}

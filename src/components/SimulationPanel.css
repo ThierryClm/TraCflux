@@ -507,7 +507,7 @@
     background: #333;
 }
 
-.scenario-ligne.commande {
+.scenario-ligne.fixe .scenario-nom {
     color: #4ecdc4;
 }
 
@@ -539,19 +539,7 @@
 
 .scenario-separateur {
     margin: 4px 0;
-    padding: 4px 10px 0;
     border-top: 1px solid #444;
-    color: #888;
-    font-size: 0.7em;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.scenario-vide {
-    padding: 4px 10px;
-    color: #666;
-    font-size: 0.8em;
-    font-style: italic;
 }
 
 .sim-btn:disabled {

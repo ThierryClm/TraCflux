@@ -34,8 +34,6 @@ const buildModel = (overrides = {}) => ({
     actionData: [],
     simulationSelectedActions: [],
     toggleSimulationAction: vi.fn(),
-    selectAllSimulationActions: vi.fn(),
-    deselectAllSimulationActions: vi.fn(),
     cycleLength: 60,
     conflictMatrix: [],
     setMatrixValue: vi.fn(),
