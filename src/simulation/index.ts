@@ -3,3 +3,4 @@ export { calculateSimulatedDiagram } from './calculSimulation';
 export { ACTIONS_HORS_SIMULATION, actionsSimulables } from './actionsSimulables';
 export { conflitsSimules } from './conflits';
 export * from './scenarios';
+export * from './impressionScenarios';

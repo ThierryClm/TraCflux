@@ -1,12 +1,19 @@
 import type { Dispatch, SetStateAction } from 'react';
+import {
+    OPTIONS_SCENARIO, cleScenarioImpression, scenariosAImprimer, scenariosDuPlan,
+    planImprime, calculerScenario, optionScenario
+} from '../../simulation';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
 
-type PlanId = string | number;
 type DossierSections = Record<string, boolean>;
 
-interface DossierPlan {
-    id: PlanId;
-    name: string;
-    color?: string | null;
+/** De quoi recalculer un scénario, pour son résumé dans la liste. */
+interface ContexteScenarios {
+    activePFId: number;
+    groups: Groupe[];
+    cycleLength: number;
+    actionData: ActionMicro[];
+    conflictMatrix: Matrice;
 }
 
 interface DossierPrintDialogProps {
@@ -16,8 +23,8 @@ interface DossierPrintDialogProps {
     setPortrait: (value: boolean) => void;
     sections: DossierSections;
     setSections: Dispatch<SetStateAction<DossierSections>>;
-    plans: DossierPlan[];
-    simulationResult: unknown;
+    plans: PlanDeFeu[];
+    contexteScenarios: ContexteScenarios;
     intersectionImage: string | null;
     intersectionArrows: unknown[];
     onExportPdf: () => void;
@@ -33,7 +40,7 @@ function DossierPrintDialog({
     sections,
     setSections,
     plans,
-    simulationResult,
+    contexteScenarios,
     intersectionImage,
     intersectionArrows,
     onExportPdf,
@@ -47,7 +54,41 @@ function DossierPrintDialog({
     const dossierSections = sections;
     const setDossierSections = setSections;
     const pfTabs = plans;
-    const simulationResultImpression = simulationResult;
+
+    // Les scénarios enregistrés, plan par plan — « Tout coché » et « Tout
+    // décoché » n'en sont pas : ils ne s'impriment pas.
+    const plansAvecScenarios = pfTabs
+        .map(pf => ({ pf, scenarios: scenariosDuPlan(pf) }))
+        .filter(p => p.scenarios.length > 0);
+    const plansSansScenario = pfTabs.filter(pf => scenariosDuPlan(pf).length === 0);
+    /** Les scénarios cochés, plan par plan, tels que l'aperçu les imprimera. */
+    const coches = new Set(plansAvecScenarios.flatMap(({ pf }) =>
+        scenariosAImprimer(dossierSections, pf, contexteScenarios.activePFId)
+            .map(sc => cleScenarioImpression(pf.id, sc.nom))));
+    const toutesLesCles = plansAvecScenarios.flatMap(({ pf, scenarios }) =>
+        scenarios.map(sc => cleScenarioImpression(pf.id, sc.nom)));
+
+    // Chaque case s'écrit avec toutes les autres : un dossier d'avant
+    // l'impression multi-scénario n'a qu'une case globale, que l'aperçu lit
+    // comme le scénario choisi du plan actif ; la première case touchée fige
+    // cette lecture en choix explicites.
+    const ecrireCoches = (nouvelles: Set<string>) => setDossierSections(s => ({
+        ...s,
+        ...Object.fromEntries(toutesLesCles.map(cle => [cle, nouvelles.has(cle)])),
+        simulation: nouvelles.size > 0
+    }));
+    const basculerScenario = (cle: string) => {
+        const nouvelles = new Set(coches);
+        if (nouvelles.has(cle)) nouvelles.delete(cle); else nouvelles.add(cle);
+        ecrireCoches(nouvelles);
+    };
+
+    const resumeScenario = (pf: PlanDeFeu, sc: { nom: string; actions: number[] }) => {
+        const plan = planImprime(pf, contexteScenarios);
+        const c = calculerScenario(sc, plan, contexteScenarios.conflictMatrix);
+        const ecart = c.cycleSimule - plan.cycleLength;
+        return `${c.actions.length} action${c.actions.length > 1 ? 's' : ''} · ${c.cycleSimule} s${ecart ? ` (${ecart > 0 ? '+' : '−'}${Math.abs(ecart)} s)` : ''}`;
+    };
     const handleDossierExportPDF = onExportPdf;
     const handleDossierConfirm = onPrint;
 
@@ -184,64 +225,64 @@ function DossierPrintDialog({
                                 </div>
                                 );
                             })}
-                            {/* Simulation — le diagramme tel que la simulation le recalcule.
-                                Un scénario nommé sur le plan actif coche la case à
-                                l'ouverture de cette boîte : l'avoir nommé vaut intention de
-                                l'imprimer. Sans aucune action cochée il n'y a rien à
-                                imprimer ; la case reste alors visible mais inerte, avec la
-                                raison en infobulle, plutôt que de disparaître de la liste. */}
-                            {(() => {
-                                const simDispo = !!simulationResultImpression;
-                                const simCochee = (dossierSections.simulation || false) && simDispo;
-                                return (
-                            <div className="dossier-pf-group">
+                            {/* Scénarios — les scénarios enregistrés de chaque plan, chacun
+                                recalculé sur son plan. Ils s'impriment à la suite de leur plan
+                                de feu, avec les mêmes options de contenu pour tous, et une page
+                                de comparaison par plan. Sans aucun scénario enregistré, la case
+                                reste visible mais inerte, avec la raison en infobulle. */}
+                            <div className="dossier-pf-group dossier-scenarios">
                                 <label
-                                    className={simDispo ? '' : 'dossier-option-indisponible'}
-                                    title={tip(simDispo
-                                        ? "Imprime le diagramme recalculé par le scénario du plan actif, avec son cycle simulé."
-                                        : "Cochez des actions dans l'onglet Simulation pour pouvoir inclure un scénario.")}
+                                    className={plansAvecScenarios.length ? '' : 'dossier-option-indisponible'}
+                                    title={tip(plansAvecScenarios.length
+                                        ? "Coche ou décoche tous les scénarios. Chacun s'imprime à la suite de son plan de feu, recalculé d'après sa version enregistrée."
+                                        : "Enregistre des scénarios dans l'onglet Simulation pour pouvoir les imprimer.")}
                                 >
-                                    <input type="checkbox" checked={simCochee} disabled={!simDispo}
-                                        onChange={e => {
-                                            const checked = e.target.checked;
-                                            setDossierSections(s => ({
-                                                ...s,
-                                                simulation: checked,
-                                                simulationActions: checked,
-                                                simulationConflits: checked,
-                                                simulationTrafic: checked,
-                                                simulationReserve: checked,
-                                            }));
-                                        }} />
-                                    Scénario
+                                    <input type="checkbox" checked={coches.size > 0} disabled={!plansAvecScenarios.length}
+                                        onChange={e => ecrireCoches(e.target.checked ? new Set(toutesLesCles) : new Set())} />
+                                    Scénarios
                                 </label>
-                                {simCochee && (
+                                {plansAvecScenarios.length > 0 && (
                                 <div className="dossier-pf-suboptions">
-                                    <label>
-                                        <input type="checkbox" checked={dossierSections.simulationActions || false}
-                                            onChange={e => { const v = e.target.checked; setDossierSections(s => ({...s, simulationActions: v})); }} />
-                                        Liste des actions
-                                    </label>
-                                    <label>
-                                        <input type="checkbox" checked={dossierSections.simulationConflits || false}
-                                            onChange={e => { const v = e.target.checked; setDossierSections(s => ({...s, simulationConflits: v})); }} />
-                                        Liste des conflits
-                                    </label>
-                                    <label>
-                                        <input type="checkbox" checked={dossierSections.simulationTrafic || false}
-                                            onChange={e => { const v = e.target.checked; setDossierSections(s => ({...s, simulationTrafic: v})); }} />
-                                        Données de trafic et calcul de capacité
-                                    </label>
-                                    <label>
-                                        <input type="checkbox" checked={dossierSections.simulationReserve || false}
-                                            onChange={e => { const v = e.target.checked; setDossierSections(s => ({...s, simulationReserve: v})); }} />
-                                        Réserve de capacité
-                                    </label>
+                                    {plansAvecScenarios.map(({ pf, scenarios }) => (
+                                        <div key={pf.id} className="dossier-scenarios-plan">
+                                            <div className="dossier-scenarios-plan-nom">{pf.name}</div>
+                                            {scenarios.map(sc => {
+                                                const cle = cleScenarioImpression(pf.id, sc.nom);
+                                                return (
+                                                    <label key={cle} className="dossier-scenario-ligne">
+                                                        <input type="checkbox" checked={coches.has(cle)}
+                                                            onChange={() => basculerScenario(cle)} />
+                                                        <span className="dossier-scenario-nom">{sc.nom}</span>
+                                                        <span className="dossier-scenario-resume">{resumeScenario(pf, sc)}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
+                                    {plansSansScenario.length > 0 && (
+                                        <div className="dossier-scenarios-aucun">
+                                            {plansSansScenario.map(pf => pf.name).join(', ')} : aucun scénario enregistré
+                                        </div>
+                                    )}
+                                    {coches.size > 0 && (<>
+                                        <div className="dossier-scenarios-titre">Pour chaque scénario coché</div>
+                                        {OPTIONS_SCENARIO.map(([cle, libelle]) => (
+                                            <label key={cle}>
+                                                <input type="checkbox" checked={optionScenario(dossierSections, cle)}
+                                                    onChange={e => { const v = e.target.checked; setDossierSections(s => ({ ...s, [cle]: v })); }} />
+                                                {libelle}
+                                            </label>
+                                        ))}
+                                        <label className="dossier-scenarios-comparatif"
+                                            title={tip("Une page par plan de feu : une ligne par scénario coché, la première rappelant le plan nominal — cycle, conflits, courant dimensionnant, degré de saturation et réserve.")}>
+                                            <input type="checkbox" checked={dossierSections.simulationComparatif || false}
+                                                onChange={e => { const v = e.target.checked; setDossierSections(s => ({ ...s, simulationComparatif: v })); }} />
+                                            Tableau comparatif des scénarios
+                                        </label>
+                                    </>)}
                                 </div>
                                 )}
                             </div>
-                                );
-                            })()}
                         </div>
                         <div className="modal-footer">
                             <button className="btn-cancel" onClick={() => setDossierDialog(false)}>Annuler</button>

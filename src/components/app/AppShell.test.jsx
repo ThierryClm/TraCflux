@@ -54,7 +54,6 @@ const buildPreviewProps = (overrides = {}) => ({
     },
     plans: { pfTabs: [{ id: 'pf-1', name: 'PF1' }], activePFId: 'pf-1', pfTrafficDatasetMap: {} },
     traffic: { activeTrafficDataset: 'default', trafficDatasets: {}, trafficDatasetNames: {} },
-    simulation: { simulationName: '', simulationResultImpression: null, simulationSelectedActions: [] },
     image: {
         intersectionImage: null,
         intersectionArrows: [],
@@ -138,7 +137,7 @@ describe('DossierPrintDialog', () => {
             sections: {},
             setSections: vi.fn(),
             plans: [{ id: 'pf-1', name: 'PF1' }],
-            simulationResult: null,
+            contexteScenarios: { activePFId: 1, groups: [], cycleLength: 60, actionData: [], conflictMatrix: [] },
             intersectionImage: null,
             intersectionArrows: [],
             onExportPdf: vi.fn(),
@@ -177,7 +176,7 @@ describe('DossierPrintDialog', () => {
 
         expect(props.onExportPdf).toHaveBeenCalledOnce();
         expect(props.onPrint).toHaveBeenCalledOnce();
-        expect(screen.getByLabelText('Scénario')).toBeDisabled();
+        expect(screen.getByLabelText('Scénarios')).toBeDisabled();
     });
 });
 

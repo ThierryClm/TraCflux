@@ -1,13 +1,7 @@
 import { useMemo } from 'react';
-import {
-    calculateOfferedCapacity,
-    calculateDegreeOfSaturation,
-    calculateReserveCapacity,
-    calculateAverageDelay,
-    calculateAverageQueueLength,
-    getCapacityColorClass
-} from '../utils/capacityCalc';
-import { getTotalGreenTime, parseTrafficVol, isCoordinated } from '../utils/trafficHelpers';
+import { getCapacityColorClass } from '../utils/capacityCalc';
+import { lignesDiagnostic, courantDimensionnant } from '../utils/diagnosticCarrefour';
+import type { DiagnosticRow, DimensioningRow } from '../utils/diagnosticCarrefour';
 import type { ActionMicro, Groupe } from '../types/projet';
 import './DiagnosticPanel.css';
 
@@ -22,24 +16,6 @@ interface DiagnosticPanelProps {
     hideTitle?: boolean;
     inhibitedGroups?: Set<number> | null;
     tip?: (text: string) => string | undefined;
-}
-
-interface DiagnosticRow {
-    g: Groupe;
-    trafic: number;
-    coord: boolean;
-    inhibe: boolean;
-    capacity: number | null;
-    x: number | null;
-    reserve: { veh: number; ratio: number | null } | null;
-    delay: number | null;
-    queue: number | null;
-    capU: number | null;
-}
-
-interface DimensioningRow extends DiagnosticRow {
-    x: number;
-    capU: number;
 }
 
 /**
@@ -66,40 +42,12 @@ const DiagnosticPanel = ({
     inhibitedGroups = null,
     tip = (t) => t
 }: DiagnosticPanelProps) => {
-    const rows = useMemo<DiagnosticRow[]>(() => {
-        return groups
-            .filter(g => g.type === 'VL' || g.type === 'V')
-            .map(g => {
-                const inhibe = inhibitedGroups ? inhibitedGroups.has(g.id) : false;
-                const green = getTotalGreenTime(g.id, g.durations?.green, actionData, cycleLength);
-                const raw = getTrafficData ? getTrafficData(g.id).trafficVol : 0;
-                const trafic = parseTrafficVol(raw);
-                const coord = isCoordinated(raw);
-                const coef = g.laneCoef ?? 0;
-                if (inhibe) {
-                    return { g, trafic, coord, inhibe: true, capacity: null, x: null, reserve: null, delay: null, queue: null, capU: null };
-                }
-                const capacity = calculateOfferedCapacity(coef, green, cycleLength);
-                const x = calculateDegreeOfSaturation(trafic, coef, green, cycleLength);
-                const reserve = calculateReserveCapacity(trafic, coef, green, cycleLength);
-                const delay = coord && trafic ? 0 : calculateAverageDelay(trafic, coef, green, cycleLength);
-                const queue = coord && trafic ? 0 : calculateAverageQueueLength(trafic, coef, green, cycleLength);
-                const capU = x === null ? null : Math.round(x * 100);
-                return { g, trafic, coord, inhibe: false, capacity, x, reserve, delay, queue, capU };
-            })
-            .filter(r => r.trafic); // uniquement les courants avec trafic renseigné
+    const rows = useMemo<DiagnosticRow[]>(
+        () => lignesDiagnostic({ groups, cycleLength, getTrafficData, actionData, inhibitedGroups }),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [groups, cycleLength, getTrafficData, actionData, activeTrafficDataset, inhibitedGroups]);
+        [groups, cycleLength, getTrafficData, actionData, activeTrafficDataset, inhibitedGroups]);
 
-    const dim = useMemo<DimensioningRow | null>(() => {
-        let best: DimensioningRow | null = null;
-        rows.forEach(r => {
-            if (r.capU !== null && r.x !== null && (!best || r.capU > best.capU)) {
-                best = r as DimensioningRow;
-            }
-        });
-        return best;
-    }, [rows]);
+    const dim = useMemo<DimensioningRow | null>(() => courantDimensionnant(rows), [rows]);
 
     const fmt = (v: number | null | undefined, suffix = '') => (v === null || v === undefined) ? '—' : `${v}${suffix}`;
 

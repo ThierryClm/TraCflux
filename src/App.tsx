@@ -27,7 +27,7 @@ import LoginModal from './components/LoginModal';
 import UserManagerModal from './components/UserManagerModal';
 import ExternalLinksModal from './components/ExternalLinksModal';
 import PropertiesPanel from './components/PropertiesPanel';
-import { calculateSimulatedDiagram } from './simulation';
+import { calculateSimulatedDiagram, sectionsScenariosInitiales } from './simulation';
 import usePopupWindow from './hooks/usePopupWindow';
 import useFloatingLegend from './hooks/useFloatingLegend';
 import useFloatingMatrix from './hooks/useFloatingMatrix';
@@ -688,22 +688,6 @@ function App() {
             conflictMatrix
         );
     }, [simulationEnabled, groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix]);
-
-    // Le scénario du plan actif, recalculé POUR L'IMPRESSION.
-    //
-    // Distinct du précédent, et à dessein. Celui-ci n'existe que pendant que
-    // l'onglet Simulation est ouvert — c'est ce qui fait basculer le diagramme
-    // à l'écran en mode simulé, et il ne doit surtout pas le faire en dehors.
-    // Mais depuis que le scénario est enregistré avec son plan de feu, il reste
-    // imprimable une fois l'onglet refermé : sans cette seconde lecture, il
-    // aurait fallu rouvrir l'onglet Simulation avant chaque tirage, et la case
-    // « Scénario » serait restée grise alors qu'un scénario est bel et bien là.
-    const simulationResultImpression = useMemo(() => {
-        if (!simulationSelectedActions || simulationSelectedActions.length === 0) return null;
-        return calculateSimulatedDiagram(
-            groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix
-        );
-    }, [groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix]);
 
     // Déclaré APRÈS simulationResult : son titre affiche le cycle simulé,
     // et un `const` n'est pas accessible avant son initialisation.
@@ -1643,20 +1627,15 @@ function App() {
                     // case décochée le reste, et s'enregistre ainsi avec le
                     // projet. Seul le premier accès propose une sélection.
                     if (Object.keys(prev).length > 0) return prev;
-                    // Un scénario nommé sur le plan actif vaut intention de
+                    // Le scénario choisi de chaque plan vaut intention de
                     // l'imprimer : sa case naît cochée.
-                    const scenarioNomme = !!(simulationName || '').trim();
                     return {
                         image: true,
                         gfNumbers: true,
                         formulaire: true,
                         securiteMatrix: false,
                         matrice: true,
-                        simulation: scenarioNomme,
-                        simulationActions: scenarioNomme,
-                        simulationConflits: scenarioNomme,
-                        simulationTrafic: scenarioNomme,
-                        simulationReserve: scenarioNomme,
+                        ...sectionsScenariosInitiales(pfTabs),
                         ...Object.fromEntries(pfTabs.flatMap(pf => {
                             const checked = pf.color === '#4CAF50';
                             return [
@@ -2771,7 +2750,7 @@ function App() {
                 sections={dossierSections}
                 setSections={setDossierSections}
                 plans={pfTabs}
-                simulationResult={simulationResultImpression}
+                contexteScenarios={{ activePFId, groups, cycleLength, actionData, conflictMatrix }}
                 intersectionImage={intersectionImage}
                 intersectionArrows={intersectionArrows}
                 onExportPdf={handleDossierExportPDF}
@@ -2785,7 +2764,6 @@ function App() {
                 project={{ projectName, intersectionName, projectProperties, groups, conflictMatrix, cycleLength }}
                 plans={{ pfTabs, activePFId, pfTrafficDatasetMap }}
                 traffic={{ activeTrafficDataset, trafficDatasets, trafficDatasetNames }}
-                simulation={{ simulationName, simulationResultImpression, simulationSelectedActions }}
                 image={{ intersectionImage, intersectionArrows, imageBrightness, imageContrast, imageNaturalDims }}
                 print={{
                     printType,
