@@ -458,7 +458,7 @@ const SimulationPanel = ({
                             <p className="scenario-dialog-aide">Les cases cochées restent en place.</p>
                             <div className="scenario-dialog-boutons">
                                 <button type="button" className="scenario-btn" onClick={fermer}>Annuler</button>
-                                <button type="button" className="scenario-btn danger" autoFocus
+                                <button type="button" className="scenario-btn principal" autoFocus
                                     onClick={() => { onSupprimerScenario(); fermer(); }}>Supprimer</button>
                             </div>
                         </>

@@ -610,16 +610,11 @@
     cursor: pointer;
 }
 
+/* Mêmes couleurs que les autres boutons, celles du thème : un fond vif
+   rendait le libellé illisible dans les thèmes qui le colorent (ambre). Le
+   bouton principal ne se distingue que par la graisse. */
 .scenario-btn.principal {
-    background: #4ecdc4;
-    border-color: #4ecdc4;
-    color: #111;
     font-weight: bold;
-}
-
-.scenario-btn.danger {
-    background: #c0504d;
-    border-color: #c0504d;
 }
 
 .scenario-btn:disabled {

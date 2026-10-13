@@ -810,16 +810,6 @@ body.light-mode .scenario-btn {
     border-color: #aaa;
 }
 
-body.light-mode .scenario-btn.principal {
-    background: #4ecdc4;
-    border-color: #3bb3aa;
-}
-
-body.light-mode .scenario-btn.danger {
-    background: #c0504d;
-    color: #fff;
-}
-
 body.light-mode .simulation-item {
     background: #fff;
     border-color: #ccc;
