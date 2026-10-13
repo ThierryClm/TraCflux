@@ -1,6 +1,10 @@
-import { useMemo } from 'react';
-import { calculateSimulatedDiagram, actionsSimulables, conflitsSimules } from '../simulation';
-import type { ActionMicro, Groupe, Matrice } from '../types/projet';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    calculateSimulatedDiagram, actionsSimulables, conflitsSimules,
+    actionsDuScenario, scenarioModifie, titreScenarioRefuse, normaliserTitreScenario, LONGUEUR_TITRE_SCENARIO
+} from '../simulation';
+import type { ActionMicro, Groupe, Matrice, ScenarioSimulation } from '../types/projet';
+import Modal from './Modal';
 import './SimulationPanel.css';
 
 interface HoveredConflict {
@@ -21,9 +25,24 @@ interface SimulationPanelProps {
     hoveredActionId: number | null;
     setHoveredActionId: (actionId: number | null) => void;
     setHoveredConflict?: (conflict: HoveredConflict | null) => void;
+    /** Titre du scénario choisi ; vide = « Sans titre ». */
     scenarioName?: string;
-    onScenarioNameChange?: ((name: string) => void) | null;
+    scenarios?: ScenarioSimulation[];
+    onChoisirScenario?: (nom: string) => void;
+    onCreerScenario?: (titre: string) => void;
+    onEnregistrerScenario?: (titre: string) => void;
+    onSupprimerScenario?: () => void;
 }
+
+/** La fenêtre ouverte par la liste ou les boutons du scénario. */
+type Dialogue =
+    | { type: 'nouveau' }
+    | { type: 'enregistrer' }
+    | { type: 'supprimer' }
+    /** Changer de scénario alors que le choisi a des modifications. */
+    | { type: 'quitter'; vers: string };
+
+const rien = () => {};
 
 const SimulationPanel = ({
     actionData,
@@ -38,7 +57,11 @@ const SimulationPanel = ({
     setHoveredActionId,
     setHoveredConflict,
     scenarioName = '',
-    onScenarioNameChange = null
+    scenarios = [],
+    onChoisirScenario = rien,
+    onCreerScenario = rien,
+    onEnregistrerScenario = rien,
+    onSupprimerScenario = rien
 }: SimulationPanelProps) => {
     // Les actions retenues par la simulation (liste partagée, cf. en-tête).
     const activeActions = actionsSimulables(actionData);
@@ -57,6 +80,64 @@ const SimulationPanel = ({
     }, [groups, actionData, selectedActions, cycleLength, conflictMatrix]);
 
     const { simulatedCycleLength, conflicts: rawConflicts, removedPeriods, contractions } = simulationResult;
+
+    // --- Scénarios ---------------------------------------------------------
+    const scenarioActif = useMemo(
+        () => scenarios.find(sc => sc.nom === scenarioName) || null,
+        [scenarios, scenarioName]);
+    const modifie = scenarioModifie(scenarioActif, selectedActions, actionData);
+
+    const [menuOuvert, setMenuOuvert] = useState(false);
+    const [dialogue, setDialogue] = useState<Dialogue | null>(null);
+    const [titre, setTitre] = useState('');
+    const zoneScenarioRef = useRef<HTMLDivElement>(null);
+
+    // La liste se referme au clic ailleurs ou sur Échap.
+    useEffect(() => {
+        if (!menuOuvert) return;
+        const dehors = (e: MouseEvent) => {
+            if (!zoneScenarioRef.current?.contains(e.target as Node)) setMenuOuvert(false);
+        };
+        const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOuvert(false); };
+        document.addEventListener('mousedown', dehors);
+        document.addEventListener('keydown', echap);
+        return () => {
+            document.removeEventListener('mousedown', dehors);
+            document.removeEventListener('keydown', echap);
+        };
+    }, [menuOuvert]);
+
+    const ouvrir = (d: Dialogue) => {
+        setMenuOuvert(false);
+        setTitre(d.type === 'enregistrer' ? scenarioName : '');
+        setDialogue(d);
+    };
+    const fermer = () => setDialogue(null);
+
+    const choisirLigne = (nom: string) => {
+        setMenuOuvert(false);
+        if (nom === scenarioName) return;
+        // Rien ne se perd sans qu'on l'ait décidé.
+        if (modifie) ouvrir({ type: 'quitter', vers: nom });
+        else onChoisirScenario(nom);
+    };
+
+    // Le titre tapé : changé, il renomme le scénario ou en crée une copie.
+    const titreNet = normaliserTitreScenario(titre);
+    const renomme = dialogue?.type === 'enregistrer' && titreNet !== scenarioName;
+    const refus = dialogue?.type === 'nouveau'
+        ? titreScenarioRefuse(titre, scenarios)
+        : dialogue?.type === 'enregistrer'
+            ? titreScenarioRefuse(titre, scenarios, scenarioName)
+            : null;
+    const refusCopie = renomme ? titreScenarioRefuse(titre, scenarios) : null;
+
+    const valider = (action: 'creer' | 'enregistrer') => {
+        if (action === 'creer' ? (refus || refusCopie) : refus) return;
+        if (action === 'creer') onCreerScenario(titreNet);
+        else onEnregistrerScenario(titreNet);
+        fermer();
+    };
 
     // Helper: adjust a time position based on AV contractions only
     // EP removedPeriods are in the post-AV timeline, so we only apply AV contractions
@@ -131,38 +212,74 @@ const SimulationPanel = ({
                 </span>
             </div>
 
-            {/* Nom du scénario. Il appartient au plan de feu et le suit : c'est
-                lui qui titre la section imprimée, et qui permet de retrouver,
-                d'une séance à l'autre, ce que cette combinaison d'actions
-                voulait démontrer. */}
-            <label className="simulation-scenario">
+            {/* Le scénario choisi, puis la liste : Tout cocher, Tout décocher,
+                les scénarios du plan, Nouveau scénario. La liste s'ouvre
+                par-dessus le panneau. Les cases cochées ne mettent à jour le
+                scénario qu'à l'enregistrement : le ● le signale en attendant. */}
+            <div className="simulation-scenario" ref={zoneScenarioRef}>
                 <span className="simulation-scenario-label">Scénario</span>
-                <input
-                    type="text"
-                    className="simulation-scenario-input"
-                    value={scenarioName}
-                    maxLength={60}
-                    placeholder="ex. Escamotage bus phase 1"
-                    onChange={(e) => onScenarioNameChange && onScenarioNameChange(e.target.value)}
-                    disabled={!onScenarioNameChange}
-                    title="Nom de cette combinaison d'actions. Enregistré avec le plan de feu, il titre la section Simulation du dossier imprimé."
-                />
-            </label>
+                <button
+                    type="button"
+                    className={`simulation-scenario-select${scenarioActif ? '' : ' sans-titre'}`}
+                    aria-haspopup="listbox"
+                    aria-expanded={menuOuvert}
+                    onClick={() => setMenuOuvert(o => !o)}
+                    title="Choisir, créer ou modifier un scénario. Les scénarios sont enregistrés avec le plan de feu ; celui choisi titre la section Simulation du dossier imprimé."
+                >
+                    <span className="simulation-scenario-nom">{scenarioActif ? scenarioActif.nom : 'Sans titre'}</span>
+                    {modifie && <span className="simulation-scenario-modifie" aria-label="modifié">●</span>}
+                    <span className="simulation-scenario-fleche">{menuOuvert ? '▴' : '▾'}</span>
+                </button>
+                {menuOuvert && (
+                    <div className="simulation-scenario-menu" role="listbox">
+                        <button type="button" className="scenario-ligne commande"
+                            onClick={() => { setMenuOuvert(false); onSelectAll(); }}>Tout cocher</button>
+                        <button type="button" className="scenario-ligne commande"
+                            onClick={() => { setMenuOuvert(false); onDeselectAll(); }}>Tout décocher</button>
+                        <div className="scenario-separateur">Scénarios du plan de feu</div>
+                        {scenarios.length === 0 && (
+                            <div className="scenario-vide">Aucun scénario enregistré</div>
+                        )}
+                        {scenarios.map(sc => (
+                            <button
+                                key={sc.nom}
+                                type="button"
+                                role="option"
+                                aria-selected={sc.nom === scenarioName}
+                                className={`scenario-ligne${sc.nom === scenarioName ? ' choisi' : ''}`}
+                                onClick={() => choisirLigne(sc.nom)}
+                            >
+                                <span className="scenario-coche">{sc.nom === scenarioName ? '✓' : ''}</span>
+                                <span className="scenario-nom">{sc.nom}</span>
+                                <span className="scenario-compte" title="Actions cochées">{actionsDuScenario(sc, actionData).length}</span>
+                            </button>
+                        ))}
+                        <div className="scenario-separateur" />
+                        <button type="button" className="scenario-ligne nouveau"
+                            onClick={() => ouvrir({ type: 'nouveau' })}>+ Nouveau scénario…</button>
+                    </div>
+                )}
+            </div>
+            {modifie && (
+                <div className="simulation-scenario-note">● modifié depuis le dernier enregistrement</div>
+            )}
 
             <div className="simulation-controls">
                 <button
                     className="sim-btn"
-                    onClick={onSelectAll}
-                    title="Cocher toutes les actions"
+                    onClick={() => ouvrir({ type: 'enregistrer' })}
+                    disabled={!scenarioActif}
+                    title={scenarioActif ? 'Enregistrer les cases cochées dans ce scénario, le renommer ou en créer une copie' : 'Choisis un scénario dans la liste, ou crée-le avec « Nouveau scénario… »'}
                 >
-                    Tout cocher
+                    Enregistrer…
                 </button>
                 <button
                     className="sim-btn"
-                    onClick={onDeselectAll}
-                    title="Décocher toutes les actions"
+                    onClick={() => ouvrir({ type: 'supprimer' })}
+                    disabled={!scenarioActif}
+                    title={scenarioActif ? 'Retirer ce scénario de la liste' : 'Aucun scénario choisi'}
                 >
-                    Tout décocher
+                    Supprimer…
                 </button>
             </div>
 
@@ -255,6 +372,83 @@ const SimulationPanel = ({
                 </div>
             )}
 
+
+            <Modal
+                isOpen={!!dialogue}
+                onClose={fermer}
+                className="simulation-scenario-dialog"
+                title={dialogue?.type === 'nouveau' ? 'Nouveau scénario'
+                    : dialogue?.type === 'enregistrer' ? 'Enregistrer le scénario'
+                    : dialogue?.type === 'supprimer' ? 'Supprimer le scénario ?'
+                    : 'Modifications non enregistrées'}
+            >
+                <div onKeyDown={(e) => { if (e.key === 'Escape') fermer(); }}>
+                    {(dialogue?.type === 'nouveau' || dialogue?.type === 'enregistrer') && (
+                        <form onSubmit={(e) => { e.preventDefault(); valider(dialogue.type === 'nouveau' ? 'creer' : 'enregistrer'); }}>
+                            <label className="scenario-dialog-champ">
+                                <span>Titre</span>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    value={titre}
+                                    maxLength={LONGUEUR_TITRE_SCENARIO}
+                                    placeholder="ex. Escamotage bus phase 1"
+                                    onChange={(e) => setTitre(e.target.value)}
+                                />
+                            </label>
+                            <p className="scenario-dialog-resume">
+                                {selectedCount} action{selectedCount > 1 ? 's' : ''} cochée{selectedCount > 1 ? 's' : ''} · cycle simulé {simulatedCycleLength}s
+                            </p>
+                            {refus && titre !== '' && <p className="scenario-dialog-refus">{refus}</p>}
+                            {renomme && !refus && (
+                                <p className="scenario-dialog-aide">
+                                    Titre modifié : « Renommer » remplace « {scenarioName} », « Créer une copie » le garde.
+                                </p>
+                            )}
+                            <div className="scenario-dialog-boutons">
+                                <button type="button" className="scenario-btn" onClick={fermer}>Annuler</button>
+                                {dialogue.type === 'nouveau' && (
+                                    <button type="submit" className="scenario-btn principal" disabled={!!refus}>Créer</button>
+                                )}
+                                {dialogue.type === 'enregistrer' && renomme && (
+                                    <button type="button" className="scenario-btn" disabled={!!(refus || refusCopie)}
+                                        onClick={() => valider('creer')}>Créer une copie</button>
+                                )}
+                                {dialogue.type === 'enregistrer' && (
+                                    <button type="submit" className="scenario-btn principal" disabled={!!refus}>
+                                        {renomme ? 'Renommer' : 'Enregistrer'}
+                                    </button>
+                                )}
+                            </div>
+                        </form>
+                    )}
+                    {dialogue?.type === 'supprimer' && (
+                        <>
+                            <p className="scenario-dialog-texte">« {scenarioName} » sera retiré de la liste.</p>
+                            <p className="scenario-dialog-aide">Les cases cochées restent en place.</p>
+                            <div className="scenario-dialog-boutons">
+                                <button type="button" className="scenario-btn" onClick={fermer}>Annuler</button>
+                                <button type="button" className="scenario-btn danger" autoFocus
+                                    onClick={() => { onSupprimerScenario(); fermer(); }}>Supprimer</button>
+                            </div>
+                        </>
+                    )}
+                    {dialogue?.type === 'quitter' && (
+                        <>
+                            <p className="scenario-dialog-texte">
+                                « {scenarioName} » a été modifié. L'enregistrer avant d'ouvrir « {dialogue.vers} » ?
+                            </p>
+                            <div className="scenario-dialog-boutons">
+                                <button type="button" className="scenario-btn" onClick={fermer}>Annuler</button>
+                                <button type="button" className="scenario-btn"
+                                    onClick={() => { onChoisirScenario(dialogue.vers); fermer(); }}>Abandonner</button>
+                                <button type="button" className="scenario-btn principal" autoFocus
+                                    onClick={() => { onEnregistrerScenario(scenarioName); onChoisirScenario(dialogue.vers); fermer(); }}>Enregistrer</button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Modal>
         </div>
     );
 };

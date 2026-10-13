@@ -791,6 +791,35 @@ body.light-mode .simulation-panel button {
     color: #222;
 }
 
+body.light-mode .simulation-scenario-select,
+body.light-mode .simulation-scenario-menu {
+    background: #fff;
+    border-color: #999;
+}
+
+body.light-mode .scenario-ligne:hover {
+    background: #eee;
+}
+
+body.light-mode .scenario-ligne.choisi {
+    background: #e0f2f1;
+}
+
+body.light-mode .scenario-btn {
+    background: #e6e6e6;
+    border-color: #aaa;
+}
+
+body.light-mode .scenario-btn.principal {
+    background: #4ecdc4;
+    border-color: #3bb3aa;
+}
+
+body.light-mode .scenario-btn.danger {
+    background: #c0504d;
+    color: #fff;
+}
+
 body.light-mode .simulation-item {
     background: #fff;
     border-color: #ccc;

@@ -88,6 +88,12 @@ export interface ActionMicro {
     actGf1Gf4?: string;
 }
 
+/** Un scénario de simulation : un titre et les actions qu'il coche. */
+export interface ScenarioSimulation {
+    nom: string;
+    actions: number[];
+}
+
 /** Un programme complet du carrefour. */
 export interface PlanDeFeu {
     id: number;
@@ -101,8 +107,12 @@ export interface PlanDeFeu {
     /** Couleur de validation de l'onglet ; null une fois la marque retirée. */
     color?: string | null;
     readOnly?: boolean;
+    /** Titre du scénario choisi ; vide = « Sans titre ». */
     simulationName?: string;
+    /** Cases cochées à l'écran, enregistrées ou non dans le scénario choisi. */
     simulationActions?: number[];
+    /** Scénarios enregistrés du plan (cf. simulation/scenarios.ts). */
+    simulationScenarios?: ScenarioSimulation[];
     phasageBulleCount?: number;
     phasageBulleTimes?: number[];
     phasageBubbleScale?: number;

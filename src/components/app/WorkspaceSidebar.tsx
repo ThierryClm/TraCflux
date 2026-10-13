@@ -6,7 +6,7 @@ import IntergreenMatrix from '../IntergreenMatrix';
 import DiagnosticPanel from '../DiagnosticPanel';
 import ConflictList from '../ConflictList';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu, ScenarioSimulation } from '../../types/projet';
 import type { SimulationResult } from '../../simulation';
 import type { ConflictInfo, HoveredConflict } from '../ConflictList';
 import type { ProjectProperties } from '../PropertiesPanel';
@@ -53,7 +53,11 @@ interface WorkspaceSidebarModel {
     setHoveredActionId: (id: number | null) => void;
     setHoveredConflict: (conflict: HoveredConflict | null) => void;
     simulationName: string;
-    updateSimulationName: (name: string) => void;
+    simulationScenarios: ScenarioSimulation[];
+    choisirScenarioSimulation: (nom: string) => void;
+    creerScenarioSimulation: (titre: string) => void;
+    enregistrerScenarioSimulation: (titre: string) => void;
+    supprimerScenarioSimulation: () => void;
     activeTrafficDataset: string;
     setActiveTrafficDataset: (name: string) => void;
     updateTrafficData: (groupId: number, field: 'trafficVol', value: number | string) => void;
@@ -139,7 +143,11 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         setHoveredActionId,
         setHoveredConflict,
         simulationName,
-        updateSimulationName,
+        simulationScenarios,
+        choisirScenarioSimulation,
+        creerScenarioSimulation,
+        enregistrerScenarioSimulation,
+        supprimerScenarioSimulation,
         activeTrafficDataset,
         setActiveTrafficDataset,
         updateTrafficData,
@@ -261,7 +269,11 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 setHoveredActionId={setHoveredActionId}
                                 setHoveredConflict={setHoveredConflict}
                                 scenarioName={simulationName}
-                                onScenarioNameChange={updateSimulationName}
+                                scenarios={simulationScenarios}
+                                onChoisirScenario={choisirScenarioSimulation}
+                                onCreerScenario={creerScenarioSimulation}
+                                onEnregistrerScenario={enregistrerScenarioSimulation}
+                                onSupprimerScenario={supprimerScenarioSimulation}
                             />
                             {/* Même tableau que l'onglet Trafic, aux mêmes formules :
                                 seuls les temps changent (diagramme simulé), et la

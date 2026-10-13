@@ -10,7 +10,10 @@ import {
     ensurePFIntegrity,
     cycleDuPlanActif
 } from '../utils/pfHelpers';
-import { ACTIONS_HORS_SIMULATION, actionsSimulables } from '../simulation';
+import {
+    ACTIONS_HORS_SIMULATION, actionsSimulables, scenariosDuPlan,
+    choisirScenario, quitterScenario, creerScenario, enregistrerScenario, supprimerScenario
+} from '../simulation';
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
@@ -1961,18 +1964,47 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
 
     const simulationName = planActif?.simulationName || '';
 
-    /** Écrit dans le plan de feu actif, seul dépositaire du scénario. */
-    const ecrireScenario = useCallback((maj: (actuelles: number[], pf: PlanDeFeu) => Partial<PlanDeFeu>) => {
+    const simulationScenarios = useMemo(() => scenariosDuPlan(planActif), [planActif]);
+
+    /**
+     * Écrit dans le plan de feu actif, seul dépositaire du scénario. La liste
+     * des scénarios est réécrite à chaque fois : un projet d'avant les
+     * scénarios multiples y fige ainsi son scénario unique dès la première
+     * case touchée, faute de quoi ce scénario suivrait les cases à l'écran et
+     * ne paraîtrait jamais modifié.
+     */
+    const ecrireScenario = useCallback((maj: (actuelles: number[], pf: PlanDeFeu) => Partial<PlanDeFeu> | null) => {
         setPfTabs(prev => prev.map(pf => {
             if (pf.id !== activePFId) return pf;
             const actuelles = Array.isArray(pf.simulationActions) ? pf.simulationActions : [];
-            return { ...pf, ...maj(actuelles, pf) };
+            const changement = maj(actuelles, pf);
+            if (!changement) return pf;
+            return { ...pf, simulationScenarios: scenariosDuPlan(pf), ...changement };
         }));
     }, [activePFId]);
 
-    const updateSimulationName = useCallback((nom: string) => {
+    /** Ouvre un scénario enregistré ; '' revient à « Sans titre ». */
+    const choisirScenarioSimulation = useCallback((nom: string) => {
+        ecrireScenario((_, pf) => nom ? choisirScenario(pf, nom) : quitterScenario(pf));
+    }, [ecrireScenario]);
+
+    // Créer, enregistrer, supprimer changent le contenu du plan : refusés,
+    // comme le titre l'était, sur un plan ou un dossier en lecture seule.
+    const creerScenarioSimulation = useCallback((titre: string) => {
         if (isEditLocked()) return;
-        ecrireScenario(() => ({ simulationName: String(nom || '').slice(0, 60) }));
+        ecrireScenario((_, pf) => creerScenario(pf, titre));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ecrireScenario]);
+
+    const enregistrerScenarioSimulation = useCallback((titre: string) => {
+        if (isEditLocked()) return;
+        ecrireScenario((_, pf) => enregistrerScenario(pf, titre));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ecrireScenario]);
+
+    const supprimerScenarioSimulation = useCallback(() => {
+        if (isEditLocked()) return;
+        ecrireScenario((_, pf) => supprimerScenario(pf));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ecrireScenario]);
 
@@ -3067,7 +3099,11 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         setSimulationEnabled,
         simulationSelectedActions,
         simulationName,
-        updateSimulationName,
+        simulationScenarios,
+        choisirScenarioSimulation,
+        creerScenarioSimulation,
+        enregistrerScenarioSimulation,
+        supprimerScenarioSimulation,
         toggleSimulationAction,
         selectAllSimulationActions,
         deselectAllSimulationActions,
