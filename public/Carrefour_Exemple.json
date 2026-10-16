@@ -9,14 +9,14 @@
       "courant": "TD",
       "minGreen": 8,
       "durations": {
-        "green": 49,
+        "green": 29,
         "orange": 3,
         "red": 45
       },
-      "offset": 10,
-      "da": "",
+      "offset": 37,
+      "da": "T2",
       "phaseFlag": "",
-      "comment": "",
+      "comment": "Vert optimisé pour écouler GF8, GF9 et GF10.",
       "commentColor": "",
       "trafficStream": "",
       "laneCoef": 0.8,
@@ -37,8 +37,8 @@
         "orange": 3,
         "red": 52
       },
-      "offset": 65,
-      "da": "",
+      "offset": 1,
+      "da": "T1",
       "phaseFlag": "",
       "comment": "",
       "commentColor": "",
@@ -61,7 +61,7 @@
         "orange": 3,
         "red": 52
       },
-      "offset": 65,
+      "offset": 1,
       "da": "",
       "phaseFlag": "",
       "comment": "",
@@ -81,11 +81,11 @@
       "courant": "Piéton",
       "minGreen": 6,
       "durations": {
-        "green": 19,
+        "green": 28,
         "orange": 9,
         "red": 29
       },
-      "offset": 102,
+      "offset": 0,
       "da": "",
       "phaseFlag": "",
       "comment": "",
@@ -105,14 +105,14 @@
       "courant": "Cycle",
       "minGreen": 6,
       "durations": {
-        "green": 71,
+        "green": 10,
         "orange": 4,
         "red": 56
       },
-      "offset": 102,
+      "offset": 22,
       "da": "",
       "phaseFlag": "",
-      "comment": "",
+      "comment": "Supprimer escamotage de phase et réduire P5",
       "commentColor": "",
       "trafficStream": "",
       "laneCoef": 1,
@@ -129,14 +129,14 @@
       "courant": "Piéton",
       "minGreen": 6,
       "durations": {
-        "green": 13,
+        "green": 10,
         "orange": 6,
         "red": 54
       },
-      "offset": 102,
+      "offset": 22,
       "da": "",
       "phaseFlag": "",
-      "comment": "",
+      "comment": "Conflit P6 / V1 : réduire P6",
       "commentColor": "",
       "trafficStream": "",
       "laneCoef": 1,
@@ -153,11 +153,11 @@
       "courant": "Piéton",
       "minGreen": 6,
       "durations": {
-        "green": 22,
+        "green": 28,
         "orange": 4,
         "red": 29
       },
-      "offset": 102,
+      "offset": 5,
       "da": "",
       "phaseFlag": "",
       "comment": "",
@@ -177,11 +177,11 @@
       "courant": "TD",
       "minGreen": 8,
       "durations": {
-        "green": 20,
+        "green": 16,
         "orange": 3,
         "red": 49
       },
-      "offset": 0,
+      "offset": 69,
       "da": "",
       "phaseFlag": "",
       "comment": "",
@@ -201,12 +201,12 @@
       "courant": "TD",
       "minGreen": 6,
       "durations": {
-        "green": 8,
+        "green": 12,
         "orange": 3,
         "red": 63
       },
-      "offset": 52,
-      "da": "",
+      "offset": 51,
+      "da": "T0",
       "phaseFlag": "",
       "comment": "",
       "commentColor": "",
@@ -225,11 +225,11 @@
       "courant": "TD",
       "minGreen": 8,
       "durations": {
-        "green": 20,
+        "green": 13,
         "orange": 3,
         "red": 45
       },
-      "offset": 27,
+      "offset": 35,
       "da": "",
       "phaseFlag": "",
       "comment": "",
@@ -249,12 +249,12 @@
       "courant": "TD",
       "minGreen": 6,
       "durations": {
-        "green": 18,
+        "green": 42,
         "orange": 3,
         "red": 30
       },
-      "offset": 28,
-      "da": "",
+      "offset": 19,
+      "da": "T3",
       "phaseFlag": "",
       "comment": "",
       "commentColor": "",
@@ -273,11 +273,11 @@
       "courant": "Piéton",
       "minGreen": 6,
       "durations": {
-        "green": 11,
+        "green": 12,
         "orange": 10,
         "red": 48
       },
-      "offset": 65,
+      "offset": 69,
       "da": "",
       "phaseFlag": "",
       "comment": "",
@@ -297,11 +297,11 @@
       "courant": "Piéton",
       "minGreen": 6,
       "durations": {
-        "green": 87,
+        "green": 43,
         "orange": 6,
         "red": 27
       },
-      "offset": 25,
+      "offset": 19,
       "da": "",
       "phaseFlag": "",
       "comment": "",
@@ -315,16 +315,16 @@
       "queueLength": 0
     }
   ],
-  "cycleLength": 120,
+  "cycleLength": 70,
   "conflictMatrix": [
     [
       "",
-      6,
-      6,
       5,
+      5,
+      4,
       "",
-      8,
-      8,
+      "",
+      7,
       "",
       "",
       "",
@@ -333,11 +333,11 @@
       ""
     ],
     [
-      7,
-      "",
-      "",
-      "",
       5,
+      "",
+      "",
+      "",
+      4,
       7,
       "",
       "",
@@ -379,35 +379,7 @@
     ],
     [
       "",
-      12,
-      11,
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ],
-    [
-      15,
-      15,
-      16,
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      ""
-    ],
-    [
+      6,
       6,
       "",
       "",
@@ -418,6 +390,34 @@
       "",
       "",
       "",
+      ""
+    ],
+    [
+      "",
+      6,
+      6,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      4,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       "",
       "",
       ""
@@ -431,51 +431,51 @@
       "",
       "",
       "",
+      4,
+      4,
+      4,
+      "",
+      4
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       6,
+      "",
+      3,
+      "",
+      5,
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      6,
+      3,
+      "",
+      "",
+      5,
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
       7,
-      8,
-      "",
-      5
-    ],
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      6,
-      "",
-      5,
-      "",
-      5,
-      ""
-    ],
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      6,
-      5,
-      "",
-      "",
-      5,
-      ""
-    ],
-    [
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      8,
       "",
       "",
       "",
@@ -491,8 +491,8 @@
       "",
       "",
       "",
-      11,
-      11,
+      10,
+      10,
       8,
       "",
       ""
@@ -505,7 +505,7 @@
       "",
       "",
       "",
-      8,
+      6,
       "",
       "",
       "",
@@ -1332,7 +1332,7 @@
     },
     {
       "id": 3,
-      "name": "PF3",
+      "name": "PF_90",
       "data": [
         {
           "id": 1,
@@ -2138,7 +2138,7 @@
     },
     {
       "id": 5,
-      "name": "V0",
+      "name": "PF_80",
       "data": [
         {
           "id": 1,
@@ -3759,7 +3759,19 @@
         0,
         0
       ],
-      "phasageBubbleRatio": 91
+      "phasageBubbleRatio": 91,
+      "simulationScenarios": [
+        {
+          "nom": "Appel bus en DA",
+          "actions": [
+            10
+          ]
+        }
+      ],
+      "simulationName": "Appel bus en DA",
+      "simulationActions": [
+        10
+      ]
     },
     {
       "id": 8,
@@ -4578,10 +4590,24 @@
         0
       ],
       "phasageBubbleScale": 117,
-      "phasageBubbleRatio": 87
+      "phasageBubbleRatio": 87,
+      "simulationScenarios": [
+        {
+          "nom": "Appel bus en début de GF1",
+          "actions": [
+            10,
+            12
+          ]
+        }
+      ],
+      "simulationName": "Appel bus en début de GF1",
+      "simulationActions": [
+        10,
+        12
+      ]
     }
   ],
-  "activePFId": 1,
+  "activePFId": 7,
   "intersectionImage": "data:image/png;base64,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O3EmM8ifrOYDnsaZB9yd4IYXrS5mbSfOZAbfa/X/CdyX8w7YgeCGF60uzm0nznT1DK6+P/C5zjx/AHYhuOFFq9iwnTjbag6BPfidAfB8ghtetAod24mrrOYRnsYZC8BuBDe8aBU4thNXWc0jn815BADXE9zwolXg2E5cZTWPfI/9CwC8m+CGF60Cx3biSquZLJl3AIA/E9zwolXc2E4AAMAP/xwXAAAAgL8nuAEAACDgJeUPtnrJMy3bCQAA+OGS4BaCPNUF2wkAALip019SLrYBAAD4BKcHNwAAAHwCwQ1v4uXkAADAr7yH++Eu+PECAABwVXADAADA03lJOQAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAATGnHMeFwEAANjHGOO4ROC7+Sy4AQCAU4lDdvadhBbc8A2//nKwdQC4C/ECcJ7vdIDg5hGuvNCwheB5rjxTAIB7+871v+B+OBeN57CNOIP9DABwre9e939scLtw5Z0+dBtxImcWAPBfuTa9j0uD2wUkT3HhNuJDOC8BeBLXTnyKy4LbxSNPcdEW4sM4M4E/8bsI4J4EN49wxhivZvaM7wtfv5k/OvY2APAOgvvhLvrxPtJqZv3/chbzBwCwn8uC++s3F5BnufCfzaZW82qOOIv5AwDYz6XBDTsRPFzJ/AEA7Oef4wIAAADw9wQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3wAbmnMelrzHGcQkAgBsR3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3AAAABAQ3ACbmHMel77GGMclAABuQnADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADAABAQHADbGTOeVz6GmMclwAAuAHBDQAAAAHBDf+RvywCAADfIbgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBAAAgILgBNjPnPC59jTGOSwAAXExwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwAwAAQEBwA2xoznlc+hpjHJcAALiQ4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AYAAICA4AbY1Jzzj48BALiW4AbY2Jzz5xcAAPciuAEAACAguAEAACAguAEAACAguAEAACAguOEbjjemOj4GAAD4YUzFAAAAAG/nL9wAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQENwAAAAQ+B9Hlhja8UCDQwAAAABJRU5ErkJggg==",
   "intersectionArrows": [
     {
@@ -5069,19 +5095,14 @@
       }
     }
   },
-  "activeTrafficDataset": "PF1",
+  "activeTrafficDataset": "MIX_07_01",
   "customTrafficDatasetNames": [],
   "pfTrafficDatasetMap": {
     "1": "PF1",
-    "2": "PF_Prio2017",
     "3": "PF3_VRA",
-    "4": "PF3_HPS_VRA",
     "5": "MIX_VRA_VRM",
-    "6": "MIX_26_11",
     "7": "MIX_07_01",
-    "8": "PF_Prio",
-    "9": "PF_Samedi",
-    "10": "PF_070126"
+    "8": "PF_Prio"
   },
   "dependencyGap": 20,
   "biCarrefourSeparator": 7,
@@ -5124,9 +5145,11 @@
   "floatingCropBasis": "image",
   "floatingZoom": 1,
   "layoutOptions": {
-    "showParameters": true,
+    "showParameters": false,
+    "commentsMode": "auto",
+    "remarksMode": "auto",
     "showComments": true,
-    "showRemarks": false,
+    "showRemarks": true,
     "showActionDescription": false,
     "showFloatingForm": false,
     "showFloatingMatrix": false,
@@ -5134,7 +5157,10 @@
     "showFloatingImage": false,
     "showFloatingConditions": false,
     "showFloatingVariables": false,
-    "showFloatingRemarks": false
+    "showFloatingRemarks": false,
+    "showImageGroupNumbers": true,
+    "showImageGroupNames": true,
+    "showImageArrows": true
   },
   "directoryNames": {
     "open": null,
