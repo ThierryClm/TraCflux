@@ -42,6 +42,8 @@ const buildModel = (overrides = {}) => ({
     setHoveredConflict: vi.fn(),
     simulationName: '',
     simulationScenarios: [],
+    infoSuppressionJeuTrafic: vi.fn(),
+    supprimerJeuTrafic: vi.fn(),
     choisirScenarioSimulation: vi.fn(),
     creerScenarioSimulation: vi.fn(),
     enregistrerScenarioSimulation: vi.fn(),

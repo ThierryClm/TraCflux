@@ -7,6 +7,7 @@ import DiagnosticPanel from '../DiagnosticPanel';
 import ConflictList from '../ConflictList';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu, ScenarioSimulation } from '../../types/projet';
+import type { PlanSuppressionJeu } from '../../utils/trafficHelpers';
 import type { SimulationResult } from '../../simulation';
 import type { ConflictInfo, HoveredConflict } from '../ConflictList';
 import type { ProjectProperties } from '../PropertiesPanel';
@@ -69,6 +70,8 @@ interface WorkspaceSidebarModel {
     setHoveredVUtile: (value: { groupId: number; vUtile: number; capacityValue: number | null } | null) => void;
     copyTrafficDataset: (source: string, target: string) => void;
     addCustomTrafficDataset: (name: string) => void;
+    infoSuppressionJeuTrafic: (name: string) => PlanSuppressionJeu;
+    supprimerJeuTrafic: (name: string) => void;
     simulationResult: SimulationResult | null;
     setShowFloatingTraffic: Dispatch<SetStateAction<boolean>>;
     tooltipPrefs: {
@@ -157,6 +160,8 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         setHoveredVUtile,
         copyTrafficDataset,
         addCustomTrafficDataset,
+        infoSuppressionJeuTrafic,
+        supprimerJeuTrafic,
         simulationResult,
         setShowFloatingTraffic,
         tooltipPrefs,
@@ -444,6 +449,8 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                     setHoveredVUtile={setHoveredVUtile}
                                     copyTrafficDataset={copyTrafficDataset}
                                     addCustomTrafficDataset={addCustomTrafficDataset}
+                                    infoSuppressionJeu={infoSuppressionJeuTrafic}
+                                    supprimerJeu={supprimerJeuTrafic}
                                     actionData={actionData}
                                     simulationSelectedActions={simulationSelectedActions}
                                     onDetach={() => setShowFloatingTraffic(v => !v)}

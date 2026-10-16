@@ -18,7 +18,7 @@ import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
 import { entier } from '../utils/entier';
-import { buildTrafficDatasetNames, trafficDatasetHasData } from '../utils/trafficHelpers';
+import { buildTrafficDatasetNames, trafficDatasetHasData, planSuppressionJeu } from '../utils/trafficHelpers';
 import type { TrafficConflict } from '../utils/conflictUtils';
 import type { AlertFunction, ConfirmFunction } from '../components/ConfirmProvider';
 import type { LargeursColonnes } from '../components/ActionTable';
@@ -2551,6 +2551,41 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         });
     }, [trafficDatasetNames, groups]);
 
+    /** Ce que supprimer le jeu impliquerait : plans concernés, remplaçant, ou refus. */
+    const infoSuppressionJeuTrafic = useCallback((nom: string) => planSuppressionJeu(
+        nom, trafficDatasetNames, pfTabs, pfTrafficDatasetMap, trafficDatasets, groups.map(g => g.id)
+    ), [trafficDatasetNames, pfTabs, pfTrafficDatasetMap, trafficDatasets, groups]);
+
+    /**
+     * Supprime un jeu de trafic : ses volumes, son nom personnalisé, et son
+     * rattachement aux plans, qui passent sur le jeu remplaçant. Un jeu
+     * standard (HPM, HPS…) revient vide, et ne reparaît dans la liste qu'une
+     * fois rempli.
+     */
+    const supprimerJeuTrafic = useCallback((nom: string) => {
+        if (isEditLocked()) return;
+        const { refus, remplacement } = infoSuppressionJeuTrafic(nom);
+        if (refus) return;
+        setTrafficDatasets(prev => {
+            const suivants = { ...prev };
+            delete suivants[nom];
+            return suivants;
+        });
+        setCustomTrafficDatasetNames(prev => prev.filter(n => n !== nom));
+        setPfTrafficDatasetMap(prev => {
+            const suivant: Record<string, string> = {};
+            pfTabs.forEach(pf => {
+                const jeu = prev[String(pf.id)] || pf.name;
+                if (jeu === nom) suivant[String(pf.id)] = remplacement;
+                else if (prev[String(pf.id)]) suivant[String(pf.id)] = prev[String(pf.id)];
+            });
+            return suivant;
+        });
+        setCapacityCompareDataset(prev => prev === nom ? '__per_pf__' : prev);
+        if (activeTrafficDataset === nom) setActiveTrafficDataset(remplacement);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [infoSuppressionJeuTrafic, pfTabs, activeTrafficDataset]);
+
     // Ensure traffic datasets have entries for all groups when group count changes
     useEffect(() => {
         setTrafficDatasets(prev => {
@@ -3110,6 +3145,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         trafficDatasetNames,
         trafficDatasetSourceNames,
         copyTrafficDataset,
+        infoSuppressionJeuTrafic,
+        supprimerJeuTrafic,
         addCustomTrafficDataset,
         pfTrafficDatasetMap,
         // Project properties

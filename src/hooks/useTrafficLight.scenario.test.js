@@ -190,3 +190,30 @@ describe('Scénarios multiples — enregistrés avec leur plan de feu', () => {
         expect(pf2.simulationScenarios === undefined || pf2.simulationScenarios.length === 0).toBe(true);
     }, 15000);
 });
+
+describe('Jeux de trafic — suppression', () => {
+    it('supprime le jeu, ses volumes et son nom ; ses plans passent sur le remplaçant', async () => {
+        const result = await monter();
+        const projet = projetDeuxPlans(result.current.groups, result.current.conflictMatrix);
+        const g1 = result.current.groups[0].id;
+        projet.trafficDatasets = { Matin: { [g1]: { trafficVol: 300 } }, Soir: { [g1]: { trafficVol: 200 } } };
+        projet.customTrafficDatasetNames = ['Matin', 'Soir'];
+        projet.pfTrafficDatasetMap = { 1: 'Soir', 2: 'Matin' };
+        projet.activeTrafficDataset = 'Soir';
+        await act(async () => { result.current.loadFullState(projet); });
+        await act(async () => { await pause(300); });
+        expect(result.current.activeTrafficDataset).toBe('Soir');
+
+        const info = result.current.infoSuppressionJeuTrafic('Soir');
+        expect(info).toEqual({ plans: ['PF1'], remplacement: 'Matin' });
+
+        await act(async () => { result.current.supprimerJeuTrafic('Soir'); });
+        await act(async () => { await pause(300); });
+        expect(result.current.trafficDatasets.Soir).toBeUndefined();
+        expect(result.current.trafficDatasetNames).not.toContain('Soir');
+        expect(result.current.activeTrafficDataset).toBe('Matin');
+        const sauve = result.current.getFullState();
+        expect(sauve.pfTrafficDatasetMap).toMatchObject({ 1: 'Matin', 2: 'Matin' });
+        expect(sauve.customTrafficDatasetNames).toEqual(['Matin']);
+    }, 15000);
+});

@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import EmptyState from './EmptyState';
-import { useAlert } from './ConfirmProvider';
+import { useAlert, useConfirm } from './ConfirmProvider';
 import { getTotalGreenTime as computeTotalGreenTime, parseTrafficVol, isCoordinated, groupesInhibes } from '../utils/trafficHelpers';
+import type { PlanSuppressionJeu } from '../utils/trafficHelpers';
 import type { ActionMicro, Groupe } from '../types/projet';
 import type { SimulationResult } from '../simulation';
 import './TrafficTable.css';
@@ -33,6 +34,9 @@ interface TrafficTableProps {
     setHoveredVUtile?: (value: HoveredVUtile | null) => void;
     copyTrafficDataset?: (source: string, target: string) => void;
     addCustomTrafficDataset: (name: string) => void;
+    /** Ce que supprimer un jeu impliquerait (cf. planSuppressionJeu). Absent : pas de suppression. */
+    infoSuppressionJeu?: (name: string) => PlanSuppressionJeu;
+    supprimerJeu?: (name: string) => void;
     actionData?: ActionMicro[];
     simulationSelectedActions?: number[];
     simulationResult?: SimulationResult | null;
@@ -57,6 +61,8 @@ const TrafficTable = ({
     setHoveredVUtile,
     copyTrafficDataset,
     addCustomTrafficDataset,
+    infoSuppressionJeu,
+    supprimerJeu,
     actionData = [],
     simulationSelectedActions = [],
     // Mode simulation : valeurs recalculées sur le diagramme simulé, saisie fermée.
@@ -67,6 +73,7 @@ const TrafficTable = ({
 }: TrafficTableProps) => {
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const showAlert = useAlert();
+    const confirmer = useConfirm();
     const [showPasteDropdown, setShowPasteDropdown] = useState(false);
     const [showAllGroups, setShowAllGroups] = useState(false);
     const [tooltipGroupId, setTooltipGroupId] = useState<number | null>(null);
@@ -102,6 +109,29 @@ const TrafficTable = ({
         }
     }, [activeTrafficDataset, trafficDatasetNames, addCustomTrafficDataset, setActiveTrafficDataset, showAlert]);
 
+    // « − » sur le sélecteur : supprime le jeu affiché, après confirmation.
+    // Les plans qui l'utilisaient passent sur un autre jeu, nommé dans la
+    // fenêtre.
+    const handleRemoveDataset = useCallback(async () => {
+        if (!infoSuppressionJeu || !supprimerJeu) return;
+        const nom = activeTrafficDataset;
+        const { refus, plans, remplacement } = infoSuppressionJeu(nom);
+        if (refus) {
+            await showAlert({ title: 'Suppression impossible', message: refus });
+            return;
+        }
+        const usage = plans.length === 0
+            ? `Aucun plan de feux ne l'utilise ; l'affichage passera sur « ${remplacement} ».`
+            : `${plans.length > 1 ? 'Les plans' : 'Le plan'} ${plans.join(', ')} ${plans.length > 1 ? "l'utilisent : ils passeront" : "l'utilise : il passera"} sur « ${remplacement} ».`;
+        const ok = await confirmer({
+            title: 'Supprimer le jeu de données',
+            message: `Supprimer le jeu de données « ${nom} » ?\nSes volumes de trafic seront effacés.\n\n${usage}`,
+            confirmLabel: 'Supprimer',
+            danger: true
+        });
+        if (ok) supprimerJeu(nom);
+    }, [activeTrafficDataset, infoSuppressionJeu, supprimerJeu, showAlert, confirmer]);
+
     const datasetHoveredRef = useRef(false);
 
     const handleDatasetMouseEnter = useCallback(() => {
@@ -120,17 +150,22 @@ const TrafficTable = ({
         setDatasetTooltip(false);
     }, []);
 
-    // Écouter la touche "+" globalement, déclencher l'ajout si le sélecteur est survolé
+    // Écouter les touches "+" et "−" globalement : ajout ou suppression d'un
+    // jeu, si le sélecteur est survolé.
     React.useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (!readOnly && datasetHoveredRef.current && (e.key === '+' || e.key === '=')) {
+            if (readOnly || !datasetHoveredRef.current) return;
+            if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
                 handleAddDataset();
+            } else if ((e.key === '-' || e.key === '_') && supprimerJeu) {
+                e.preventDefault();
+                handleRemoveDataset();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleAddDataset, readOnly]);
+    }, [handleAddDataset, handleRemoveDataset, supprimerJeu, readOnly]);
 
     // L'onglet Trafic affiche les données du plan, indépendamment des actions
     // cochées en simulation (décision de mars 2026) : c'est le plan qu'on y lit,
@@ -344,7 +379,7 @@ const TrafficTable = ({
                     )}
                     {datasetTooltip && (
                         <div className="traffic-dataset-tooltip">
-                            Appuyez sur + pour ajouter un jeu de données personnalisé
+                            Appuyez sur + pour ajouter un jeu de données personnalisé{supprimerJeu ? ', sur − pour supprimer le jeu affiché' : ''}
                         </div>
                     )}
                 </div>

@@ -183,6 +183,8 @@ function App() {
         trafficDatasetSourceNames,
         copyTrafficDataset,
         addCustomTrafficDataset,
+        infoSuppressionJeuTrafic,
+        supprimerJeuTrafic,
         pfTrafficDatasetMap,
         capacityCompareSelection,
         setCapacityCompareSelection,
@@ -2474,6 +2476,8 @@ function App() {
                     setHoveredVUtile={setHoveredVUtile}
                     copyTrafficDataset={copyTrafficDataset}
                     addCustomTrafficDataset={addCustomTrafficDataset}
+                    infoSuppressionJeu={infoSuppressionJeuTrafic}
+                    supprimerJeu={supprimerJeuTrafic}
                     actionData={actionData}
                     simulationSelectedActions={simulationSelectedActions}
                     simulationResult={simulationResult}
@@ -2485,7 +2489,8 @@ function App() {
     }, [showFloatingTraffic, groups, cycleLength, activeTrafficDataset, actionData,
         simulationSelectedActions, simulationResult, simulationEnabled, hoveredArrowGroupId,
         trafficPopup.renderToPopup, updateTrafficData,
-        getTrafficData, updateGroupParams, trafficDatasetNames, trafficDatasetSourceNames, copyTrafficDataset, addCustomTrafficDataset]);
+        getTrafficData, updateGroupParams, trafficDatasetNames, trafficDatasetSourceNames, copyTrafficDataset, addCustomTrafficDataset,
+        infoSuppressionJeuTrafic, supprimerJeuTrafic]);
 
     // Afficher l'écran de connexion si non authentifié
     // Écran de connexion seulement si les comptes sont activés sur ce poste.
@@ -2558,7 +2563,7 @@ function App() {
                         creerScenarioSimulation, enregistrerScenarioSimulation, supprimerScenarioSimulation, activeTrafficDataset,
                         setActiveTrafficDataset, updateTrafficData, getTrafficData, updateGroupParams, setHoveredArrowGroupId,
                         hoveredArrowGroupId, setHoveredArrowGroupSaturated, trafficDatasetNames, trafficDatasetSourceNames, setHoveredVUtile, copyTrafficDataset,
-                        addCustomTrafficDataset, simulationResult, setShowFloatingTraffic, tooltipPrefs, activeTab,
+                        addCustomTrafficDataset, infoSuppressionJeuTrafic, supprimerJeuTrafic, simulationResult, setShowFloatingTraffic, tooltipPrefs, activeTab,
                         setActiveTab, setSidebarWidth, intersectionName, setIntersectionName, projectProperties,
                         updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, setShowFloatingProperties,
                         showGroupNamesForm, setShowFloatingForm, activePFId,
