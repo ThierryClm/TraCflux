@@ -840,15 +840,6 @@ body.light-mode .sim-desc {
     color: #666;
 }
 
-body.light-mode .simulation-info {
-    background: #eee;
-    border-color: #ccc;
-}
-
-body.light-mode .sim-info-label {
-    color: #555;
-}
-
 body.light-mode .simulation-list-header {
     color: #222;
 }
@@ -1648,15 +1639,6 @@ body.high-contrast-mode .sim-time {
 }
 
 body.high-contrast-mode .sim-desc {
-    color: #aabbee;
-}
-
-body.high-contrast-mode .simulation-info {
-    background: #1a2050;
-    border-color: #3355aa;
-}
-
-body.high-contrast-mode .sim-info-label {
     color: #aabbee;
 }
 
@@ -2516,15 +2498,6 @@ body.amber-mode .sim-time {
 }
 
 body.amber-mode .sim-desc {
-    color: #999;
-}
-
-body.amber-mode .simulation-info {
-    background: #303030;
-    border-color: #555;
-}
-
-body.amber-mode .sim-info-label {
     color: #999;
 }
 

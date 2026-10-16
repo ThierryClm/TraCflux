@@ -11,7 +11,7 @@ import {
     cycleDuPlanActif
 } from '../utils/pfHelpers';
 import {
-    scenariosDuPlan,
+    scenariosDuPlan, scenarioFixeDesCases,
     choisirScenario, quitterScenario, creerScenario, enregistrerScenario, supprimerScenario
 } from '../simulation';
 import { isExampleSession } from '../utils/exampleMode';
@@ -2009,7 +2009,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     }, [ecrireScenario]);
 
     const toggleSimulationAction = useCallback((actionId: number) => {
-        ecrireScenario(actuelles => ({
+        // Sans scénario choisi, le panneau affiche le scénario fixe des cases :
+        // la première case touchée le retient, pour qu'il paraisse modifié.
+        ecrireScenario((actuelles, pf) => ({
+            simulationName: pf.simulationName || scenarioFixeDesCases(actuelles, pf.data),
             simulationActions: actuelles.includes(actionId)
                 ? actuelles.filter(id => id !== actionId)
                 : [...actuelles, actionId]

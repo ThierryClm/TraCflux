@@ -138,23 +138,10 @@
     max-width: 100px;
 }
 
-/* Simulation info */
-.simulation-info {
-    background: #252525;
-    border: 1px solid #3a3a3a;
-    border-radius: 4px;
-    padding: 8px 10px;
-    margin-bottom: 10px;
-}
-
-.sim-info-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.85em;
-}
-
-.sim-info-label {
+/* Cycle simulé, à côté du titre du panneau. */
+.simulation-cycle {
+    font-size: 0.8em;
+    font-weight: normal;
     color: #888;
 }
 
@@ -456,19 +443,13 @@
     white-space: nowrap;
 }
 
-.simulation-scenario-modifie,
-.simulation-scenario-note {
+.simulation-scenario-modifie {
     color: #f5a623;
 }
 
 .simulation-scenario-fleche {
     color: #888;
     font-size: 0.85em;
-}
-
-.simulation-scenario-note {
-    font-size: 0.75em;
-    margin: -4px 0 8px 0;
 }
 
 .simulation-scenario-menu {

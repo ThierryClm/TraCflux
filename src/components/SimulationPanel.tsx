@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     calculateSimulatedDiagram, actionsSimulables, conflitsSimules,
     actionsDuScenario, scenarioModifie, titreScenarioRefuse, normaliserTitreScenario, LONGUEUR_TITRE_SCENARIO,
-    scenariosFixes, estScenarioFixe
+    scenariosFixes, estScenarioFixe, scenarioFixeDesCases
 } from '../simulation';
 import type { ActionMicro, Groupe, Matrice, ScenarioSimulation } from '../types/projet';
 import Modal from './Modal';
@@ -88,7 +88,8 @@ const SimulationPanel = ({
     // « Tout décoché », pas « Sans titre ».
     const scenarioActif = useMemo(() => {
         if (!scenarioName) {
-            return [...fixes].reverse().find(sc => !scenarioModifie(sc, selectedActions, actionData)) || null;
+            const nom = scenarioFixeDesCases(selectedActions, actionData);
+            return fixes.find(sc => sc.nom === nom) || null;
         }
         return [...fixes, ...scenarios].find(sc =>
             sc.nom.localeCompare(scenarioName, 'fr', { sensitivity: 'base' }) === 0) || null;
@@ -222,7 +223,19 @@ const SimulationPanel = ({
     return (
         <div className="simulation-panel">
             <div className="simulation-header">
-                <h3>Simulation</h3>
+                {/* Le cycle simulé, à côté du titre : un cadre à lui seul
+                    prenait une ligne du panneau. */}
+                <h3>
+                    Simulation
+                    <span className="simulation-cycle" title="Cycle simulé, et écart au cycle du plan">
+                        {' · '}<span className="sim-info-value">{simulatedCycleLength}s</span>
+                        {simulatedCycleLength !== cycleLength && (
+                            <span className="sim-info-delta">
+                                {' '}({simulatedCycleLength - cycleLength > 0 ? '+' : ''}{simulatedCycleLength - cycleLength}s)
+                            </span>
+                        )}
+                    </span>
+                </h3>
                 <span className="simulation-count">
                     {selectedCount}/{activeActions.length} actions
                 </span>
@@ -241,7 +254,11 @@ const SimulationPanel = ({
                     aria-haspopup="listbox"
                     aria-expanded={menuOuvert}
                     onClick={() => setMenuOuvert(o => !o)}
-                    title="Choisir, créer ou modifier un scénario. Les scénarios sont enregistrés avec le plan de feu ; celui choisi titre la section Simulation du dossier imprimé."
+                    // Modifié, l'infobulle dit quoi faire des cases changées — sans
+                    // ligne sous le champ, qui décalait la liste des actions.
+                    title={modifie
+                        ? (fixe ? `« ${nomActif} » modifié — Enregistrer… en fait un nouveau scénario` : `« ${nomActif} » modifié depuis le dernier enregistrement — Enregistrer… le met à jour`)
+                        : "Choisir, créer ou modifier un scénario. Les scénarios sont enregistrés avec le plan de feu ; celui choisi titre la section Simulation du dossier imprimé."}
                 >
                     <span className="simulation-scenario-nom">{scenarioActif ? scenarioActif.nom : 'Sans titre'}</span>
                     {modifie && <span className="simulation-scenario-modifie" aria-label="modifié">●</span>}
@@ -284,11 +301,6 @@ const SimulationPanel = ({
                     </div>
                 )}
             </div>
-            {modifie && (
-                <div className="simulation-scenario-note">
-                    {fixe ? `● « ${nomActif} » modifié — Enregistrer… en fait un nouveau scénario` : '● modifié depuis le dernier enregistrement'}
-                </div>
-            )}
 
             <div className="simulation-controls">
                 <button
@@ -311,19 +323,6 @@ const SimulationPanel = ({
                 >
                     Supprimer…
                 </button>
-            </div>
-
-            {/* Simulation info */}
-            <div className="simulation-info">
-                <div className="sim-info-item">
-                    <span className="sim-info-label">Cycle simulé:</span>
-                    <span className="sim-info-value">{simulatedCycleLength}s</span>
-                    {simulatedCycleLength !== cycleLength && (
-                        <span className="sim-info-delta">
-                            ({simulatedCycleLength - cycleLength > 0 ? '+' : ''}{simulatedCycleLength - cycleLength}s)
-                        </span>
-                    )}
-                </div>
             </div>
 
             {/* Actions list */}

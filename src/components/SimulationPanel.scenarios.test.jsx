@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import SimulationPanel from './SimulationPanel';
 import {
-    scenariosDuPlan, choisirScenario, quitterScenario, creerScenario, enregistrerScenario, supprimerScenario
+    scenariosDuPlan, choisirScenario, quitterScenario, creerScenario, enregistrerScenario, supprimerScenario,
+    scenarioFixeDesCases
 } from '../simulation';
 
 /**
@@ -32,7 +33,7 @@ const Banc = ({ initial }) => {
             <SimulationPanel
                 actionData={actions}
                 selectedActions={cochees}
-                onToggle={(id) => maj(() => ({ simulationActions: cochees.includes(id) ? cochees.filter(x => x !== id) : [...cochees, id] }))}
+                onToggle={(id) => maj(p => ({ simulationName: p.simulationName || scenarioFixeDesCases(cochees, actions), simulationActions: cochees.includes(id) ? cochees.filter(x => x !== id) : [...cochees, id] }))}
                 groups={groupes}
                 cycleLength={60}
                 conflictMatrix={[]}
@@ -218,5 +219,28 @@ describe('Scénarios de simulation — changer de scénario avec des modificatio
         fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
         expect(etat().nom).toBe('Creuse');
         expect(etat().scenarios.find(s => s.nom === 'Prolongement seul').actions).toEqual([3]);
+    });
+
+    it('le cycle simulé s\'affiche à côté du titre', () => {
+        render(<Banc initial={{}} />);
+        expect(document.querySelector('.simulation-header h3').textContent).toBe('Simulation · 60s');
+    });
+
+    it('modifié, l\'infobulle du scénario le dit, sans ligne qui décale la liste', () => {
+        render(<Banc initial={{ simulationName: 'Tout décoché', simulationActions: [] }} />);
+        const champ = () => screen.getByRole('button', { name: /Tout décoché/ });
+        expect(champ().title).toMatch(/^Choisir, créer ou modifier/);
+        fireEvent.click(caseDe('Prolongement'));
+        expect(champ().title).toBe('« Tout décoché » modifié — Enregistrer… en fait un nouveau scénario');
+        expect(screen.queryByText(/modifié —/)).toBeNull();
+        fireEvent.click(caseDe('Prolongement'));
+        expect(champ().title, 'revenu à l\'état initial').toMatch(/^Choisir, créer ou modifier/);
+    });
+
+    it("sur un plan neuf, cocher une case garde « Tout décoché », marqué modifié", () => {
+        render(<Banc initial={{}} />);
+        fireEvent.click(caseDe('Prolongement'));
+        expect(etat()).toMatchObject({ nom: 'Tout décoché', cochees: [3] });
+        expect(screen.getByLabelText('modifié')).toBeTruthy();
     });
 });

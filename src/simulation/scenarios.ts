@@ -42,6 +42,18 @@ export const scenariosFixes = (actionData: ActionMicro[] = []): ScenarioSimulati
 ];
 
 /**
+ * Le scénario fixe que désignent des cases, s'il y en a un : « Tout
+ * décoché » sans case cochée, « Tout coché » toutes cochées, sinon ''. C'est
+ * ce qu'affiche un plan sans scénario choisi.
+ */
+export const scenarioFixeDesCases = (cochees: number[], actionData: ActionMicro[] = []): string => {
+    const simulables = actionsSimulables(actionData).map(a => a.id);
+    const n = simulables.filter(id => cochees.includes(id)).length;
+    if (n === 0) return TOUT_DECOCHE;
+    return n === simulables.length ? TOUT_COCHE : '';
+};
+
+/**
  * Un scénario enregistré sous un titre devenu réservé — « tout coché »,
  * créé avant les scénarios fixes — est gardé, sous un titre distinct.
  */
