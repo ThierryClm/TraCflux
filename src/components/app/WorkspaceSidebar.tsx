@@ -192,11 +192,15 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         helpZoneRef,
     } = model;
 
+    // Le panneau de la simulation porte ses commandes — scénario, actions à
+    // cocher : masquer les paramètres ne doit pas le replier avec eux.
+    const panneauVisible = sidebarVisible || simulationEnabled;
+
     return (
-                <aside className={`sidebar${sidebarVisible ? '' : ' repliee'}`} style={{
-                    width: sidebarVisible ? `${phasageBulleEnabled ? Math.min(sidebarWidth, 350) : sidebarWidth}px` : '0px',
-                    minWidth: sidebarVisible ? (phasageBulleEnabled ? '200px' : '300px') : '0px',
-                    padding: sidebarVisible ? '1rem' : '0',
+                <aside className={`sidebar${panneauVisible ? '' : ' repliee'}`} style={{
+                    width: panneauVisible ? `${phasageBulleEnabled ? Math.min(sidebarWidth, 350) : sidebarWidth}px` : '0px',
+                    minWidth: panneauVisible ? (phasageBulleEnabled ? '200px' : '300px') : '0px',
+                    padding: panneauVisible ? '1rem' : '0',
                     overflow: 'hidden'
                 }}>
                     {phasageBulleEnabled ? (

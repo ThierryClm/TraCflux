@@ -115,6 +115,17 @@ describe('WorkspaceSidebar', () => {
         expect(screen.getByTestId('traffic-table')).toBeInTheDocument();
     });
 
+    it('paramètres masqués : le panneau se replie, sauf en simulation', () => {
+        const { container, unmount } = render(<WorkspaceSidebar model={buildModel({ sidebarVisible: false })} />);
+        expect(container.querySelector('aside.sidebar').classList.contains('repliee')).toBe(true);
+        unmount();
+        const simu = render(<WorkspaceSidebar model={buildModel({ sidebarVisible: false, simulationEnabled: true })} />);
+        const aside = simu.container.querySelector('aside.sidebar');
+        expect(aside.classList.contains('repliee')).toBe(false);
+        expect(aside.style.width).not.toBe('0px');
+        expect(screen.getByTestId('simulation-panel')).toBeInTheDocument();
+    });
+
     it('centralise le changement d’onglet et le calcul de largeur de la matrice', () => {
         const model = buildModel();
         render(<WorkspaceSidebar model={model} />);
