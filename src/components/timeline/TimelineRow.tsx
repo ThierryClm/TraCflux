@@ -321,121 +321,46 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                 );
             })()}
 
-            {/* Green cuts from Escamotage actions - mask portions of the green bar */}
-            {simGroup?.greenCuts?.map((cut, idx) => {
-                const cutDeb = cut.deb;
-                const cutFin = cut.fin;
+            {/* Verts escamotés en simulation : hachures par-dessus le vert, qui
+                reste visible (distinct d'une fermeture anticipée). Deux sources :
+                les coupes calculées par la simulation, et celles des escamotages
+                de groupe cochés (vert du groupe source ± temps interverts). Une
+                plage présente dans les deux n'est dessinée qu'une fois. */}
+            {(() => {
                 const currentCycleLen = effectiveCycleLength || cycleLength;
-                const wrapsAround = cutDeb > cutFin;
-
-                if (wrapsAround) {
-                    // Cut wraps around cycle
-                    const firstPartWidth = (currentCycleLen - cutDeb) * pixelsPerSecond;
-                    const secondPartWidth = cutFin * pixelsPerSecond;
-                    return (
-                        <React.Fragment key={`green-cut-${idx}`}>
-                            {/* First part: from cutDeb to end of cycle */}
-                            <div
-                                className="green-cut-overlay"
-                                style={{
-                                    left: `${cutDeb * pixelsPerSecond}px`,
-                                    width: `${firstPartWidth}px`
-                                }}
-                            />
-                            {/* Second part: from start of cycle to cutFin */}
-                            <div
-                                className="green-cut-overlay"
-                                style={{
-                                    left: '0px',
-                                    width: `${secondPartWidth}px`
-                                }}
-                            />
-                        </React.Fragment>
-                    );
-                }
-
-                // Normal case: cut doesn't wrap
-                const cutWidth = (cutFin - cutDeb) * pixelsPerSecond;
-                return (
-                    <div
-                        key={`green-cut-${idx}`}
-                        className="green-cut-overlay"
-                        style={{
-                            left: `${cutDeb * pixelsPerSecond}px`,
-                            width: `${cutWidth}px`
-                        }}
-                    />
-                );
-            })}
-
-            {/* Green cuts from SELECTED Escamotage (group-specific) actions */}
-            {selectedEscamotageGroup
-                .filter(action => {
-                    const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                    return targetGfId === group.id;
-                })
-                .map((action, idx) => {
+                const coupes: Array<{ deb: number; fin: number }> = [];
+                const ajouter = (deb: number, fin: number) => {
+                    if (!coupes.some(c => c.deb === deb && c.fin === fin)) coupes.push({ deb, fin });
+                };
+                simGroup?.greenCuts?.forEach(cut => ajouter(Number(cut.deb), Number(cut.fin)));
+                selectedEscamotageGroup.forEach(action => {
                     const sourceGfId = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
                     const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                    if (sourceGfId === 0 || targetGfId === 0) return null;
-
+                    if (sourceGfId === 0 || targetGfId !== group.id) return;
                     const sourceGroup = groups.find(g => g.id === sourceGfId);
-                    if (!sourceGroup) return null;
-
-                    // Get intergreen times from conflict matrix
+                    if (!sourceGroup) return;
                     const intergreenSourceToTarget = Number(conflictMatrix[sourceGfId - 1]?.[targetGfId - 1] || 0);
                     const intergreenTargetToSource = Number(conflictMatrix[targetGfId - 1]?.[sourceGfId - 1] || 0);
-
-                    // Source group times
-                    const currentCycleLen = effectiveCycleLength || cycleLength;
                     const sourceStart = sourceGroup.offset % currentCycleLen;
                     const sourceEndRaw = sourceStart + sourceGroup.durations.green;
                     const sourceEnd = sourceEndRaw === currentCycleLen ? currentCycleLen : (sourceEndRaw % currentCycleLen);
-
-                    // Calculate arrow target positions (cut boundaries)
-                    // Arrow 1: target = sourceStart - intergreenTargetToSource
+                    // Début : vert source − interverts cible→source ; fin : fin de vert source + interverts source→cible
                     const cutStart = ((sourceStart - intergreenTargetToSource) % currentCycleLen + currentCycleLen) % currentCycleLen;
-                    // Arrow 2: target = sourceEnd + intergreenSourceToTarget
                     const cutEndRaw = sourceEnd + intergreenSourceToTarget;
-                    const cutEnd = cutEndRaw === currentCycleLen ? currentCycleLen : (cutEndRaw % currentCycleLen);
-
-                    const wrapsAround = cutStart > cutEnd;
-
-                    if (wrapsAround) {
-                        const firstPartWidth = (currentCycleLen - cutStart) * pixelsPerSecond;
-                        const secondPartWidth = cutEnd * pixelsPerSecond;
-                        return (
-                            <React.Fragment key={`escam-group-cut-${idx}`}>
-                                <div
-                                    className="green-cut-overlay"
-                                    style={{
-                                        left: `${cutStart * pixelsPerSecond}px`,
-                                        width: `${firstPartWidth}px`
-                                    }}
-                                />
-                                <div
-                                    className="green-cut-overlay"
-                                    style={{
-                                        left: '0px',
-                                        width: `${secondPartWidth}px`
-                                    }}
-                                />
-                            </React.Fragment>
-                        );
-                    }
-
-                    const cutWidth = (cutEnd - cutStart) * pixelsPerSecond;
-                    return (
-                        <div
-                            key={`escam-group-cut-${idx}`}
-                            className="green-cut-overlay"
-                            style={{
-                                left: `${cutStart * pixelsPerSecond}px`,
-                                width: `${cutWidth}px`
-                            }}
-                        />
-                    );
-                })}
+                    ajouter(cutStart, cutEndRaw === currentCycleLen ? currentCycleLen : (cutEndRaw % currentCycleLen));
+                });
+                return coupes.flatMap(({ deb, fin }, idx) => (deb > fin
+                    // La coupe passe la fin du cycle : deux morceaux
+                    ? [[deb, currentCycleLen], [0, fin]]
+                    : [[deb, fin]]
+                ).map(([a, b], part) => (
+                    <div
+                        key={`green-cut-${idx}-${part}`}
+                        className="green-cut-overlay"
+                        style={{ left: `${a * pixelsPerSecond}px`, width: `${(b - a) * pixelsPerSecond}px` }}
+                    />
+                )));
+            })()}
 
             {/* Action-based overlays */}
             {groupActions.map((action, idx) => {

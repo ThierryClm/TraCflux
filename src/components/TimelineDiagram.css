@@ -295,11 +295,13 @@
     position: absolute;
     top: 7px;
     bottom: 7px;
-    background: #2a2a2a;
+    /* Vert escamoté : hachures par-dessus le vert, qui reste visible.
+       Se distingue d'une fermeture anticipée, où le vert est raccourci. */
+    background: repeating-linear-gradient(135deg, rgba(20, 20, 20, 0.85) 0 3px, transparent 3px 7px);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-sizing: border-box;
     z-index: 50;
     pointer-events: none;
-    border-left: 1px dashed #666;
-    border-right: 1px dashed #666;
 }
 
 .cycle-block {
