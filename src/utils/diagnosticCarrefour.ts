@@ -53,7 +53,7 @@ export const lignesDiagnostic = ({
     .filter(g => g.type === 'VL' || g.type === 'V')
     .map(g => {
         const inhibe = inhibitedGroups ? inhibitedGroups.has(g.id) : false;
-        const green = getTotalGreenTime(g.id, g.durations?.green, actionData, cycleLength);
+        const green = getTotalGreenTime(g.id, g.durations?.green, actionData, cycleLength, g.phaseFlag);
         const raw = getTrafficData ? getTrafficData(g.id).trafficVol : 0;
         const trafic = parseTrafficVol(raw);
         const coord = isCoordinated(raw);
