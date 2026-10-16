@@ -9,7 +9,7 @@ interface FlechesSynchroBtsProps {
 
 /** Synchro BTS : flèches verticales bleues. */
 const FlechesSynchroBts = ({ ctx, synchroBtsActions }: FlechesSynchroBtsProps) => {
-    const { groups, pixelsPerSecond, RULER_HEIGHT, ROW_TOTAL_HEIGHT, svgHeight, totalWidth, hoveredActionId, setHoveredActionId, handleActionDragStart, getShiftedActionPosition } = ctx;
+    const { groups, pixelsPerSecond, RULER_HEIGHT, ROW_TOTAL_HEIGHT, svgHeight, totalWidth, hoveredActionId, setHoveredActionId, handleActionDragStart, effectiveCycleLength } = ctx;
 
     return (
         <>
@@ -23,11 +23,10 @@ const FlechesSynchroBts = ({ ctx, synchroBtsActions }: FlechesSynchroBtsProps) =
 
                 if (plage1 < 1 || plage2 < 1 || plage1 > groups.length || plage2 > groups.length) return null;
 
-                // Apply time shifts in simulation mode
-                const btsPlage = (plage1 > 0 && plage2 > 0) ? { plage1, plage2 } : null;
-                const shiftedPos = getShiftedActionPosition(rawDeb, rawDeb, null, 'Synchro BTS', btsPlage);
-                if (shiftedPos.hidden) return null;
-                const deb = shiftedPos.deb;
+                // Repère fixe : les autres actions simulées ne le déplacent pas.
+                // Au-delà d'un cycle simulé raccourci, il n'a plus de place.
+                if (rawDeb >= effectiveCycleLength) return null;
+                const deb = rawDeb;
 
                 // X position at deb
                 const xPos = deb * pixelsPerSecond;

@@ -6,7 +6,8 @@ import IntergreenMatrix from '../IntergreenMatrix';
 import DiagnosticPanel from '../DiagnosticPanel';
 import ConflictList from '../ConflictList';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import type { ActionMicro, Groupe, Matrice, PlanDeFeu, ScenarioSimulation } from '../../types/projet';
+import type { PlanSuppressionJeu } from '../../utils/trafficHelpers';
 import type { SimulationResult } from '../../simulation';
 import type { ConflictInfo, HoveredConflict } from '../ConflictList';
 import type { ProjectProperties } from '../PropertiesPanel';
@@ -44,8 +45,6 @@ interface WorkspaceSidebarModel {
     actionData: ActionMicro[];
     simulationSelectedActions: number[];
     toggleSimulationAction: (id: number) => void;
-    selectAllSimulationActions: () => void;
-    deselectAllSimulationActions: () => void;
     cycleLength: number;
     conflictMatrix: Matrice;
     setMatrixValue: (from: number, to: number, value: string) => void;
@@ -53,7 +52,11 @@ interface WorkspaceSidebarModel {
     setHoveredActionId: (id: number | null) => void;
     setHoveredConflict: (conflict: HoveredConflict | null) => void;
     simulationName: string;
-    updateSimulationName: (name: string) => void;
+    simulationScenarios: ScenarioSimulation[];
+    choisirScenarioSimulation: (nom: string) => void;
+    creerScenarioSimulation: (titre: string) => void;
+    enregistrerScenarioSimulation: (titre: string) => void;
+    supprimerScenarioSimulation: () => void;
     activeTrafficDataset: string;
     setActiveTrafficDataset: (name: string) => void;
     updateTrafficData: (groupId: number, field: 'trafficVol', value: number | string) => void;
@@ -67,6 +70,8 @@ interface WorkspaceSidebarModel {
     setHoveredVUtile: (value: { groupId: number; vUtile: number; capacityValue: number | null } | null) => void;
     copyTrafficDataset: (source: string, target: string) => void;
     addCustomTrafficDataset: (name: string) => void;
+    infoSuppressionJeuTrafic: (name: string) => PlanSuppressionJeu;
+    supprimerJeuTrafic: (name: string) => void;
     simulationResult: SimulationResult | null;
     setShowFloatingTraffic: Dispatch<SetStateAction<boolean>>;
     tooltipPrefs: {
@@ -130,8 +135,6 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         actionData,
         simulationSelectedActions,
         toggleSimulationAction,
-        selectAllSimulationActions,
-        deselectAllSimulationActions,
         cycleLength,
         conflictMatrix,
         setMatrixValue,
@@ -139,7 +142,11 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         setHoveredActionId,
         setHoveredConflict,
         simulationName,
-        updateSimulationName,
+        simulationScenarios,
+        choisirScenarioSimulation,
+        creerScenarioSimulation,
+        enregistrerScenarioSimulation,
+        supprimerScenarioSimulation,
         activeTrafficDataset,
         setActiveTrafficDataset,
         updateTrafficData,
@@ -153,6 +160,8 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         setHoveredVUtile,
         copyTrafficDataset,
         addCustomTrafficDataset,
+        infoSuppressionJeuTrafic,
+        supprimerJeuTrafic,
         simulationResult,
         setShowFloatingTraffic,
         tooltipPrefs,
@@ -188,11 +197,15 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         helpZoneRef,
     } = model;
 
+    // Le panneau de la simulation porte ses commandes — scénario, actions à
+    // cocher : masquer les paramètres ne doit pas le replier avec eux.
+    const panneauVisible = sidebarVisible || simulationEnabled;
+
     return (
-                <aside className={`sidebar${sidebarVisible ? '' : ' repliee'}`} style={{
-                    width: sidebarVisible ? `${phasageBulleEnabled ? Math.min(sidebarWidth, 350) : sidebarWidth}px` : '0px',
-                    minWidth: sidebarVisible ? (phasageBulleEnabled ? '200px' : '300px') : '0px',
-                    padding: sidebarVisible ? '1rem' : '0',
+                <aside className={`sidebar${panneauVisible ? '' : ' repliee'}`} style={{
+                    width: panneauVisible ? `${phasageBulleEnabled ? Math.min(sidebarWidth, 350) : sidebarWidth}px` : '0px',
+                    minWidth: panneauVisible ? (phasageBulleEnabled ? '200px' : '300px') : '0px',
+                    padding: panneauVisible ? '1rem' : '0',
                     overflow: 'hidden'
                 }}>
                     {phasageBulleEnabled ? (
@@ -252,8 +265,6 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 actionData={actionData}
                                 selectedActions={simulationSelectedActions}
                                 onToggle={toggleSimulationAction}
-                                onSelectAll={selectAllSimulationActions}
-                                onDeselectAll={deselectAllSimulationActions}
                                 groups={groups}
                                 cycleLength={cycleLength}
                                 conflictMatrix={conflictMatrix}
@@ -261,7 +272,11 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 setHoveredActionId={setHoveredActionId}
                                 setHoveredConflict={setHoveredConflict}
                                 scenarioName={simulationName}
-                                onScenarioNameChange={updateSimulationName}
+                                scenarios={simulationScenarios}
+                                onChoisirScenario={choisirScenarioSimulation}
+                                onCreerScenario={creerScenarioSimulation}
+                                onEnregistrerScenario={enregistrerScenarioSimulation}
+                                onSupprimerScenario={supprimerScenarioSimulation}
                             />
                             {/* Même tableau que l'onglet Trafic, aux mêmes formules :
                                 seuls les temps changent (diagramme simulé), et la
@@ -434,6 +449,8 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                     setHoveredVUtile={setHoveredVUtile}
                                     copyTrafficDataset={copyTrafficDataset}
                                     addCustomTrafficDataset={addCustomTrafficDataset}
+                                    infoSuppressionJeu={infoSuppressionJeuTrafic}
+                                    supprimerJeu={supprimerJeuTrafic}
                                     actionData={actionData}
                                     simulationSelectedActions={simulationSelectedActions}
                                     onDetach={() => setShowFloatingTraffic(v => !v)}

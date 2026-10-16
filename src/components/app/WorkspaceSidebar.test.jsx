@@ -34,8 +34,6 @@ const buildModel = (overrides = {}) => ({
     actionData: [],
     simulationSelectedActions: [],
     toggleSimulationAction: vi.fn(),
-    selectAllSimulationActions: vi.fn(),
-    deselectAllSimulationActions: vi.fn(),
     cycleLength: 60,
     conflictMatrix: [],
     setMatrixValue: vi.fn(),
@@ -43,7 +41,13 @@ const buildModel = (overrides = {}) => ({
     setHoveredActionId: vi.fn(),
     setHoveredConflict: vi.fn(),
     simulationName: '',
-    updateSimulationName: vi.fn(),
+    simulationScenarios: [],
+    infoSuppressionJeuTrafic: vi.fn(),
+    supprimerJeuTrafic: vi.fn(),
+    choisirScenarioSimulation: vi.fn(),
+    creerScenarioSimulation: vi.fn(),
+    enregistrerScenarioSimulation: vi.fn(),
+    supprimerScenarioSimulation: vi.fn(),
     activeTrafficDataset: 'default',
     setActiveTrafficDataset: vi.fn(),
     updateTrafficData: vi.fn(),
@@ -111,6 +115,17 @@ describe('WorkspaceSidebar', () => {
         render(<WorkspaceSidebar model={buildModel({ simulationEnabled: true })} />);
         expect(screen.getByTestId('simulation-panel')).toBeInTheDocument();
         expect(screen.getByTestId('traffic-table')).toBeInTheDocument();
+    });
+
+    it('paramètres masqués : le panneau se replie, sauf en simulation', () => {
+        const { container, unmount } = render(<WorkspaceSidebar model={buildModel({ sidebarVisible: false })} />);
+        expect(container.querySelector('aside.sidebar').classList.contains('repliee')).toBe(true);
+        unmount();
+        const simu = render(<WorkspaceSidebar model={buildModel({ sidebarVisible: false, simulationEnabled: true })} />);
+        const aside = simu.container.querySelector('aside.sidebar');
+        expect(aside.classList.contains('repliee')).toBe(false);
+        expect(aside.style.width).not.toBe('0px');
+        expect(screen.getByTestId('simulation-panel')).toBeInTheDocument();
     });
 
     it('centralise le changement d’onglet et le calcul de largeur de la matrice', () => {

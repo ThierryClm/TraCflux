@@ -10,12 +10,15 @@ import {
     ensurePFIntegrity,
     cycleDuPlanActif
 } from '../utils/pfHelpers';
-import { ACTIONS_HORS_SIMULATION, actionsSimulables } from '../simulation';
+import {
+    scenariosDuPlan, scenarioFixeDesCases,
+    choisirScenario, quitterScenario, creerScenario, enregistrerScenario, supprimerScenario
+} from '../simulation';
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
 import { entier } from '../utils/entier';
-import { buildTrafficDatasetNames, trafficDatasetHasData } from '../utils/trafficHelpers';
+import { buildTrafficDatasetNames, trafficDatasetHasData, planSuppressionJeu } from '../utils/trafficHelpers';
 import type { TrafficConflict } from '../utils/conflictUtils';
 import type { AlertFunction, ConfirmFunction } from '../components/ConfirmProvider';
 import type { LargeursColonnes } from '../components/ActionTable';
@@ -1961,44 +1964,60 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
 
     const simulationName = planActif?.simulationName || '';
 
-    /** Écrit dans le plan de feu actif, seul dépositaire du scénario. */
-    const ecrireScenario = useCallback((maj: (actuelles: number[], pf: PlanDeFeu) => Partial<PlanDeFeu>) => {
+    const simulationScenarios = useMemo(() => scenariosDuPlan(planActif), [planActif]);
+
+    /**
+     * Écrit dans le plan de feu actif, seul dépositaire du scénario. La liste
+     * des scénarios est réécrite à chaque fois : un projet d'avant les
+     * scénarios multiples y fige ainsi son scénario unique dès la première
+     * case touchée, faute de quoi ce scénario suivrait les cases à l'écran et
+     * ne paraîtrait jamais modifié.
+     */
+    const ecrireScenario = useCallback((maj: (actuelles: number[], pf: PlanDeFeu) => Partial<PlanDeFeu> | null) => {
         setPfTabs(prev => prev.map(pf => {
             if (pf.id !== activePFId) return pf;
             const actuelles = Array.isArray(pf.simulationActions) ? pf.simulationActions : [];
-            return { ...pf, ...maj(actuelles, pf) };
+            const changement = maj(actuelles, pf);
+            if (!changement) return pf;
+            return { ...pf, simulationScenarios: scenariosDuPlan(pf), ...changement };
         }));
     }, [activePFId]);
 
-    const updateSimulationName = useCallback((nom: string) => {
+    /** Ouvre un scénario enregistré ; '' revient à « Sans titre ». */
+    const choisirScenarioSimulation = useCallback((nom: string) => {
+        ecrireScenario((_, pf) => nom ? choisirScenario(pf, nom) : quitterScenario(pf));
+    }, [ecrireScenario]);
+
+    // Créer, enregistrer, supprimer changent le contenu du plan : refusés,
+    // comme le titre l'était, sur un plan ou un dossier en lecture seule.
+    const creerScenarioSimulation = useCallback((titre: string) => {
         if (isEditLocked()) return;
-        ecrireScenario(() => ({ simulationName: String(nom || '').slice(0, 60) }));
+        ecrireScenario((_, pf) => creerScenario(pf, titre));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ecrireScenario]);
+
+    const enregistrerScenarioSimulation = useCallback((titre: string) => {
+        if (isEditLocked()) return;
+        ecrireScenario((_, pf) => enregistrerScenario(pf, titre));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ecrireScenario]);
+
+    const supprimerScenarioSimulation = useCallback(() => {
+        if (isEditLocked()) return;
+        ecrireScenario((_, pf) => supprimerScenario(pf));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ecrireScenario]);
 
     const toggleSimulationAction = useCallback((actionId: number) => {
-        ecrireScenario(actuelles => ({
+        // Sans scénario choisi, le panneau affiche le scénario fixe des cases :
+        // la première case touchée le retient, pour qu'il paraisse modifié.
+        ecrireScenario((actuelles, pf) => ({
+            simulationName: pf.simulationName || scenarioFixeDesCases(actuelles, pf.data),
             simulationActions: actuelles.includes(actionId)
                 ? actuelles.filter(id => id !== actionId)
                 : [...actuelles, actionId]
         }));
     }, [ecrireScenario]);
-
-    const selectAllSimulationActions = useCallback(() => {
-        ecrireScenario(() => ({ simulationActions: actionsSimulables(actionData).map(a => a.id) }));
-    }, [ecrireScenario, actionData]);
-
-    const deselectAllSimulationActions = useCallback(() => {
-        // Les familles hors simulation ne sont pas affichées : on ne les décoche
-        // pas, faute de quoi elles disparaîtraient d'un scénario sans que rien
-        // ne l'ait demandé.
-        ecrireScenario(actuelles => ({
-            simulationActions: actuelles.filter(id => {
-                const action = actionData.find(a => a.id === id);
-                return action && ACTIONS_HORS_SIMULATION.includes(action.action);
-            })
-        }));
-    }, [ecrireScenario, actionData]);
 
     // Save project - defined after all state declarations to capture current values
     const saveProject = useCallback(async (name: string) => {
@@ -2531,6 +2550,41 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             return newDatasets;
         });
     }, [trafficDatasetNames, groups]);
+
+    /** Ce que supprimer le jeu impliquerait : plans concernés, remplaçant, ou refus. */
+    const infoSuppressionJeuTrafic = useCallback((nom: string) => planSuppressionJeu(
+        nom, trafficDatasetNames, pfTabs, pfTrafficDatasetMap, trafficDatasets, groups.map(g => g.id)
+    ), [trafficDatasetNames, pfTabs, pfTrafficDatasetMap, trafficDatasets, groups]);
+
+    /**
+     * Supprime un jeu de trafic : ses volumes, son nom personnalisé, et son
+     * rattachement aux plans, qui passent sur le jeu remplaçant. Un jeu
+     * standard (HPM, HPS…) revient vide, et ne reparaît dans la liste qu'une
+     * fois rempli.
+     */
+    const supprimerJeuTrafic = useCallback((nom: string) => {
+        if (isEditLocked()) return;
+        const { refus, remplacement } = infoSuppressionJeuTrafic(nom);
+        if (refus) return;
+        setTrafficDatasets(prev => {
+            const suivants = { ...prev };
+            delete suivants[nom];
+            return suivants;
+        });
+        setCustomTrafficDatasetNames(prev => prev.filter(n => n !== nom));
+        setPfTrafficDatasetMap(prev => {
+            const suivant: Record<string, string> = {};
+            pfTabs.forEach(pf => {
+                const jeu = prev[String(pf.id)] || pf.name;
+                if (jeu === nom) suivant[String(pf.id)] = remplacement;
+                else if (prev[String(pf.id)]) suivant[String(pf.id)] = prev[String(pf.id)];
+            });
+            return suivant;
+        });
+        setCapacityCompareDataset(prev => prev === nom ? '__per_pf__' : prev);
+        if (activeTrafficDataset === nom) setActiveTrafficDataset(remplacement);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [infoSuppressionJeuTrafic, pfTabs, activeTrafficDataset]);
 
     // Ensure traffic datasets have entries for all groups when group count changes
     useEffect(() => {
@@ -3067,10 +3121,12 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         setSimulationEnabled,
         simulationSelectedActions,
         simulationName,
-        updateSimulationName,
+        simulationScenarios,
+        choisirScenarioSimulation,
+        creerScenarioSimulation,
+        enregistrerScenarioSimulation,
+        supprimerScenarioSimulation,
         toggleSimulationAction,
-        selectAllSimulationActions,
-        deselectAllSimulationActions,
         // Intersection image
         intersectionImage,
         setIntersectionImage,
@@ -3089,6 +3145,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         trafficDatasetNames,
         trafficDatasetSourceNames,
         copyTrafficDataset,
+        infoSuppressionJeuTrafic,
+        supprimerJeuTrafic,
         addCustomTrafficDataset,
         pfTrafficDatasetMap,
         // Project properties

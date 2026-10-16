@@ -3,7 +3,7 @@ import type { ActionMicro } from '../types/projet';
 /**
  * Les actions que la simulation sait rejouer.
  *
- * Six familles n'ont aucun effet sur le déroulé d'un cycle — elles annotent le
+ * Sept familles n'ont aucun effet sur le déroulé d'un cycle — elles annotent le
  * diagramme ou concernent un autre système — et la simulation les écarte.
  * Cette liste était enfermée dans le composant ; le dossier imprimé en aurait
  * tenu une copie, et les deux listes auraient fini par diverger comme l'ont
@@ -16,6 +16,7 @@ export const ACTIONS_HORS_SIMULATION = [
     'Priorité piétons',
     'Signal aide conduite',
     'Synchro BTS',
+    'Instant Co',
     "Flèche d'anticipation"
 ];
 

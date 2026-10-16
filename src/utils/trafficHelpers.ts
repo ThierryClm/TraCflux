@@ -87,3 +87,41 @@ export const trafficDatasetHasData = (
     dataset: JeuTrafic | undefined,
     groupIds: Array<number | string>
 ): boolean => groupIds.some(id => parseTrafficVol(dataset?.[String(id)]?.trafficVol) > 0);
+
+/** Ce que supprimer un jeu de trafic impliquerait, ou pourquoi c'est refusé. */
+export interface PlanSuppressionJeu {
+    /** Raison du refus ; absente si la suppression est possible. */
+    refus?: string;
+    /** Plans de feux qui utilisent le jeu, par leur nom. */
+    plans: string[];
+    /** Le jeu qui le remplace pour ces plans, et à l'écran. */
+    remplacement: string;
+}
+
+/**
+ * Prépare la suppression d'un jeu de trafic. « Projection » reste toujours
+ * proposé — supprimé, il reviendrait vide — et le dernier jeu de la liste ne
+ * se supprime pas. Les plans qui l'utilisaient passent sur le premier autre
+ * jeu de la liste qui porte du trafic, à défaut sur le premier autre jeu.
+ */
+export const planSuppressionJeu = (
+    nom: string,
+    noms: string[],
+    pfTabs: Pick<PlanDeFeu, 'id' | 'name'>[],
+    pfTrafficDatasetMap: Record<string, string>,
+    trafficDatasets: Record<string, JeuTrafic>,
+    groupIds: Array<number | string>
+): PlanSuppressionJeu => {
+    const plans = pfTabs
+        .filter(pf => (pfTrafficDatasetMap[String(pf.id)] || pf.name) === nom)
+        .map(pf => pf.name);
+    const autres = noms.filter(n => n !== nom);
+    const remplacement = autres.find(n => trafficDatasetHasData(trafficDatasets[n], groupIds)) || autres[0] || '';
+    if (nom === 'Projection') {
+        return { refus: "« Projection » est un jeu standard, toujours proposé : il ne se supprime pas. Ses volumes peuvent être effacés à la main.", plans, remplacement };
+    }
+    if (!remplacement) {
+        return { refus: "C'est le seul jeu de données : il ne se supprime pas.", plans, remplacement };
+    }
+    return { plans, remplacement };
+};

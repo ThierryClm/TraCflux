@@ -565,6 +565,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                 <p><strong>Surbrillance interactive :</strong> Le survol des champs Coef, Trafic, V.Utile, Cap.U, Retard ou File d'attente met en surbrillance la barre correspondante dans le diagramme.</p>
                 <p><strong>Jeux de données :</strong> La listbox "Donnée" permet de basculer entre plusieurs jeux de données trafic (HPM, HPS, etc.). Chaque jeu de données conserve ses propres valeurs de trafic.</p>
                 <p><strong>Jeux de données personnalisés :</strong> Survolez le sélecteur "Donnée" et appuyez sur la touche <em>+</em> pour créer un nouveau jeu de données personnalisé (17 caractères max). Le nom est prérempli à partir du jeu actif. Les jeux personnalisés sont sauvegardés dans le projet et dans le stockage local.</p>
+                <p><strong>Supprimer un jeu de données :</strong> Survolez le sélecteur "Donnée" et appuyez sur la touche <em>−</em> pour supprimer le jeu affiché, après confirmation. Ses volumes sont effacés ; la fenêtre nomme les plans de feux qui l'utilisaient et le jeu sur lequel ils passent (le premier autre jeu renseigné). « Projection », toujours proposé, ne se supprime pas, ni le dernier jeu de la liste.</p>
                 <p><strong>Association PF / jeu de données :</strong> Chaque onglet PF mémorise le jeu de données trafic sélectionné. Lorsque vous changez d'onglet PF, le jeu de données associé est automatiquement restauré. Cette association est sauvegardée dans le projet.</p>
                 <p><strong>Bouton Coller :</strong> Si le jeu de données sélectionné est vide, un bouton "Coller..." apparaît pour copier les données depuis un autre jeu de données.</p>
                 <p><strong>Code couleur Cap.U :</strong></p>
@@ -579,8 +580,9 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
             <section className="help-section">
                 <h4>Simulation</h4>
                 <p>L'onglet Simulation permet de tester l'effet des actions de micro-régulation sur le diagramme.</p>
-                <p><strong>Un scénario</strong> est une combinaison d'actions cochées, et le nom qu'on lui donne dans le champ <em>Scénario</em>, en tête du panneau. Le nom et les actions cochées appartiennent au <strong>plan de feu</strong> : ils sont enregistrés avec le projet, se retrouvent à la réouverture, et chaque plan a le sien. C'est ce nom qui titre la section correspondante du dossier imprimé.</p>
-                <p><strong>Six familles d'actions ne sont pas rejouées</strong>, faute d'agir sur le déroulé du cycle : début et fin de bande passante, priorité piétons, signal d'aide à la conduite, synchro BTS, flèche d'anticipation. Elles n'apparaissent pas dans la liste du panneau et « Tout cocher » ne les sélectionne pas.</p>
+                <p><strong>Un scénario</strong> est une combinaison d'actions cochées, sous un titre. Chaque <strong>plan de feu</strong> peut en porter plusieurs : ils sont enregistrés avec le projet et se retrouvent à la réouverture. La liste <em>Scénario</em>, en tête du panneau, propose dans l'ordre les deux scénarios fixes <em>Tout coché</em> et <em>Tout décoché</em>, les scénarios du plan (par ordre alphabétique, avec leur nombre d'actions), puis <em>+ Nouveau scénario…</em>, qui demande un titre et retient les cases cochées à cet instant. Les scénarios fixes ne se modifient ni ne se suppriment, et leurs titres sont réservés : des cases changées à partir de l'un d'eux s'enregistrent sous un nouveau scénario. Le titre du scénario choisi titre la section correspondante du dossier imprimé.</p>
+                <p>Cocher ou décocher une action ne modifie pas le scénario enregistré : un <strong>●</strong> orange signale l'écart, et le bouton <em>Enregistrer…</em> le met à jour. Dans sa fenêtre, changer le titre propose de <em>Renommer</em> le scénario ou d'en <em>Créer une copie</em>. <em>Supprimer…</em> retire le scénario de la liste, après confirmation, en laissant les cases cochées. Ouvrir un scénario alors que le ● est affiché demande quoi faire des modifications : <em>Annuler</em> reste sur le scénario modifié sans rien perdre, <em>Abandonner</em> ouvre le scénario demandé en oubliant les modifications, <em>Enregistrer</em> les garde avant de l'ouvrir. Rechoisir le scénario modifié lui-même permet ainsi de revenir à sa version enregistrée.</p>
+                <p><strong>Sept familles d'actions ne sont pas rejouées</strong>, faute d'agir sur le déroulé du cycle : début et fin de bande passante, priorité piétons, signal d'aide à la conduite, synchro BTS, Instant Co, flèche d'anticipation. Elles n'apparaissent pas dans la liste du panneau et « Tout coché » ne les sélectionne pas. Les flèches Synchro BTS et Instant Co restent dessinées sur le diagramme simulé, à leur instant saisi.</p>
                 <ul>
                     <li><strong>Actions cochables :</strong> Chaque action définie dans les conditions de micro-régulation peut être cochée individuellement. Le diagramme se met à jour en temps réel pour visualiser l'effet combiné des actions sélectionnées.</li>
                     <li><strong>Ordre de traitement :</strong> Les actions sont traitées dans l'ordre suivant : Point de repos → Ouverture anticipée → Fermeture anticipée → Escamotage (groupe) → Adaptatif vertical → Escamotage de phase. Chaque action s'applique sur le diagramme virtuel résultant des actions précédentes.</li>
@@ -591,8 +593,8 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Actions grisées :</strong> Les actions dont la plage [Déb, Fin] tombe entièrement dans une zone supprimée (AV ou EP) sont affichées en grisé dans la liste.</li>
                     <li><strong>Conflits simulés :</strong> Le tableau des conflits se met à jour selon les temps de vert simulés. Les groupes réduits à un vert nul sont exclus des conflits. Le survol d'un conflit affiche une flèche rouge pointillée dans le diagramme depuis les positions simulées.</li>
                     <li><strong>Données trafic :</strong> Les données V.Utile, Cap.U, Retard et File d'attente sont toujours affichées. Les valeurs inhibées par les actions cochées apparaissent en grisé.</li>
-                    <li><strong>Tout cocher / Tout décocher :</strong> Permet de sélectionner ou désélectionner rapidement toutes les actions. « Tout décocher » laisse intactes les familles non rejouées, qui ne sont pas affichées.</li>
-                    <li><strong>Impression du scénario :</strong> Le scénario du plan actif s'imprime dans le dossier (case <em>Scénario</em>), que l'onglet Simulation soit ouvert ou non — il suffit qu'au moins une action soit cochée. Voir « Impression du dossier », plus bas.</li>
+                    <li><strong>Tout coché / Tout décoché</strong> (en tête de la liste <em>Scénario</em>) : Scénarios fixes qui cochent ou décochent toutes les actions rejouées. Un plan sans scénario choisi affiche celui qui correspond à ses cases.</li>
+                    <li><strong>Impression des scénarios :</strong> Les scénarios enregistrés de tous les plans de feu s'impriment dans le dossier (case <em>Scénarios</em>), que l'onglet Simulation soit ouvert ou non. Seule la version enregistrée s'imprime : enregistre tes modifications avant. Voir « Impression du dossier », plus bas.</li>
                 </ul>
             </section>
 
@@ -705,16 +707,22 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                             <li><em>Réserve de capacité :</em> Capacité offerte, degré de saturation, réserve, attente et file moyennes, courant par courant</li>
                         </ul>
                     </li>
-                    <li><strong>Scénario</strong> (dernière case de la liste, décochée par défaut) :
+                    <li><strong>Scénarios</strong> (dernière case de la liste) :
                         <ul>
-                            <li>Imprime le diagramme <strong>recalculé par le scénario du plan actif</strong>, titré du nom donné dans le champ <em>Scénario</em> et de son cycle simulé, avec l'écart au cycle nominal</li>
-                            <li>La case naît cochée lorsque le plan actif porte déjà un nom de scénario à la première ouverture de cette boîte ; une fois décochée, elle le reste, et ce choix s'enregistre avec le projet</li>
-                            <li>Elle reste inerte tant qu'aucune action n'est cochée dans l'onglet Simulation : il n'y a alors rien à imprimer</li>
-                            <li>L'impression porte sur le <strong>plan de feu actif</strong> uniquement</li>
-                            <li><em>Liste des actions :</em> Les actions que la simulation prend en compte, chacune avec sa coche ; les actions écartées restent visibles, en gris</li>
-                            <li><em>Liste des conflits :</em> Les conflits du diagramme simulé, escamotages cochés déduits</li>
-                            <li><em>Données de trafic et calcul de capacité :</em> Le tableau de l'écran, nourri des temps simulés</li>
-                            <li><em>Réserve de capacité :</em> Mêmes formules, groupes aux temps simulés ; les groupes qu'une action inhibe n'y affichent plus de capacité, comme dans le tableau de trafic</li>
+                            <li>Liste les <strong>scénarios enregistrés</strong> de chaque plan de feu, regroupés par plan, avec leur nombre d'actions et leur cycle simulé ; « Tout coché » et « Tout décoché », simples facilités de coche, n'y figurent pas</li>
+                            <li>Chaque scénario est <strong>recalculé sur son plan</strong>, d'après sa version enregistrée — et non d'après les cases cochées à l'écran</li>
+                            <li>À la première ouverture de cette boîte, le scénario choisi de chaque plan naît coché ; ensuite, tes choix s'enregistrent avec le projet. La case <em>Scénarios</em> coche ou décoche tout</li>
+                            <li>Elle reste inerte tant qu'aucun scénario n'est enregistré dans l'onglet Simulation</li>
+                            <li><em>Pour chaque scénario coché</em>, des options communes à tous :
+                                <ul>
+                                    <li><em>Diagramme simulé :</em> Titré du scénario, de son plan et de son cycle simulé, avec l'écart au cycle nominal</li>
+                                    <li><em>Liste des actions :</em> Les actions que la simulation prend en compte, chacune avec sa coche ; les actions écartées restent visibles, en gris</li>
+                                    <li><em>Liste des conflits :</em> Les conflits du diagramme simulé, escamotages cochés déduits</li>
+                                    <li><em>Données de trafic et calcul de capacité :</em> Le tableau de l'écran, nourri des temps simulés, avec le jeu de trafic du plan</li>
+                                    <li><em>Réserve de capacité :</em> Mêmes formules, groupes aux temps simulés ; les groupes qu'une action inhibe n'y affichent plus de capacité, comme dans le tableau de trafic</li>
+                                </ul>
+                            </li>
+                            <li><em>Tableau comparatif des scénarios :</em> Une page par plan de feu, une ligne par scénario coché, la première rappelant le plan nominal — actions, cycle simulé, conflits, courant dimensionnant, degré de saturation et réserve, aux couleurs de la réserve de capacité</li>
                         </ul>
                     </li>
                 </ul>
@@ -724,7 +732,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Page de titre :</strong> Nom du carrefour</li>
                     <li><strong>Sections globales :</strong> Image du carrefour, formulaire, matrice de sécurité et matrice des temps interverts (si cochées)</li>
                     <li><strong>Pour chaque PF coché :</strong> Diagramme du plan de feu, suivi de ses conditions de micro-régulation, variables micro, phasage bulle, données de trafic/capacité et réserve de capacité (selon les sous-options cochées)</li>
-                    <li><strong>Scénario</strong> (si coché, en fin de dossier) : Diagramme recalculé du plan actif, puis actions retenues, conflits, trafic et réserve selon les sous-options</li>
+                    <li><strong>Scénarios</strong> (s'il y en a de cochés) : À la suite de leur plan de feu — même si son diagramme est décoché — d'abord le tableau comparatif du plan, puis chaque scénario : diagramme simulé, actions, conflits, trafic et réserve selon les options</li>
                     <li><strong>Pied de page :</strong> « TraCflux » et le numéro de version, en bas à gauche de chaque page</li>
                 </ul>
                 <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Paramètres d'impression recommandés</h5>

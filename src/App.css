@@ -2441,6 +2441,101 @@ body.amber-mode .help-back-to-top {
     margin: 4px 0 0 0;
 }
 
+/* Comparaison des scénarios d'un plan : une ligne par scénario, la première
+   rappelant le plan nominal. Mêmes seuils de couleur que la réserve de
+   capacité ; conflits et dépassements ressortent en rouge. */
+.print-comparatif-scenarios {
+    border-collapse: collapse;
+    font-size: 12px;
+    width: auto;
+}
+
+.print-comparatif-scenarios th,
+.print-comparatif-scenarios td {
+    border: 1px solid #999;
+    padding: 3px 8px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.print-comparatif-scenarios th {
+    background: #eee;
+    font-weight: bold;
+}
+
+.print-comparatif-scenarios .col-scenario {
+    text-align: left;
+    min-width: 22ch;
+}
+
+.print-comparatif-scenarios .ligne-reference td {
+    background: #f4f4ef;
+    font-style: italic;
+}
+
+.print-comparatif-scenarios .capacity-green { color: #2e7d32; }
+.print-comparatif-scenarios .capacity-orange { color: #e08a00; }
+.print-comparatif-scenarios .capacity-red,
+.print-comparatif-scenarios .comparatif-alerte { color: #c62828; font-weight: bold; }
+/* td.… : l'emporte sur le fond de la ligne de référence. */
+.print-comparatif-scenarios td.capacity-black {
+    color: #000;
+    background-color: #ff6b6b;
+    font-weight: bold;
+}
+
+/* Liste des scénarios dans la boîte d'impression : regroupés par plan, le
+   résumé à droite. */
+.dossier-scenarios-plan {
+    margin: 4px 0 2px;
+}
+
+.dossier-scenarios-plan-nom {
+    font-size: 12px;
+    font-weight: bold;
+    opacity: 0.9;
+}
+
+.dossier-pf-suboptions .dossier-scenario-ligne {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 14px;
+}
+
+.dossier-scenario-nom {
+    flex: 1 1 auto;
+}
+
+.dossier-scenario-resume {
+    opacity: 0.65;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.dossier-scenarios-aucun {
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.55;
+    margin: 2px 0 4px;
+}
+
+.dossier-scenarios-titre {
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.7;
+    margin: 6px 0 2px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(128, 128, 128, 0.35);
+}
+
+.dossier-pf-suboptions .dossier-scenarios-comparatif {
+    margin-top: 4px;
+    font-weight: bold;
+}
+
 .print-preview-dossier {
     display: flex;
     flex-direction: column;

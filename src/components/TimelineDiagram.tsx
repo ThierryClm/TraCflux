@@ -449,13 +449,13 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
     }));
 
     // Get all "Synchro BTS" actions
-    // In simulation mode: show overlay ONLY when action is CHECKED (normal logic - hidden by default)
+    // Repère de synchronisation : hors simulation (cf. ACTIONS_HORS_SIMULATION),
+    // il n'a rien à cocher et reste affiché en mode simulation comme ailleurs.
     // If plage1 is not set, default to 1 (first group)
     // If plage2 is not set, default to groups.length (total number of groups)
     const synchroBtsActions = actionData.filter(action => {
         if (action.action !== 'Synchro BTS') return false;
         if (action.deb === '' || action.deb === undefined) return false;
-        if (simulationFilter && !simulationFilter.has(action.id)) return false;
         return true;
     }).map(action => ({
         ...action,
@@ -468,13 +468,13 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
     }));
 
     // Get all "Instant Co" actions
-    // In simulation mode: show overlay ONLY when action is CHECKED (normal logic - hidden by default)
+    // Repère de synchronisation : hors simulation (cf. ACTIONS_HORS_SIMULATION),
+    // il n'a rien à cocher et reste affiché en mode simulation comme ailleurs.
     // If plage1 is not set, default to 1 (first group)
     // If plage2 is not set, default to groups.length (total number of groups)
     const instantCoActions = actionData.filter(action => {
         if (action.action !== 'Instant Co') return false;
         if (action.deb === '' || action.deb === undefined) return false;
-        if (simulationFilter && !simulationFilter.has(action.id)) return false;
         return true;
     }).map(action => ({
         ...action,

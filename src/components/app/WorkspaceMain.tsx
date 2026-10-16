@@ -183,8 +183,9 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
     } = model;
     return (
         <>
-                {/* Resizable divider */}
-                {sidebarVisible && (
+                {/* Resizable divider — présent aussi en simulation, dont le
+                    panneau reste affiché quand les paramètres sont masqués. */}
+                {(sidebarVisible || simulationEnabled) && (
                     <div
                         className={`resize-divider ${isResizing ? 'resizing' : ''}`}
                         onMouseDown={handleResizeStart}

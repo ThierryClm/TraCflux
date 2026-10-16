@@ -112,7 +112,7 @@ describe('Réserve de capacité — un groupe inhibé ne montre plus de chiffres
 });
 
 describe('Actions et conflits de la simulation — les listes partagées', () => {
-    it('six familles restent hors simulation', () => {
+    it('sept familles restent hors simulation', () => {
         const actions = [
             action(1, 'Escamotage de phase', 1),
             action(2, 'Début de bande passante', 2),
@@ -122,7 +122,8 @@ describe('Actions et conflits de la simulation — les listes partagées', () =>
             action(6, 'Synchro BTS', 6),
             action(7, "Flèche d'anticipation", 7),
             action(8, 'Ouverture anticipée', 8),
-            action(9, '', 9)
+            action(9, '', 9),
+            action(10, 'Instant Co', 10)
         ];
         expect(actionsSimulables(actions).map(a => a.id)).toEqual([1, 8]);
     });
