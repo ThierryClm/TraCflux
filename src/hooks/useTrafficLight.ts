@@ -22,6 +22,7 @@ import { useEtatJeuxTrafic, useNomsJeuxTrafic, useOperationsJeuxTrafic } from '.
 import { useReglagesPlanActif } from './trafficLight/useReglagesPlanActif';
 import { useGestionPlans } from './trafficLight/useGestionPlans';
 import { useScenariosSimulation } from './trafficLight/useScenariosSimulation';
+import { useAnnulerRetablir } from './trafficLight/useAnnulerRetablir';
 import type {
     EtatHistorique, EtatProjet, GroupeEnregistre, JeuxTrafic, ParametresGroupe,
     ProjetEnregistre, ProprietesProjet, SauvegardeCache, UseTrafficLightOptions
@@ -44,7 +45,6 @@ import type {
     Projet,
     TypeGroupe
 } from '../types/projet';
-const MAX_HISTORY_SIZE = 50;
 
 /** Champs d'une condition qui désignent un groupe de feu par son numéro. */
 const CHAMPS_GF: ('gf' | 'plage1' | 'plage2' | 'actGf1' | 'actGf1Gf2' | 'actGf1Gf3' | 'actGf1Gf4')[] = ['gf', 'plage1', 'plage2', 'actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'];
@@ -1982,143 +1982,12 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     });
     // Note: Simulation state is NOT saved to localStorage (per user request)
 
-    // Save current state to history (for undo)
-    const saveToHistory = useCallback(() => {
-        if (isUndoing.current || isRedoing.current) return; // Don't save during undo/redo
-
-        const currentState: EtatHistorique = {
-            groups: JSON.parse(JSON.stringify(groups)),
-            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
-            pfTabs: JSON.parse(JSON.stringify(pfTabs)),
-            activePFId,
-            cycleLength,
-            intersectionName
-        };
-
-        setHistory(prev => {
-            const newHistory = [...prev, currentState];
-            // Limit history size
-            if (newHistory.length > MAX_HISTORY_SIZE) {
-                return newHistory.slice(-MAX_HISTORY_SIZE);
-            }
-            return newHistory;
-        });
-
-        // Clear redo history when a new action is performed
-        setRedoHistory([]);
-    }, [groups, conflictMatrix, pfTabs, activePFId, cycleLength, intersectionName]);
-
-    // Start drag - save history once at the beginning
-    const startDrag = useCallback(() => {
-        if (!isDragging.current) {
-            saveToHistory();
-            isDragging.current = true;
-        }
-    }, [saveToHistory]);
-
-    // End drag
-    const endDrag = useCallback(() => {
-        isDragging.current = false;
-    }, []);
-
-    // Undo function
-    const undo = useCallback(() => {
-        if (history.length === 0) return false;
-
-        isUndoing.current = true;
-
-        // Save current state to redo history before restoring
-        const currentState: EtatHistorique = {
-            groups: JSON.parse(JSON.stringify(groups)),
-            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
-            pfTabs: JSON.parse(JSON.stringify(pfTabs)),
-            activePFId,
-            cycleLength,
-            intersectionName
-        };
-        setRedoHistory(prev => [...prev, currentState]);
-
-        const previousState = history[history.length - 1];
-
-        // Restore previous state
-        setGroups(previousState.groups);
-        setConflictMatrix(previousState.conflictMatrix);
-        if (previousState.pfTabs) {
-            setPfTabs(previousState.pfTabs);
-            setActivePFIdRaw(previousState.activePFId);
-        } else if (previousState.actionData) {
-            // Handle old history format
-            const anciennesActions = previousState.actionData;
-            setPfTabs(prev => prev.map(pf =>
-                pf.id === activePFId ? { ...pf, data: anciennesActions } : pf
-            ));
-        }
-        setCycleLength(previousState.cycleLength);
-        setIntersectionName(previousState.intersectionName);
-
-        // Une annulation réinstalle d'un bloc les groupes, le cycle, les plans
-        // de feu ET le plan actif. Sans cette remise à zéro, la recopie
-        // « groupes → PF actif » y voyait un changement d'onglet : elle écrivait
-        // le cycle et le diagramme qu'on venait de restaurer dans le plan de feu
-        // actif AVANT l'annulation, écrasant ce que l'historique venait de
-        // rendre. Annuler sur un plan revenait ainsi à abîmer l'autre.
-        resetPfSyncRefs(previousState.activePFId || activePFId);
-
-        // Remove the last history entry
-        setHistory(prev => prev.slice(0, -1));
-
-        // Reset the flag after a short delay
-        setTimeout(() => {
-            isUndoing.current = false;
-        }, 100);
-
-        return true;
-    }, [history, groups, conflictMatrix, pfTabs, activePFId, cycleLength, intersectionName]);
-
-    // Redo function
-    const redo = useCallback(() => {
-        if (redoHistory.length === 0) return false;
-
-        isRedoing.current = true;
-
-        // Save current state to history before restoring
-        const currentState: EtatHistorique = {
-            groups: JSON.parse(JSON.stringify(groups)),
-            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
-            pfTabs: JSON.parse(JSON.stringify(pfTabs)),
-            activePFId,
-            cycleLength,
-            intersectionName
-        };
-        setHistory(prev => [...prev, currentState]);
-
-        const nextState = redoHistory[redoHistory.length - 1];
-
-        // Restore next state
-        setGroups(nextState.groups);
-        setConflictMatrix(nextState.conflictMatrix);
-        if (nextState.pfTabs) {
-            setPfTabs(nextState.pfTabs);
-            setActivePFIdRaw(nextState.activePFId);
-        }
-        setCycleLength(nextState.cycleLength);
-        setIntersectionName(nextState.intersectionName);
-
-        // Même raison que dans undo : le rétablissement réinstalle le plan actif
-        // en même temps que l'état, la synchronisation ne doit pas le prendre
-        // pour un changement d'onglet.
-        resetPfSyncRefs(nextState.activePFId || activePFId);
-
-        // Remove the last redo history entry
-        setRedoHistory(prev => prev.slice(0, -1));
-
-        // Reset the flag after a short delay
-        setTimeout(() => {
-            isRedoing.current = false;
-        }, 100);
-
-        return true;
-    }, [redoHistory, groups, conflictMatrix, pfTabs, activePFId, cycleLength, intersectionName]);
+    // Annuler / Rétablir.
+    const { saveToHistory, startDrag, endDrag, undo, redo } = useAnnulerRetablir({
+        groups, setGroups, conflictMatrix, setConflictMatrix, pfTabs, setPfTabs,
+        activePFId, setActivePFIdRaw, cycleLength, setCycleLength, intersectionName, setIntersectionName,
+        history, setHistory, redoHistory, setRedoHistory, isUndoing, isRedoing, isDragging, resetPfSyncRefs
+    });
 
     // Wrapped update functions that save to history (skip if dragging)
     const updateActionRowWithHistory = useCallback((rowId: number, field: keyof ActionMicro, value: string) => {
