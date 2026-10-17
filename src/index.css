@@ -907,9 +907,9 @@ body.light-mode .grid-cycle-end {
 }
 
 /* Green cut overlay */
-body.light-mode .green-cut-overlay {
-    background: repeating-linear-gradient(135deg, rgba(40, 40, 40, 0.75) 0 3px, transparent 3px 7px);
-    border-color: rgba(0, 0, 0, 0.6);
+body.light-mode {
+    --escamotage-hachure: rgba(40, 40, 40, 0.75);
+    --escamotage-contour: rgba(0, 0, 0, 0.6);
 }
 body.light-mode .green-cut-overlay.escamote {
     --fond-escamote: #e8e8e8;
@@ -1710,9 +1710,9 @@ body.high-contrast-mode .grid-cycle-end {
 }
 
 /* Green cut overlay */
-body.high-contrast-mode .green-cut-overlay {
-    background: repeating-linear-gradient(135deg, rgba(15, 20, 64, 0.9) 0 3px, transparent 3px 7px);
-    border-color: #ffdd00;
+body.high-contrast-mode {
+    --escamotage-hachure: rgba(15, 20, 64, 0.9);
+    --escamotage-contour: #ffdd00;
 }
 body.high-contrast-mode .green-cut-overlay.escamote {
     --fond-escamote: #1a2050;
@@ -2571,8 +2571,8 @@ body.amber-mode .grid-cycle-end {
     background: #ffb300;
 }
 
-body.amber-mode .green-cut-overlay {
-    background: #303030;
+body.amber-mode .green-cut-overlay.escamote {
+    --fond-escamote: #303030;
 }
 
 /* Intersection image */
