@@ -23,9 +23,10 @@ import { useGestionPlans } from './trafficLight/useGestionPlans';
 import { useScenariosSimulation } from './trafficLight/useScenariosSimulation';
 import { useAnnulerRetablir } from './trafficLight/useAnnulerRetablir';
 import { calculerConflits } from './trafficLight/calculConflits';
+import { mettreProjetEnTete, listerProjetsCache, lireProjetCache, supprimerProjetCache } from './trafficLight/cacheProjets';
 import type {
     EtatHistorique, EtatProjet, GroupeEnregistre, JeuxTrafic, ParametresGroupe,
-    ProjetEnregistre, ProprietesProjet, SauvegardeCache, UseTrafficLightOptions
+    ProjetEnregistre, ProprietesProjet, UseTrafficLightOptions
 } from './trafficLight/types';
 export type {
     ChampsProjet, EtatProjet, JeuxTrafic, ParametresGroupe, ProjetEnregistre,
@@ -850,104 +851,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         }
     };
 
-    // Nombre max de projets conservés dans le cache localStorage.
-    // C'est un plafond de COMPTAGE, pas la vraie limite : le quota réel est en
-    // octets (~5 Mo navigateur), géré par safeLocalStorage qui absorbe un
-    // éventuel QuotaExceededError. Monté à 15 : depuis l'optimisation auto des
-    // images de fond (~250 Ko/projet au lieu de ~800 Ko), bien plus de projets
-    // tiennent dans le quota (15 × 250 Ko ≈ 3,75 Mo, avec marge).
-    // Solution de fond pour lever la contrainte de capacité : migration du
-    // stockage des projets vers IndexedDB (gros chantier — cf. mémoire projet).
-    const MAX_CACHED_PROJECTS = 15;
-
-    // Update project order - move project to top and limit to MAX_CACHED_PROJECTS
-    const updateProjectOrder = (name: string) => {
-        try {
-            const orderRaw = localStorage.getItem('traffic_project_order');
-            let order: string[] = orderRaw ? JSON.parse(orderRaw) : [];
-            // Remove if already exists
-            order = order.filter(n => n !== name);
-            // Add to top
-            order.unshift(name);
-
-            // Remove old projects beyond the limit (keep last backup)
-            while (order.length > MAX_CACHED_PROJECTS) {
-                const oldProjectName = order.pop();
-                // Delete the old project from localStorage (but keep its backup if exists)
-                localStorage.removeItem(`traffic_project_${oldProjectName}`);
-                console.log(`Cache nettoyé: projet "${oldProjectName}" supprimé`);
-            }
-
-            safeLocalStorage.setItem('traffic_project_order', JSON.stringify(order));
-        } catch (e) {
-            console.error("Update order failed", e);
-        }
-    };
-
-    const getAllSaves = () => {
-        const saves: SauvegardeCache[] = [];
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                // Skip null/undefined keys
-                if (!key) continue;
-                // Only include main project files (exclude backups and order file)
-                if (key.startsWith('traffic_project_') && !key.endsWith('_backup') && key !== 'traffic_project_order') {
-                    const name = key.replace('traffic_project_', '');
-                    // Skip empty names
-                    if (!name) continue;
-
-                    const raw = localStorage.getItem(key);
-                    let savedAt = null;
-                    let size = 0;
-
-                    if (raw) {
-                        size = raw.length;
-                        try {
-                            const data = JSON.parse(raw);
-                            savedAt = data.savedAt || null;
-                        } catch {
-                            // Ignore parse errors
-                        }
-                    }
-
-                    saves.push({ name, savedAt, size });
-                }
-            }
-
-            // Sort by order (most recently loaded first) and limit to MAX_CACHED_PROJECTS
-            const orderRaw = localStorage.getItem('traffic_project_order');
-            if (orderRaw) {
-                const order: string[] = JSON.parse(orderRaw);
-                saves.sort((a, b) => {
-                    const indexA = order.indexOf(a.name);
-                    const indexB = order.indexOf(b.name);
-                    // Projects not in order list go to the end
-                    if (indexA === -1 && indexB === -1) return 0;
-                    if (indexA === -1) return 1;
-                    if (indexB === -1) return -1;
-                    return indexA - indexB;
-                });
-            }
-        } catch (e) {
-            console.error("getAllSaves failed", e);
-        }
-
-        // Return all available projects (no limit for display)
-        return saves;
-    };
-
+    // Cache des projets (trafficLight/cacheProjets). Fonctions d'appel
+    // recréées à chaque rendu, comme avant le découpage : la liste des projets
+    // se rafraîchit au même rythme dans les fenêtres qui en dépendent.
+    const updateProjectOrder = (name: string) => mettreProjetEnTete(name);
+    const getAllSaves = () => listerProjetsCache();
     // Get project data without applying to state (for green wave)
-    const getProjectData = (name: string): ProjetEnregistre | null => {
-        try {
-            const raw = localStorage.getItem(`traffic_project_${name}`);
-            if (!raw) return null;
-            return JSON.parse(raw);
-        } catch (e) {
-            console.error("Get project data failed", e);
-            return null;
-        }
-    };
+    const getProjectData = (name: string) => lireProjetCache(name);
 
     // Load full state (for duplication)
     const loadFullState = (state: EtatProjet) => {
@@ -1207,9 +1117,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     const getFullStateRef = useRef(getFullState);
     getFullStateRef.current = getFullState;
 
-    const deleteSave = (name: string) => {
-        localStorage.removeItem(`traffic_project_${name}`);
-    };
+    const deleteSave = (name: string) => supprimerProjetCache(name);
 
     // Multiple PF (Plans de Feux) support
     const [pfTabs, setPfTabs] = useState<PlanDeFeu[]>(() => [{ id: 1, name: 'PF1', data: createEmptyActionData(), diagram: [], remarques: '' }]);
