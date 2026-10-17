@@ -23,9 +23,12 @@ import { useGestionPlans } from './trafficLight/useGestionPlans';
 import { useScenariosSimulation } from './trafficLight/useScenariosSimulation';
 import { useAnnulerRetablir } from './trafficLight/useAnnulerRetablir';
 import { calculerConflits } from './trafficLight/calculConflits';
+import { mettreProjetEnTete, listerProjetsCache, lireProjetCache, supprimerProjetCache, ecrireProjetCache } from './trafficLight/cacheProjets';
+import { useDeplacementGroupes } from './trafficLight/useDeplacementGroupes';
+import { intervertMinimal, migrerGroupes, matriceDuCache, plansDuCache, matriceDuFichier, largeursColonnesBornees } from './trafficLight/lectureProjet';
 import type {
-    EtatHistorique, EtatProjet, GroupeEnregistre, JeuxTrafic, ParametresGroupe,
-    ProjetEnregistre, ProprietesProjet, SauvegardeCache, UseTrafficLightOptions
+    EtatHistorique, EtatProjet, ParametresGroupe,
+    ProjetEnregistre, ProprietesProjet, UseTrafficLightOptions
 } from './trafficLight/types';
 export type {
     ChampsProjet, EtatProjet, JeuxTrafic, ParametresGroupe, ProjetEnregistre,
@@ -34,25 +37,16 @@ export type {
 import type {
     ActionMicro,
     CaseMatrice,
-    Durees,
     FlecheCarrefour,
     Groupe,
-    JeuTrafic,
     LienExterne,
-    LigneDiagramme,
     Matrice,
     PlanDeFeu,
     Projet,
     TypeGroupe
 } from '../types/projet';
 
-/** Champs d'une condition qui désignent un groupe de feu par son numéro. */
-const CHAMPS_GF: ('gf' | 'plage1' | 'plage2' | 'actGf1' | 'actGf1Gf2' | 'actGf1Gf3' | 'actGf1Gf4')[] = ['gf', 'plage1', 'plage2', 'actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'];
 
-
-/** Un groupe piéton ou cycliste admet un intervert de 0 s ; les autres, 3 s. */
-const intervertMinimal = (groupe: Pick<Groupe, 'type'> | GroupeEnregistre | undefined) =>
-    (groupe && (groupe.type === 'Piéton' || groupe.type === 'P' || groupe.type === 'Cycliste' || groupe.type === 'CY')) ? 0 : 3;
 
 // L'échec d'autosave n'est signalé qu'une fois : il se rejoue toutes les deux
 // secondes d'inactivité, et une alerte répétée serait vite ignorée.
@@ -239,287 +233,6 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         });
     };
 
-    // Swap group data and matrix, but keep GF IDs in place (G1 stays G1, G2 stays G2)
-    const moveGroup = (index: number, direction: 'up' | 'down') => {
-        if (direction === 'up' && index === 0) return;
-        if (direction === 'down' && index === groups.length - 1) return;
-
-        const targetIndex = direction === 'up' ? index - 1 : index + 1;
-
-        // GF numbers are 1-based (index + 1)
-        const gfA = index + 1;
-        const gfB = targetIndex + 1;
-
-        // 1. Swap group DATA (but keep IDs in place)
-        setGroups(currentGroups => {
-            const newGroups = [...currentGroups];
-            const groupA = newGroups[index];
-            const groupB = newGroups[targetIndex];
-
-            // Swap all properties except ID
-            newGroups[index] = {
-                ...groupB,
-                id: groupA.id  // Keep original ID
-            };
-            newGroups[targetIndex] = {
-                ...groupA,
-                id: groupB.id  // Keep original ID
-            };
-
-            return newGroups;
-        });
-
-        // 2. Swap matrix rows and columns
-        setConflictMatrix(currentMatrix => {
-            if (!currentMatrix || currentMatrix.length === 0) return currentMatrix;
-
-            const newMatrix = currentMatrix.map(row => [...row]);
-
-            // Swap Rows
-            const tempRow = newMatrix[index];
-            newMatrix[index] = newMatrix[targetIndex];
-            newMatrix[targetIndex] = tempRow;
-
-            // Swap Cols
-            for (let r = 0; r < newMatrix.length; r++) {
-                const row = newMatrix[r];
-                const tempVal = row[index];
-                row[index] = row[targetIndex];
-                row[targetIndex] = tempVal;
-            }
-            return newMatrix;
-        });
-
-        // 3. Swap GF references in ActionTable
-        // Permute les références aux deux groupes dans une condition.
-        const permuterGf = (row: ActionMicro): ActionMicro => {
-            const newRow = { ...row };
-            CHAMPS_GF.forEach(field => {
-                const val = entier(newRow[field]);
-                if (val === gfA) {
-                    newRow[field] = gfB.toString();
-                } else if (val === gfB) {
-                    newRow[field] = gfA.toString();
-                }
-            });
-            return newRow;
-        };
-
-        setActionData(currentData => currentData.map(permuterGf));
-
-        // 4. Swap diagram data in ALL PF tabs (not just the active one)
-        setPfTabs(currentTabs => {
-            return currentTabs.map(pf => {
-                const newPf = { ...pf };
-
-                // Swap diagram data if it exists
-                if (newPf.diagram && newPf.diagram.length > 0) {
-                    const newDiagram = [...newPf.diagram];
-                    const entryA = newDiagram.find(d => d.groupId === gfA);
-                    const entryB = newDiagram.find(d => d.groupId === gfB);
-
-                    if (entryA && entryB) {
-                        // Swap all properties except groupId
-                        const tempOffset = entryA.offset;
-                        const tempGreenDuration = entryA.greenDuration;
-                        const tempDa = entryA.da;
-                        const tempComment = entryA.comment;
-                        const tempCommentColor = entryA.commentColor;
-
-                        entryA.offset = entryB.offset;
-                        entryA.greenDuration = entryB.greenDuration;
-                        entryA.da = entryB.da;
-                        entryA.comment = entryB.comment;
-                        entryA.commentColor = entryB.commentColor;
-
-                        entryB.offset = tempOffset;
-                        entryB.greenDuration = tempGreenDuration;
-                        entryB.da = tempDa;
-                        entryB.comment = tempComment;
-                        entryB.commentColor = tempCommentColor;
-                    }
-                    newPf.diagram = newDiagram;
-                }
-
-                // Swap conflict matrix in PF if it exists
-                if (newPf.conflictMatrix && newPf.conflictMatrix.length > 0) {
-                    const newMatrix = newPf.conflictMatrix.map(row => [...row]);
-
-                    // Swap Rows
-                    const tempRow = newMatrix[index];
-                    newMatrix[index] = newMatrix[targetIndex];
-                    newMatrix[targetIndex] = tempRow;
-
-                    // Swap Cols
-                    for (let r = 0; r < newMatrix.length; r++) {
-                        const row = newMatrix[r];
-                        const tempVal = row[index];
-                        row[index] = row[targetIndex];
-                        row[targetIndex] = tempVal;
-                    }
-                    newPf.conflictMatrix = newMatrix;
-                }
-
-                // Swap GF references in action data if it exists
-                if (newPf.data && newPf.data.length > 0) {
-                    newPf.data = newPf.data.map(permuterGf);
-                }
-
-                return newPf;
-            });
-        });
-    };
-
-    // Move a group to a new position (after another group)
-    // sourceId: the ID of the group to move
-    // afterId: the ID of the group after which to insert (0 = insert at beginning)
-    const moveGroupToPosition = (sourceId: number, afterId: number) => {
-        const sourceIndex = groups.findIndex(g => g.id === sourceId);
-        if (sourceIndex === -1) return;
-
-        // Calculate target index
-        let targetIndex;
-        if (afterId === 0) {
-            targetIndex = 0; // Insert at beginning
-        } else {
-            const afterIndex = groups.findIndex(g => g.id === afterId);
-            if (afterIndex === -1) return;
-            targetIndex = afterIndex + 1;
-        }
-
-        // Adjust target if source is before target
-        if (sourceIndex < targetIndex) {
-            targetIndex--;
-        }
-
-        if (sourceIndex === targetIndex) return; // No change needed
-
-        // Create mapping from old positions to new positions
-        const oldToNew: Record<number, number> = {};
-        const newToOld: Record<number, number> = {};
-
-        // Build the new order of groups
-        const newGroups = [...groups];
-        const [movedGroup] = newGroups.splice(sourceIndex, 1);
-        newGroups.splice(targetIndex, 0, movedGroup);
-
-        // Create position mappings (1-based GF numbers)
-        for (let i = 0; i < groups.length; i++) {
-            const oldGf = i + 1;
-            const group = groups[i];
-            const newIndex = newGroups.findIndex(g => g.id === group.id);
-            const newGf = newIndex + 1;
-            oldToNew[oldGf] = newGf;
-            newToOld[newGf] = oldGf;
-        }
-
-        // 1. Reorder groups and reassign IDs to be sequential
-        setGroups(() => {
-            return newGroups.map((g, idx) => ({
-                ...g,
-                id: idx + 1
-            }));
-        });
-
-        // 2. Reorder matrix rows and columns
-        setConflictMatrix(currentMatrix => {
-            if (!currentMatrix || currentMatrix.length === 0) return currentMatrix;
-
-            const size = currentMatrix.length;
-            const newMatrix: Matrice = Array(size).fill(null).map(() => Array(size).fill(0));
-
-            // Copy values to new positions
-            for (let oldRow = 0; oldRow < size; oldRow++) {
-                for (let oldCol = 0; oldCol < size; oldCol++) {
-                    const newRow = oldToNew[oldRow + 1] - 1;
-                    const newCol = oldToNew[oldCol + 1] - 1;
-                    if (newRow >= 0 && newRow < size && newCol >= 0 && newCol < size) {
-                        newMatrix[newRow][newCol] = currentMatrix[oldRow][oldCol];
-                    }
-                }
-            }
-
-            return newMatrix;
-        });
-
-        // 3. Update GF references in ActionTable
-        const size = groups.length;
-
-        // Renumérote les références aux groupes dans une condition.
-        const renumeroterGf = (row: ActionMicro): ActionMicro => {
-            const newRow = { ...row };
-            CHAMPS_GF.forEach(field => {
-                const val = entier(newRow[field]);
-                if (!isNaN(val) && val > 0 && val <= size) {
-                    newRow[field] = oldToNew[val].toString();
-                }
-            });
-            return newRow;
-        };
-
-        // Remap active PF tab data first
-        setActionData(currentData => currentData.map(renumeroterGf));
-
-        // 4. Update ALL PF tabs with reordered data
-        setPfTabs(currentTabs => {
-            return currentTabs.map(pf => {
-                const newPf = { ...pf };
-
-                // Reorder diagram data if it exists
-                if (newPf.diagram && newPf.diagram.length > 0) {
-                    newPf.diagram = newPf.diagram.map(entry => ({
-                        ...entry,
-                        groupId: oldToNew[entry.groupId] || entry.groupId
-                    }));
-                }
-
-                // Reorder conflict matrix in PF if it exists
-                if (newPf.conflictMatrix && newPf.conflictMatrix.length > 0) {
-                    const pfSize = newPf.conflictMatrix.length;
-                    const newMatrix: Matrice = Array(pfSize).fill(null).map(() => Array(pfSize).fill(''));
-                    const source = newPf.conflictMatrix;
-
-                    for (let oldRow = 0; oldRow < pfSize; oldRow++) {
-                        for (let oldCol = 0; oldCol < pfSize; oldCol++) {
-                            const newRow = oldToNew[oldRow + 1] - 1;
-                            const newCol = oldToNew[oldCol + 1] - 1;
-                            if (newRow >= 0 && newRow < pfSize && newCol >= 0 && newCol < pfSize) {
-                                newMatrix[newRow][newCol] = source[oldRow][oldCol];
-                            }
-                        }
-                    }
-                    newPf.conflictMatrix = newMatrix;
-                }
-
-                // Update GF references in action data for non-active tabs
-                // (active tab already handled by setActionData above)
-                if (pf.id !== activePFId && newPf.data && newPf.data.length > 0) {
-                    newPf.data = newPf.data.map(renumeroterGf);
-                }
-
-                return newPf;
-            });
-        });
-
-        // 5. Reorder traffic datasets (keyed by groupId)
-        setTrafficDatasets(currentDatasets => {
-            const newDatasets: JeuxTrafic = {};
-            Object.keys(currentDatasets).forEach(datasetKey => {
-                const dataset = currentDatasets[datasetKey];
-                const newDataset: JeuTrafic = {};
-                Object.keys(dataset).forEach(oldGroupId => {
-                    const oldId = entier(oldGroupId);
-                    const newId = oldToNew[oldId];
-                    if (newId) {
-                        newDataset[newId] = dataset[oldGroupId];
-                    }
-                });
-                newDatasets[datasetKey] = newDataset;
-            });
-            return newDatasets;
-        });
-    };
-
     const getGroupState = useCallback((group: Groupe, time: number) => {
         const { durations, offset } = group;
         const totalDuration = cycleLength;
@@ -584,49 +297,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
 
             // Migrate and validate groups structure for old projects
             if (data.groups) {
-                const migratedGroups = data.groups.map((g, index): Groupe => {
-                    // Ensure all required fields exist with proper defaults
-                    const id = g.id !== undefined ? g.id : index + 1;
-
-                    // Handle old duration formats
-                    let durations = g.durations;
-                    if (!durations || typeof durations !== 'object') {
-                        // Old format might have green/orange/red directly on group
-                        durations = {
-                            green: g.green !== undefined ? g.green : (g.greenDuration !== undefined ? g.greenDuration : 10),
-                            orange: g.orange !== undefined ? g.orange : 3,
-                            red: g.red !== undefined ? g.red : 0
-                        };
-                    }
-                    // Validate duration values
-                    const dureesValides: Durees = {
-                        green: !isNaN(Number(durations.green)) ? Number(durations.green) : 10,
-                        orange: !isNaN(Number(durations.orange)) ? Number(durations.orange) : 3,
-                        red: !isNaN(Number(durations.red)) ? Number(durations.red) : 0
-                    };
-
-                    return {
-                        id,
-                        name: g.name || `Groupe ${id}`,
-                        type: g.type || 'VL',
-                        courant: g.courant || '',
-                        minGreen: g.minGreen !== undefined && !isNaN(g.minGreen) ? g.minGreen : 6,
-                        durations: dureesValides,
-                        offset: g.offset !== undefined && !isNaN(g.offset) ? g.offset : 0,
-                        da: g.da || '',
-                        phaseFlag: g.phaseFlag || '',
-                        comment: g.comment || '',
-                        commentColor: g.commentColor || '',
-                        // Traffic Engineering Props
-                        trafficStream: g.trafficStream || '',
-                        laneCoef: g.laneCoef !== undefined ? g.laneCoef : 1,
-                        trafficVol: g.trafficVol !== undefined ? g.trafficVol : 0,
-                        effectiveGreen: g.effectiveGreen !== undefined ? g.effectiveGreen : 0,
-                        usedCapacity: g.usedCapacity !== undefined ? g.usedCapacity : 0,
-                        delay: g.delay !== undefined ? g.delay : 0,
-                        queueLength: g.queueLength !== undefined ? g.queueLength : 0
-                    };
-                });
+                const migratedGroups = migrerGroupes(data.groups);
                 setGroups(migratedGroups);
             }
 
@@ -636,108 +307,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             setCycleLength(cycleDuPlanActif(data, DEFAULT_CYCLE));
 
             // Ensure conflict matrix matches group count
-            const groupCount = data.groups ? data.groups.length : 0;
-            if (data.conflictMatrix && groupCount > 0) {
-                // Clean values outside valid range, resize to match group count
-                // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
-                const loadedGroups = data.groups || [];
-                const cleanedMatrix = Array.from({ length: groupCount }, (_, r) => {
-                    return Array.from({ length: groupCount }, (_, c) => {
-                        const val = data.conflictMatrix?.[r]?.[c];
-                        if (val === undefined || val === null) return '';
-                        const fromGroup = loadedGroups[r];
-                        const minVal = intervertMinimal(fromGroup);
-                        const numericVal = typeof val === 'number' ? val : entier(val);
-                        if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) return '';
-                        return numericVal;
-                    });
-                });
-                setConflictMatrix(cleanedMatrix);
-            } else if (groupCount > 0) {
-                // No matrix in data, create empty one
-                setConflictMatrix(Array.from({ length: groupCount }, () => new Array(groupCount).fill('')));
-            }
+            const matriceLue = matriceDuCache(data);
+            if (matriceLue) setConflictMatrix(matriceLue);
             // Load action table data (pfTabs)
-            if (data.pfTabs) {
-                // Migrate and validate pfTabs structure
-                const groupCount = data.groups ? data.groups.length : 0;
-                const migratedPfTabs = data.pfTabs.map((pf): PlanDeFeu => {
-                    const migrated: PlanDeFeu = { ...pf };
-
-                    // Ensure data array exists
-                    if (!migrated.data) {
-                        migrated.data = [];
-                    }
-
-                    // Ensure diagram array exists with valid data
-                    if (!migrated.diagram || !Array.isArray(migrated.diagram) || migrated.diagram.length === 0) {
-                        // Initialize diagram from groups if available
-                        if (data.groups) {
-                            migrated.diagram = data.groups.map(g => ({
-                                groupId: g.id,
-                                offset: g.offset !== undefined && !isNaN(g.offset) ? g.offset : 0,
-                                greenDuration: g.durations?.green !== undefined && !isNaN(g.durations.green) ? g.durations.green : 10,
-                                da: g.da || '',
-                                comment: g.comment || '',
-                                commentColor: g.commentColor || '#000000',
-                                phaseFlag: g.phaseFlag || ''
-                            }));
-                        } else {
-                            migrated.diagram = [];
-                        }
-                    } else {
-                        // Validate existing diagram entries
-                        migrated.diagram = migrated.diagram.map(d => ({
-                            ...d,
-                            offset: d.offset !== undefined && !isNaN(d.offset) ? d.offset : 0,
-                            greenDuration: d.greenDuration !== undefined && !isNaN(d.greenDuration) ? d.greenDuration : 10
-                        }));
-                    }
-
-                    // Ensure conflictMatrix exists with proper size
-                    if (!migrated.conflictMatrix || !Array.isArray(migrated.conflictMatrix) || migrated.conflictMatrix.length === 0) {
-                        // Initialize from main conflict matrix or create empty
-                        if (data.conflictMatrix && data.conflictMatrix.length > 0) {
-                            migrated.conflictMatrix = data.conflictMatrix.map(row => [...row]);
-                        } else if (groupCount > 0) {
-                            migrated.conflictMatrix = Array.from({ length: groupCount }, () =>
-                                new Array(groupCount).fill('')
-                            );
-                        }
-                    }
-
-                    // Ensure remarques field exists
-                    if (migrated.remarques === undefined) {
-                        migrated.remarques = '';
-                    }
-
-                    return migrated;
-                });
-                setPfTabs(migratedPfTabs);
-                if (data.activePFId) setActivePFIdRaw(data.activePFId);
-            } else if (data.actionData) {
-                // Handle old format for backward compatibility
-                const groupCount = data.groups ? data.groups.length : 0;
-                const initialDiagram: LigneDiagramme[] = data.groups ? data.groups.map(g => ({
-                    groupId: g.id,
-                    offset: g.offset !== undefined && !isNaN(g.offset) ? g.offset : 0,
-                    greenDuration: g.durations?.green !== undefined && !isNaN(g.durations.green) ? g.durations.green : 10,
-                    da: g.da || '',
-                    comment: g.comment || '',
-                    commentColor: g.commentColor || '#000000'
-                })) : [];
-                const initialMatrix = data.conflictMatrix && data.conflictMatrix.length > 0
-                    ? data.conflictMatrix.map(row => [...row])
-                    : (groupCount > 0 ? Array.from({ length: groupCount }, () => new Array<CaseMatrice>(groupCount).fill('')) : []);
-                setPfTabs([{
-                    id: 1,
-                    name: 'PF1',
-                    data: data.actionData,
-                    diagram: initialDiagram,
-                    conflictMatrix: initialMatrix,
-                    remarques: ''
-                }]);
-                setActivePFIdRaw(1);
+            const plansLus = plansDuCache(data);
+            if (plansLus) {
+                setPfTabs(plansLus.pfTabs);
+                if (plansLus.activePFId) setActivePFIdRaw(plansLus.activePFId);
             }
 
             // Load intersection image and arrows
@@ -779,19 +355,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             setCapacityCompareSelection(Array.isArray(data.capacityCompareSelection) ? data.capacityCompareSelection : null);
             setCapacityCompareDataset(data.capacityCompareDataset || '__per_pf__');
             setMatricesLocked(data.matricesLocked === true);
-            {
-                const acw = data.actionColWidths || {};
-                const clamp = (v: unknown, lo: number, hi: number, def: number) => {
-                    const n = Number(v);
-                    if (!isFinite(n)) return def;
-                    return Math.min(hi, Math.max(lo, Math.round(n)));
-                };
-                setActionColWidths({
-                    description: clamp(acw.description, 100, 350, 160),
-                    micro: clamp(acw.micro, 300, 700, 420),
-                    abrv: clamp(acw.abrv, 38, 75, 38)
-                });
-            }
+            setActionColWidths(largeursColonnesBornees(data.actionColWidths));
             setExternalLinks(data.externalLinks && Array.isArray(data.externalLinks) ? data.externalLinks : []);
 
             // Rendre à leurs modules les champs qui ne vivent pas ici — les
@@ -850,104 +414,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         }
     };
 
-    // Nombre max de projets conservés dans le cache localStorage.
-    // C'est un plafond de COMPTAGE, pas la vraie limite : le quota réel est en
-    // octets (~5 Mo navigateur), géré par safeLocalStorage qui absorbe un
-    // éventuel QuotaExceededError. Monté à 15 : depuis l'optimisation auto des
-    // images de fond (~250 Ko/projet au lieu de ~800 Ko), bien plus de projets
-    // tiennent dans le quota (15 × 250 Ko ≈ 3,75 Mo, avec marge).
-    // Solution de fond pour lever la contrainte de capacité : migration du
-    // stockage des projets vers IndexedDB (gros chantier — cf. mémoire projet).
-    const MAX_CACHED_PROJECTS = 15;
-
-    // Update project order - move project to top and limit to MAX_CACHED_PROJECTS
-    const updateProjectOrder = (name: string) => {
-        try {
-            const orderRaw = localStorage.getItem('traffic_project_order');
-            let order: string[] = orderRaw ? JSON.parse(orderRaw) : [];
-            // Remove if already exists
-            order = order.filter(n => n !== name);
-            // Add to top
-            order.unshift(name);
-
-            // Remove old projects beyond the limit (keep last backup)
-            while (order.length > MAX_CACHED_PROJECTS) {
-                const oldProjectName = order.pop();
-                // Delete the old project from localStorage (but keep its backup if exists)
-                localStorage.removeItem(`traffic_project_${oldProjectName}`);
-                console.log(`Cache nettoyé: projet "${oldProjectName}" supprimé`);
-            }
-
-            safeLocalStorage.setItem('traffic_project_order', JSON.stringify(order));
-        } catch (e) {
-            console.error("Update order failed", e);
-        }
-    };
-
-    const getAllSaves = () => {
-        const saves: SauvegardeCache[] = [];
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                // Skip null/undefined keys
-                if (!key) continue;
-                // Only include main project files (exclude backups and order file)
-                if (key.startsWith('traffic_project_') && !key.endsWith('_backup') && key !== 'traffic_project_order') {
-                    const name = key.replace('traffic_project_', '');
-                    // Skip empty names
-                    if (!name) continue;
-
-                    const raw = localStorage.getItem(key);
-                    let savedAt = null;
-                    let size = 0;
-
-                    if (raw) {
-                        size = raw.length;
-                        try {
-                            const data = JSON.parse(raw);
-                            savedAt = data.savedAt || null;
-                        } catch {
-                            // Ignore parse errors
-                        }
-                    }
-
-                    saves.push({ name, savedAt, size });
-                }
-            }
-
-            // Sort by order (most recently loaded first) and limit to MAX_CACHED_PROJECTS
-            const orderRaw = localStorage.getItem('traffic_project_order');
-            if (orderRaw) {
-                const order: string[] = JSON.parse(orderRaw);
-                saves.sort((a, b) => {
-                    const indexA = order.indexOf(a.name);
-                    const indexB = order.indexOf(b.name);
-                    // Projects not in order list go to the end
-                    if (indexA === -1 && indexB === -1) return 0;
-                    if (indexA === -1) return 1;
-                    if (indexB === -1) return -1;
-                    return indexA - indexB;
-                });
-            }
-        } catch (e) {
-            console.error("getAllSaves failed", e);
-        }
-
-        // Return all available projects (no limit for display)
-        return saves;
-    };
-
+    // Cache des projets (trafficLight/cacheProjets). Fonctions d'appel
+    // recréées à chaque rendu, comme avant le découpage : la liste des projets
+    // se rafraîchit au même rythme dans les fenêtres qui en dépendent.
+    const updateProjectOrder = (name: string) => mettreProjetEnTete(name);
+    const getAllSaves = () => listerProjetsCache();
     // Get project data without applying to state (for green wave)
-    const getProjectData = (name: string): ProjetEnregistre | null => {
-        try {
-            const raw = localStorage.getItem(`traffic_project_${name}`);
-            if (!raw) return null;
-            return JSON.parse(raw);
-        } catch (e) {
-            console.error("Get project data failed", e);
-            return null;
-        }
-    };
+    const getProjectData = (name: string) => lireProjetCache(name);
 
     // Load full state (for duplication)
     const loadFullState = (state: EtatProjet) => {
@@ -976,23 +449,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             setCycleLength(cycleDuPlanActif(state, DEFAULT_CYCLE));
 
             // Mettre à jour la matrice de conflits
-            if (state.conflictMatrix && Array.isArray(state.conflictMatrix)) {
-                // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
-                const loadedGroups = state.groups || [];
-                const cleanedMatrix = state.conflictMatrix.map((row, r) => row.map((val): CaseMatrice => {
-                    if (val === undefined || val === null) return '';
-                    const fromGroup = loadedGroups[r];
-                    const minVal = intervertMinimal(fromGroup);
-                    const numericVal = typeof val === 'number' ? val : entier(val);
-                    if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) return '';
-                    return numericVal;
-                }));
-                setConflictMatrix(cleanedMatrix);
-            } else {
-                // Réinitialiser la matrice selon le nombre de groupes
-                const groupCount = (state.groups && state.groups.length) || 5;
-                setConflictMatrix(Array.from({ length: groupCount }, () => Array(groupCount).fill('')));
-            }
+            setConflictMatrix(matriceDuFichier(state));
 
             // Handle new pfTabs format or old actionData format
             // All branches produce PFs with guaranteed complete structure
@@ -1076,19 +533,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
 
             // Largeurs colonnes micro-régulation : valeurs bornées, defaut
             // si absent/invalide.
-            {
-                const acw = state.actionColWidths || {};
-                const clamp = (v: unknown, lo: number, hi: number, def: number) => {
-                    const n = Number(v);
-                    if (!isFinite(n)) return def;
-                    return Math.min(hi, Math.max(lo, Math.round(n)));
-                };
-                setActionColWidths({
-                    description: clamp(acw.description, 100, 350, 160),
-                    micro: clamp(acw.micro, 300, 700, 420),
-                    abrv: clamp(acw.abrv, 38, 75, 38)
-                });
-            }
+            setActionColWidths(largeursColonnesBornees(state.actionColWidths));
 
             // Reset PF sync refs so forward/reverse sync start fresh
             resetPfSyncRefs(state.activePFId || 1);
@@ -1207,9 +652,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     const getFullStateRef = useRef(getFullState);
     getFullStateRef.current = getFullState;
 
-    const deleteSave = (name: string) => {
-        localStorage.removeItem(`traffic_project_${name}`);
-    };
+    const deleteSave = (name: string) => supprimerProjetCache(name);
 
     // Multiple PF (Plans de Feux) support
     const [pfTabs, setPfTabs] = useState<PlanDeFeu[]>(() => [{ id: 1, name: 'PF1', data: createEmptyActionData(), diagram: [], remarques: '' }]);
@@ -1290,6 +733,11 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
                 : pf
         ));
     }, [activePFId]);
+
+    // Déplacement des groupes (numéros GF fixes, données qui changent de place).
+    const { moveGroup, moveGroupToPosition } = useDeplacementGroupes({
+        groups, activePFId, setGroups, setConflictMatrix, setActionData, setPfTabs, setTrafficDatasets
+    });
 
     // Reorder actions (for sorting)
     const reorderActions = useCallback((sortedData: ActionMicro[]) => {
@@ -1391,67 +839,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             return false;
         }
 
-        // Vérifier et libérer de l'espace si localStorage est presque plein
-        ensureLocalStorageSpace();
-
-        try {
-            // Create backup of existing save before overwriting
-            const existingSave = localStorage.getItem(`traffic_project_${name}`);
-            if (existingSave && existingSave.length > jsonData.length * 0.5) {
-                // Existing save is significantly larger - warn user
-                const existingSize = existingSave.length;
-                const newSize = jsonData.length;
-                if (newSize < existingSize * 0.3) {
-                    // New save is less than 30% of old save - likely data loss
-                    const ok = askConfirm
-                        ? await askConfirm({
-                            title: 'Perte de données possible',
-                            message: `Attention : la nouvelle sauvegarde (${newSize} car.) est beaucoup plus petite que l'ancienne (${existingSize} car.).\n\nCela pourrait indiquer une perte de données.\n\nVoulez-vous quand même sauvegarder ?`,
-                            confirmLabel: 'Sauvegarder',
-                            danger: true,
-                        })
-                        : window.confirm(`Attention: La nouvelle sauvegarde (${newSize} car.) est beaucoup plus petite que l'ancienne (${existingSize} car.).\n\nCela pourrait indiquer une perte de données.\n\nVoulez-vous quand même sauvegarder?`);
-                    if (!ok) {
-                        return false;
-                    }
-                }
-                // Keep a backup
-                localStorage.setItem(`traffic_project_${name}_backup`, existingSave);
-            }
-
-            localStorage.setItem(`traffic_project_${name}`, jsonData);
-            return true;
-        } catch (e) {
-            console.error("Save failed", e);
-            if (e.name === 'QuotaExceededError') {
-                // Automatically delete the oldest project and retry
-                try {
-                    const orderRaw = localStorage.getItem('traffic_project_order');
-                    if (orderRaw) {
-                        const order: string[] = JSON.parse(orderRaw);
-                        // Find the oldest project (last in the list) that is not the current one
-                        const oldestProject = order.filter(n => n !== name).pop();
-                        if (oldestProject) {
-                            localStorage.removeItem(`traffic_project_${oldestProject}`);
-                            localStorage.removeItem(`traffic_project_${oldestProject}_backup`);
-                            // Update order
-                            const newOrder = order.filter(n => n !== oldestProject);
-                            localStorage.setItem('traffic_project_order', JSON.stringify(newOrder));
-                            console.log(`Espace insuffisant: projet "${oldestProject}" supprimé automatiquement`);
-                            // Retry save
-                            localStorage.setItem(`traffic_project_${name}`, jsonData);
-                            return true;
-                        }
-                    }
-                } catch (retryError) {
-                    console.error("Retry save failed", retryError);
-                }
-                alertFn({ title: 'Stockage insuffisant', message: 'Espace de stockage insuffisant même après nettoyage.' });
-            } else {
-                alertFn({ title: 'Erreur de sauvegarde', message: 'Erreur lors de la sauvegarde : ' + e.message });
-            }
-            return false;
-        }
+        return ecrireProjetCache(name, jsonData, { askConfirm, alertFn });
     }, [intersectionName, groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, externalLinks, projectProperties, askConfirm]);
 
     // Verrou de synchronisation pendant l'installation des données.
