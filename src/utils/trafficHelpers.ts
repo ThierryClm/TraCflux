@@ -1,17 +1,25 @@
-import type { ActionMicro, JeuTrafic, PlanDeFeu } from '../types/projet';
+import type { ActionMicro, DrapeauPhase, JeuTrafic, PlanDeFeu } from '../types/projet';
 
 /**
  * Aides trafic partagées entre le tableau Données Trafic et le panneau
  * Diagnostic, pour qu'ils calculent toujours à partir des mêmes bases.
  */
 
+/**
+ * Vert pris en compte pour la capacité : vert principal + secondes lucarnes.
+ * Un groupe en aiguillage (« a ») ne cumule pas sa seconde lucarne : elle
+ * s'ouvre dans le créneau de l'autre branche de l'aiguillage, à la place de
+ * celle-ci, et ne s'ajoute pas au vert principal à chaque cycle.
+ */
 export const getTotalGreenTime = (
     groupId: number,
     mainGreenTime: number | undefined,
     actionData: ActionMicro[] = [],
-    cycleLength = 0
+    cycleLength = 0,
+    phaseFlag: DrapeauPhase = ''
 ): number => {
     if (!mainGreenTime) return 0;
+    if (phaseFlag === 'a') return mainGreenTime;
     const lucarneActions = actionData.filter(
         action => action.action === 'Seconde lucarne' &&
             parseInt(String(action.gf ?? '')) === groupId &&
