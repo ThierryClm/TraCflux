@@ -353,7 +353,15 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                     const cutEndRaw = sourceEnd + intergreenSourceToTarget;
                     ajouter(cutStart, cutEndRaw === currentCycleLen ? currentCycleLen : (cutEndRaw % currentCycleLen), true);
                 });
-                return coupes.flatMap(({ deb, fin, coche }, idx) => (deb > fin
+                // Escamotage coché jusqu'à la fin du vert : le jaune qui suit
+                // disparaît avec lui.
+                const finVert = endValue % currentCycleLen;
+                const jaune = group.durations.orange || 0;
+                return coupes.map(c => {
+                    if (!c.coche || jaune <= 0 || c.fin % currentCycleLen !== finVert) return c;
+                    const fin = (c.fin + jaune) % currentCycleLen;
+                    return { ...c, fin: fin === 0 ? currentCycleLen : fin };
+                }).flatMap(({ deb, fin, coche }, idx) => (deb > fin
                     // La coupe passe la fin du cycle : deux morceaux
                     ? [[deb, currentCycleLen], [0, fin]]
                     : [[deb, fin]]

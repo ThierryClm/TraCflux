@@ -304,10 +304,16 @@
     pointer-events: none;
 }
 
-/* Escamotage coché : il a lieu, le vert disparaît (ni vert ni hachures). */
+/* Escamotage coché : il a lieu, le vert disparaît (ni vert ni hachures).
+   Le halo des barres dépasse de 5 px : une ombre pleine de la couleur du
+   fond le recouvre au-dessus et au-dessous (pas sur les côtés, pour ne pas
+   rogner une seconde lucarne accolée), et seul reste un contour fin. */
 .green-cut-overlay.escamote {
-    background: #2a2a2a;
+    --fond-escamote: #2a2a2a;
+    background: var(--fond-escamote);
     border: none;
+    box-shadow: 0 -4px 0 0 var(--fond-escamote), 0 4px 0 0 var(--fond-escamote);
+    outline: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .cycle-block {

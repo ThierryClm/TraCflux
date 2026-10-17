@@ -912,7 +912,8 @@ body.light-mode .green-cut-overlay {
     border-color: rgba(0, 0, 0, 0.6);
 }
 body.light-mode .green-cut-overlay.escamote {
-    background: #e8e8e8;
+    --fond-escamote: #e8e8e8;
+    outline-color: rgba(0, 0, 0, 0.25);
 }
 
 /* Intersection image in light mode */
@@ -1714,7 +1715,8 @@ body.high-contrast-mode .green-cut-overlay {
     border-color: #ffdd00;
 }
 body.high-contrast-mode .green-cut-overlay.escamote {
-    background: #1a2050;
+    --fond-escamote: #1a2050;
+    outline-color: rgba(255, 221, 0, 0.5);
 }
 
 /* Intersection image */

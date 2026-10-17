@@ -65,7 +65,7 @@ describe('Vert escamoté en simulation', () => {
         expect(coupesDuGf1([])).toEqual([{ debut: 16, fin: 27, escamote: false }]);
     });
 
-    it("coché : l'escamotage a lieu, le vert disparaît — dessiné une seule fois", () => {
-        expect(coupesDuGf1([1])).toEqual([{ debut: 16, fin: 27, escamote: true }]);
+    it("coché : l'escamotage a lieu, le vert et ses 3 s de jaune disparaissent — dessiné une seule fois", () => {
+        expect(coupesDuGf1([1])).toEqual([{ debut: 16, fin: 30, escamote: true }]);
     });
 });
