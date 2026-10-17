@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { MAX_CACHED_PROJECTS, mettreProjetEnTete, listerProjetsCache, lireProjetCache, supprimerProjetCache } from './cacheProjets';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { MAX_CACHED_PROJECTS, mettreProjetEnTete, listerProjetsCache, lireProjetCache, supprimerProjetCache, ecrireProjetCache } from './cacheProjets';
 
 const ordre = () => JSON.parse(localStorage.getItem('traffic_project_order'));
 
@@ -51,5 +51,46 @@ describe('cache des projets', () => {
         localStorage.setItem('traffic_project_A', '{}');
         supprimerProjetCache('A');
         expect(localStorage.getItem('traffic_project_A')).toBeNull();
+    });
+});
+
+describe('écriture d\'un projet dans le cache', () => {
+    const alertFn = vi.fn(() => Promise.resolve());
+    const gros = 'x'.repeat(1000);
+    beforeEach(() => { localStorage.clear(); alertFn.mockClear(); });
+    afterEach(() => vi.restoreAllMocks());
+
+    it('écrit le projet et garde une copie de secours de l\'ancienne version', async () => {
+        localStorage.setItem('traffic_project_A', 'ancien'.padEnd(800, '.'));
+        expect(await ecrireProjetCache('A', gros, { alertFn })).toBe(true);
+        expect(localStorage.getItem('traffic_project_A')).toBe(gros);
+        expect(localStorage.getItem('traffic_project_A_backup')).toBe('ancien'.padEnd(800, '.'));
+    });
+
+    it('nouvelle version bien plus petite : demande confirmation, et n\'écrit rien si refus', async () => {
+        localStorage.setItem('traffic_project_A', gros);
+        const askConfirm = vi.fn(() => Promise.resolve(false));
+        expect(await ecrireProjetCache('A', 'petit'.padEnd(200, '.'), { askConfirm, alertFn })).toBe(false);
+        expect(askConfirm).toHaveBeenCalledOnce();
+        expect(localStorage.getItem('traffic_project_A')).toBe(gros);
+    });
+
+    it('stockage plein : retire le plus ancien projet puis réessaie', async () => {
+        localStorage.setItem('traffic_project_Vieux', '{}');
+        localStorage.setItem('traffic_project_order', JSON.stringify(['A', 'Vieux']));
+        const vrai = Storage.prototype.setItem;
+        let premier = true;
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (cle, valeur) {
+            if (cle === 'traffic_project_A' && premier) {
+                premier = false;
+                const e = new Error('plein'); e.name = 'QuotaExceededError'; throw e;
+            }
+            return vrai.call(this, cle, valeur);
+        });
+        expect(await ecrireProjetCache('A', gros, { alertFn })).toBe(true);
+        expect(localStorage.getItem('traffic_project_Vieux')).toBeNull();
+        expect(localStorage.getItem('traffic_project_A')).toBe(gros);
+        expect(JSON.parse(localStorage.getItem('traffic_project_order'))).toEqual(['A']);
+        expect(alertFn).not.toHaveBeenCalled();
     });
 });

@@ -23,7 +23,7 @@ import { useGestionPlans } from './trafficLight/useGestionPlans';
 import { useScenariosSimulation } from './trafficLight/useScenariosSimulation';
 import { useAnnulerRetablir } from './trafficLight/useAnnulerRetablir';
 import { calculerConflits } from './trafficLight/calculConflits';
-import { mettreProjetEnTete, listerProjetsCache, lireProjetCache, supprimerProjetCache } from './trafficLight/cacheProjets';
+import { mettreProjetEnTete, listerProjetsCache, lireProjetCache, supprimerProjetCache, ecrireProjetCache } from './trafficLight/cacheProjets';
 import { intervertMinimal, migrerGroupes, matriceDuCache, plansDuCache, matriceDuFichier, largeursColonnesBornees } from './trafficLight/lectureProjet';
 import type {
     EtatHistorique, EtatProjet, JeuxTrafic, ParametresGroupe,
@@ -1117,67 +1117,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             return false;
         }
 
-        // Vérifier et libérer de l'espace si localStorage est presque plein
-        ensureLocalStorageSpace();
-
-        try {
-            // Create backup of existing save before overwriting
-            const existingSave = localStorage.getItem(`traffic_project_${name}`);
-            if (existingSave && existingSave.length > jsonData.length * 0.5) {
-                // Existing save is significantly larger - warn user
-                const existingSize = existingSave.length;
-                const newSize = jsonData.length;
-                if (newSize < existingSize * 0.3) {
-                    // New save is less than 30% of old save - likely data loss
-                    const ok = askConfirm
-                        ? await askConfirm({
-                            title: 'Perte de données possible',
-                            message: `Attention : la nouvelle sauvegarde (${newSize} car.) est beaucoup plus petite que l'ancienne (${existingSize} car.).\n\nCela pourrait indiquer une perte de données.\n\nVoulez-vous quand même sauvegarder ?`,
-                            confirmLabel: 'Sauvegarder',
-                            danger: true,
-                        })
-                        : window.confirm(`Attention: La nouvelle sauvegarde (${newSize} car.) est beaucoup plus petite que l'ancienne (${existingSize} car.).\n\nCela pourrait indiquer une perte de données.\n\nVoulez-vous quand même sauvegarder?`);
-                    if (!ok) {
-                        return false;
-                    }
-                }
-                // Keep a backup
-                localStorage.setItem(`traffic_project_${name}_backup`, existingSave);
-            }
-
-            localStorage.setItem(`traffic_project_${name}`, jsonData);
-            return true;
-        } catch (e) {
-            console.error("Save failed", e);
-            if (e.name === 'QuotaExceededError') {
-                // Automatically delete the oldest project and retry
-                try {
-                    const orderRaw = localStorage.getItem('traffic_project_order');
-                    if (orderRaw) {
-                        const order: string[] = JSON.parse(orderRaw);
-                        // Find the oldest project (last in the list) that is not the current one
-                        const oldestProject = order.filter(n => n !== name).pop();
-                        if (oldestProject) {
-                            localStorage.removeItem(`traffic_project_${oldestProject}`);
-                            localStorage.removeItem(`traffic_project_${oldestProject}_backup`);
-                            // Update order
-                            const newOrder = order.filter(n => n !== oldestProject);
-                            localStorage.setItem('traffic_project_order', JSON.stringify(newOrder));
-                            console.log(`Espace insuffisant: projet "${oldestProject}" supprimé automatiquement`);
-                            // Retry save
-                            localStorage.setItem(`traffic_project_${name}`, jsonData);
-                            return true;
-                        }
-                    }
-                } catch (retryError) {
-                    console.error("Retry save failed", retryError);
-                }
-                alertFn({ title: 'Stockage insuffisant', message: 'Espace de stockage insuffisant même après nettoyage.' });
-            } else {
-                alertFn({ title: 'Erreur de sauvegarde', message: 'Erreur lors de la sauvegarde : ' + e.message });
-            }
-            return false;
-        }
+        return ecrireProjetCache(name, jsonData, { askConfirm, alertFn });
     }, [intersectionName, groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, externalLinks, projectProperties, askConfirm]);
 
     // Verrou de synchronisation pendant l'installation des données.
