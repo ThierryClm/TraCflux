@@ -60,7 +60,7 @@ describe('calculateSimulatedDiagram', () => {
             // Escamotage adds greenCut to group 2
             const g2 = result.simulatedGroups.find(g => g.id === 2);
             expect(g2.greenCuts).toHaveLength(1);
-            expect(g2.greenCuts[0]).toEqual({ deb: 30, fin: 35 });
+            expect(g2.greenCuts[0]).toEqual({ deb: 30, fin: 35, coche: true });
         });
 
         it('traite Escamotage de phase en dernier', () => {
@@ -550,7 +550,7 @@ describe('calculateSimulatedDiagram', () => {
             // Escamotage groupe: G3 has a greenCut
             const g3 = result.simulatedGroups.find(g => g.id === 3);
             expect(g3.greenCuts).toHaveLength(1);
-            expect(g3.greenCuts[0]).toEqual({ deb: 62, fin: 68 });
+            expect(g3.greenCuts[0]).toEqual({ deb: 62, fin: 68, coche: true });
 
             // AV [76,80] removes 4s, EP [90,97] adjusted to [86,93] removes 7s
             // Cycle: 100 - 4 - 7 = 89

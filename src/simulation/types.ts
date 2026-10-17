@@ -6,7 +6,9 @@ export interface SimulatedGroup extends Groupe {
     simulatedOffset: number;
     simulatedGreen: number;
     isEscamoted: boolean;
-    greenCuts: Array<{ deb: number; fin: number }>;
+    /** Plages où le vert est coupé ; `coche` : escamotage coché, le vert
+        disparaît ; sinon il reste visible, hachuré (escamotage possible). */
+    greenCuts: Array<{ deb: number; fin: number; coche?: boolean }>;
 }
 
 export interface RemovedPeriod {

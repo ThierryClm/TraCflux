@@ -55,7 +55,7 @@ export const appliquerEscamotagesGroupe = (etat: EtatSimulation): void => {
             const groupIndex = simulatedGroups.findIndex(g => g.id === targetGfId);
             if (groupIndex !== -1 && !simulatedGroups[groupIndex].isEscamoted) {
                 // Add a green cut period for this group
-                simulatedGroups[groupIndex].greenCuts.push({ deb, fin });
+                simulatedGroups[groupIndex].greenCuts.push({ deb, fin, coche: true });
             }
         }
     });
