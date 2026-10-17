@@ -688,8 +688,8 @@ function App() {
     const flechesActionSimulation = useMemo(
         () => !simulationEnabled || survolActionSimulation === null
             ? []
-            : groupesSurlignesParAction(actionData.find(a => a.id === survolActionSimulation)),
-        [simulationEnabled, survolActionSimulation, actionData]);
+            : groupesSurlignesParAction(actionData.find(a => a.id === survolActionSimulation), groups, cycleLength),
+        [simulationEnabled, survolActionSimulation, actionData, groups, cycleLength]);
 
     // Calculate simulated diagram when in simulation mode
     const simulationResult = useMemo(() => {
