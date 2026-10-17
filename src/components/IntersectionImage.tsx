@@ -29,6 +29,8 @@ export interface IntersectionImageProps {
     setCurrentTime?: Dispatch<SetStateAction<number>>;
     // Survol partagé avec le diagramme
     hoveredArrowGroupId?: number | null;
+    /** Groupes allumés ensemble : ceux de l'action survolée en simulation. */
+    hoveredArrowGroupIds?: number[];
     setHoveredArrowGroupId?: (id: number | null) => void;
     /** Instant survolé sur le diagramme ; prime sur le curseur d'animation à l'arrêt. */
     hoveredDiagramTime?: number | null;
@@ -66,6 +68,7 @@ const IntersectionImage = ({
     setCurrentTime,
     // Hover state for diagram highlighting
     hoveredArrowGroupId,
+    hoveredArrowGroupIds,
     setHoveredArrowGroupId,
     // Instant survolé sur le diagramme (prime sur le curseur d'animation)
     hoveredDiagramTime = null,
@@ -864,7 +867,7 @@ const IntersectionImage = ({
                             const arrowLength = arrow.length || 1;
                             const turnLength = arrow.turnLength || 1;
                             const arrowColor = getGroupColorAtTime(arrow.groupId, displayedTime);
-                            const isHovered = hoveredArrowGroupId === arrow.groupId;
+                            const isHovered = hoveredArrowGroupId === arrow.groupId || !!hoveredArrowGroupIds?.includes(arrow.groupId);
                             const isPedestrianOrCycle = groupInfo.courant === 'Piéton' || groupInfo.courant === 'Cycle';
                             return (
                                 <div
