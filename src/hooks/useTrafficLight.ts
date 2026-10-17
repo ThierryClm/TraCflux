@@ -18,12 +18,12 @@ import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
 import { entier } from '../utils/entier';
-import { buildTrafficDatasetNames, trafficDatasetHasData, planSuppressionJeu } from '../utils/trafficHelpers';
 import type { TrafficConflict } from '../utils/conflictUtils';
 import type { AlertFunction } from '../components/ConfirmProvider';
 import type { LargeursColonnes } from '../components/ActionTable';
 import { safeLocalStorage, ensureLocalStorageSpace } from './trafficLight/stockageLocal';
 import { DEFAULT_PROJECT_PROPERTIES } from './trafficLight/types';
+import { useEtatJeuxTrafic, useNomsJeuxTrafic, useOperationsJeuxTrafic } from './trafficLight/useJeuxTrafic';
 import type {
     EtatHistorique, EtatProjet, GroupeEnregistre, JeuxTrafic, ParametresGroupe,
     ProjetEnregistre, ProprietesProjet, SauvegardeCache, UseTrafficLightOptions
@@ -60,14 +60,7 @@ const intervertMinimal = (groupe: Pick<Groupe, 'type'> | GroupeEnregistre | unde
 // secondes d'inactivité, et une alerte répétée serait vite ignorée.
 let echecCacheSignale = false;
 
-// Traffic dataset types
-export const TRAFFIC_DATASETS = ['HPM', 'HPS', 'HC', 'Estimation', 'Projection'];
-
-
-// Create empty traffic data for a group (only trafficVol varies by dataset)
-const createEmptyTrafficData = () => ({
-    trafficVol: 0
-});
+export { TRAFFIC_DATASETS } from './trafficLight/useJeuxTrafic';
 
 /**
  * @param champsProjetRef  Réf vers { lire, ecrire } : des champs de projet
@@ -1266,28 +1259,12 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     const [imageBrightness, setImageBrightness] = useState(100);
     const [imageContrast, setImageContrast] = useState(100);
 
-    // Traffic datasets state (HPM, HPS, HC, Estimation, Projection)
-    const [activeTrafficDataset, setActiveTrafficDataset] = useState(() => {
-        return safeLocalStorage.getItem('trafficActiveDataset') || 'HPM';
-    });
-    const [customTrafficDatasetNames, setCustomTrafficDatasetNames] = useState<string[]>(() => {
-        try {
-            const saved = safeLocalStorage.getItem('customTrafficDatasetNames');
-            return saved ? JSON.parse(saved) : [];
-        } catch { return []; }
-    });
-
-    // Mapping PF id → dataset actif (choix conservé par PF)
-    const [pfTrafficDatasetMap, setPfTrafficDatasetMap] = useState<Record<string, string>>(() => {
-        try {
-            const saved = safeLocalStorage.getItem('pfTrafficDatasetMap');
-            return saved ? JSON.parse(saved) : {};
-        } catch { return {}; }
-    });
-
-    // Ref pour accéder au mapping PF→dataset à jour dans le wrapper setActivePFId
-    const pfTrafficDatasetMapRef = useRef(pfTrafficDatasetMap);
-    pfTrafficDatasetMapRef.current = pfTrafficDatasetMap;
+    const {
+        activeTrafficDataset, setActiveTrafficDataset,
+        customTrafficDatasetNames, setCustomTrafficDatasetNames,
+        pfTrafficDatasetMap, setPfTrafficDatasetMap, pfTrafficDatasetMapRef,
+        trafficDatasets, setTrafficDatasets
+    } = useEtatJeuxTrafic();
 
     // Wrapper qui restaure le dataset trafic mémorisé pour le PF cible
     const setActivePFId = useCallback((pfId: number) => {
@@ -1296,21 +1273,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         if (savedDataset) {
             setActiveTrafficDataset(savedDataset);
         }
-    }, []);
-
-    // Initialize traffic datasets with empty data for all groups
-    const createInitialTrafficDatasets = (groupCount: number) => {
-        const datasets: JeuxTrafic = {};
-        TRAFFIC_DATASETS.forEach(ds => {
-            datasets[ds] = {};
-            for (let i = 1; i <= groupCount; i++) {
-                datasets[ds][i] = createEmptyTrafficData();
-            }
-        });
-        return datasets;
-    };
-
-    const [trafficDatasets, setTrafficDatasets] = useState<JeuxTrafic>(() => createInitialTrafficDatasets(5));
+    }, [pfTrafficDatasetMapRef, setActiveTrafficDataset]);
 
     // Applique le résultat de mergePfFromProject : ajoute les PF importés + les
     // jeux de trafic rapatriés, SANS toucher aux groupes ni au PF actif courant.
@@ -1320,7 +1283,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         if (mergedState.trafficDatasets) setTrafficDatasets(mergedState.trafficDatasets);
         if (Array.isArray(mergedState.customTrafficDatasetNames)) setCustomTrafficDatasetNames(mergedState.customTrafficDatasetNames);
         if (mergedState.pfTrafficDatasetMap) setPfTrafficDatasetMap(mergedState.pfTrafficDatasetMap);
-    }, []);
+    }, [setTrafficDatasets, setCustomTrafficDatasetNames, setPfTrafficDatasetMap]);
 
     // Get current actionData based on active PF
     const actionData = useMemo(() => {
@@ -1432,23 +1395,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     // Le nom visible d'un PF peut différer de la clé de son jeu de trafic.
     // Le mapping PF → jeu est la source de vérité ; les jeux historiques qui
     // contiennent encore des données restent également accessibles.
-    const trafficDatasetNames = useMemo(() => {
-        if (!pfTabs || pfTabs.length === 0) return TRAFFIC_DATASETS;
-        return buildTrafficDatasetNames(
-            pfTabs,
-            pfTrafficDatasetMap,
-            customTrafficDatasetNames,
-            trafficDatasets,
-            activeTrafficDataset
-        );
-    }, [pfTabs, pfTrafficDatasetMap, customTrafficDatasetNames, trafficDatasets, activeTrafficDataset]);
-
-    const trafficDatasetSourceNames = useMemo(() => {
-        const groupIds = groups.map(group => group.id);
-        return trafficDatasetNames.filter(name =>
-            trafficDatasetHasData(trafficDatasets[name], groupIds)
-        );
-    }, [trafficDatasetNames, trafficDatasets, groups]);
+    const { trafficDatasetNames, trafficDatasetSourceNames } = useNomsJeuxTrafic({
+        pfTabs, pfTrafficDatasetMap, customTrafficDatasetNames, trafficDatasets, activeTrafficDataset, groups
+    });
 
     // Computed Conflicts
     const conflicts = useMemo(() => {
@@ -2181,27 +2130,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         }
     }, [activePFId, pfTabs]);
 
-    // Save traffic datasets to localStorage
-    useEffect(() => {
-        safeLocalStorage.setItem('trafficActiveDataset', activeTrafficDataset);
-        safeLocalStorage.setItem('customTrafficDatasetNames', JSON.stringify(customTrafficDatasetNames));
-        safeLocalStorage.setItem('pfTrafficDatasetMap', JSON.stringify(pfTrafficDatasetMap));
-    }, [activeTrafficDataset, customTrafficDatasetNames, pfTrafficDatasetMap]);
-
     // Save project properties to localStorage
     useEffect(() => {
         safeLocalStorage.setItem('trafficProjectProperties', JSON.stringify(projectProperties));
     }, [projectProperties]);
-
-    // Mémoriser le choix du dataset pour le PF courant
-    useEffect(() => {
-        if (activePFId && activeTrafficDataset) {
-            setPfTrafficDatasetMap(prev => {
-                if (prev[activePFId] === activeTrafficDataset) return prev;
-                return { ...prev, [activePFId]: activeTrafficDataset };
-            });
-        }
-    }, [activeTrafficDataset, activePFId]);
 
     // Auto-save current project to cache (debounced)
     const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2269,116 +2201,17 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         };
     }, [groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, intersectionName, projectProperties, capacityCompareSelection, capacityCompareDataset, customTrafficDatasetNames, pfTrafficDatasetMap, externalLinks, matricesLocked, actionColWidths]);
 
-    // Update traffic data for a specific group in the active dataset
-    const updateTrafficData = useCallback((groupId: number, field: keyof JeuTrafic[string], value: number | string) => {
-        if (isEditLocked()) return;
-        setTrafficDatasets(prev => {
-            const newDatasets = { ...prev };
-            if (!newDatasets[activeTrafficDataset]) {
-                newDatasets[activeTrafficDataset] = {};
-            }
-            if (!newDatasets[activeTrafficDataset][groupId]) {
-                newDatasets[activeTrafficDataset][groupId] = createEmptyTrafficData();
-            }
-            newDatasets[activeTrafficDataset][groupId] = {
-                ...newDatasets[activeTrafficDataset][groupId],
-                [field]: value
-            };
-            return newDatasets;
-        });
-    }, [activeTrafficDataset]);
-
-    // Get traffic data for a specific group in the active dataset
-    const getTrafficData = useCallback((groupId: number) => {
-        if (!trafficDatasets[activeTrafficDataset]) {
-            return createEmptyTrafficData();
-        }
-        return trafficDatasets[activeTrafficDataset][groupId] || createEmptyTrafficData();
-    }, [trafficDatasets, activeTrafficDataset]);
-
-    // Copy traffic data from one dataset to another
-    const copyTrafficDataset = useCallback((sourceDataset: string, targetDataset: string) => {
-        setTrafficDatasets(prev => {
-            const source = prev[sourceDataset];
-            if (!source || sourceDataset === targetDataset) return prev;
-            const target = { ...prev[targetDataset] };
-            Object.keys(source).forEach(groupId => {
-                target[groupId] = { ...source[groupId] };
-            });
-            return { ...prev, [targetDataset]: target };
-        });
-    }, []);
-
-    const addCustomTrafficDataset = useCallback((name: string) => {
-        if (!name || trafficDatasetNames.includes(name)) return;
-        setCustomTrafficDatasetNames(prev => [...prev, name]);
-        // Initialiser les données vides pour ce nouveau jeu
-        setTrafficDatasets(prev => {
-            const newDatasets = { ...prev };
-            newDatasets[name] = {};
-            groups.forEach(g => {
-                newDatasets[name][g.id] = createEmptyTrafficData();
-            });
-            return newDatasets;
-        });
-    }, [trafficDatasetNames, groups]);
-
-    /** Ce que supprimer le jeu impliquerait : plans concernés, remplaçant, ou refus. */
-    const infoSuppressionJeuTrafic = useCallback((nom: string) => planSuppressionJeu(
-        nom, trafficDatasetNames, pfTabs, pfTrafficDatasetMap, trafficDatasets, groups.map(g => g.id)
-    ), [trafficDatasetNames, pfTabs, pfTrafficDatasetMap, trafficDatasets, groups]);
-
-    /**
-     * Supprime un jeu de trafic : ses volumes, son nom personnalisé, et son
-     * rattachement aux plans, qui passent sur le jeu remplaçant. Un jeu
-     * standard (HPM, HPS…) revient vide, et ne reparaît dans la liste qu'une
-     * fois rempli.
-     */
-    const supprimerJeuTrafic = useCallback((nom: string) => {
-        if (isEditLocked()) return;
-        const { refus, remplacement } = infoSuppressionJeuTrafic(nom);
-        if (refus) return;
-        setTrafficDatasets(prev => {
-            const suivants = { ...prev };
-            delete suivants[nom];
-            return suivants;
-        });
-        setCustomTrafficDatasetNames(prev => prev.filter(n => n !== nom));
-        setPfTrafficDatasetMap(prev => {
-            const suivant: Record<string, string> = {};
-            pfTabs.forEach(pf => {
-                const jeu = prev[String(pf.id)] || pf.name;
-                if (jeu === nom) suivant[String(pf.id)] = remplacement;
-                else if (prev[String(pf.id)]) suivant[String(pf.id)] = prev[String(pf.id)];
-            });
-            return suivant;
-        });
-        setCapacityCompareDataset(prev => prev === nom ? '__per_pf__' : prev);
-        if (activeTrafficDataset === nom) setActiveTrafficDataset(remplacement);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [infoSuppressionJeuTrafic, pfTabs, activeTrafficDataset]);
-
-    // Ensure traffic datasets have entries for all groups when group count changes
-    useEffect(() => {
-        setTrafficDatasets(prev => {
-            const newDatasets = { ...prev };
-            let changed = false;
-            TRAFFIC_DATASETS.forEach(ds => {
-                if (!newDatasets[ds]) {
-                    newDatasets[ds] = {};
-                    changed = true;
-                }
-                groups.forEach(g => {
-                    if (!newDatasets[ds][g.id]) {
-                        newDatasets[ds][g.id] = createEmptyTrafficData();
-                        changed = true;
-                    }
-                });
-            });
-            return changed ? newDatasets : prev;
-        });
-    }, [groups]);
-
+    const {
+        updateTrafficData, getTrafficData, copyTrafficDataset, addCustomTrafficDataset,
+        infoSuppressionJeuTrafic, supprimerJeuTrafic
+    } = useOperationsJeuxTrafic({
+        trafficDatasets, setTrafficDatasets,
+        activeTrafficDataset, setActiveTrafficDataset,
+        customTrafficDatasetNames, setCustomTrafficDatasetNames,
+        pfTrafficDatasetMap, setPfTrafficDatasetMap,
+        setCapacityCompareDataset, trafficDatasetNames,
+        pfTabs, groups, activePFId, isEditLocked
+    });
     // Note: Simulation state is NOT saved to localStorage (per user request)
 
     // Save current state to history (for undo)
