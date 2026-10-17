@@ -363,6 +363,34 @@ body.light-mode .welcome-screen .welcome-hint strong { color: #555; }
     .sidebar:not(.repliee) {
         width: 100vw !important;
         box-sizing: border-box;
+        /* Reste à l'écran quand la page défile vers la droite. */
+        position: sticky;
+        left: 0;
+    }
+
+    /* Paramètres masqués : le panneau replié ne garde plus sa hauteur, la
+       suite remonte directement sous les bandeaux. */
+    .sidebar.repliee {
+        display: none !important;
+    }
+
+    /* La barre de menu reste en haut quand on descend, et à l'écran quand
+       on glisse vers la droite. Bandeau d'exemple et en-tête du projet
+       gardent la largeur de l'écran au lieu de celle du diagramme. */
+    .menu-bar {
+        position: sticky !important;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        box-sizing: border-box;
+    }
+
+    .example-banner,
+    .app-header {
+        position: sticky;
+        left: 0;
+        width: 100vw;
+        box-sizing: border-box;
     }
 
     .diagram-area {
