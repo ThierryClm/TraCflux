@@ -45,10 +45,11 @@ describe('useTrafficLight — déplacer un groupe', () => {
         expect(result.current.conflictMatrix).toEqual([['', 7, ''], [5, '', 6], ['', 8, '']]);
     });
 
-    // Défaut constaté sur master, à corriger à part : moveGroup permute les
-    // numéros GF des conditions du plan actif deux fois (setActionData puis
-    // la boucle sur tous les plans), ce qui les laisse inchangés. Le test des
-    // conditions viendra avec la correction.
+    // Défaut constaté sur master : moveGroup permute les numéros GF des
+    // conditions du plan actif deux fois (setActionData puis la boucle sur
+    // tous les plans), ce qui les laisse inchangés. Sans effet pour
+    // l'utilisateur : l'application n'appelle plus moveGroup, le menu
+    // « Déplacer un groupe de feu… » passe par moveGroupToPosition.
 
     it('à une autre position : jeux de trafic renumérotés avec leur groupe', () => {
         const { result } = renderHook(() => useTrafficLight());
