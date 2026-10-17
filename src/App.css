@@ -341,9 +341,52 @@ body.light-mode .welcome-screen .welcome-hint strong { color: #555; }
 
     /* Un cycle de 60 s fait environ 700 px, plus 325 px de colonne de noms :
        le diagramme ne tiendra jamais sur un téléphone. Le comprimer le rendrait
-       illisible — il défile latéralement, d'un glissement du doigt. */
-    .timeline-layout {
-        overflow-x: auto;
+       illisible. C'est la PAGE qui défile latéralement, pas une boîte du
+       diagramme : on fait glisser toute la fenêtre Diagramme, son en-tête et
+       ses boutons de droite compris, et en dézoomant (pincement) on la voit
+       en entier. Une boîte défilante, elle, restait rognée au dézoom, et ne
+       laissait voir qu'une centaine de pixels de barres à côté des noms.
+       Ces règles l'emportent sur celles, plus bas dans les feuilles, qui
+       bornent la zone et le diagramme à l'écran : d'où les !important. */
+    .app-container {
+        height: auto !important;
+        min-height: 100vh !important;
+        width: max-content !important;
+        min-width: 100% !important;
+    }
+
+    .split-view {
+        overflow: visible !important;
+    }
+
+    /* Le panneau des paramètres, au-dessus, garde la largeur de l'écran. */
+    .sidebar:not(.repliee) {
+        width: 100vw !important;
+        box-sizing: border-box;
+    }
+
+    .diagram-area {
+        width: max-content !important;
+        min-width: 100% !important;
+        align-self: flex-start !important;
+        box-sizing: border-box;
+    }
+
+    .diagram-panel {
+        overflow: visible !important;
+    }
+
+    .timeline-layout,
+    .timeline-container.scrollable .timeline-layout {
+        overflow: visible !important;
+        max-height: none !important;
+    }
+
+    /* Accrochée à gauche, la colonne des noms (325 px) ne laissait qu'environ
+       70 px de barres sur un téléphone en portrait : elle défile avec le reste. */
+    .timeline-container.scrollable .timeline-sidebar {
+        position: relative !important;
+        left: auto !important;
     }
 }
 
