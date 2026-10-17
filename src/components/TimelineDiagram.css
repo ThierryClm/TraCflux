@@ -304,6 +304,12 @@
     pointer-events: none;
 }
 
+/* Escamotage coché : il a lieu, le vert disparaît (ni vert ni hachures). */
+.green-cut-overlay.escamote {
+    background: #2a2a2a;
+    border: none;
+}
+
 .cycle-block {
     position: absolute;
     top: 7px;

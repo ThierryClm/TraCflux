@@ -911,6 +911,9 @@ body.light-mode .green-cut-overlay {
     background: repeating-linear-gradient(135deg, rgba(40, 40, 40, 0.75) 0 3px, transparent 3px 7px);
     border-color: rgba(0, 0, 0, 0.6);
 }
+body.light-mode .green-cut-overlay.escamote {
+    background: #e8e8e8;
+}
 
 /* Intersection image in light mode */
 body.light-mode .intersection-image-container {
@@ -1709,6 +1712,9 @@ body.high-contrast-mode .grid-cycle-end {
 body.high-contrast-mode .green-cut-overlay {
     background: repeating-linear-gradient(135deg, rgba(15, 20, 64, 0.9) 0 3px, transparent 3px 7px);
     border-color: #ffdd00;
+}
+body.high-contrast-mode .green-cut-overlay.escamote {
+    background: #1a2050;
 }
 
 /* Intersection image */

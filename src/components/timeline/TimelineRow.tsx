@@ -321,18 +321,22 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                 );
             })()}
 
-            {/* Verts escamotés en simulation : hachures par-dessus le vert, qui
-                reste visible (distinct d'une fermeture anticipée). Deux sources :
-                les coupes calculées par la simulation, et celles des escamotages
-                de groupe cochés (vert du groupe source ± temps interverts). Une
-                plage présente dans les deux n'est dessinée qu'une fois. */}
+            {/* Verts escamotables en simulation. Escamotage non coché : hachures
+                par-dessus le vert, qui reste visible (distinct d'une fermeture
+                anticipée). Escamotage coché : l'escamotage a lieu, le vert
+                disparaît. Deux sources : les coupes calculées par la simulation,
+                et celles des escamotages de groupe cochés (vert du groupe source
+                ± temps interverts). Une plage présente dans les deux n'est
+                dessinée qu'une fois ; cochée si l'une des deux l'est. */}
             {(() => {
                 const currentCycleLen = effectiveCycleLength || cycleLength;
-                const coupes: Array<{ deb: number; fin: number }> = [];
-                const ajouter = (deb: number, fin: number) => {
-                    if (!coupes.some(c => c.deb === deb && c.fin === fin)) coupes.push({ deb, fin });
+                const coupes: Array<{ deb: number; fin: number; coche: boolean }> = [];
+                const ajouter = (deb: number, fin: number, coche: boolean) => {
+                    const deja = coupes.find(c => c.deb === deb && c.fin === fin);
+                    if (deja) deja.coche = deja.coche || coche;
+                    else coupes.push({ deb, fin, coche });
                 };
-                simGroup?.greenCuts?.forEach(cut => ajouter(Number(cut.deb), Number(cut.fin)));
+                simGroup?.greenCuts?.forEach(cut => ajouter(Number(cut.deb), Number(cut.fin), !!cut.coche));
                 selectedEscamotageGroup.forEach(action => {
                     const sourceGfId = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
                     const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
@@ -347,16 +351,16 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                     // Début : vert source − interverts cible→source ; fin : fin de vert source + interverts source→cible
                     const cutStart = ((sourceStart - intergreenTargetToSource) % currentCycleLen + currentCycleLen) % currentCycleLen;
                     const cutEndRaw = sourceEnd + intergreenSourceToTarget;
-                    ajouter(cutStart, cutEndRaw === currentCycleLen ? currentCycleLen : (cutEndRaw % currentCycleLen));
+                    ajouter(cutStart, cutEndRaw === currentCycleLen ? currentCycleLen : (cutEndRaw % currentCycleLen), true);
                 });
-                return coupes.flatMap(({ deb, fin }, idx) => (deb > fin
+                return coupes.flatMap(({ deb, fin, coche }, idx) => (deb > fin
                     // La coupe passe la fin du cycle : deux morceaux
                     ? [[deb, currentCycleLen], [0, fin]]
                     : [[deb, fin]]
                 ).map(([a, b], part) => (
                     <div
                         key={`green-cut-${idx}-${part}`}
-                        className="green-cut-overlay"
+                        className={`green-cut-overlay${coche ? ' escamote' : ''}`}
                         style={{ left: `${a * pixelsPerSecond}px`, width: `${(b - a) * pixelsPerSecond}px` }}
                     />
                 )));

@@ -4,10 +4,11 @@ import TimelineDiagram from './TimelineDiagram';
 import { calculateSimulatedDiagram } from '../simulation';
 
 /**
- * Vert escamoté en simulation, repris de l'aiguillage du carrefour exemple
- * (plan PF_Aiguillage) : GF9 s'escamote lui-même sur son vert 16-27 s. La
- * plage vient à la fois de la simulation et de l'escamotage de groupe coché :
- * elle n'est dessinée qu'une fois, sans quoi les hachures se superposent.
+ * Vert escamotable en simulation, repris de l'aiguillage du carrefour exemple
+ * (plan PF_Aiguillage) : GF9 s'escamote lui-même sur son vert 16-27 s.
+ * Non coché, le vert reste visible sous des hachures ; coché, l'escamotage a
+ * lieu et le vert disparaît. Cochée, la plage vient à la fois de la simulation
+ * et de l'escamotage de groupe : elle n'est dessinée qu'une fois.
  */
 
 const PPS = 10;
@@ -54,12 +55,17 @@ const coupesDuGf1 = (cochees) => {
     const ligne = container.querySelectorAll('.timeline-row-track')[0];
     return [...ligne.querySelectorAll('.green-cut-overlay')].map(c => ({
         debut: parseFloat(c.style.left) / PPS,
-        fin: (parseFloat(c.style.left) + parseFloat(c.style.width)) / PPS
+        fin: (parseFloat(c.style.left) + parseFloat(c.style.width)) / PPS,
+        escamote: c.classList.contains('escamote')
     }));
 };
 
 describe('Vert escamoté en simulation', () => {
-    it("l'escamotage coché est dessiné une seule fois, sur le vert", () => {
-        expect(coupesDuGf1([1])).toEqual([{ debut: 16, fin: 27 }]);
+    it("non coché : le vert reste visible, hachuré", () => {
+        expect(coupesDuGf1([])).toEqual([{ debut: 16, fin: 27, escamote: false }]);
+    });
+
+    it("coché : l'escamotage a lieu, le vert disparaît — dessiné une seule fois", () => {
+        expect(coupesDuGf1([1])).toEqual([{ debut: 16, fin: 27, escamote: true }]);
     });
 });
