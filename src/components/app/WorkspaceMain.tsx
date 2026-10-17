@@ -8,6 +8,7 @@ import type { IntersectionImageProps } from '../IntersectionImage';
 import ActionTable from '../ActionTable';
 import type { ActionTableProps } from '../ActionTable';
 import { toast } from '../../utils/toast';
+import { ECRAN_MOBILE } from '../../utils/ecranMobile';
 import type {
     CSSProperties,
     Dispatch,
@@ -252,6 +253,18 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                     // celui de l'onglet Trafic : GF + Nom + Coef +
                                     // Trafic + V.Utile + Cap.U + Retard + File.
                                     setSidebarWidth(395);
+                                    // Sur un téléphone, le panneau est empilé au-dessus du
+                                    // diagramme, hors de vue quand on touche cet onglet :
+                                    // on l'amène à l'écran avec ses actions à cocher.
+                                    if (window.matchMedia?.(ECRAN_MOBILE).matches) {
+                                        requestAnimationFrame(() => {
+                                            const panneau = document.querySelector('.simulation-panel');
+                                            if (!panneau) return;
+                                            // Juste sous la barre de menu, qui reste collée en haut.
+                                            const menu = document.querySelector('.menu-bar')?.getBoundingClientRect().height ?? 0;
+                                            window.scrollTo({ left: 0, top: panneau.getBoundingClientRect().top + window.scrollY - menu - 8 });
+                                        });
+                                    }
                                 }
                             }}
                             title={tip("Activer/désactiver le mode simulation")}

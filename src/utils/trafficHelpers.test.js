@@ -83,4 +83,16 @@ describe('trafficHelpers — getTotalGreenTime', () => {
     it('vert nul -> 0', () => {
         expect(getTotalGreenTime(1, 0, [], CYCLE)).toBe(0);
     });
+    it('aiguillage (« a ») : vert principal seul, la seconde lucarne ne se cumule pas', () => {
+        const actions = [
+            { id: 1, gf: 1, action: 'Seconde lucarne', deb: 50, fin: 60 },
+        ];
+        expect(getTotalGreenTime(1, 30, actions, CYCLE, 'a')).toBe(30);
+    });
+    it('escamotage (« e ») : la seconde lucarne reste comptée', () => {
+        const actions = [
+            { id: 1, gf: 1, action: 'Seconde lucarne', deb: 50, fin: 60 },
+        ];
+        expect(getTotalGreenTime(1, 30, actions, CYCLE, 'e')).toBe(40);
+    });
 });

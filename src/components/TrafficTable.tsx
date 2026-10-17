@@ -248,10 +248,10 @@ const TrafficTable = ({
         updateGroupParams(id, { [field]: value });
     };
 
-    // Vert total (vert principal + secondes lucarnes) — délègue à l'util
-    // partagé pour rester cohérent avec le panneau Diagnostic.
-    const getTotalGreenTime = (groupId: number, mainGreenTime: number) =>
-        computeTotalGreenTime(groupId, mainGreenTime, actionData, cycleEffectif);
+    // Vert total (vert principal + secondes lucarnes, sauf en aiguillage) —
+    // délègue à l'util partagé pour rester cohérent avec le panneau Diagnostic.
+    const getTotalGreenTime = (g: Groupe, mainGreenTime: number) =>
+        computeTotalGreenTime(g.id, mainGreenTime, actionData, cycleEffectif, g.phaseFlag);
 
     // Calculate V.Utile = trafic / (1800 * coef / cycle)
     const calculateVUtile = (trafficVol: number, laneCoef: number | undefined): number | null => {
@@ -445,7 +445,7 @@ const TrafficTable = ({
                                 onMouseEnter={() => {
                                     setHoveredGroupId && setHoveredGroupId(g.id);
                                     if (setHoveredGroupSaturated) {
-                                        const totalGreen = getTotalGreenTime(g.id, vertDe(g));
+                                        const totalGreen = getTotalGreenTime(g, vertDe(g));
                                         const numericVol = parseTrafficVol(trafficData.trafficVol);
                                         const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                         const cap = isInhibited ? null : calculateCapacity(totalGreen, vUtile).value;
@@ -459,7 +459,7 @@ const TrafficTable = ({
 
                                 {/* Coef Voie (shared across all datasets) */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
+                                    const totalGreen = getTotalGreenTime(g, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
@@ -485,7 +485,7 @@ const TrafficTable = ({
                                 })()}
                                 {/* Trafic (per dataset) */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
+                                    const totalGreen = getTotalGreenTime(g, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
@@ -530,7 +530,7 @@ const TrafficTable = ({
                                 })()}
                                 {/* Vert Utile (calculé) */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
+                                    const totalGreen = getTotalGreenTime(g, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
@@ -546,7 +546,7 @@ const TrafficTable = ({
                                 })()}
                                 {/* Capacité Utilisée (calculée: V.Utile / temps vert * 100) */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
+                                    const totalGreen = getTotalGreenTime(g, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
                                     const capacity = isInhibited ? { value: null, display: '' } : calculateCapacity(totalGreen, vUtile);
@@ -564,7 +564,7 @@ const TrafficTable = ({
                                 {/* Ou si action "Début de bande passante" avec actGf1 = groupe : max(0, début_vert - fin_action) */}
                                 {/* Si trafic coordonné (suffixe 'c'), retard = 0 */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
+                                    const totalGreen = getTotalGreenTime(g, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const coordinated = isCoordinated(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
@@ -584,7 +584,7 @@ const TrafficTable = ({
                                 {/* Ou si action "Début de bande passante" avec actGf1 = groupe : max(0, début_vert - fin_action) */}
                                 {/* Si trafic coordonné (suffixe 'c'), file d'attente = 0 */}
                                 {(() => {
-                                    const totalGreen = getTotalGreenTime(g.id, vertDe(g));
+                                    const totalGreen = getTotalGreenTime(g, vertDe(g));
                                     const numericVol = parseTrafficVol(trafficData.trafficVol);
                                     const coordinated = isCoordinated(trafficData.trafficVol);
                                     const vUtile = isInhibited ? null : calculateVUtile(numericVol, g.laneCoef);
