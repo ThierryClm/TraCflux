@@ -134,14 +134,16 @@ const IncrustationEscamotageGroupe = ({ ctx, conflictMatrix, escamotageGroupActi
                             >
                                 <polygon points="0 0, 8 3, 0 6" fill="#87CEEB" />
                             </marker>
+                            {/* Hachures sombres, comme le bandeau d'un vert escamotable
+                                en simulation (.green-cut-overlay) : traits de 3 px tous les 7 px. */}
                             <pattern
                                 id={`escam-hatch-${idx}`}
                                 patternUnits="userSpaceOnUse"
-                                width="6"
-                                height="6"
-                                patternTransform="rotate(-45)"
+                                width="7"
+                                height="7"
+                                patternTransform="rotate(45)"
                             >
-                                <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(135,206,235,0.9)" strokeWidth="3" />
+                                <line className="escamotage-hachure-trait" x1="0" y1="0" x2="0" y2="7" strokeWidth="3" />
                             </pattern>
                         </defs>
                         {/* Hatched rectangle between arrow endpoints */}
@@ -151,7 +153,7 @@ const IncrustationEscamotageGroupe = ({ ctx, conflictMatrix, escamotageGroupActi
                             width={rectWidth}
                             height={rectHeight}
                             fill={`url(#escam-hatch-${idx})`}
-                            stroke="#006400"
+                            className="escamotage-hachure-cadre"
                             strokeWidth="1"
                         />
                         {/* Arrows only when target group is defined */}
