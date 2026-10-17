@@ -56,6 +56,8 @@ interface WorkspaceMainModel {
     helpZoneRef: MutableRefObject<string | null>;
     hoveredActionId: number | null;
     hoveredArrowGroupId: number | null;
+    /** Groupes de l'action survolée dans le panneau de simulation. */
+    flechesActionSimulation: number[];
     hoveredArrowGroupSaturated: boolean;
     hoveredConflict: TimelineDiagramProps['hoveredConflict'];
     hoveredDiagramTime: number | null;
@@ -162,7 +164,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         cycleLengthInput, cycleSimulationSpeed, dependencyGap, diagramAreaRef, diagramHeight,
         displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
-        helpZoneRef, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict,
+        helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
         imageFondClair, intersectionArrows, intersectionDisplay, intersectionImage, intersectionName, isPlayingSimulation,
         isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
@@ -517,6 +519,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 currentTime={simulationCurrentTime}
                                 setCurrentTime={setSimulationCurrentTime}
                                 hoveredArrowGroupId={hoveredArrowGroupId}
+                                hoveredArrowGroupIds={flechesActionSimulation}
                                 setHoveredArrowGroupId={setHoveredArrowGroupId}
                                 imageFondClair={imageFondClair}
                                 hoveredDiagramTime={hoveredDiagramTime}

@@ -6,6 +6,7 @@ import { useAuth } from './hooks/useAuth';
 import TimelineDiagram from './components/TimelineDiagram';
 import ToastContainer from './components/ToastContainer';
 import { toast, getToastPrefs, setToastPref } from './utils/toast';
+import { groupesSurlignesParAction } from './utils/groupesAction';
 import GroupTable from './components/GroupTable';
 import TrafficTable from './components/TrafficTable';
 import IntergreenMatrix from './components/IntergreenMatrix';
@@ -423,6 +424,9 @@ function App() {
         simulationSpeed, cycleSimulationSpeed
     } = useSimulationUI();
     const [hoveredArrowGroupId, setHoveredArrowGroupId] = useState<number | null>(null);
+    // Action survolée dans le panneau de simulation : ses flèches (groupe et
+    // plage) s'allument dans l'image du carrefour.
+    const [survolActionSimulation, setSurvolActionSimulation] = useState<number | null>(null);
     const [hoveredArrowGroupSaturated, setHoveredArrowGroupSaturated] = useState(false);
     const [hoveredConflict, setHoveredConflict] = useState<HoveredConflict | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -678,6 +682,14 @@ function App() {
 
 
 
+
+    // Hors simulation, rien : le panneau peut disparaître sous la souris sans
+    // recevoir la fin du survol.
+    const flechesActionSimulation = useMemo(
+        () => !simulationEnabled || survolActionSimulation === null
+            ? []
+            : groupesSurlignesParAction(actionData.find(a => a.id === survolActionSimulation)),
+        [simulationEnabled, survolActionSimulation, actionData]);
 
     // Calculate simulated diagram when in simulation mode
     const simulationResult = useMemo(() => {
@@ -2559,7 +2571,7 @@ function App() {
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
                         tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction,
                         cycleLength, conflictMatrix, setMatrixValue, hoveredActionId,
-                        setHoveredActionId, setHoveredConflict, simulationName, simulationScenarios, choisirScenarioSimulation,
+                        setHoveredActionId, setSurvolActionSimulation, setHoveredConflict, simulationName, simulationScenarios, choisirScenarioSimulation,
                         creerScenarioSimulation, enregistrerScenarioSimulation, supprimerScenarioSimulation, activeTrafficDataset,
                         setActiveTrafficDataset, updateTrafficData, getTrafficData, updateGroupParams, setHoveredArrowGroupId,
                         hoveredArrowGroupId, setHoveredArrowGroupSaturated, trafficDatasetNames, trafficDatasetSourceNames, setHoveredVUtile, copyTrafficDataset,
@@ -2581,7 +2593,7 @@ function App() {
                         cycleLengthInput, cycleSimulationSpeed, dependencyGap, diagramAreaRef, diagramHeight,
                         displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
                         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
-                        helpZoneRef, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict,
+                        helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
                         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
                         imageFondClair, intersectionArrows, intersectionDisplay, intersectionImage, intersectionName, isPlayingSimulation,
                         isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
