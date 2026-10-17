@@ -23,6 +23,8 @@ interface SimulationPanelProps {
     conflictMatrix: Matrice;
     hoveredActionId: number | null;
     setHoveredActionId: (actionId: number | null) => void;
+    /** Survol d'une action à cocher : allume ses flèches dans l'image du carrefour. */
+    onSurvolAction?: (actionId: number | null) => void;
     setHoveredConflict?: (conflict: HoveredConflict | null) => void;
     /** Titre du scénario choisi ; vide = « Sans titre ». */
     scenarioName?: string;
@@ -53,6 +55,7 @@ const SimulationPanel = ({
     conflictMatrix,
     hoveredActionId,
     setHoveredActionId,
+    onSurvolAction = rien,
     setHoveredConflict,
     scenarioName = '',
     scenarios = [],
@@ -104,6 +107,10 @@ const SimulationPanel = ({
     const zoneScenarioRef = useRef<HTMLDivElement>(null);
 
     // La liste se referme au clic ailleurs ou sur Échap.
+    // Le panneau disparaît (onglet quitté) sans recevoir la fin du survol :
+    // on éteint les flèches de l'action qui était survolée.
+    useEffect(() => () => onSurvolAction(null), [onSurvolAction]);
+
     useEffect(() => {
         if (!menuOuvert) return;
         const dehors = (e: MouseEvent) => {
@@ -340,8 +347,8 @@ const SimulationPanel = ({
                             <label
                                 key={action.id}
                                 className={`simulation-item ${isChecked ? 'checked' : ''} ${isModifying ? 'modifying' : ''} ${isHovered ? 'hovered' : ''} ${isErased ? 'erased' : ''}`}
-                                onMouseEnter={() => setHoveredActionId(action.id)}
-                                onMouseLeave={() => setHoveredActionId(null)}
+                                onMouseEnter={() => { setHoveredActionId(action.id); onSurvolAction(action.id); }}
+                                onMouseLeave={() => { setHoveredActionId(null); onSurvolAction(null); }}
                             >
                                 <input
                                     type="checkbox"

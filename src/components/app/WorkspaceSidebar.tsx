@@ -50,6 +50,8 @@ interface WorkspaceSidebarModel {
     setMatrixValue: (from: number, to: number, value: string) => void;
     hoveredActionId: number | null;
     setHoveredActionId: (id: number | null) => void;
+    /** Action survolée dans le panneau de simulation (flèches allumées sur l'image). */
+    setSurvolActionSimulation: (id: number | null) => void;
     setHoveredConflict: (conflict: HoveredConflict | null) => void;
     simulationName: string;
     simulationScenarios: ScenarioSimulation[];
@@ -139,7 +141,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         conflictMatrix,
         setMatrixValue,
         hoveredActionId,
-        setHoveredActionId,
+        setHoveredActionId, setSurvolActionSimulation,
         setHoveredConflict,
         simulationName,
         simulationScenarios,
@@ -270,6 +272,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 conflictMatrix={conflictMatrix}
                                 hoveredActionId={hoveredActionId}
                                 setHoveredActionId={setHoveredActionId}
+                                onSurvolAction={setSurvolActionSimulation}
                                 setHoveredConflict={setHoveredConflict}
                                 scenarioName={simulationName}
                                 scenarios={simulationScenarios}
