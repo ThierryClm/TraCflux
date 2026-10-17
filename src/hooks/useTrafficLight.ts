@@ -24,8 +24,9 @@ import { useScenariosSimulation } from './trafficLight/useScenariosSimulation';
 import { useAnnulerRetablir } from './trafficLight/useAnnulerRetablir';
 import { calculerConflits } from './trafficLight/calculConflits';
 import { mettreProjetEnTete, listerProjetsCache, lireProjetCache, supprimerProjetCache } from './trafficLight/cacheProjets';
+import { intervertMinimal, migrerGroupes, matriceDuCache, plansDuCache, matriceDuFichier, largeursColonnesBornees } from './trafficLight/lectureProjet';
 import type {
-    EtatHistorique, EtatProjet, GroupeEnregistre, JeuxTrafic, ParametresGroupe,
+    EtatHistorique, EtatProjet, JeuxTrafic, ParametresGroupe,
     ProjetEnregistre, ProprietesProjet, UseTrafficLightOptions
 } from './trafficLight/types';
 export type {
@@ -35,12 +36,10 @@ export type {
 import type {
     ActionMicro,
     CaseMatrice,
-    Durees,
     FlecheCarrefour,
     Groupe,
     JeuTrafic,
     LienExterne,
-    LigneDiagramme,
     Matrice,
     PlanDeFeu,
     Projet,
@@ -50,10 +49,6 @@ import type {
 /** Champs d'une condition qui désignent un groupe de feu par son numéro. */
 const CHAMPS_GF: ('gf' | 'plage1' | 'plage2' | 'actGf1' | 'actGf1Gf2' | 'actGf1Gf3' | 'actGf1Gf4')[] = ['gf', 'plage1', 'plage2', 'actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'];
 
-
-/** Un groupe piéton ou cycliste admet un intervert de 0 s ; les autres, 3 s. */
-const intervertMinimal = (groupe: Pick<Groupe, 'type'> | GroupeEnregistre | undefined) =>
-    (groupe && (groupe.type === 'Piéton' || groupe.type === 'P' || groupe.type === 'Cycliste' || groupe.type === 'CY')) ? 0 : 3;
 
 // L'échec d'autosave n'est signalé qu'une fois : il se rejoue toutes les deux
 // secondes d'inactivité, et une alerte répétée serait vite ignorée.
@@ -585,49 +580,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
 
             // Migrate and validate groups structure for old projects
             if (data.groups) {
-                const migratedGroups = data.groups.map((g, index): Groupe => {
-                    // Ensure all required fields exist with proper defaults
-                    const id = g.id !== undefined ? g.id : index + 1;
-
-                    // Handle old duration formats
-                    let durations = g.durations;
-                    if (!durations || typeof durations !== 'object') {
-                        // Old format might have green/orange/red directly on group
-                        durations = {
-                            green: g.green !== undefined ? g.green : (g.greenDuration !== undefined ? g.greenDuration : 10),
-                            orange: g.orange !== undefined ? g.orange : 3,
-                            red: g.red !== undefined ? g.red : 0
-                        };
-                    }
-                    // Validate duration values
-                    const dureesValides: Durees = {
-                        green: !isNaN(Number(durations.green)) ? Number(durations.green) : 10,
-                        orange: !isNaN(Number(durations.orange)) ? Number(durations.orange) : 3,
-                        red: !isNaN(Number(durations.red)) ? Number(durations.red) : 0
-                    };
-
-                    return {
-                        id,
-                        name: g.name || `Groupe ${id}`,
-                        type: g.type || 'VL',
-                        courant: g.courant || '',
-                        minGreen: g.minGreen !== undefined && !isNaN(g.minGreen) ? g.minGreen : 6,
-                        durations: dureesValides,
-                        offset: g.offset !== undefined && !isNaN(g.offset) ? g.offset : 0,
-                        da: g.da || '',
-                        phaseFlag: g.phaseFlag || '',
-                        comment: g.comment || '',
-                        commentColor: g.commentColor || '',
-                        // Traffic Engineering Props
-                        trafficStream: g.trafficStream || '',
-                        laneCoef: g.laneCoef !== undefined ? g.laneCoef : 1,
-                        trafficVol: g.trafficVol !== undefined ? g.trafficVol : 0,
-                        effectiveGreen: g.effectiveGreen !== undefined ? g.effectiveGreen : 0,
-                        usedCapacity: g.usedCapacity !== undefined ? g.usedCapacity : 0,
-                        delay: g.delay !== undefined ? g.delay : 0,
-                        queueLength: g.queueLength !== undefined ? g.queueLength : 0
-                    };
-                });
+                const migratedGroups = migrerGroupes(data.groups);
                 setGroups(migratedGroups);
             }
 
@@ -637,108 +590,13 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             setCycleLength(cycleDuPlanActif(data, DEFAULT_CYCLE));
 
             // Ensure conflict matrix matches group count
-            const groupCount = data.groups ? data.groups.length : 0;
-            if (data.conflictMatrix && groupCount > 0) {
-                // Clean values outside valid range, resize to match group count
-                // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
-                const loadedGroups = data.groups || [];
-                const cleanedMatrix = Array.from({ length: groupCount }, (_, r) => {
-                    return Array.from({ length: groupCount }, (_, c) => {
-                        const val = data.conflictMatrix?.[r]?.[c];
-                        if (val === undefined || val === null) return '';
-                        const fromGroup = loadedGroups[r];
-                        const minVal = intervertMinimal(fromGroup);
-                        const numericVal = typeof val === 'number' ? val : entier(val);
-                        if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) return '';
-                        return numericVal;
-                    });
-                });
-                setConflictMatrix(cleanedMatrix);
-            } else if (groupCount > 0) {
-                // No matrix in data, create empty one
-                setConflictMatrix(Array.from({ length: groupCount }, () => new Array(groupCount).fill('')));
-            }
+            const matriceLue = matriceDuCache(data);
+            if (matriceLue) setConflictMatrix(matriceLue);
             // Load action table data (pfTabs)
-            if (data.pfTabs) {
-                // Migrate and validate pfTabs structure
-                const groupCount = data.groups ? data.groups.length : 0;
-                const migratedPfTabs = data.pfTabs.map((pf): PlanDeFeu => {
-                    const migrated: PlanDeFeu = { ...pf };
-
-                    // Ensure data array exists
-                    if (!migrated.data) {
-                        migrated.data = [];
-                    }
-
-                    // Ensure diagram array exists with valid data
-                    if (!migrated.diagram || !Array.isArray(migrated.diagram) || migrated.diagram.length === 0) {
-                        // Initialize diagram from groups if available
-                        if (data.groups) {
-                            migrated.diagram = data.groups.map(g => ({
-                                groupId: g.id,
-                                offset: g.offset !== undefined && !isNaN(g.offset) ? g.offset : 0,
-                                greenDuration: g.durations?.green !== undefined && !isNaN(g.durations.green) ? g.durations.green : 10,
-                                da: g.da || '',
-                                comment: g.comment || '',
-                                commentColor: g.commentColor || '#000000',
-                                phaseFlag: g.phaseFlag || ''
-                            }));
-                        } else {
-                            migrated.diagram = [];
-                        }
-                    } else {
-                        // Validate existing diagram entries
-                        migrated.diagram = migrated.diagram.map(d => ({
-                            ...d,
-                            offset: d.offset !== undefined && !isNaN(d.offset) ? d.offset : 0,
-                            greenDuration: d.greenDuration !== undefined && !isNaN(d.greenDuration) ? d.greenDuration : 10
-                        }));
-                    }
-
-                    // Ensure conflictMatrix exists with proper size
-                    if (!migrated.conflictMatrix || !Array.isArray(migrated.conflictMatrix) || migrated.conflictMatrix.length === 0) {
-                        // Initialize from main conflict matrix or create empty
-                        if (data.conflictMatrix && data.conflictMatrix.length > 0) {
-                            migrated.conflictMatrix = data.conflictMatrix.map(row => [...row]);
-                        } else if (groupCount > 0) {
-                            migrated.conflictMatrix = Array.from({ length: groupCount }, () =>
-                                new Array(groupCount).fill('')
-                            );
-                        }
-                    }
-
-                    // Ensure remarques field exists
-                    if (migrated.remarques === undefined) {
-                        migrated.remarques = '';
-                    }
-
-                    return migrated;
-                });
-                setPfTabs(migratedPfTabs);
-                if (data.activePFId) setActivePFIdRaw(data.activePFId);
-            } else if (data.actionData) {
-                // Handle old format for backward compatibility
-                const groupCount = data.groups ? data.groups.length : 0;
-                const initialDiagram: LigneDiagramme[] = data.groups ? data.groups.map(g => ({
-                    groupId: g.id,
-                    offset: g.offset !== undefined && !isNaN(g.offset) ? g.offset : 0,
-                    greenDuration: g.durations?.green !== undefined && !isNaN(g.durations.green) ? g.durations.green : 10,
-                    da: g.da || '',
-                    comment: g.comment || '',
-                    commentColor: g.commentColor || '#000000'
-                })) : [];
-                const initialMatrix = data.conflictMatrix && data.conflictMatrix.length > 0
-                    ? data.conflictMatrix.map(row => [...row])
-                    : (groupCount > 0 ? Array.from({ length: groupCount }, () => new Array<CaseMatrice>(groupCount).fill('')) : []);
-                setPfTabs([{
-                    id: 1,
-                    name: 'PF1',
-                    data: data.actionData,
-                    diagram: initialDiagram,
-                    conflictMatrix: initialMatrix,
-                    remarques: ''
-                }]);
-                setActivePFIdRaw(1);
+            const plansLus = plansDuCache(data);
+            if (plansLus) {
+                setPfTabs(plansLus.pfTabs);
+                if (plansLus.activePFId) setActivePFIdRaw(plansLus.activePFId);
             }
 
             // Load intersection image and arrows
@@ -780,19 +638,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             setCapacityCompareSelection(Array.isArray(data.capacityCompareSelection) ? data.capacityCompareSelection : null);
             setCapacityCompareDataset(data.capacityCompareDataset || '__per_pf__');
             setMatricesLocked(data.matricesLocked === true);
-            {
-                const acw = data.actionColWidths || {};
-                const clamp = (v: unknown, lo: number, hi: number, def: number) => {
-                    const n = Number(v);
-                    if (!isFinite(n)) return def;
-                    return Math.min(hi, Math.max(lo, Math.round(n)));
-                };
-                setActionColWidths({
-                    description: clamp(acw.description, 100, 350, 160),
-                    micro: clamp(acw.micro, 300, 700, 420),
-                    abrv: clamp(acw.abrv, 38, 75, 38)
-                });
-            }
+            setActionColWidths(largeursColonnesBornees(data.actionColWidths));
             setExternalLinks(data.externalLinks && Array.isArray(data.externalLinks) ? data.externalLinks : []);
 
             // Rendre à leurs modules les champs qui ne vivent pas ici — les
@@ -886,23 +732,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             setCycleLength(cycleDuPlanActif(state, DEFAULT_CYCLE));
 
             // Mettre à jour la matrice de conflits
-            if (state.conflictMatrix && Array.isArray(state.conflictMatrix)) {
-                // Minimum is 0 for Piéton/Cycliste from-group, 3 for others
-                const loadedGroups = state.groups || [];
-                const cleanedMatrix = state.conflictMatrix.map((row, r) => row.map((val): CaseMatrice => {
-                    if (val === undefined || val === null) return '';
-                    const fromGroup = loadedGroups[r];
-                    const minVal = intervertMinimal(fromGroup);
-                    const numericVal = typeof val === 'number' ? val : entier(val);
-                    if (isNaN(numericVal) || numericVal < minVal || numericVal > 20) return '';
-                    return numericVal;
-                }));
-                setConflictMatrix(cleanedMatrix);
-            } else {
-                // Réinitialiser la matrice selon le nombre de groupes
-                const groupCount = (state.groups && state.groups.length) || 5;
-                setConflictMatrix(Array.from({ length: groupCount }, () => Array(groupCount).fill('')));
-            }
+            setConflictMatrix(matriceDuFichier(state));
 
             // Handle new pfTabs format or old actionData format
             // All branches produce PFs with guaranteed complete structure
@@ -986,19 +816,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
 
             // Largeurs colonnes micro-régulation : valeurs bornées, defaut
             // si absent/invalide.
-            {
-                const acw = state.actionColWidths || {};
-                const clamp = (v: unknown, lo: number, hi: number, def: number) => {
-                    const n = Number(v);
-                    if (!isFinite(n)) return def;
-                    return Math.min(hi, Math.max(lo, Math.round(n)));
-                };
-                setActionColWidths({
-                    description: clamp(acw.description, 100, 350, 160),
-                    micro: clamp(acw.micro, 300, 700, 420),
-                    abrv: clamp(acw.abrv, 38, 75, 38)
-                });
-            }
+            setActionColWidths(largeursColonnesBornees(state.actionColWidths));
 
             // Reset PF sync refs so forward/reverse sync start fresh
             resetPfSyncRefs(state.activePFId || 1);
