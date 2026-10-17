@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { SetStateAction } from 'react';
 import {
     DEFAULT_CYCLE,
-    MAX_PF,
     MAX_GROUPS,
     createEmptyActionData,
     buildDiagramFromGroups,
@@ -10,10 +9,6 @@ import {
     ensurePFIntegrity,
     cycleDuPlanActif
 } from '../utils/pfHelpers';
-import {
-    scenariosDuPlan, scenarioFixeDesCases,
-    choisirScenario, quitterScenario, creerScenario, enregistrerScenario, supprimerScenario
-} from '../simulation';
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
@@ -25,6 +20,8 @@ import { safeLocalStorage, ensureLocalStorageSpace } from './trafficLight/stocka
 import { DEFAULT_PROJECT_PROPERTIES } from './trafficLight/types';
 import { useEtatJeuxTrafic, useNomsJeuxTrafic, useOperationsJeuxTrafic } from './trafficLight/useJeuxTrafic';
 import { useReglagesPlanActif } from './trafficLight/useReglagesPlanActif';
+import { useGestionPlans } from './trafficLight/useGestionPlans';
+import { useScenariosSimulation } from './trafficLight/useScenariosSimulation';
 import type {
     EtatHistorique, EtatProjet, GroupeEnregistre, JeuxTrafic, ParametresGroupe,
     ProjetEnregistre, ProprietesProjet, SauvegardeCache, UseTrafficLightOptions
@@ -1499,154 +1496,17 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         setActionData(reorderedData);
     }, [setActionData]);
 
-    // Duplicate current PF. Renvoie null si la limite MAX_PF est atteinte
-    // (l'appelant affiche le message d'erreur).
-    const duplicatePF = useCallback(() => {
-        if (dossierReadOnlyRef.current) return;
-        if (pfTabs.length >= MAX_PF) return null;
-        const nextId = Math.max(...pfTabs.map(pf => pf.id)) + 1;
-        const newName = `PF${nextId}`;
-        const currentData = JSON.parse(JSON.stringify(actionData));
-        const currentPF = pfTabs.find(pf => pf.id === activePFId);
-        const currentRemarques = currentPF?.remarques || '';
-        const currentDiagram = currentPF?.diagram ? JSON.parse(JSON.stringify(currentPF.diagram)) : [];
-        const currentCycleLength = currentPF?.cycleLength || cycleLength;
-        const currentMicro = currentPF?.microCustomFields ? JSON.parse(JSON.stringify(currentPF.microCustomFields)) : [];
-        setPfTabs(prev => [...prev, {
-            id: nextId,
-            name: newName,
-            data: currentData,
-            remarques: currentRemarques,
-            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
-            diagram: currentDiagram,
-            cycleLength: currentCycleLength,
-            microCustomFields: currentMicro
-        }]);
-        setActivePFId(nextId);
-        return nextId;
-    }, [pfTabs, actionData, activePFId, conflictMatrix, cycleLength]);
+    // Onglets des plans de feux.
+    const { duplicatePF, deletePF, renamePF, setPFColor, updatePFRemarques, reorderPF } = useGestionPlans({
+        pfTabs, setPfTabs, activePFId, setActivePFId, actionData, conflictMatrix, cycleLength, dossierReadOnlyRef
+    });
 
-    // Delete a PF (cannot delete if only one remains)
-    const deletePF = useCallback((pfId: number) => {
-        if (dossierReadOnlyRef.current) return;
-        if (pfTabs.length <= 1) return false;
-        setPfTabs(prev => prev.filter(pf => pf.id !== pfId));
-        if (activePFId === pfId) {
-            const remaining = pfTabs.filter(pf => pf.id !== pfId);
-            setActivePFId(remaining[0].id);
-        }
-        return true;
-    }, [pfTabs, activePFId]);
-
-    // Rename a PF
-    const renamePF = useCallback((pfId: number, newName: string) => {
-        if (dossierReadOnlyRef.current) return;
-        setPfTabs(prev => prev.map(pf =>
-            pf.id === pfId ? { ...pf, name: newName } : pf
-        ));
-    }, []);
-
-    // Set PF color (for validation)
-    const setPFColor = useCallback((pfId: number, color: string | null) => {
-        setPfTabs(prev => prev.map(pf =>
-            pf.id === pfId ? { ...pf, color: color } : pf
-        ));
-    }, []);
-
-    // Update remarques for active PF
-    const updatePFRemarques = useCallback((remarques: string) => {
-        setPfTabs(prev => prev.map(pf =>
-            pf.id === activePFId ? { ...pf, remarques: remarques } : pf
-        ));
-    }, [activePFId]);
-
-    // Reorder PF tabs (drag & drop)
-    const reorderPF = useCallback((fromIndex: number, toIndex: number) => {
-        if (fromIndex === toIndex) return;
-        setPfTabs(prev => {
-            const newTabs = [...prev];
-            const [movedTab] = newTabs.splice(fromIndex, 1);
-            newTabs.splice(toIndex, 0, movedTab);
-            return newTabs;
-        });
-    }, []);
-
-    // Simulation functions
-    //
-    // Le scénario — son nom et les actions cochées — appartient au PLAN DE FEU,
-    // et non à la session. Il était tenu dans un état local, perdu à chaque
-    // fermeture : on retrouvait un projet avec ses actions de micro-régulation
-    // saisies mais plus aucune trace de la combinaison qu'on avait retenue,
-    // ni de son intitulé.
-    //
-    // Il n'y a délibérément PAS de second état recopié vers l'onglet actif : la
-    // valeur affichée EST celle du plan. Les recopies miroir de ce fichier ont
-    // coûté trois défauts d'intégrité en septembre 2026 — un plan héritant du
-    // cycle d'un autre — et rien ici n'en justifie une de plus.
-    const planActif = useMemo(
-        () => pfTabs.find(pf => pf.id === activePFId) || null,
-        [pfTabs, activePFId]);
-
-    const simulationSelectedActions = useMemo(
-        () => (Array.isArray(planActif?.simulationActions) ? planActif.simulationActions : []),
-        [planActif]);
-
-    const simulationName = planActif?.simulationName || '';
-
-    const simulationScenarios = useMemo(() => scenariosDuPlan(planActif), [planActif]);
-
-    /**
-     * Écrit dans le plan de feu actif, seul dépositaire du scénario. La liste
-     * des scénarios est réécrite à chaque fois : un projet d'avant les
-     * scénarios multiples y fige ainsi son scénario unique dès la première
-     * case touchée, faute de quoi ce scénario suivrait les cases à l'écran et
-     * ne paraîtrait jamais modifié.
-     */
-    const ecrireScenario = useCallback((maj: (actuelles: number[], pf: PlanDeFeu) => Partial<PlanDeFeu> | null) => {
-        setPfTabs(prev => prev.map(pf => {
-            if (pf.id !== activePFId) return pf;
-            const actuelles = Array.isArray(pf.simulationActions) ? pf.simulationActions : [];
-            const changement = maj(actuelles, pf);
-            if (!changement) return pf;
-            return { ...pf, simulationScenarios: scenariosDuPlan(pf), ...changement };
-        }));
-    }, [activePFId]);
-
-    /** Ouvre un scénario enregistré ; '' revient à « Sans titre ». */
-    const choisirScenarioSimulation = useCallback((nom: string) => {
-        ecrireScenario((_, pf) => nom ? choisirScenario(pf, nom) : quitterScenario(pf));
-    }, [ecrireScenario]);
-
-    // Créer, enregistrer, supprimer changent le contenu du plan : refusés,
-    // comme le titre l'était, sur un plan ou un dossier en lecture seule.
-    const creerScenarioSimulation = useCallback((titre: string) => {
-        if (isEditLocked()) return;
-        ecrireScenario((_, pf) => creerScenario(pf, titre));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ecrireScenario]);
-
-    const enregistrerScenarioSimulation = useCallback((titre: string) => {
-        if (isEditLocked()) return;
-        ecrireScenario((_, pf) => enregistrerScenario(pf, titre));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ecrireScenario]);
-
-    const supprimerScenarioSimulation = useCallback(() => {
-        if (isEditLocked()) return;
-        ecrireScenario((_, pf) => supprimerScenario(pf));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ecrireScenario]);
-
-    const toggleSimulationAction = useCallback((actionId: number) => {
-        // Sans scénario choisi, le panneau affiche le scénario fixe des cases :
-        // la première case touchée le retient, pour qu'il paraisse modifié.
-        ecrireScenario((actuelles, pf) => ({
-            simulationName: pf.simulationName || scenarioFixeDesCases(actuelles, pf.data),
-            simulationActions: actuelles.includes(actionId)
-                ? actuelles.filter(id => id !== actionId)
-                : [...actuelles, actionId]
-        }));
-    }, [ecrireScenario]);
+    // Scénarios de simulation, rangés dans le plan de feu actif.
+    const {
+        simulationSelectedActions, simulationName, simulationScenarios,
+        choisirScenarioSimulation, creerScenarioSimulation, enregistrerScenarioSimulation,
+        supprimerScenarioSimulation, toggleSimulationAction
+    } = useScenariosSimulation({ pfTabs, setPfTabs, activePFId, isEditLocked });
 
     // Save project - defined after all state declarations to capture current values
     const saveProject = useCallback(async (name: string) => {
