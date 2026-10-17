@@ -2245,7 +2245,7 @@ function App() {
         showCropControls, setShowCropControls,
         intersectionArrows, groups, imageNaturalDims, imageFondClair,
         selectedActions: simulationSelectedActions, conflictMatrix,
-        hoveredArrowGroupId, setHoveredArrowGroupId, hoveredDiagramTime,
+        hoveredArrowGroupId, hoveredArrowGroupIds: flechesActionSimulation, setHoveredArrowGroupId, hoveredDiagramTime,
         isPlayingSimulation,
         simulationCurrentTime, simulationResult,
         actionData, cycleLength,

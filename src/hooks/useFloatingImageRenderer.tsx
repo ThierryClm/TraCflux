@@ -38,6 +38,8 @@ interface FloatingImageRendererOptions {
     selectedActions: number[];
     conflictMatrix: Matrice;
     hoveredArrowGroupId: number | null;
+    /** Groupes allumés ensemble : ceux de l'action survolée en simulation. */
+    hoveredArrowGroupIds?: number[];
     setHoveredArrowGroupId?: Dispatch<SetStateAction<number | null>>;
     hoveredDiagramTime?: number | null;
     isPlayingSimulation: boolean;
@@ -69,6 +71,7 @@ const useFloatingImageRenderer = ({
     selectedActions,
     conflictMatrix,
     hoveredArrowGroupId,
+    hoveredArrowGroupIds,
     setHoveredArrowGroupId,
     hoveredDiagramTime,
     isPlayingSimulation,
@@ -233,7 +236,7 @@ const useFloatingImageRenderer = ({
                                 const scale = arrow.scale || 1;
                                 const arrowLength = arrow.length || 1;
                                 const turnLength = arrow.turnLength || 1;
-                                const isHovered = hoveredArrowGroupId === groupId;
+                                const isHovered = hoveredArrowGroupId === groupId || !!hoveredArrowGroupIds?.includes(groupId);
 
                                 // Même moteur de couleur que le panneau intégré.
                                 // La copie réduite qui vivait ici ignorait les
@@ -279,7 +282,7 @@ const useFloatingImageRenderer = ({
             </div>
         );
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
-        intersectionArrows, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredDiagramTime,
+        intersectionArrows, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
         selectedActions, conflictMatrix,
         isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast,
