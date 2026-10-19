@@ -7,6 +7,23 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.1] — 2026-10-19
+
+### Corrigé
+
+- **Les couleurs d'écart de la matrice se calculent sur le premier onglet.** Dans un plan de feu
+  autre que le plan de référence, une valeur supérieure s'affiche en rouge et une valeur inférieure en
+  vert. La référence était le plan créé en premier : supprimé — un PF1 réimporté depuis un autre projet
+  reçoit un nouvel identifiant —, il laissait tous les plans sans couleurs ; déplacé, il faisait comparer
+  à un plan qui n'était plus en tête. La référence est désormais le **premier onglet**, à l'écran comme à
+  l'impression, et l'infobulle d'une case la nomme.
+
+### Retiré
+
+- **La mesure d'audience.** Le script Cloudflare Web Analytics, chargé sur tracflux.com depuis le
+  29 septembre, est retiré. TraCflux ne contient plus ni mesure d'audience, ni cookie, ni télémétrie ; la
+  fenêtre « À propos » le dit.
+
 ## [1.5.0] — 2026-10-19
 
 ### Ajouté

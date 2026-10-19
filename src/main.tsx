@@ -4,14 +4,12 @@ import App from './App'
 import { ConfirmProvider } from './components/ConfirmProvider'
 import { MicroVariablesProvider } from './components/MicroVariablesProvider'
 import ReloadPrompt from './components/ReloadPrompt'
-import { initPrivacyFriendlyAnalytics } from './utils/analytics'
 import { installErrorInterceptor } from './utils/errorInterceptor'
 import { adapterSelecteursDansCadreTiers } from './utils/cadreTiers'
 import { adapterSelecteursSansAPI } from './utils/selecteursSansAPI'
 import './index.css'
 
 installErrorInterceptor();
-initPrivacyFriendlyAnalytics();
 // Dans un cadre d'un autre site, les fenêtres natives Ouvrir / Enregistrer
 // sont refusées : sélecteur de fichier classique pour Ouvrir, repli pour le reste.
 adapterSelecteursDansCadreTiers();
