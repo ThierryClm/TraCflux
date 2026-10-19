@@ -3,7 +3,7 @@ import type { ChangeEvent, FocusEvent, KeyboardEvent, MouseEvent } from 'react';
 import EmptyState from './EmptyState';
 import type { ActionMicro, CaseMatrice, Groupe, Matrice, PlanDeFeu } from '../types/projet';
 import type { HoveredConflict } from './ConflictList';
-import { compareWithPF1 as compareWithPF1Pure, buildCellTooltipLines as buildCellTooltipLinesPure } from '../utils/matrixComparison';
+import { compareWithPF1 as compareWithPF1Pure, buildCellTooltipLines as buildCellTooltipLinesPure, matriceDeReference } from '../utils/matrixComparison';
 import {
     getFlecheAnticipations as getFlecheAnticipationsPure,
     hasOverlap as hasOverlapPure,
@@ -129,14 +129,14 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
     // Bi-carrefour separator index
     const separatorIdx = biCarrefourSeparator != null ? groups.findIndex(g => g.id === biCarrefourSeparator) : -1;
 
-    // Get the reference matrix from PF1 for comparison
-    const pf1Matrix = pfTabs?.find(pf => pf.id === 1)?.conflictMatrix || null;
-    const isComparingWithPF1 = Boolean(activePFId && activePFId !== 1 && pf1Matrix && pf1Matrix.length > 0);
+    // Matrice du plan de référence (premier onglet), sauf quand on le consulte lui-même.
+    const reference = matriceDeReference(pfTabs, activePFId);
+    const pf1Matrix = reference?.matrice ?? null;
 
     // Compare current value with PF1 value (logique pure dans utils/matrixComparison).
     // Returns: 'higher' (red), 'lower' (green), or null (equal or no comparison).
     const compareWithPF1 = (fromIdx: number, toIdx: number, currentVal: CaseMatrice | null | undefined) =>
-        compareWithPF1Pure(fromIdx, toIdx, currentVal, isComparingWithPF1 ? pf1Matrix : null);
+        compareWithPF1Pure(fromIdx, toIdx, currentVal, pf1Matrix);
 
     // Get all "Seconde lucarne" actions
     const getSecondesLucarnes = (): SecondeLucarne[] => {
@@ -322,13 +322,14 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
     const isDelayInsufficient = (fromIdx: number, toIdx: number) => isDelayInsufficientPure(fromIdx, toIdx, conflictCtx);
 
     // Lignes d'infobulle de cellule (logique pure dans utils/matrixComparison) :
-    //  - écart vs PF1 (seulement quand on consulte un autre PF) ;
+    //  - écart vs le plan de référence (seulement quand on consulte un autre PF) ;
     //  - description du conflit pour les cases en fond rouge.
     const buildCellTooltipLines = (fromIdx: number, toIdx: number) =>
         buildCellTooltipLinesPure({
             fromIdx, toIdx,
             conflictMatrix,
-            refMatrix: isComparingWithPF1 ? pf1Matrix : null,
+            refMatrix: pf1Matrix,
+            refName: reference?.nom,
             groups,
             isDelayInsufficient,
             hasOverlap,

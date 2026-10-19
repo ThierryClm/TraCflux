@@ -12,6 +12,7 @@ import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
 import { ARROW_SIZE, BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
+import { matriceDeReference } from '../../utils/matrixComparison';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
 import type { ProjectProperties } from '../PropertiesPanel';
 
@@ -653,8 +654,8 @@ function PrintPreviewModal({
                                                 </thead>
                                                 <tbody>
                                                     {(() => {
-                                                        const pf1Matrix = pfTabs?.find(pf => pf.id === 1)?.conflictMatrix || null;
-                                                        const isComparing = activePFId !== 1 && pf1Matrix && pf1Matrix.length > 0;
+                                                        const pf1Matrix = matriceDeReference(pfTabs, activePFId)?.matrice ?? null;
+                                                        const isComparing = pf1Matrix !== null;
                                                         return groups.map((fromGroup, fromIdx) => (
                                                         <tr key={fromGroup.id}>
                                                             <td className="row-header">{fromGroup.id}</td>
@@ -718,8 +719,8 @@ function PrintPreviewModal({
                                                 </thead>
                                                 <tbody>
                                                     {(() => {
-                                                        const pf1Matrix = pfTabs?.find(pf => pf.id === 1)?.conflictMatrix || null;
-                                                        const isComparing = activePFId !== 1 && pf1Matrix && pf1Matrix.length > 0;
+                                                        const pf1Matrix = matriceDeReference(pfTabs, activePFId)?.matrice ?? null;
+                                                        const isComparing = pf1Matrix !== null;
                                                         return groups.map((fromGroup, fromIdx) => (
                                                         <tr key={fromGroup.id}>
                                                             <td className="row-header">{fromGroup.id}</td>

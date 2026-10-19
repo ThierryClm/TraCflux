@@ -2,13 +2,35 @@
 // référence (PF1), et de composition de l'infobulle des cases de matrice.
 // Extrait d'IntergreenMatrix.jsx pour permettre les tests unitaires.
 
-import type { CaseMatrice, Groupe, Matrice } from '../types/projet';
+import type { CaseMatrice, Groupe, Matrice, PlanDeFeu } from '../types/projet';
+
+/**
+ * Plan de feu de référence des couleurs de la matrice : le premier onglet.
+ * C'était le plan d'identifiant 1 ; supprimé, ou déplacé hors de la
+ * première place, il laissait les autres plans sans couleurs ou comparés à
+ * un plan qui n'était plus le PF de base affiché.
+ *
+ * Renvoie null quand il n'y a rien à comparer : plan de référence actif,
+ * ou sans matrice enregistrée.
+ */
+export function matriceDeReference(
+    pfTabs: PlanDeFeu[] | null | undefined,
+    activePFId: number | null | undefined
+): { matrice: Matrice; nom: string } | null {
+    const reference = pfTabs?.[0];
+    if (!reference || reference.id === activePFId) return null;
+    const matrice = reference.conflictMatrix;
+    if (!matrice || !matrice.length) return null;
+    return { matrice, nom: reference.name || `PF${reference.id}` };
+}
 
 interface CellTooltipOptions {
     fromIdx: number;
     toIdx: number;
     conflictMatrix: Matrice;
     refMatrix: Matrice | null;
+    /** Nom du plan de référence, repris dans l'infobulle. */
+    refName?: string;
     groups: Groupe[];
     isDelayInsufficient: (fromIdx: number, toIdx: number) => boolean;
     hasOverlap: (fromIdx: number, toIdx: number) => boolean;
@@ -79,6 +101,7 @@ export function buildCellTooltipLines({
     toIdx,
     conflictMatrix,
     refMatrix,
+    refName = 'PF1',
     groups,
     isDelayInsufficient,
     hasOverlap,
@@ -98,7 +121,7 @@ export function buildCellTooltipLines({
             const delta = Math.abs(cur - ref);
             lines.push(
                 (cur > ref ? 'Augmentée' : 'Réduite') +
-                ` de ${delta} s vs PF de base (PF1) : ${fromLabel} → ${toLabel}`
+                ` de ${delta} s vs PF de base (${refName}) : ${fromLabel} → ${toLabel}`
             );
         }
     }

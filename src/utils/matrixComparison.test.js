@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compareWithPF1, buildCellTooltipLines } from './matrixComparison';
+import { compareWithPF1, buildCellTooltipLines, matriceDeReference } from './matrixComparison';
 
 describe('compareWithPF1', () => {
     it('renvoie null quand refMatrix est null', () => {
@@ -204,5 +204,21 @@ describe('buildCellTooltipLines', () => {
         });
         expect(lines[0]).toContain('GF1');
         expect(lines[0]).toContain('GF2');
+    });
+});
+
+describe('matriceDeReference', () => {
+    const m = [['', 5], [5, '']];
+    it('prend le premier onglet, quel que soit son identifiant', () => {
+        const onglets = [{ id: 4, name: 'PF_base', conflictMatrix: m }, { id: 1, name: 'PF1', conflictMatrix: [] }];
+        expect(matriceDeReference(onglets, 1)).toEqual({ matrice: m, nom: 'PF_base' });
+    });
+    it('null quand le plan de référence est affiché, sans matrice, ou sans onglets', () => {
+        expect(matriceDeReference([{ id: 4, name: 'A', conflictMatrix: m }], 4)).toBeNull();
+        expect(matriceDeReference([{ id: 4, name: 'A' }, { id: 5, name: 'B' }], 5)).toBeNull();
+        expect(matriceDeReference(undefined, 1)).toBeNull();
+    });
+    it('nom par défaut tiré de l\'identifiant', () => {
+        expect(matriceDeReference([{ id: 7, conflictMatrix: m }, { id: 8 }], 8).nom).toBe('PF7');
     });
 });
