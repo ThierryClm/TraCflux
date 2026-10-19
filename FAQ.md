@@ -14,7 +14,7 @@ Pour trois raisons, dans cet ordre.
 
 **Le déploiement.** Rien à installer, donc rien à faire valider par une direction informatique : on ouvre une page. Dans une collectivité ou un bureau d'études, ce seul point fait souvent la différence entre un outil qu'on essaie et un outil qu'on renonce à essayer. L'application est par ailleurs **installable (PWA)** et fonctionne **hors ligne**.
 
-**La confidentialité.** Tout s'exécute **en local**, sans serveur ni télémétrie : les données ne quittent jamais votre poste — voir [Mes données sont-elles envoyées sur internet ?](#mes-données-sont-elles-envoyées-sur-internet-).
+**La confidentialité.** Tout s'exécute **en local**, sans serveur : les données de vos projets ne quittent jamais votre poste — voir [Mes données sont-elles envoyées sur internet ?](#mes-données-sont-elles-envoyées-sur-internet-).
 
 ### Je voudrais améliorer le fonctionnement des carrefours à feu sur mon territoire, mais le sujet m'est totalement étranger. Cette application va-t-elle m'aider à traiter mon problème ?
 
@@ -174,7 +174,7 @@ Oui, totalement. Le code est publié sous licence libre [GNU AGPL v3](LICENSE) �
 
 ### Mes données sont-elles envoyées sur internet ?
 
-**Non, jamais.** L'application fonctionne intégralement dans votre navigateur, sans serveur ni télémétrie. Aucune donnée de projet ne quitte votre poste — pas même un fichier de log d'erreur (le rapport de diagnostic est téléchargé en local, jamais transmis).
+**Non, jamais.** L'application fonctionne intégralement dans votre navigateur, sans serveur. Aucune donnée de projet ne quitte votre poste — pas même un fichier de log d'erreur (le rapport de diagnostic est téléchargé en local, jamais transmis).
 
 ### Puis-je l'utiliser sans connexion internet ?
 

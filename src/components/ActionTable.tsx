@@ -472,13 +472,20 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
         reorderActions([...filledRows, ...emptyRows]);
     }, [actionData, reorderActions]);
 
-    // Calculate visible rows: all filled + 1 empty at the end
+    // Lignes affichées : toutes les lignes remplies, puis une ligne vide de saisie.
+    // Une condition supprimée laisse une ligne vide à sa place, au milieu des
+    // données : la proposer en bas faisait remonter la nouvelle condition à
+    // cette place dès le premier chiffre tapé, et une autre ligne vide
+    // apparaissait en bas. La ligne de saisie est donc la première ligne vide
+    // située après la dernière ligne remplie ; un trou du milieu ne sert qu'en
+    // dernier recours, quand il n'en reste pas d'autre.
     const visibleRows = useMemo(() => {
         const filledRows = actionData.filter(isRowFilled);
-        const emptyRows = actionData.filter(row => !isRowFilled(row));
-        // Show all filled rows + only 1 empty row at the end
-        const oneEmpty = emptyRows.length > 0 ? [emptyRows[0]] : [];
-        return [...filledRows, ...oneEmpty];
+        let derniereRemplie = -1;
+        actionData.forEach((row, i) => { if (isRowFilled(row)) derniereRemplie = i; });
+        const ligneDeSaisie = actionData.slice(derniereRemplie + 1).find(row => !isRowFilled(row))
+            ?? actionData.find(row => !isRowFilled(row));
+        return ligneDeSaisie ? [...filledRows, ligneDeSaisie] : filledRows;
     }, [actionData]);
 
     // Auto-resize all textareas when data changes

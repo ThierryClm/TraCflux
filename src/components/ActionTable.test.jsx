@@ -90,6 +90,31 @@ describe('ActionTable — lignes affichées', () => {
         expect(champ(1, COL.deb)).toHaveValue('10');
     });
 
+    // Signalé par Thierry (19/10) : une condition supprimée laisse une ligne
+    // vide au milieu ; la saisie s'y faisait, et la nouvelle condition
+    // remontait au milieu du tableau dès le premier chiffre.
+    it('la ligne de saisie suit la dernière condition, pas le trou laissé par une suppression', () => {
+        const actionData = donnees(
+            { gf: '7', action: 'Escamotage' },
+            {},
+            { gf: '3', action: 'Point de repos' }
+        );
+        const { updateActionRow } = renderTable({ actionData });
+        expect(lignesCorps()).toHaveLength(3);
+        fireEvent.change(champ(2, COL.gf), { target: { value: '5' } });
+        // La 4e ligne (après le 3), et non la 2e (le trou entre 7 et 3).
+        expect(updateActionRow).toHaveBeenCalledWith(actionData[3].id, 'gf', '5');
+    });
+
+    it('sans ligne libre après la dernière condition, le trou du milieu sert de ligne de saisie', () => {
+        const actionData = donnees();
+        actionData.forEach((row, i) => { if (i !== 4) { row.gf = '1'; row.action = 'Escamotage'; } });
+        const { updateActionRow } = renderTable({ actionData });
+        expect(lignesCorps()).toHaveLength(30);
+        fireEvent.change(champ(29, COL.gf), { target: { value: '2' } });
+        expect(updateActionRow).toHaveBeenCalledWith(actionData[4].id, 'gf', '2');
+    });
+
     it('une ligne avec seulement une description compte comme remplie', () => {
         renderTable({ actionData: donnees({ description: 'note' }) });
         expect(lignesCorps()).toHaveLength(2);
