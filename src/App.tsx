@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { ChangeEvent, CSSProperties } from 'react';
+import { useBooleenMemorise, usePrefsInfobulles } from './hooks/usePreferencesEspaceTravail';
 import { useTrafficLight } from './hooks/useTrafficLight';
 import { MAX_PF, mergePfFromProject } from './utils/pfHelpers';
 import { useAuth } from './hooks/useAuth';
@@ -92,7 +93,6 @@ interface OptionsExportPng {
 }
 
 /** Sections de l'application dont les infobulles peuvent être coupées. */
-type PrefsInfobulles = Record<'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>;
 
 function App() {
     const askConfirm = useConfirm();
@@ -323,26 +323,8 @@ function App() {
         const saved = localStorage.getItem('showWrapFlash');
         return saved === null ? true : saved === 'true';
     });
-    // Preferences "Infobulles..." (Mise en page). 6 sections, toutes
-    // cochees par defaut. Persiste au niveau de l'application (localStorage).
-    const [tooltipPrefs, setTooltipPrefsState] = useState<PrefsInfobulles>(() => {
-        try {
-            const raw = localStorage.getItem('tracflux.tooltips');
-            const def = { main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
-            if (!raw) return def;
-            const parsed = JSON.parse(raw);
-            return { ...def, ...parsed };
-        } catch {
-            return { main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
-        }
-    });
-    const setTooltipPref = useCallback((key: keyof PrefsInfobulles) => {
-        setTooltipPrefsState(prev => {
-            const next = { ...prev, [key]: !prev[key] };
-            try { localStorage.setItem('tracflux.tooltips', JSON.stringify(next)); } catch {}
-            return next;
-        });
-    }, []);
+    // Préférences « Infobulles... » (Mise en page), mémorisées dans le navigateur.
+    const { tooltipPrefs, setTooltipPref } = usePrefsInfobulles();
     // Helper local : utilise tooltipPrefs.main pour les title= de App.tsx.
     const tip = (text: string | undefined) => tooltipPrefs.main ? text : undefined;
     const [showSaveReminder, setShowSaveReminder] = useState(() => {
@@ -558,46 +540,16 @@ function App() {
         setShowFloatingLegend
     } = useFloatingLegend();
 
-    // Floating conditions & variables states (lifted from ActionTable for menu control)
+    // Fenêtres des conditions et des variables (remontées d'ActionTable pour
+    // le menu), miroir du diagramme, liste des conflits détachée, panneau
+    // « Réserve de capacité » (coché par défaut ; menu Mise en page).
     // Persistés au niveau application (localStorage) — préférence d'espace de
     // travail qui ne voyage pas avec le projet.
-    const [showFloatingConditions, setShowFloatingConditions] = useState(() => {
-        try { return localStorage.getItem('floating_conditions_visible') === 'true'; } catch { return false; }
-    });
-    const [showFloatingVariables, setShowFloatingVariables] = useState(() => {
-        try { return localStorage.getItem('floating_variables_visible') === 'true'; } catch { return false; }
-    });
-    useEffect(() => {
-        try { localStorage.setItem('floating_conditions_visible', String(showFloatingConditions)); } catch {}
-    }, [showFloatingConditions]);
-    useEffect(() => {
-        try { localStorage.setItem('floating_variables_visible', String(showFloatingVariables)); } catch {}
-    }, [showFloatingVariables]);
-
-    // Miroir de présentation du diagramme (fenêtre détachée, lecture seule).
-    const [showFloatingDiagram, setShowFloatingDiagram] = useState(() => {
-        try { return localStorage.getItem('floating_diagram_visible') === 'true'; } catch { return false; }
-    });
-    useEffect(() => {
-        try { localStorage.setItem('floating_diagram_visible', String(showFloatingDiagram)); } catch {}
-    }, [showFloatingDiagram]);
-
-    // Liste des conflits détachée (mise en évidence sur un écran).
-    const [showFloatingConflicts, setShowFloatingConflicts] = useState(() => {
-        try { return localStorage.getItem('floating_conflicts_visible') === 'true'; } catch { return false; }
-    });
-    useEffect(() => {
-        try { localStorage.setItem('floating_conflicts_visible', String(showFloatingConflicts)); } catch {}
-    }, [showFloatingConflicts]);
-
-    // Affichage du panneau « Réserve de capacité » sous le tableau trafic
-    // (préférence d'espace de travail, cochée par défaut ; menu Mise en page).
-    const [showCapacityReserve, setShowCapacityReserve] = useState(() => {
-        try { return localStorage.getItem('show_capacity_reserve') !== 'false'; } catch { return true; }
-    });
-    useEffect(() => {
-        try { localStorage.setItem('show_capacity_reserve', String(showCapacityReserve)); } catch {}
-    }, [showCapacityReserve]);
+    const [showFloatingConditions, setShowFloatingConditions] = useBooleenMemorise('floating_conditions_visible', false);
+    const [showFloatingVariables, setShowFloatingVariables] = useBooleenMemorise('floating_variables_visible', false);
+    const [showFloatingDiagram, setShowFloatingDiagram] = useBooleenMemorise('floating_diagram_visible', false);
+    const [showFloatingConflicts, setShowFloatingConflicts] = useBooleenMemorise('floating_conflicts_visible', false);
+    const [showCapacityReserve, setShowCapacityReserve] = useBooleenMemorise('show_capacity_reserve', true);
 
     // V.Utile hover state: { groupId, vUtile } when hovering V.Utile cell
     const [hoveredVUtile, setHoveredVUtile] = useState<VertUtileSurvole | null>(null);
