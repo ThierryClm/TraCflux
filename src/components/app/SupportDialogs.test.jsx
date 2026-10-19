@@ -83,13 +83,13 @@ describe('SupportDialogs', () => {
         expect(screen.queryByText('Chargement de l’aide…')).toBeNull();
     });
 
-    it('explique la mesure d’audience sans collecte des projets', () => {
+    it('annonce l’absence de mesure d’audience et de télémétrie', () => {
         render(<SupportDialogs model={buildModel({ aboutModal: true })} />);
 
         expect(screen.getByText('Confidentialité')).toBeInTheDocument();
         expect(screen.getByText(/Les données de vos projets restent sur votre ordinateur/)).toBeInTheDocument();
-        expect(screen.getByText(/sans cookie ni identifiant persistant/)).toBeInTheDocument();
-        expect(screen.getByText(/Do Not Track ou Global Privacy Control/)).toBeInTheDocument();
+        expect(screen.getByText(/ni mesure d’audience, ni cookie, ni télémétrie/)).toBeInTheDocument();
+        expect(screen.queryByText(/Cloudflare/)).toBeNull();
     });
 
     it('construit et télécharge les deux formats de diagnostic', () => {
