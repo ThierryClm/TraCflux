@@ -39,7 +39,7 @@ npm run release
 ```
 
 Le script affiche ce guide, demande le type de bump (patch / mineur /
-majeur), met à jour **`src/version.js`** *et* **`package.json`** de façon
+majeur), met à jour **`src/version.ts`** *et* **`package.json`** de façon
 cohérente, crée le commit et le tag git `vX.Y.Z`. Ensuite :
 
 ```bash

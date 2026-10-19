@@ -1,9 +1,9 @@
 // Script de release interactif (npm run release).
 //
 // - Affiche l'aide-mémoire de versionnage (cf. VERSIONING.md)
-// - Lit la version courante dans src/version.js (source de vérité)
+// - Lit la version courante dans src/version.ts (source de vérité)
 // - Demande le type de bump : patch / minor / major
-// - Met à jour src/version.js ET package.json de façon cohérente
+// - Met à jour src/version.ts ET package.json de façon cohérente
 // - Crée le commit « Release vX.Y.Z » + le tag annoté vX.Y.Z
 // - Rappelle de pousser avec git push --follow-tags
 //
@@ -15,7 +15,7 @@ import { execSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 
-const VERSION_FILE = 'src/version.js';
+const VERSION_FILE = 'src/version.ts';
 const PKG_FILE = 'package.json';
 
 function fail(msg) {
@@ -36,7 +36,7 @@ if (status) {
          "isolé). git status :\n\n" + status);
 }
 
-// 2. Version courante depuis src/version.js
+// 2. Version courante depuis src/version.ts
 const versionSrc = readFileSync(VERSION_FILE, 'utf8');
 const m = versionSrc.match(/APP_VERSION\s*=\s*'(\d+)\.(\d+)\.(\d+)'/);
 if (!m) fail(`Impossible de lire APP_VERSION dans ${VERSION_FILE}.`);
@@ -83,7 +83,7 @@ const newVersionSrc = versionSrc.replace(
     /(APP_VERSION\s*=\s*')\d+\.\d+\.\d+(')/,
     `$1${next}$2`
 );
-if (newVersionSrc === versionSrc) fail('Le remplacement dans src/version.js a échoué.');
+if (newVersionSrc === versionSrc) fail('Le remplacement dans src/version.ts a échoué.');
 writeFileSync(VERSION_FILE, newVersionSrc);
 
 const pkg = JSON.parse(readFileSync(PKG_FILE, 'utf8'));
