@@ -1977,6 +1977,10 @@ function App() {
 
         const data = loadProject(projectNameToOpen) || null;
         if (data) {
+            // loadProject ne passe pas par le wrapper loadFullState : sans cet
+            // appel, un projet restauré depuis une fenêtre exemple restait
+            // en mode exemple (Sauvegarder grisé, aucune sauvegarde auto).
+            leaveExampleMode();
             // Un projet tout juste rouvert depuis le cache n'a aucune
             // modification : même remise à zéro que l'ouverture d'un fichier.
             // Sans elle, l'installation de ses données comptait comme une
