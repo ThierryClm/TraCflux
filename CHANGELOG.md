@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.2] — 2026-10-19
+
+### Corrigé
+
+- **Ajouter une condition de micro-régulation après une suppression.** Une condition supprimée laisse
+  une ligne vide à sa place ; c'est elle qui servait de ligne de saisie en bas du tableau. Au premier
+  chiffre tapé dans GF, la nouvelle condition remontait au milieu des autres et une seconde ligne vide
+  apparaissait. La ligne de saisie est désormais celle qui suit la dernière condition.
+
+### Modifié
+
+- **La mesure d'audience retirée en 1.5.1 est rétablie**, à l'identique : sur tracflux.com seulement,
+  sans cookie, désactivée par Do Not Track et Global Privacy Control, et décrite dans « À propos ».
+  Les données des projets, elles, ne quittent toujours pas le poste.
+
 ## [1.5.1] — 2026-10-19
 
 ### Corrigé

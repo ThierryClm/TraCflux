@@ -19,7 +19,7 @@ TraCflux s'organise en **deux modules complémentaires** :
 - **Diagramme de Feux** *(module principal)* — conception et analyse des plans de feux d'un carrefour : groupes, matrice intervert, diagramme temporel, micro-régulation, multiprogrammation (plans de feux multiples).
 - **Onde verte** *(module complémentaire)* — coordination espace-temps de plusieurs carrefours sur un axe routier, avec visualisation des bandes passantes. S'appuie sur les projets de carrefours préalablement créés dans le module principal.
 
-Conçue pour être utilisée **localement**, sans serveur ni télémétrie : toutes les données restent dans le navigateur (localStorage) et sur votre poste.
+Conçue pour être utilisée **localement**, sans serveur : les données de vos projets restent dans le navigateur (localStorage) et sur votre poste.
 
 ## Essayer TraCflux
 
@@ -36,7 +36,7 @@ TraCflux s'exécute **dans le navigateur**. Ce choix engage directement sa **lon
 Deux verrous en découlent, levés d'un coup :
 
 - **Déploiement** — rien à installer, donc rien à faire valider par une DSI : on ouvre une page. L'application est par ailleurs **installable (PWA)** et fonctionne **hors ligne**.
-- **Confidentialité** — tout s'exécute **en local, sans serveur ni télémétrie** : les données ne quittent jamais le poste.
+- **Confidentialité** — tout s'exécute **en local, sans serveur** : les données des projets ne quittent jamais le poste.
 
 L'**import des formats existants** procède du même principe : un projet doit pouvoir **survivre à l'outil qui l'a créé**.
 
