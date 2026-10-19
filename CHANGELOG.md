@@ -7,6 +7,80 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.0] — 2026-10-19
+
+### Ajouté
+
+- **Plusieurs scénarios par plan de feu.** Un plan de feu ne porte plus un seul scénario de
+  micro-régulation mais autant qu'on en veut : « priorité bus seule », « priorité bus + ouverture
+  anticipée »… La liste *Scénario* de l'onglet Simulation les propose, précédés de **Tout coché** et
+  **Tout décoché** ; un ● orange signale des cases qui s'écartent du scénario enregistré, et
+  *Enregistrer…* le met à jour. Le cycle simulé s'affiche dans le titre du diagramme, l'écart au cycle
+  du plan en infobulle. Le panneau de gauche reste affiché en simulation.
+- **Le dossier imprimé compare les scénarios.** La case *Scénarios* de « Imprimer le projet » liste les
+  scénarios enregistrés de chaque plan de feu, à cocher un par un. Chaque plan reçoit un tableau
+  comparatif — une ligne par scénario : cycle simulé, conflits, courant dimensionnant, saturation et
+  réserve —, puis chaque scénario son diagramme recalculé, avec au choix ses actions, ses conflits, ses
+  données de trafic et sa réserve de capacité.
+- **Les actions se combinent en simulation.** Chaque action cochée s'applique au cycle déjà transformé
+  par les précédentes : un point de repos décale la suite pour tous les groupes, un adaptatif partiel
+  seulement pour les groupes de sa plage. Les cadres pleine largeur (escamotage de phase, adaptatif
+  sans plage) reculent avec un adaptatif partiel ; en bicarrefour, seul le morceau concerné recule.
+- **Survoler une action allume ses flèches** dans l'image du carrefour (onglet Simulation) : le groupe
+  de l'action et ceux de sa plage.
+- **Plusieurs jeux de trafic**, et la touche **−** supprime le jeu de données affiché. Le carrefour
+  exemple en compte trois et montre des scénarios de simulation.
+- **Commentaires et remarques : Afficher, Masquer ou Automatique.** Dans *Mise en page*, le choix
+  Automatique n'affiche la colonne que pour les plans de feu qui ont des commentaires (ou une remarque).
+  Le réglage est enregistré avec le projet ; un projet ancien s'ouvre comme avant.
+- **Un bouton « i » dans « Restaurer un projet récent »** rappelle d'où viennent les projets listés : les
+  dernières versions enregistrées automatiquement sur ce poste, à vérifier avant reprise si le projet
+  est partagé sur le réseau.
+
+### Modifié
+
+- **L'impression se fait dans un onglet à part.** Le dossier (*Fichier → Imprimer le projet…*), les
+  aperçus et l'onde verte s'impriment dans un onglet indépendant, qui se ferme après : TraCflux et ses
+  fenêtres détachées ne sont plus figés tant que la boîte d'impression reste ouverte.
+- **Le vert escamotable est barré d'un bandeau hachuré** sur la moitié basse de la barre, le vert restant
+  visible au-dessus, avec le même rendu en plan de feu et en simulation. Un escamotage coché en
+  simulation fait toujours disparaître le vert et son jaune.
+- **Sur téléphone, la page défile latéralement** pour dérouler toute la fenêtre Diagramme, colonne des
+  noms comprise ; le dézoom la montre en entier.
+- **Les cases d'affichage de l'image du carrefour** (numéros, noms des groupes, ajout de flèches au clic)
+  sont enregistrées avec le projet, et non plus une fois pour tous les projets du navigateur.
+- **Les nouvelles flèches du carrefour** reprennent leurs valeurs par défaut d'origine (0,4 pour les
+  tourne-à-gauche et tourne-à-droite, 0,5 pour les flèches composées, longueur 2 pour piétons et
+  cycles). Les flèches existantes ne changent pas.
+- **Les notifications restent affichées tant que la souris les survole**, puis reprennent leur délai.
+- **Démarrage plus léger** : l'aide et le module Onde verte ne sont chargés qu'à leur ouverture
+  (fichier principal de 842 Ko à 672 Ko).
+
+### Corrigé
+
+- **Firefox et Safari ouvrent et enregistrent des fichiers.** Sans les fenêtres natives de Chrome et
+  Edge, « Ouvrir un projet » renvoyait à la liste du navigateur et « Sauvegarder » ne produisait aucun
+  fichier. Ouvrir passe désormais par le sélecteur de fichier classique, Sauvegarder par un
+  téléchargement du `.json`. Même correction quand TraCflux est affiché dans le cadre d'un autre site.
+- **« Restaurer un projet récent » depuis le projet exemple** laissait le projet en mode exemple :
+  Sauvegarder grisé et aucune sauvegarde automatique. Le projet restauré redevient enregistrable.
+- **Capacité d'un groupe en aiguillage** : sa seconde lucarne s'ouvre à la place de l'autre branche et
+  ne s'ajoute plus à son vert principal (tableau de trafic, réserve de capacité, scénarios imprimés).
+- **Simulation, actions qui chevauchent la fin du cycle** : point de repos, escamotage de phase et
+  adaptatif vertical sont désormais appliqués ; cadres et dessins s'arrêtent à la fin du cycle simulé.
+- **Simulation, positions** : accolade de fermeture anticipée et cadres d'adaptatif à plage à leur place,
+  plage d'un escamotage de groupe dessinée une seule fois.
+- **Astérisque « modifié » à tort** à la réouverture depuis le cache, au changement de plan de feu et à
+  l'ouverture du projet exemple.
+- **Fenêtres détachées** : l'image détachée ne garde plus de marge haute, et une fenêtre rouverte avec le
+  projet ne se réduit plus à une bande de quelques pixels.
+- **Enregistrement d'un fichier modifié sur le disque entre-temps** : l'écriture est réessayée au lieu de
+  laisser un fichier vide.
+
+*Sous le capot : tout le code de l'application est passé en TypeScript, `useTrafficLight` et `App` ont
+été découpés en modules, un linter (Oxlint) tourne en intégration continue, et 1 205 tests automatisés
+s'exécutent, contre 664 à la version 1.4.0.*
+
 ## [1.4.1] — 2026-09-22
 
 ### Ajouté

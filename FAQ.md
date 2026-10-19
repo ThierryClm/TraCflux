@@ -182,7 +182,7 @@ Oui. Une fois la page chargée, l'application fonctionne sans connexion. Vous po
 
 ### Où sont stockés mes projets ?
 
-Les projets actifs sont conservés dans le **localStorage** du navigateur (≈ 5 Mo disponibles). Pour un stockage durable, exportez en `.json` via **Fichier → Sauvegarder le projet** — le fichier est enregistré sur votre disque ou dans un partage réseau de votre choix.
+Les projets actifs sont conservés dans le **localStorage** du navigateur (≈ 5 Mo disponibles) ; *Fichier → Restaurer un projet récent* les liste, et son bouton **i** rappelle qu'il s'agit des dernières versions enregistrées automatiquement **sur ce poste**. Pour un stockage durable, enregistrez le projet en `.json` via **Fichier → Sauvegarder** — sous Chrome et Edge, le fichier va sur votre disque ou dans un partage réseau de votre choix ; sous Firefox et Safari, il est téléchargé (voir [Quels navigateurs et systèmes sont supportés ?](#quels-navigateurs-et-systèmes-sont-supportés-)).
 
 ### Comment partager un projet avec un collègue ?
 
@@ -223,9 +223,13 @@ Vous pouvez à tout moment ouvrir le **projet exemple** depuis l'écran d'accuei
 
 **Chrome, Firefox, Edge, Safari** dans une version récente (2 ans max). L'application étant une page web, elle fonctionne sur **Windows, macOS et Linux** indifféremment, ainsi qu'en environnement Citrix ou bureau distant.
 
+Une différence pratique concerne les fichiers. **Chrome et Edge** ouvrent leurs propres fenêtres *Ouvrir* et *Enregistrer* : vous choisissez le dossier, et l'application retient les derniers dossiers utilisés. **Firefox et Safari** n'ont pas ces fenêtres : *Ouvrir un projet* passe par le sélecteur de fichier classique, et *Sauvegarder* **télécharge** le fichier `.json` sous le nom du projet. Il arrive alors dans le dossier des téléchargements, sauf si le navigateur est réglé pour demander où enregistrer — sous Firefox : *Paramètres → Général → Fichiers et applications → Toujours vous demander où enregistrer les fichiers*. Un second enregistrement sous le même nom peut être renommé par le navigateur, par exemple `Carrefour (1).json`.
+
+L'installation comme application (bouton *Installer* de la barre d'adresse) est proposée par Chrome et Edge.
+
 ### Puis-je l'utiliser sur un smartphone ou une tablette ?
 
-**Oui, et sans rien installer** : il suffit d'ouvrir [tracflux.com](https://tracflux.com) dans le navigateur de l'appareil. L'application s'y adapte — sur un écran étroit, ou bas comme l'est un téléphone tenu en paysage, le panneau des paramètres cesse d'être posé à côté du diagramme et vient **au-dessus** de lui. Tout s'atteint alors par le défilement vertical, et le diagramme, plus large que l'écran, se fait glisser latéralement du doigt. Le tableau des conditions de micro-régulation défile de la même façon.
+**Oui, et sans rien installer** : il suffit d'ouvrir [tracflux.com](https://tracflux.com) dans le navigateur de l'appareil. L'application s'y adapte — sur un écran étroit, ou bas comme l'est un téléphone tenu en paysage, le panneau des paramètres cesse d'être posé à côté du diagramme et vient **au-dessus** de lui. Tout s'atteint alors par le défilement vertical ; le diagramme, plus large que l'écran, se déroule en faisant **défiler la page latéralement**, colonne des noms comprise, et se voit en entier en dézoomant. Le tableau des conditions de micro-régulation défile de la même façon.
 
 **Éprouvé sur le terrain.** La consultation d'un projet depuis un téléphone fonctionne : les défilements horizontal et vertical répondent, les plans de feux se parcourent, les tableaux se lisent.
 
@@ -265,7 +269,7 @@ C'est particulièrement adapté aux comités techniques, formations internes, va
 
 Tout passe par le menu **Mise en page**, selon votre contexte :
 
-- **Sur un petit écran ou en mobilité** (ordinateur portable, sur le terrain, dans le train) : donnez le maximum de place au diagramme. Masquez le panneau de configuration (case *Affichage des paramètres* ou bouton Paramètre), masquez Commentaires / Remarques / Description des conditions micro, masquez le nom des groupes dans le formulaire, ajustez la **Dilatation du diagramme (Zoom)** — ou Ctrl + molette — et désactivez les **Infobulles** une fois à l'aise. L'interface se concentre alors sur l'essentiel.
+- **Sur un petit écran ou en mobilité** (ordinateur portable, sur le terrain, dans le train) : donnez le maximum de place au diagramme. Masquez le panneau de configuration (case *Affichage des paramètres* ou bouton Paramètre), masquez Commentaires / Remarques / Description des conditions micro — ou réglez Commentaires et Remarques sur **Automatique**, qui n'affiche leur colonne que pour les plans de feu qui en ont —, masquez le nom des groupes dans le formulaire, ajustez la **Dilatation du diagramme (Zoom)** — ou Ctrl + molette — et désactivez les **Infobulles** une fois à l'aise. L'interface se concentre alors sur l'essentiel.
 - **Sur un poste à plusieurs écrans** : utilisez le **Détachement** pour envoyer des fenêtres (matrice intervert, formulaire, données trafic, conditions micro, image du carrefour, remarques) sur un second écran, tout en gardant le diagramme en plein sur l'écran principal. Chaque fenêtre détachée se zoome indépendamment (Ctrl + molette), et chaque projet retrouve sa configuration de détachements à l'ouverture.
 
 Une fenêtre détachée n'est pas une copie figée posée de côté : **elle reste solidaire du reste de l'application, dans les deux sens**. Survolez une flèche sur le plan du carrefour envoyé au second écran, et la ligne du groupe s'allume dans le diagramme resté sur l'écran principal, en même temps que sa ligne dans le formulaire et dans les données trafic. Survolez une ligne du diagramme, et ce sont les flèches du second écran qui s'allument. C'est ce qui fait du second écran un prolongement de votre plan de travail plutôt qu'un rangement.
@@ -331,13 +335,15 @@ Pas de limite stricte. L'application a été testée avec une trentaine de group
 
 À **tester l'effet d'actions** (escamotage, ouverture anticipée, point de repos, adaptatif vertical…) sur un cycle existant **sans modifier le projet original**. Vous cochez les actions que vous voulez activer, le diagramme se redessine en montrant le cycle simulé, et vous pouvez visualiser conflits et décalages. Décocher les cases revient instantanément à l'état initial.
 
+Les actions **se combinent** : chacune s'applique au cycle déjà transformé par les précédentes — un point de repos décale la suite pour tous les groupes, un adaptatif partiel seulement pour les groupes de sa plage. Une action dont la zone chevauche la fin du cycle (de 102 à 8 s sur un cycle de 120 s, par exemple) est prise en compte de part et d'autre. Le vert escamotable est barré d'un **bandeau hachuré** sur sa moitié basse, le vert restant visible au-dessus ; l'escamotage coché le fait disparaître. Survoler une action dans la liste allume ses flèches dans l'image du carrefour.
+
 Six familles d'actions ne sont pas rejouées, parce qu'elles n'agissent pas sur le déroulé du cycle : début et fin de bande passante, priorité piétons, signal d'aide à la conduite, synchro BTS, flèche d'anticipation. Elles n'apparaissent donc pas dans la liste du panneau.
 
 La combinaison que vous retenez, une fois nommée, devient un **scénario** enregistré avec le plan de feu — voir la question suivante.
 
 ### Comment construire et justifier un scénario de micro-régulation ?
 
-Un **scénario** est une combinaison d'actions de micro-régulation retenue sur un plan de feu, et le nom qu'on lui donne : « escamotage bus phase 1 », « priorité bus seule », « priorité bus + ouverture anticipée ». C'est l'unité de travail quand il s'agit de proposer une évolution et de la défendre devant un maître d'ouvrage.
+Un **scénario** est une combinaison d'actions de micro-régulation retenue sur un plan de feu, et le nom qu'on lui donne : « escamotage bus phase 1 », « priorité bus seule », « priorité bus + ouverture anticipée ». Un plan de feu peut en porter **plusieurs**, ce qui permet de comparer les variantes entre elles. C'est l'unité de travail quand il s'agit de proposer une évolution et de la défendre devant un maître d'ouvrage.
 
 La démarche tient en six temps.
 
@@ -349,13 +355,13 @@ La démarche tient en six temps.
 
 4. **Vérifier les conflits**. Le panneau les liste sous les actions. Un escamotage coché prend en charge le dégagement du couple de groupes qu'il nomme : ce conflit-là disparaît de la liste, ce qui est normal. Les autres sont à traiter.
 
-5. **Mesurer l'effet sur la capacité**. Le tableau des données de trafic, sous le panneau de simulation, suit les actions cochées : les groupes dont une action supprime le vert — escamotage de phase, fermeture anticipée, adaptatif vertical — n'affichent plus de capacité, puisqu'elle n'aurait plus de sens. Pour comparer plusieurs programmes entre eux plutôt que plusieurs scénarios, le menu *Diagramme → Comparer la capacité des plans de feu* met les plans côte à côte, à trafic égal si vous le demandez.
+5. **Mesurer l'effet sur la capacité**. Le tableau des données de trafic, sous le panneau de simulation, suit les actions cochées : les groupes dont une action supprime le vert — escamotage de phase, fermeture anticipée, adaptatif vertical — n'affichent plus de capacité, puisqu'elle n'aurait plus de sens. Le jeu de trafic affiché (heure de pointe du matin, du soir…) se choisit dans ce tableau. Pour comparer plusieurs programmes entre eux plutôt que plusieurs scénarios, le menu *Diagramme → Comparer la capacité des plans de feu* met les plans côte à côte, à trafic égal si vous le demandez.
 
-6. **Nommer le scénario** dans le champ *Scénario*, en tête du panneau. Le nom et les actions cochées sont **enregistrés avec le plan de feu** : vous les retrouvez à la réouverture du projet, et chaque plan a le sien.
+6. **Enregistrer le scénario** depuis la liste *Scénario*, en tête du panneau, sous un nom parlant. Le nom et les actions cochées sont **enregistrés avec le plan de feu** : vous les retrouvez à la réouverture du projet. Recommencez pour chaque variante : la liste les propose toutes, précédées de *Tout coché* et *Tout décoché*. Cocher ou décocher une action ne modifie pas le scénario enregistré — un ● orange signale l'écart, et *Enregistrer…* le met à jour.
 
-**Le livrable.** Une fois le scénario nommé, *Fichier → Imprimer le projet...* propose une case **Scénario**, cochée d'emblée. Elle produit le diagramme recalculé, titré du nom que vous lui avez donné et de son cycle simulé, accompagné au choix de la liste des actions — chacune avec sa coche, celles écartées restant visibles en gris —, de la liste des conflits, des données de trafic et de la réserve de capacité. De quoi montrer sur la même page ce qui a été retenu, ce qui a été écarté, et ce que cela change.
+**Le livrable.** *Fichier → Imprimer le projet...* propose une case **Scénarios**, qui liste les scénarios enregistrés de chaque plan de feu, à cocher un par un. Pour chaque plan, un **tableau comparatif** met les scénarios cochés côte à côte, le plan nominal en première ligne : actions, cycle simulé, conflits, courant dimensionnant, degré de saturation et réserve. Suit chaque scénario : son diagramme recalculé, titré de son nom et de son cycle simulé, accompagné au choix de la liste des actions — chacune avec sa coche, celles écartées restant visibles en gris —, de la liste des conflits, des données de trafic et de la réserve de capacité. De quoi montrer ce qui a été retenu, ce qui a été écarté, et ce que cela change.
 
-L'impression porte sur le **plan de feu actif**. Pour comparer deux scénarios dans un même dossier, imprimez-les l'un après l'autre, ou portez-les sur deux plans de feu distincts.
+Seule la **version enregistrée** d'un scénario s'imprime : enregistrez vos modifications avant d'imprimer. L'impression se prépare dans un onglet à part, qui se ferme ensuite : l'application reste utilisable pendant que la boîte d'impression est ouverte.
 
 ---
 

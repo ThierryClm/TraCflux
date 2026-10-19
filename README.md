@@ -81,7 +81,8 @@ Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèc
 - Diagramme temporel horizontal avec tête de lecture
 - **Multiprogrammation** — plans de feux multiples (PF) gérés par onglets : un même carrefour décliné en plusieurs programmes (pointe du matin, pointe du soir, heure creuse, nuit, événementiel…), chacun avec son cycle, ses durées de vert, ses offsets, sa matrice intervert et sa micro-régulation propres
 - Table d'actions de micro-régulation par plan (escamotage, ouverture/fermeture anticipée, etc.)
-- **Scénarios de micro-régulation** — une combinaison d'actions cochées, nommée et enregistrée avec son plan de feu. La simulation en montre le cycle recalculé, les conflits restants et l'effet sur la capacité ; le dossier imprimé en rend compte, actions retenues et écartées à l'appui ([voir la FAQ](FAQ.md#comment-construire-et-justifier-un-scénario-de-micro-régulation))
+- **Mode simulation** — les actions cochées se combinent et le diagramme se redessine sur le cycle recalculé, sans toucher au plan d'origine : les actions qui chevauchent la fin du cycle sont prises en compte, le vert escamotable est barré d'un bandeau hachuré, et survoler une action allume ses flèches dans l'image du carrefour
+- **Scénarios de micro-régulation** — plusieurs combinaisons d'actions par plan de feu, chacune nommée et enregistrée avec le projet. La simulation en montre le cycle recalculé, les conflits restants et l'effet sur la capacité ; le dossier imprimé les compare dans un tableau par plan, puis détaille chaque scénario, actions retenues et écartées à l'appui ([voir la FAQ](FAQ.md#comment-construire-et-justifier-un-scénario-de-micro-régulation))
 - Fond de plan personnalisable (photo aérienne, plan CAO, schéma au trait) avec flèches d'animation des groupes — optimisé automatiquement à l'import (redimensionnement + WebP) pour alléger le projet
 
 ### Capacité et diagnostic
@@ -95,7 +96,7 @@ Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèc
 
 - **Import de projets DiagFeux (`.dfe`)** *(en cours de développement)* — reprise des études réalisées avec le logiciel du CERTU/Cerema (voir [Reprendre les études DiagFeux](#reprendre-les-études-diagfeux))
 - Import Excel / CSV, export JSON
-- Export PDF et PNG du diagramme, dossier d'impression complet, en A4 paysage ou portrait au choix
+- Export PDF et PNG du diagramme, dossier d'impression complet, en A4 paysage ou portrait au choix ; l'impression se fait dans un onglet à part, sans figer l'application
 
 ### Module Onde verte
 
@@ -109,14 +110,16 @@ Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèc
 - Thèmes (sombre, clair, haut contraste, ambre, daltonien, sépia, bleu nuit)
 - **Détachement de fenêtres** — à partager en visio ou à poser sur un second écran : matrice, formulaire, propriétés, données trafic, conflits, réserve de capacité, conditions et variables de micro-régulation, remarques, image du carrefour, et **miroir du diagramme en lecture seule**. Les fenêtres détachées suivent le projet : elles se rouvrent à sa réouverture, ce qui suppose d'avoir autorisé les fenêtres contextuelles pour le site — les navigateurs n'en ouvrent qu'une par action de l'utilisateur ([voir la FAQ](FAQ.md#à-la-réouverture-dun-projet-mes-fenêtres-détachées-ne-reviennent-pas-toutes-pourquoi))
 - Application installable (PWA), fonctionne hors ligne, avec bandeau « nouvelle version disponible »
-- **Utilisable sur smartphone et tablette** — sur un écran étroit ou bas, la mise en page s'empile et le diagramme se fait glisser du doigt ; éprouvé sur le terrain pour consulter un plan, la saisie restant l'affaire d'un poste de travail ([voir la FAQ](FAQ.md#puis-je-lutiliser-sur-un-smartphone-ou-une-tablette))
+- Commentaires et remarques du diagramme : **Afficher**, **Masquer** ou **Automatique** (seulement pour les plans de feu qui en ont), réglage enregistré avec le projet
+- **Navigateurs** — Chrome et Edge ouvrent et enregistrent les projets dans le dossier de votre choix ; Firefox et Safari passent par le sélecteur de fichier classique pour ouvrir et par un téléchargement du `.json` pour enregistrer
+- **Utilisable sur smartphone et tablette** — sur un écran étroit ou bas, la mise en page s'empile et la page défile latéralement pour dérouler tout le diagramme ; éprouvé sur le terrain pour consulter un plan, la saisie restant l'affaire d'un poste de travail ([voir la FAQ](FAQ.md#puis-je-lutiliser-sur-un-smartphone-ou-une-tablette))
 - Rapport de diagnostic pour signalement de bug (local, sans envoi réseau)
 
 ## Développement
 
 Pour travailler sur le code. L'usage courant ne demande rien de tout cela — voir [Essayer TraCflux](#essayer-tracflux).
 
-Prérequis : [Node.js](https://nodejs.org/) 18 ou plus.
+Prérequis : [Node.js](https://nodejs.org/) 20.19 ou plus (22.12 ou plus pour la branche 22), exigé par Vite.
 
 ```bash
 git clone https://github.com/ThierryClm/TraCflux.git
@@ -136,10 +139,15 @@ L'application s'ouvre à `http://localhost:3000`.
 | `npm run preview` | Aperçu local du build de production |
 | `npm run serve` | Reconstruit `dist/`, s'assure que le serveur d'aperçu tourne, et **vérifie qu'il sert bien ce build** — la commande à utiliser au quotidien (voir [Dépannage](#dépannage)) |
 | `npm run clean` | Nettoyage local : supprime `dist/` et arrête les processus `node.exe` (Windows — voir [Dépannage](#dépannage)) |
-| `npm test` | Lancer les tests (Vitest) |
+| `npm test` | Lancer les tests (Vitest), en mode surveillance |
+| `npx vitest run` | Lancer les tests une seule fois |
+| `npm run test:coverage` | Les tests avec la mesure de couverture ; échoue sous les seuils fixés dans `vite.config.ts` |
 | `npm run test:ui` | Les mêmes tests dans l'interface graphique de Vitest |
+| `npm run types` | Vérification des types TypeScript (`tsc --noEmit`) |
+| `npm run lint` | Analyse du code par Oxlint (`.oxlintrc.json`) : les erreurs bloquent l'intégration continue, les avertissements sont une dette à réduire |
+| `npm run preview:deploy` | Construit et publie la branche en cours sur une adresse de prévisualisation Surge ; refuse de s'exécuter sur `master` |
 | `npm run check` | Rapport de santé des dépendances : vulnérabilités et versions obsolètes, celles qui atteignent le navigateur étant séparées de celles confinées à la chaîne de compilation |
-| `npm run release` | Incrémente la version, met à jour `src/version.js` et `package.json`, crée le commit et le tag (voir [VERSIONING.md](VERSIONING.md)) |
+| `npm run release` | Incrémente la version, met à jour `src/version.ts` et `package.json`, crée le commit et le tag (voir [VERSIONING.md](VERSIONING.md)) |
 
 Le projet passant parfois plusieurs semaines sans modification, `npm run check` est la commande à lancer en reprenant : de nouvelles alertes de sécurité peuvent être apparues sans qu'une seule ligne de code ait bougé.
 
@@ -169,7 +177,7 @@ Un projet d'exemple est fourni dans le dossier [`examples/`](examples/). Ouvrez 
 
 ## Architecture
 
-Application React + Vite, état centralisé dans [`src/hooks/useTrafficLight.js`](src/hooks/useTrafficLight.js). Voir [`CLAUDE.md`](CLAUDE.md) pour les détails d'implémentation (structures de données, rendu du timeline, détection de conflits).
+Application React + TypeScript (strict) + Vite, état centralisé dans [`src/hooks/useTrafficLight.ts`](src/hooks/useTrafficLight.ts), découpé en sous-modules dans [`src/hooks/trafficLight/`](src/hooks/trafficLight/). L'intégration continue vérifie les types, le lint, les tests avec leur couverture et le build à chaque PR. Voir [`CLAUDE.md`](CLAUDE.md) pour les détails d'implémentation (structures de données, rendu du timeline, détection de conflits).
 
 ## Comptes utilisateurs
 

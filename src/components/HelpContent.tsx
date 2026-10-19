@@ -135,12 +135,14 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                 <p><strong>① Optimiser sur petit écran ou en mobilité</strong> (ordinateur portable, sur le terrain, dans le train). L'objectif est de donner un maximum de place au diagramme en mono-fenêtre :</p>
                 <ul>
                     <li><strong>Masquer le panneau de configuration</strong> (case <em>Affichage des paramètres</em>, ou bouton Paramètre de l'en-tête) : libère toute la largeur pour le diagramme.</li>
-                    <li><strong>Masquer Commentaires, Remarques et Description des conditions micro</strong> : on ne garde que l'essentiel à l'écran.</li>
+                    <li><strong>Masquer Commentaires, Remarques et Description des conditions micro</strong> : on ne garde que l'essentiel à l'écran. Pour Commentaires et Remarques, le choix <em>Automatique</em> n'affiche la colonne que pour les plans de feu qui en ont.</li>
                     <li><strong>Masquer le nom des groupes de feu dans le formulaire</strong> : récupère ~160 px supplémentaires.</li>
                     <li><strong>Dilatation du diagramme (Zoom)</strong> : ajustez l'échelle horizontale pour voir tout le cycle sans défilement (ou Ctrl + molette).</li>
                     <li><strong>Désactiver les Infobulles</strong> une fois l'outil bien en main : interface plus épurée.</li>
                     <li>Les <strong>séparateurs ajustables</strong> (vertical et horizontal) donnent la priorité à la zone qui vous importe.</li>
                 </ul>
+
+                <p><strong>Sur un téléphone ou une tablette</strong>, la mise en page s'adapte d'elle-même : sur un écran étroit, ou bas comme un téléphone tenu en paysage, le panneau des paramètres vient au-dessus du diagramme, et la page défile latéralement pour dérouler toute la fenêtre Diagramme, colonne des noms comprise ; dézoomer la montre en entier. L'usage visé est la consultation sur le terrain ; la saisie reste plus confortable sur un poste de travail, et les fenêtres détachées n'y ont pas d'objet.</p>
 
                 <p><strong>② Tirer parti de plusieurs écrans</strong> (poste de travail fixe). L'objectif est d'étaler le travail :</p>
                 <ul>
@@ -632,8 +634,9 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Sauvegarde automatique :</strong> Les données sont sauvegardées automatiquement dans le navigateur (local storage)</li>
                     <li><strong>Nouveau projet :</strong> Menu Fichier → Nouveau projet réinitialise l'application (actif uniquement si le projet a été modifié)</li>
                     <li><strong>Ouvrir un projet :</strong> Menu Fichier → Ouvrir un projet permet de charger un fichier JSON depuis le disque. Les répertoires récents sont proposés en sous-menu.</li>
-                    <li><strong>Ouvrir depuis le local storage :</strong> Menu Fichier → Ouvrir depuis le local storage permet de charger un projet précédemment sauvegardé dans le navigateur</li>
+                    <li><strong>Restaurer un projet récent :</strong> Menu Fichier → Restaurer un projet récent… recharge un projet sauvegardé automatiquement dans le navigateur. Le bouton <strong>i</strong> de la fenêtre rappelle qu'il s'agit des dernières versions enregistrées sur ce poste : vérifiez qu'un projet partagé n'a pas été modifié entre-temps par un autre utilisateur.</li>
                     <li><strong>Sauvegarder :</strong> Menu Fichier → Sauvegarder exporte le projet au format JSON sur le disque. Les répertoires récents sont proposés en sous-menu.</li>
+                    <li><strong>Firefox et Safari :</strong> Ces navigateurs n'ont pas les fenêtres Ouvrir / Enregistrer de Chrome et Edge. <em>Ouvrir un projet</em> passe par le sélecteur de fichier classique, et <em>Sauvegarder</em> télécharge le fichier JSON sous le nom du projet, dans le dossier des téléchargements — sauf si le navigateur est réglé pour demander où enregistrer (Firefox : Paramètres → Général → Fichiers et applications). Les répertoires récents n'y sont pas proposés.</li>
                     <li><strong>Importer Excel :</strong> Menu Fichier → Importer Excel charge les données depuis un fichier Excel (.xlsx). Les répertoires récents sont proposés en sous-menu.</li>
                 </ul>
                 <h5 style={{ marginTop: '15px', marginBottom: '10px', color: '#aaa' }}>Sécurité de la sauvegarde</h5>
