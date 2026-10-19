@@ -41,6 +41,7 @@ import usePhasageBulleUI from './hooks/usePhasageBulleUI';
 import useRecentFiles from './hooks/useRecentFiles';
 import useSimulationUI from './hooks/useSimulationUI';
 import useDialogState from './hooks/useDialogState';
+import useDialoguesApp from './hooks/useDialoguesApp';
 import useFloatingImage from './hooks/useFloatingImage';
 import useIntersectionDisplayOptions from './hooks/useIntersectionDisplayOptions';
 import { CROP_BASIS, DEFAULT_CROP, DEFAULT_ZOOM } from './utils/floatingImageBox';
@@ -74,9 +75,7 @@ import { estAffiche, planACommentaires, texteRenseigne } from './utils/modeAffic
 import { entier } from './utils/entier';
 import { copieAvecAncetres, documentImpression, ouvrirOngletImpression } from './utils/ongletImpression';
 import type { ChampsProjet, EtatProjet } from './hooks/useTrafficLight';
-import type { Projet } from './types/projet';
 import type { GreenWaveProjectSource, SavedGreenWave } from './types/greenWave';
-import type { ViewerIntersection } from './components/GreenWaveViewer';
 import type { CreatedIntersection } from './components/CreateGreenWaveDialog';
 import type { TrafficConflict } from './utils/conflictUtils';
 import type { HoveredConflict } from './components/ConflictList';
@@ -292,8 +291,29 @@ function App() {
         importUsersFromFile
     } = useAuth();
 
-    // État pour le modal de gestion des utilisateurs
-    const [showUserManager, setShowUserManager] = useState(false);
+
+    // États des fenêtres de dialogue (utilisateurs, aide, diagnostic,
+    // comparateur, ouverture et import de projets, onde verte).
+    const {
+        showUserManager, setShowUserManager,
+        helpAnchor, setHelpAnchor,
+        aboutModal, setAboutModal,
+        diagnosticModal, setDiagnosticModal,
+        capacityCompareModal, setCapacityCompareModal,
+        diagnosticIncludeProject, setDiagnosticIncludeProject,
+        diagnosticMaskNames, setDiagnosticMaskNames,
+        diagnosticRefresh, setDiagnosticRefresh,
+        selectedProject, setSelectedProject,
+        importFile, setImportFile,
+        importError, setImportError,
+        importHintDir, setImportHintDir,
+        showExportPfModal, setShowExportPfModal,
+        showCopyMatrixModal, setShowCopyMatrixModal,
+        importPfData, setImportPfData,
+        selectedGreenWave, setSelectedGreenWave,
+        greenWaveData, setGreenWaveData,
+        setGreenWaveListKey
+    } = useDialoguesApp();
 
     const [, setSelectedGroupId] = useState<number | null>(null);
     const {
@@ -385,17 +405,6 @@ function App() {
         const w = window.open(url, 'tracflux-onde-verte');
         if (w) greenWaveWindowRef.current = w;
     };
-    // Anchor à atteindre dans la modale d'aide (alimenté par l'URL ?openHelp=…).
-    // Passé à <HelpContent /> via la prop initialAnchor.
-    const [helpAnchor, setHelpAnchor] = useState<string | null>(null);
-    const [aboutModal, setAboutModal] = useState(false);
-    const [diagnosticModal, setDiagnosticModal] = useState(false);
-    const [capacityCompareModal, setCapacityCompareModal] = useState(false);
-    const [diagnosticIncludeProject, setDiagnosticIncludeProject] = useState(false);
-    // Noms masqués par défaut : un rapport est destiné à une issue publique,
-    // et ces noms désignent une commune et des rues réelles.
-    const [diagnosticMaskNames, setDiagnosticMaskNames] = useState(true);
-    const [diagnosticRefresh, setDiagnosticRefresh] = useState(0);
     const printPreviewPageRef = useRef<HTMLDivElement>(null);
 
     // Intersection image animation state
@@ -877,14 +886,6 @@ function App() {
     }, [cycleLength]);
 
     const { recentFiles, addToRecentFiles, getRecentDirectories, getRecentDirectoriesForMenu } = useRecentFiles();
-    const [selectedProject, setSelectedProject] = useState<string | null>(null);
-    const [importFile, setImportFile] = useState<File | null>(null);
-    const [importError, setImportError] = useState('');
-    const [importHintDir, setImportHintDir] = useState('');
-    const [showExportPfModal, setShowExportPfModal] = useState(false);
-    const [showCopyMatrixModal, setShowCopyMatrixModal] = useState(false);
-    // Projet dont on importe les plans de feux, en attente des options d'import.
-    const [importPfData, setImportPfData] = useState<{ name: string; state: Projet } | null>(null);
     const diagfeuxInputRef = useRef<HTMLInputElement>(null);
     const projectPfInputRef = useRef<HTMLInputElement>(null);
 
@@ -971,10 +972,6 @@ function App() {
         }
     };
 
-    // Green wave data states
-    const [selectedGreenWave, setSelectedGreenWave] = useState<string | null>(null);
-    const [greenWaveData, setGreenWaveData] = useState<ViewerIntersection[] | null>(null);
-    const [, setGreenWaveListKey] = useState(0);
 
     // Project path
     const [, setCurrentProjectPath] = useState<string | null>('');
