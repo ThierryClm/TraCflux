@@ -299,6 +299,44 @@ describe('IntergreenMatrix — comparaison avec le PF1', () => {
         act(() => { vi.advanceTimersByTime(500); });
         expect(screen.getByText('Augmentée de 2 s vs PF de base (PF1) : 15 s → 17 s')).toBeInTheDocument();
     });
+
+    // Cas de Thierry (19/10) : PF1 d'origine supprimé, plan réimporté puis
+    // placé en premier onglet. La référence est le premier onglet.
+    it('le PF1 supprimé : le premier onglet devient la référence', () => {
+        const onglets = [
+            { id: 4, name: 'PF_base', data: [], diagram: [], conflictMatrix: matrice(5, 15) },
+            { id: 2, name: 'PF2', data: [], diagram: [], conflictMatrix: matrice(3, 17) }
+        ];
+        renderMatrix({ conflictMatrix: matrice(3, 17), pfTabs: onglets, activePFId: 2 });
+        expect(saisie(1, 2)).toHaveClass('matrix-compare-lower');
+        expect(saisie(2, 1)).toHaveClass('matrix-compare-higher');
+    });
+
+    it("un plan déplacé en tête devient la référence, et l'ancien PF1 est comparé à lui", () => {
+        const onglets = [
+            { id: 3, name: 'PF_base', data: [], diagram: [], conflictMatrix: matrice(3, 17) },
+            { id: 1, name: 'PF1', data: [], diagram: [], conflictMatrix: matrice(5, 15) }
+        ];
+        const { unmount } = renderMatrix({ conflictMatrix: matrice(5, 15), pfTabs: onglets, activePFId: 1 });
+        expect(saisie(1, 2)).toHaveClass('matrix-compare-higher');
+        expect(saisie(2, 1)).toHaveClass('matrix-compare-lower');
+        unmount();
+        // Le plan de tête lui-même n'est comparé à rien.
+        renderMatrix({ conflictMatrix: matrice(3, 17), pfTabs: onglets, activePFId: 3 });
+        expect(document.querySelectorAll('.matrix-compare-higher, .matrix-compare-lower').length).toBe(0);
+    });
+
+    it("nomme le plan de référence dans l'infobulle", () => {
+        vi.useFakeTimers();
+        const onglets = [
+            { id: 4, name: 'PF_base', data: [], diagram: [], conflictMatrix: matrice(5, 15) },
+            { id: 2, name: 'PF2', data: [], diagram: [], conflictMatrix: matrice(3, 17) }
+        ];
+        renderMatrix({ conflictMatrix: matrice(3, 17), pfTabs: onglets, activePFId: 2 });
+        fireEvent.mouseEnter(caseMatrice(2, 1));
+        act(() => { vi.advanceTimersByTime(500); });
+        expect(screen.getByText('Augmentée de 2 s vs PF de base (PF_base) : 15 s → 17 s')).toBeInTheDocument();
+    });
 });
 
 describe('IntergreenMatrix — secondes lucarnes', () => {

@@ -238,15 +238,15 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                 Valeurs acceptées : 3 à 20 secondes.</p>
                 <p>Dans les différents plans de feux, les valeurs de la matrice sont affichées selon un code couleur :</p>
                 <ul>
-                    <li><strong style={{ color: '#fff' }}>Blanc :</strong> Valeur de base, telle que définie dans le plan de feux de référence (PF1).</li>
-                    <li><strong style={{ color: '#4caf50' }}>Vert :</strong> Valeur réévaluée à la baisse par rapport au PF1 pour tenir compte des temps de dégagement.</li>
-                    <li><strong style={{ color: '#f44336' }}>Rouge :</strong> Valeur ajustée à la hausse par rapport au PF1.</li>
+                    <li><strong style={{ color: '#fff' }}>Blanc :</strong> Valeur de base, telle que définie dans le plan de feux de référence : le <em>premier onglet</em> de la barre des plans, quel que soit son nom. Déplacer un plan en première position en fait la référence.</li>
+                    <li><strong style={{ color: '#4caf50' }}>Vert :</strong> Valeur réévaluée à la baisse par rapport au plan de référence pour tenir compte des temps de dégagement.</li>
+                    <li><strong style={{ color: '#f44336' }}>Rouge :</strong> Valeur ajustée à la hausse par rapport au plan de référence.</li>
                     <li><strong style={{ color: '#fff', background: 'rgba(255,0,0,0.3)', padding: '0 4px', borderRadius: '2px' }}>Fond rouge :</strong> Conflit détecté — le temps de dégagement requis n'est pas respecté dans le diagramme.</li>
                     <li><strong style={{ color: '#fff', background: 'rgba(255,165,0,0.3)', padding: '0 4px', borderRadius: '2px' }}>Fond orange :</strong> Valeur manquante — une case symétrique (GFx→GFy / GFy→GFx) n'est pas renseignée, ce qui compromet la symétrie de la matrice.</li>
                 </ul>
                 <p>Au survol stable d'une case pendant <strong>une seconde</strong>, une infobulle apparaît si elle a quelque chose à dire :</p>
                 <ul>
-                    <li>la valeur diffère du PF de référence (PF1) → l'écart est précisé : <em>« Augmentée / Réduite de X s vs PF de base (PF1) : a → b »</em> ;</li>
+                    <li>la valeur diffère du plan de référence → l'écart est précisé, avec le nom de ce plan : <em>« Augmentée / Réduite de X s vs PF de base (PF1_120) : a → b »</em> ;</li>
                     <li>la case est en <strong style={{ background:'rgba(255,0,0,0.3)', padding:'0 4px', borderRadius:'2px' }}>fond rouge</strong> → le problème est décrit : recouvrement des verts, ou intervert demandé supérieur au délai réel disponible entre fin de vert d'un groupe et début de vert de l'autre.</li>
                 </ul>
                 <p>Le délai d'une seconde évite l'apparition d'infobulles à la chaîne lors d'un balayage rapide de la grille.</p>
