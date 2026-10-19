@@ -7,6 +7,7 @@ import ReloadPrompt from './components/ReloadPrompt'
 import { initPrivacyFriendlyAnalytics } from './utils/analytics'
 import { installErrorInterceptor } from './utils/errorInterceptor'
 import { adapterSelecteursDansCadreTiers } from './utils/cadreTiers'
+import { adapterSelecteursSansAPI } from './utils/selecteursSansAPI'
 import './index.css'
 
 installErrorInterceptor();
@@ -14,6 +15,9 @@ initPrivacyFriendlyAnalytics();
 // Dans un cadre d'un autre site, les fenêtres natives Ouvrir / Enregistrer
 // sont refusées : sélecteur de fichier classique pour Ouvrir, repli pour le reste.
 adapterSelecteursDansCadreTiers();
+// Sans ces fenêtres (Firefox, Safari, cadre tiers) : sélecteur classique pour
+// Ouvrir, téléchargement pour Enregistrer.
+adapterSelecteursSansAPI();
 
 // Check URL parameters to decide which component to render
 const urlParams = new URLSearchParams(window.location.search);

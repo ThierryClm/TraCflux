@@ -8,7 +8,8 @@
  *   (<input type="file">), autorisé dans un cadre. Il rend un fichier sous
  *   la même forme que l'API : les appelants ne changent pas.
  * - « Enregistrer sous » et « Choisir un dossier » : masqués. L'application
- *   prend alors le repli prévu pour les navigateurs qui ne les ont pas.
+ *   prend alors le repli prévu pour les navigateurs qui ne les ont pas
+ *   (téléchargement pour Enregistrer, cf. selecteursSansAPI).
  */
 
 /** Vrai si la page est dans un cadre dont le parent est d'une autre origine. */
