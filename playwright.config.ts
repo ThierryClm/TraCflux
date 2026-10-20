@@ -5,7 +5,7 @@
  * code ; ceux-ci rejouent ce que fait l'utilisateur, y compris les cas de
  * données qui ont produit des régressions.
  *
- *   npm run e2e            tous les navigateurs
+ *   npm run e2e            tous les navigateurs (Chrome, Edge, Firefox, Safari)
  *   npm run e2e -- --project=firefox
  */
 import { defineConfig, devices } from '@playwright/test';
@@ -31,6 +31,9 @@ export default defineConfig({
     },
     projects: [
         { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1600, height: 900 } } },
+        // Edge, le vrai navigateur de Microsoft (et non son moteur Chromium
+        // seul) : c'est celui de Thierry au quotidien.
+        { name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge', viewport: { width: 1600, height: 900 } } },
         { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1600, height: 900 } } },
         { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1600, height: 900 } } },
     ],

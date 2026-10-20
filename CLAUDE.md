@@ -14,7 +14,7 @@ npm run check    # Dependency health report (audit + outdated, prod vs dev)
 npm run serve    # Rebuild dist/ and make sure the local server is up (see below)
 npx vitest run   # Run the test suite once (`npm test` starts watch mode)
 npm run lint     # Oxlint (.oxlintrc.json): errors fail CI, warnings are debt to reduce
-npm run e2e      # Playwright user journeys (e2e/) in Chromium, Firefox and WebKit on the built app
+npm run e2e      # Playwright user journeys (e2e/) in Chromium, Edge, Firefox and WebKit on the built app
 ```
 
 When a regression is found in real use, add its scenario to `e2e/` (with the
