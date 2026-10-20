@@ -1,0 +1,43 @@
+/**
+ * Parcours réels dans de vrais navigateurs (Chrome, Firefox, Safari/WebKit),
+ * sur la version compilée servie par `vite preview` : celle que reçoivent les
+ * utilisateurs. Les tests unitaires (Vitest, src/) vérifient des morceaux de
+ * code ; ceux-ci rejouent ce que fait l'utilisateur, y compris les cas de
+ * données qui ont produit des régressions.
+ *
+ *   npm run e2e            tous les navigateurs
+ *   npm run e2e -- --project=firefox
+ */
+import { defineConfig, devices } from '@playwright/test';
+
+// 4190 est un port réservé (ManageSieve) : Firefox et WebKit refusent d'y aller.
+const PORT = 4321;
+
+export default defineConfig({
+    testDir: './e2e',
+    timeout: 60_000,
+    expect: { timeout: 10_000 },
+    fullyParallel: true,
+    forbidOnly: !!process.env.CI,
+    retries: process.env.CI ? 1 : 0,
+    reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+    use: {
+        baseURL: `http://127.0.0.1:${PORT}`,
+        viewport: { width: 1600, height: 900 },
+        trace: 'retain-on-failure',
+        // Les parcours n'ont pas besoin du mode hors ligne : sans service
+        // worker, chaque test part d'une page servie par le réseau.
+        serviceWorkers: 'block',
+    },
+    projects: [
+        { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1600, height: 900 } } },
+        { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1600, height: 900 } } },
+        { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1600, height: 900 } } },
+    ],
+    webServer: {
+        command: `npm run build && npx vite preview --host 127.0.0.1 --port ${PORT} --strictPort`,
+        url: `http://127.0.0.1:${PORT}`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 180_000,
+    },
+});
