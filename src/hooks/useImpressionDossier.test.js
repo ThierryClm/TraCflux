@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useImpressionDossier, useMiseEnPageImpression } from './useImpressionDossier';
+import { nomSansExtension, stylePagesDossier, useImpressionDossier, useMiseEnPageImpression } from './useImpressionDossier';
 
 const ouvrir = vi.hoisted(() => vi.fn());
 vi.mock('../utils/ongletImpression', async (original) => ({
@@ -79,5 +79,58 @@ describe('impression du dossier', () => {
         const { result } = preparer();
         result.current.imprimerApercu('dossier');
         expect(ouvrir).not.toHaveBeenCalled();
+    });
+});
+
+describe('marges de page du dossier', () => {
+    const css = stylePagesDossier({ signature: 'TraCflux 1.5.2', carrefour: 'Carrefour Gambetta', fichier: 'Gambetta_v3' });
+
+    it('à partir de la 2e page : nom du carrefour en haut au centre, nom du fichier en bas au centre', () => {
+        for (const page of ['dossier-page', 'dossier-page-portrait']) {
+            const bloc = css.split(`@page ${page} {`)[1].split('}\n@page')[0];
+            expect(bloc).toContain('@top-center { content: "Carrefour Gambetta"');
+            expect(bloc).toContain('@bottom-center { content: "Gambetta_v3"');
+            expect(bloc).toContain('@bottom-left { content: "TraCflux 1.5.2"');
+            expect(bloc).toContain('counter(page)');
+        }
+    });
+
+    it('la première page, page de garde, ne porte ni l\'un ni l\'autre', () => {
+        expect(css).toContain('@page dossier-page:first {\n    @top-center { content: none; }\n    @bottom-center { content: none; }');
+        expect(css).toContain('@page dossier-page-portrait:first');
+    });
+
+    it('sans nom de carrefour ni de fichier, pas de marge vide', () => {
+        const sansNoms = stylePagesDossier({ signature: 'TraCflux 1.5.2' });
+        expect(sansNoms).not.toMatch(/@top-center \{ content: "/);
+        expect(sansNoms).not.toMatch(/@bottom-center \{ content: "/);
+    });
+
+    it('guillemets et barres obliques ne cassent pas la règle', () => {
+        const piege = stylePagesDossier({ signature: 's', carrefour: 'Rue "du Port"', fichier: 'a\\b' });
+        expect(piege).toContain('content: "Rue \\"du Port\\""');
+        expect(piege).toContain('content: "a\\\\b"');
+    });
+
+    it('le nom du fichier perd son extension .json', () => {
+        expect(nomSansExtension('Gambetta_v3.json')).toBe('Gambetta_v3');
+        expect(nomSansExtension('Gambetta.JSON')).toBe('Gambetta');
+        expect(nomSansExtension(null)).toBe('');
+    });
+});
+
+describe('impression avec les noms', () => {
+    it('le style injecté porte le carrefour et le fichier', () => {
+        document.body.innerHTML = '<div class="print-preview-overlay"></div>';
+        const ajout = vi.spyOn(document.head, 'appendChild');
+        const { result } = renderHook(() => useImpressionDossier({
+            dossierPortrait: false, setDossierDialog: vi.fn(), setPrintType: vi.fn(), setPrintPreviewModal: vi.fn(),
+            nomCarrefour: 'Carrefour Gambetta', nomFichier: 'Gambetta_v3.json'
+        }));
+        result.current.imprimerApercu('dossier');
+        // Dernier style injecté : l'espion garde les appels des tests précédents.
+        const style = ajout.mock.calls.map(([el]) => el).findLast(el => el.id === 'dossier-print-footer-style');
+        expect(style.textContent).toContain('@top-center { content: "Carrefour Gambetta"');
+        expect(style.textContent).toContain('@bottom-center { content: "Gambetta_v3"');
     });
 });
