@@ -165,6 +165,8 @@ export interface OptionsMiseEnPage {
     /** Afficher / masquer / automatique ; prime sur showRemarks. */
     remarksMode?: ModeAffichage;
     showActionDescription?: boolean;
+    /** Afficher / masquer / automatique ; prime sur showActionDescription. */
+    actionDescriptionMode?: ModeAffichage;
     showFloatingForm?: boolean;
     showFloatingMatrix?: boolean;
     showFloatingTraffic?: boolean;

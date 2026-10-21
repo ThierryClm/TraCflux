@@ -45,9 +45,9 @@ interface UseFileOperationsOptions {
     setIntersectionName: StateSetter<string>;
     commentsMode: ModeAffichage;
     remarksMode: ModeAffichage;
-    showActionDescription: boolean;
+    descriptionMode: ModeAffichage;
     sidebarVisible: boolean;
-    setShowActionDescription: StateSetter<boolean>;
+    setDescriptionMode: (mode: ModeAffichage) => void;
     setSidebarVisible: StateSetter<boolean>;
     showFloatingForm: boolean;
     setShowFloatingForm: StateSetter<boolean>;
@@ -101,8 +101,8 @@ const useFileOperations = ({
     setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
     setCommentsMode, setRemarksMode, setIntersectionName,
     // Options de mise en page sauvegardées dans le projet
-    commentsMode, remarksMode, showActionDescription, sidebarVisible,
-    setShowActionDescription, setSidebarVisible,
+    commentsMode, remarksMode, descriptionMode, sidebarVisible,
+    setDescriptionMode, setSidebarVisible,
     // Flags de détachement de fenêtres (niveau projet)
     showFloatingForm, setShowFloatingForm,
     showFloatingMatrix, setShowFloatingMatrix,
@@ -252,7 +252,8 @@ const useFileOperations = ({
                 const modeRemarques = lireModeAffichage(lo, 'remarks');
                 if (modeCommentaires) setCommentsMode(modeCommentaires);
                 if (modeRemarques) setRemarksMode(modeRemarques);
-                if (typeof lo.showActionDescription === 'boolean') setShowActionDescription(lo.showActionDescription);
+                const modeDescription = lireModeAffichage(lo, 'description');
+                if (modeDescription) setDescriptionMode(modeDescription);
 
                 // Détachements de fenêtres : on applique directement les
                 // valeurs du projet. Pas de close-then-reopen : le setTimeout
@@ -433,7 +434,8 @@ const useFileOperations = ({
                 const modeRemarques = lireModeAffichage(lo, 'remarks');
                 if (modeCommentaires) setCommentsMode(modeCommentaires);
                 if (modeRemarques) setRemarksMode(modeRemarques);
-                if (typeof lo.showActionDescription === 'boolean') setShowActionDescription(lo.showActionDescription);
+                const modeDescription = lireModeAffichage(lo, 'description');
+                if (modeDescription) setDescriptionMode(modeDescription);
 
                 // Détachements de fenêtres : on applique directement les
                 // valeurs du projet. Pas de close-then-reopen : le setTimeout
@@ -580,7 +582,7 @@ const useFileOperations = ({
     }, [projectName, getFullState, setIntersectionName, saveProject, saveDirectoryHandle, addRecentDirectory, recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
         // Layout options sauvegardées dans le projet — sans ces deps, le
         // callback memoisé garde les valeurs périmées du premier rendu.
-        sidebarVisible, commentsMode, remarksMode, showActionDescription,
+        sidebarVisible, commentsMode, remarksMode, descriptionMode,
         showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
         showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -674,7 +676,7 @@ const useFileOperations = ({
             }
         }
     }, [recentSaveDirs, projectName, loadDirectoryHandle, saveDirectoryHandle, addRecentDirectory, getFullState, setIntersectionName, saveProject, recentOpenDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
-        sidebarVisible, commentsMode, remarksMode, showActionDescription,
+        sidebarVisible, commentsMode, remarksMode, descriptionMode,
         showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
         showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -701,7 +703,8 @@ const useFileOperations = ({
                 commentsMode, remarksMode,
                 showComments: booleenDuMode(commentsMode),
                 showRemarks: booleenDuMode(remarksMode),
-                showActionDescription,
+                actionDescriptionMode: descriptionMode,
+                showActionDescription: booleenDuMode(descriptionMode),
                 showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
                 showFloatingConditions, showFloatingVariables, showFloatingRemarks
             }
@@ -738,7 +741,7 @@ const useFileOperations = ({
             }
         }
     }, [getFullState, projectName, diagramHeight, floatingCrop, floatingZoom, dossierSections,
-        sidebarVisible, commentsMode, remarksMode, showActionDescription,
+        sidebarVisible, commentsMode, remarksMode, descriptionMode,
         showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
         showFloatingConditions, showFloatingVariables, showFloatingRemarks,
         lastSaveDirectoryRef, alertFn]);

@@ -341,6 +341,18 @@
     font-weight: bold;
 }
 
+/* Description d'un point de repos : même calque que Action_Micro, pour mettre
+   en couleur la durée d'attente. */
+.desc-highlight-container {
+    position: relative;
+    display: inline-block;
+}
+
+.input-desc.micro-has-backdrop {
+    color: transparent;
+    caret-color: #eee;
+}
+
 .input-micro.micro-has-backdrop {
     color: transparent;
     caret-color: #eee;

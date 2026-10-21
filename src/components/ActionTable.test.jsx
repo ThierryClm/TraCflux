@@ -234,6 +234,37 @@ describe('ActionTable — champs selon l’action', () => {
             expect(updateActionRow).toHaveBeenCalledWith(1, f, ''));
     });
 
+    it('choisir Point de repos propose « attente maxi 10 secondes » en description', () => {
+        const { updateActionRow } = renderTable({ actionData: donnees({ gf: '1', action: 'Escamotage' }) });
+        fireEvent.change(champ(0, COL.action), { target: { value: 'Point de repos' } });
+        expect(updateActionRow).toHaveBeenCalledWith(1, 'description', 'attente maxi 10 secondes');
+    });
+
+    it('la description proposée prévient l\'application, pour rendre la colonne visible', () => {
+        const onDescriptionProposee = vi.fn();
+        renderTable({ actionData: donnees({ gf: '1', action: 'Escamotage' }), onDescriptionProposee });
+        fireEvent.change(champ(0, COL.action), { target: { value: 'Point de repos' } });
+        expect(onDescriptionProposee).toHaveBeenCalledTimes(1);
+    });
+
+    it('choisir Point de repos garde une description déjà saisie', () => {
+        const { updateActionRow } = renderTable({ actionData: donnees({ gf: '1', action: 'Escamotage', description: 'Bus V2' }) });
+        fireEvent.change(champ(0, COL.action), { target: { value: 'Point de repos' } });
+        expect(updateActionRow).not.toHaveBeenCalledWith(1, 'description', expect.anything());
+    });
+
+    it('point de repos : la durée d\'attente de la description est en violet', () => {
+        renderTable({ actionData: donnees({ gf: '1', action: 'Point de repos', deb: '10', description: 'attente maxi 15 secondes' }) });
+        const violet = cellule(0, COL.description).querySelectorAll('.micro-keyword');
+        expect([...violet].map(e => e.textContent)).toEqual(['15']);
+        expect(champ(0, COL.description)).toHaveValue('attente maxi 15 secondes');
+    });
+
+    it('autre action : description sans calque de couleur', () => {
+        renderTable({ actionData: donnees({ gf: '1', action: 'Escamotage', description: 'attente maxi 15 secondes' }) });
+        expect(cellule(0, COL.description).querySelector('.micro-keyword')).toBeNull();
+    });
+
     it('choisir Point de repos garde un texte micro déjà saisi', () => {
         const { updateActionRow } = renderTable({ actionData: donnees({ gf: '1', action: 'Escamotage', micro: 'Si BP' }) });
         fireEvent.change(champ(0, COL.action), { target: { value: 'Point de repos' } });

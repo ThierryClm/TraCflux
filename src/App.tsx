@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import type { ChangeEvent } from 'react';
 import { useBooleenMemorise, usePrefsInfobulles } from './hooks/usePreferencesEspaceTravail';
 import { useImpressionDossier, useMiseEnPageImpression } from './hooks/useImpressionDossier';
+import { recalerCurseur } from './simulation/curseur';
 import { useTrafficLight } from './hooks/useTrafficLight';
 import { MAX_PF, mergePfFromProject } from './utils/pfHelpers';
 import { useAuth } from './hooks/useAuth';
@@ -71,7 +72,7 @@ import './components/GroupTable.css';
 import './components/IntergreenMatrix.css';
 import './App.css';
 import { lireMiseEnPage, appliquerMiseEnPage, affichageCommentairesRemarques } from './utils/miseEnPageProjet';
-import { estAffiche, planACommentaires, texteRenseigne } from './utils/modeAffichage';
+import { estAffiche, planACommentaires, planADescriptions, texteRenseigne } from './utils/modeAffichage';
 import { entier } from './utils/entier';
 import type { ChampsProjet } from './hooks/useTrafficLight';
 import type { GreenWaveProjectSource, SavedGreenWave } from './types/greenWave';
@@ -410,12 +411,20 @@ function App() {
         showGroupNamesForm, setShowGroupNamesForm,
         showGroupNamesMatrix, setShowGroupNamesMatrix,
         showGroupNamesDiagram, setShowGroupNamesDiagram,
-        showActionDescription, setShowActionDescription
+        descriptionMode, setDescriptionMode
     } = useDarkMode();
     // Affichage effectif pour le plan de feux courant : en mode automatique,
     // seulement si ce plan a des commentaires (resp. une remarque).
     const showComments = estAffiche(commentsMode, planACommentaires(groups));
     const showRemarks = estAffiche(remarksMode, texteRenseigne(currentRemarques));
+    // Colonne Description des conditions : en automatique, seulement si une
+    // condition du plan courant a une description.
+    const showActionDescription = estAffiche(descriptionMode, planADescriptions(actionData));
+    // Une description proposée d'office (point de repos) ne doit pas rester
+    // invisible : Masquer passe en Automatique, les autres choix sont gardés.
+    const revelerDescription = useCallback(() => {
+        setDescriptionMode(mode => (mode === 'masquer' ? 'auto' : mode));
+    }, [setDescriptionMode]);
 
     // Cases d'affichage de l'image du carrefour (numéros, noms, ajout de
     // flèches) : enregistrées avec le projet, cf. champsProjetRef. Leur
@@ -426,7 +435,7 @@ function App() {
     const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
         useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, intersectionDisplay,
             // Enregistrés dans le projet : les changer est une modification.
-            commentsMode, remarksMode]);
+            commentsMode, remarksMode, descriptionMode]);
 
     // Passer d'un plan de feux à un autre n'est pas une modification du projet :
     // l'écran recharge les groupes, le cycle, la matrice et les actions du plan
@@ -642,6 +651,18 @@ function App() {
             conflictMatrix
         );
     }, [simulationEnabled, groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix]);
+
+    // Quand la simulation change (case cochée ou décochée, scénario, durée de
+    // repos), le curseur reste au même instant du cycle d'origine
+    // (cf. simulation/curseur). Avant l'affichage, pour qu'il ne saute pas.
+    const simulationPrecedente = useRef<{ resultat: typeof simulationResult; plan: number | null }>({ resultat: null, plan: null });
+    useLayoutEffect(() => {
+        const { resultat: avant, plan } = simulationPrecedente.current;
+        simulationPrecedente.current = { resultat: simulationResult, plan: activePFId };
+        if (!avant || !simulationResult || plan !== activePFId) return;
+        if (avant.journal === simulationResult.journal) return;
+        setSimulationCurrentTime(t => recalerCurseur(t, avant.journal, simulationResult.journal, simulationResult.simulatedCycleLength));
+    }, [simulationResult, activePFId, setSimulationCurrentTime]);
 
     // Déclaré APRÈS simulationResult : son titre affiche le cycle simulé,
     // et un `const` n'est pas accessible avant son initialisation.
@@ -883,7 +904,7 @@ function App() {
             dossierSections,
             ...lireMiseEnPage({
                 diagramHeight, floatingCrop, floatingZoom,
-                sidebarVisible, commentsMode, remarksMode, showActionDescription,
+                sidebarVisible, commentsMode, remarksMode, descriptionMode,
                 showFloatingForm, showFloatingMatrix, showFloatingTraffic,
                 showFloatingImage, showFloatingConditions, showFloatingVariables,
                 showFloatingRemarks,
@@ -902,7 +923,7 @@ function App() {
         ecrire: (etat) => appliquerMiseEnPage(etat, {
             setDiagramHeight, resetDiagramHeight,
             setFloatingCrop, setFloatingZoom, markLegacyCrop,
-            setSidebarVisible, setCommentsMode, setRemarksMode, setShowActionDescription,
+            setSidebarVisible, setCommentsMode, setRemarksMode, setDescriptionMode,
             setShowFloatingForm, setShowFloatingMatrix, setShowFloatingTraffic,
             setShowFloatingImage, setShowFloatingConditions, setShowFloatingVariables,
             setShowFloatingRemarks, setDossierSections,
@@ -926,8 +947,8 @@ function App() {
         setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
         setCommentsMode, setRemarksMode, setIntersectionName,
         // Layout options sauvegardées au niveau projet
-        commentsMode, remarksMode, showActionDescription, sidebarVisible,
-        setShowActionDescription, setSidebarVisible,
+        commentsMode, remarksMode, descriptionMode, sidebarVisible,
+        setDescriptionMode, setSidebarVisible,
         // Flags de détachement (niveau projet : dimensions des popups
         // dépendent du nombre de groupes, donc liées au projet)
         showFloatingForm, setShowFloatingForm,
@@ -1508,8 +1529,14 @@ function App() {
             case 'toggleGroupNamesDiagram':
                 setShowGroupNamesDiagram(v => !v);
                 break;
-            case 'toggleActionDescription':
-                setShowActionDescription(v => !v);
+            case 'descriptionShow':
+                setDescriptionMode('afficher');
+                break;
+            case 'descriptionHide':
+                setDescriptionMode('masquer');
+                break;
+            case 'descriptionAuto':
+                setDescriptionMode('auto');
                 break;
             case 'enableAccounts':
                 (async () => {
@@ -2174,7 +2201,7 @@ function App() {
                     onManageUsers={() => setShowUserManager(true)}
                     accountsEnabled={accountsEnabled}
                     biCarrefourSeparator={biCarrefourSeparator}
-                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
+                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, descriptionMode, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
                     pixelsPerSecond={pixelsPerSecond}
                     onPixelsPerSecondChange={setPixelsPerSecond}
                     showMicroOnHover={showMicroOnHover}
@@ -2245,7 +2272,7 @@ function App() {
                         setIntersectionArrows, setIntersectionDisplayOption, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
                         setPhasageBulleCount, setPhasageBulleEnabled, setPhasageBulleModal, setPhasageBulleTimes, setPhasageBulleVersion,
                         setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
-                        setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
+                        setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription, revelerDescription,
                         showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
                         showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,
                         sidebarVisible, simulationCurrentTime, simulationEnabled, simulationResult, simulationSelectedActions,

@@ -53,6 +53,8 @@ export interface SimulationResult {
     removedPeriods: RemovedPeriod[];
     contractions: Contraction[];
     restPoints: SimulationRestPoint[];
+    /** Opérations qui transforment le temps, pour recaler le curseur (cf. curseur.ts). */
+    journal: OperationTemps[];
 }
 
 /**

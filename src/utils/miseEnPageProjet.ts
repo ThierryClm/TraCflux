@@ -5,9 +5,10 @@ import { booleenDuMode, lireModeAffichage, modeDuBooleen, texteRenseigne, type M
 /** Réglages de mise en page persistants d'un projet. */
 type DirectoryKey = 'open' | 'save' | 'import' | 'image' | 'greenWave';
 
-interface LayoutValues extends Omit<OptionsMiseEnPage, 'showComments' | 'showRemarks'> {
+interface LayoutValues extends Omit<OptionsMiseEnPage, 'showComments' | 'showRemarks' | 'showActionDescription' | 'actionDescriptionMode'> {
     commentsMode: ModeAffichage;
     remarksMode: ModeAffichage;
+    descriptionMode: ModeAffichage;
     diagramHeight?: number | null;
     floatingCrop?: CadrageImage;
     floatingZoom?: number;
@@ -30,7 +31,7 @@ interface LayoutSetters {
     setSidebarVisible?: SetterBooleen;
     setCommentsMode?: (mode: ModeAffichage) => void;
     setRemarksMode?: (mode: ModeAffichage) => void;
-    setShowActionDescription?: SetterBooleen;
+    setDescriptionMode?: (mode: ModeAffichage) => void;
     setShowFloatingForm?: SetterBooleen;
     setShowFloatingMatrix?: SetterBooleen;
     setShowFloatingTraffic?: SetterBooleen;
@@ -71,7 +72,8 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
         remarksMode: v.remarksMode,
         showComments: booleenDuMode(v.commentsMode),
         showRemarks: booleenDuMode(v.remarksMode),
-        showActionDescription: v.showActionDescription,
+        actionDescriptionMode: v.descriptionMode,
+        showActionDescription: booleenDuMode(v.descriptionMode),
         showFloatingForm: v.showFloatingForm,
         showFloatingMatrix: v.showFloatingMatrix,
         showFloatingTraffic: v.showFloatingTraffic,
@@ -130,7 +132,6 @@ export const appliquerMiseEnPage = (
 
     const poseurs: Partial<Record<keyof OptionsMiseEnPage, SetterBooleen>> = {
         showParameters: s.setSidebarVisible,
-        showActionDescription: s.setShowActionDescription,
         showFloatingForm: s.setShowFloatingForm,
         showFloatingMatrix: s.setShowFloatingMatrix,
         showFloatingTraffic: s.setShowFloatingTraffic,
@@ -150,8 +151,10 @@ export const appliquerMiseEnPage = (
         const modeRemarques = lireModeAffichage(lo, 'remarks');
         if (modeCommentaires) s.setCommentsMode?.(modeCommentaires);
         if (modeRemarques) s.setRemarksMode?.(modeRemarques);
+        const modeDescription = lireModeAffichage(lo, 'description');
+        if (modeDescription) s.setDescriptionMode?.(modeDescription);
         DRAPEAUX_MISE_EN_PAGE.forEach(nom => {
-            if (nom === 'showParameters') return;
+            if (nom === 'showParameters' || nom === 'showActionDescription') return;
             if (typeof lo[nom] === 'boolean') poseurs[nom]?.(lo[nom]);
         });
     } else {

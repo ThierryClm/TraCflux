@@ -54,6 +54,7 @@ export interface OptionsMenuBar {
     commentsMode?: ModeAffichage;
     remarksMode?: ModeAffichage;
     showActionDescription?: boolean;
+    descriptionMode?: ModeAffichage;
     showCapacityReserve?: boolean;
     showGroupNamesForm?: boolean;
     showGroupNamesMatrix?: boolean;
@@ -427,7 +428,16 @@ const MenuBar = ({
                         { label: 'Automatique (plans qui en ont)', action: 'remarksAuto', checked: layoutOptions.remarksMode === 'auto', keepSubmenuOpen: true }
                     ]
                 },
-                { label: 'Description des conditions micro', action: 'toggleActionDescription', toggle: true, checked: layoutOptions.showActionDescription, keepSubmenuOpen: true },
+                {
+                    label: 'Description des conditions micro',
+                    type: 'submenu',
+                    submenuId: 'descriptionConditions',
+                    submenu: [
+                        { label: 'Afficher', action: 'descriptionShow', checked: layoutOptions.descriptionMode === 'afficher', keepSubmenuOpen: true },
+                        { label: 'Masquer', action: 'descriptionHide', checked: layoutOptions.descriptionMode === 'masquer', keepSubmenuOpen: true },
+                        { label: 'Automatique (plans qui en ont)', action: 'descriptionAuto', checked: layoutOptions.descriptionMode === 'auto', keepSubmenuOpen: true }
+                    ]
+                },
                 { label: 'Panneau Réserve de capacité', action: 'toggleCapacityReserve', toggle: true, checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true },
                 { type: 'separator' },
                 {

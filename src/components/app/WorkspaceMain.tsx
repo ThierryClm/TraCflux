@@ -127,6 +127,8 @@ interface WorkspaceMainModel {
     setSimulationCurrentTime: NonNullable<IntersectionImageProps['setCurrentTime']>;
     setSimulationEnabled: (value: boolean) => void;
     showActionDescription: boolean;
+    /** Description masquée et une description proposée : passer en Automatique. */
+    revelerDescription: () => void;
     showComments: boolean;
     showDependencies: boolean;
     showFloatingConditions: boolean;
@@ -178,7 +180,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         setPhasageBulleCount, setPhasageBulleEnabled, setPhasageBulleModal, setPhasageBulleTimes, setPhasageBulleVersion,
         setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
         setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
-        showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
+        revelerDescription, showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
         showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,
         sidebarVisible, simulationCurrentTime, simulationEnabled, simulationResult, simulationSelectedActions,
         simulationSpeed, startDrag, tip, tooltipPrefs, updateActionRow,
@@ -558,6 +560,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 setShowFloatingVariables={setShowFloatingVariables}
                                 showWrapFlash={showWrapFlash}
                                 showDescription={showActionDescription}
+                                onDescriptionProposee={revelerDescription}
                                 actionColWidths={actionColWidths}
                                 setActionColWidths={setActionColWidths}
                             tooltipsEnabled={tooltipPrefs.micro}

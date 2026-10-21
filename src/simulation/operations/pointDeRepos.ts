@@ -1,20 +1,24 @@
 import type { EtatSimulation } from '../types';
 import { toInt } from '../outils';
 import { projeter } from '../journal';
+import { lireDureeRepos } from '../dureeRepos';
 
-/** Points de repos cochés : le cycle se fige REST_DURATION secondes à chacun. */
+/**
+ * Points de repos cochés : le cycle se fige à chacun le temps lu dans la
+ * description de sa condition (« attente maxi N secondes », 30 s au plus,
+ * 10 s sans valeur ; cf. dureeRepos).
+ */
 export const appliquerPointsDeRepos = (etat: EtatSimulation): void => {
     const { selectedActions, simulatedGroups, restPoints, journal } = etat;
 
     // 0. Point de repos — at each selected rest point t (in original timeline),
-    // freeze the cycle for REST_DURATION seconds. Cycle grows; groups whose green
+    // freeze the cycle for its own duration (read from the description). Cycle grows; groups whose green
     // covers t are stretched (option A: green duration extended); groups starting
     // after t are shifted to the right.
     //
     // Inhibition rule: a rest point that falls INSIDE the [deb, fin] zone of a
     // selected Adaptatif vertical or Escamotage de phase action is ignored,
     // because that zone is removed from the cycle later and the freeze cannot apply.
-    const REST_DURATION = 10;
     const inhibitionZones = selectedActions
         .filter(a => (a.action === 'Adaptatif vertical' || a.action === 'Escamotage de phase') && a.deb !== '' && a.fin !== '')
         .map(a => ({ deb: toInt(a.deb) || 0, fin: toInt(a.fin) || 0 }));
@@ -24,14 +28,16 @@ export const appliquerPointsDeRepos = (etat: EtatSimulation): void => {
 
     const restPointActions = selectedActions
         .filter(a => a.action === 'Point de repos' && a.deb !== '')
-        .map(a => ({ id: a.id, rawDeb: toInt(a.deb) || 0 }))
+        .map(a => ({ id: a.id, rawDeb: toInt(a.deb) || 0, duree: lireDureeRepos(a.description) }))
         .filter(a => !isRestPointInhibited(a.rawDeb))
         .sort((a, b) => a.rawDeb - b.rawDeb);
 
-    restPointActions.forEach(({ id, rawDeb }, idx) => {
-        // Effective position in the (already-stretched) simulated timeline:
-        // each prior rest point added REST_DURATION before this one.
-        const t = rawDeb + idx * REST_DURATION;
+    // Effective position in the (already-stretched) simulated timeline:
+    // each prior rest point added its own duration before this one.
+    let decalage = 0;
+    restPointActions.forEach(({ id, rawDeb, duree: REST_DURATION }) => {
+        const t = rawDeb + decalage;
+        decalage += REST_DURATION;
 
         simulatedGroups.forEach(g => {
             if (g.isEscamoted) return;

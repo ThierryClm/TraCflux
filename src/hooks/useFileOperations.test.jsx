@@ -37,7 +37,7 @@ const etatComplet = () => ({
     layoutOptions: {
         showParameters: false, showComments: true, showRemarks: false,
         commentsMode: 'afficher', remarksMode: 'masquer',
-        showActionDescription: true, showFloatingForm: true, showFloatingMatrix: false,
+        actionDescriptionMode: 'afficher', showActionDescription: true, showFloatingForm: true, showFloatingMatrix: false,
         showFloatingTraffic: true, showFloatingImage: false, showFloatingConditions: true,
         showFloatingVariables: false, showFloatingRemarks: true
     },
@@ -55,7 +55,7 @@ const proprietes = (sur = {}) => {
         floatingZoom: 1.4,
         commentsMode: 'afficher',
         remarksMode: 'masquer',
-        showActionDescription: true,
+        descriptionMode: 'afficher',
         sidebarVisible: false,
         showFloatingForm: true,
         showFloatingMatrix: false,
@@ -91,7 +91,7 @@ const proprietes = (sur = {}) => {
     ['setSelectedProject', 'setOpenModal', 'setCurrentProjectPath', 'setProjectModified',
         'setHasUnsavedChanges', 'setDiagramHeight', 'resetDiagramHeight', 'setFloatingCrop',
         'setFloatingZoom', 'markLegacyCrop', 'setCommentsMode', 'setRemarksMode',
-        'setIntersectionName', 'setShowActionDescription', 'setSidebarVisible',
+        'setIntersectionName', 'setDescriptionMode', 'setSidebarVisible',
         'setShowFloatingForm', 'setShowFloatingMatrix', 'setShowFloatingTraffic',
         'setShowFloatingImage', 'setShowFloatingConditions', 'setShowFloatingVariables',
         'setShowFloatingRemarks', 'setHasActiveProject', 'setDossierSections']
