@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { nomSansExtension, stylePagesDossier, useImpressionDossier, useMiseEnPageImpression } from './useImpressionDossier';
+import { nomDeFichier, stylePagesDossier, useImpressionDossier, useMiseEnPageImpression } from './useImpressionDossier';
 
 const ouvrir = vi.hoisted(() => vi.fn());
 vi.mock('../utils/ongletImpression', async (original) => ({
@@ -112,10 +112,11 @@ describe('marges de page du dossier', () => {
         expect(piege).toContain('content: "a\\\\b"');
     });
 
-    it('le nom du fichier perd son extension .json', () => {
-        expect(nomSansExtension('Gambetta_v3.json')).toBe('Gambetta_v3');
-        expect(nomSansExtension('Gambetta.JSON')).toBe('Gambetta');
-        expect(nomSansExtension(null)).toBe('');
+    it('le nom du fichier garde son extension .json, ajoutée au nom de projet qui en tient lieu', () => {
+        expect(nomDeFichier('Gambetta_v3.json')).toBe('Gambetta_v3.json');
+        expect(nomDeFichier('Gambetta.JSON')).toBe('Gambetta.JSON');
+        expect(nomDeFichier('Gambetta_v3')).toBe('Gambetta_v3.json');
+        expect(nomDeFichier(null)).toBe('');
     });
 });
 
@@ -131,6 +132,6 @@ describe('impression avec les noms', () => {
         // Dernier style injecté : l'espion garde les appels des tests précédents.
         const style = ajout.mock.calls.map(([el]) => el).findLast(el => el.id === 'dossier-print-footer-style');
         expect(style.textContent).toContain('@top-center { content: "Carrefour Gambetta"');
-        expect(style.textContent).toContain('@bottom-center { content: "Gambetta_v3"');
+        expect(style.textContent).toContain('@bottom-center { content: "Gambetta_v3.json"');
     });
 });

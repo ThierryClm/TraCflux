@@ -213,7 +213,7 @@ interface MentionsPages {
     signature: string;
     /** Nom du carrefour, en haut au centre à partir de la 2e page. */
     carrefour?: string;
-    /** Nom du fichier sans extension, en bas au centre à partir de la 2e page. */
+    /** Nom du fichier, extension comprise, en bas au centre à partir de la 2e page. */
     fichier?: string;
 }
 
@@ -223,7 +223,7 @@ interface MentionsPages {
  * Sur chaque page : l'outil et sa version en bas à gauche, le numéro de page
  * en bas à droite. À partir de la 2e page — la première est la page de garde,
  * qui porte déjà le nom du carrefour en titre — le nom du carrefour en haut au
- * centre et le nom du fichier, sans extension, en bas au centre : une feuille
+ * centre et le nom du fichier, extension comprise, en bas au centre : une feuille
  * isolée dit de quel carrefour et de quel fichier elle vient.
  *
  * Le chemin du fichier et la date ne figurent pas : le navigateur imprime
@@ -247,9 +247,16 @@ export const stylePagesDossier = ({ signature, carrefour, fichier }: MentionsPag
 }`).join('\n');
 };
 
-/** Nom du fichier projet sans son extension .json. */
-export const nomSansExtension = (nom: string | null | undefined): string =>
-    (nom || '').replace(/\.json$/i, '').trim();
+/**
+ * Nom du fichier projet tel qu'imprimé, avec son extension .json. Un projet
+ * sans fichier (restauré du cache, exemple) est désigné par son nom de projet,
+ * complété de .json : c'est le nom qu'aurait son fichier.
+ */
+export const nomDeFichier = (nom: string | null | undefined): string => {
+    const brut = (nom || '').trim();
+    if (!brut) return '';
+    return /\.json$/i.test(brut) ? brut : `${brut}.json`;
+};
 
 export const useImpressionDossier = ({ dossierPortrait, setDossierDialog, setPrintType, setPrintPreviewModal, nomCarrefour, nomFichier }: EntreesImpression) => {
     // Injecte les marges de page du dossier le temps de la copie (cf. stylePagesDossier).
@@ -261,7 +268,7 @@ export const useImpressionDossier = ({ dossierPortrait, setDossierDialog, setPri
         style.textContent = stylePagesDossier({
             signature: `${APP_NAME} ${APP_VERSION}`,
             carrefour: nomCarrefour?.trim(),
-            fichier: nomSansExtension(nomFichier),
+            fichier: nomDeFichier(nomFichier),
         });
         document.head.appendChild(style);
         return style;
