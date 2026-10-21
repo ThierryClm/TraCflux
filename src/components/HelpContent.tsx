@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import RechercheAide from './RechercheAide';
 
 /**
  * Aide en ligne (menu Aide) — contenu partagé entre App.tsx et GreenWavePage.tsx.
@@ -63,6 +64,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
 
     return (
         <div className="help-content" ref={helpContentRef}>
+            <RechercheAide racine={helpContentRef} />
             {helpToc.length > 0 && (
                 <nav id="help-sommaire" className="help-toc" style={{ background: '#2a2a2a', border: '1px solid #444', borderRadius: '6px', padding: '12px 16px', marginBottom: '20px' }}>
                     <h3 style={{ color: '#4ecdc4', marginTop: 0, marginBottom: '10px', fontSize: '1em' }}>Sommaire</h3>
@@ -124,6 +126,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     </li>
                     <li><strong>Indicateur Valider/Validé :</strong> Cliquez sur "Valider" (quand aucun conflit) pour marquer l'onglet PF en vert. Cliquez à nouveau pour annuler la validation.</li>
                     <li><strong>Séparateur ajustable :</strong> La position du séparateur entre le diagramme et les conditions de micro-régulation est sauvegardée avec le projet.</li>
+                    <li><strong>Rechercher dans l'aide :</strong> Saisissez un mot dans le champ en haut de cette fenêtre. Toutes ses occurrences sont surlignées, la courante en orange ; ▲ et ▼ (ou Entrée et Maj+Entrée) passent de l'une à l'autre, et le bouton <em>Chapitres</em> déroule la liste des sections qui contiennent le mot, avec leur nombre d'occurrences. La recherche ignore majuscules et accents : « ecran » trouve « écran ».</li>
                 </ul>
             </section>
 
@@ -518,6 +521,13 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                 <ul>
                     <li><strong>+</strong> et <strong>−</strong> : Colorent le texte sélectionné en vert ou en rouge (voir les sections Commentaires et Remarques)</li>
                     <li><strong>▲</strong> et <strong>▼</strong> : Agrandissent ou réduisent le texte sélectionné dans les Remarques</li>
+                </ul>
+
+                <p><strong>Aide</strong></p>
+                <ul>
+                    <li><strong>Ctrl+F :</strong> Place le curseur dans la recherche de l'aide, quand celle-ci est ouverte</li>
+                    <li><strong>Entrée</strong> / <strong>Maj+Entrée :</strong> Occurrence suivante / précédente</li>
+                    <li><strong>Échap :</strong> Efface la recherche</li>
                 </ul>
 
                 <p><strong>Affichage</strong></p>

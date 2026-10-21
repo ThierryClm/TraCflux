@@ -1,0 +1,134 @@
+/* Recherche dans l'aide : barre collée en haut de la fenêtre pendant le
+   défilement, sur le fond de la fenêtre (qui suit le thème). */
+.help-recherche {
+    position: sticky;
+    top: -16px; /* la marge intérieure du corps de la fenêtre compte pour le collage */
+    z-index: 20;
+    /* Jusqu'aux bords du corps de la fenêtre : 16 px de marge intérieure,
+       plus les 10 px de l'aide à droite. */
+    margin: -16px -26px 14px -16px;
+    padding: 12px 26px 10px 16px;
+    background: var(--md-bg, #3a3a3a);
+    border-bottom: 1px solid var(--md-separator, #555);
+}
+
+.help-recherche-barre {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.help-recherche-loupe {
+    font-size: 0.95em;
+    opacity: 0.8;
+}
+
+.modal-body input.help-recherche-champ {
+    flex: 1 1 auto;
+    min-width: 120px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.95em;
+}
+
+.help-recherche-compteur {
+    min-width: 5.5em;
+    text-align: center;
+    font-size: 0.85em;
+    color: var(--md-muted, #aaa);
+    white-space: nowrap;
+}
+
+.help-recherche-compteur.help-recherche-vide {
+    color: #e57373;
+}
+
+.help-recherche-btn {
+    background: var(--md-field-bg, #444);
+    border: 1px solid var(--md-field-border, #666);
+    color: var(--md-text, #e0e0e0);
+    border-radius: 4px;
+    padding: 5px 9px;
+    font-size: 0.85em;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.help-recherche-btn:hover:not(:disabled) {
+    background: var(--md-hover, #505050);
+}
+
+.help-recherche-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* Liste déroulante des chapitres et sections qui contiennent le mot. */
+.help-recherche-liste {
+    position: absolute;
+    right: 26px;
+    top: calc(100% - 4px);
+    width: min(460px, 90%);
+    max-height: 50vh;
+    overflow-y: auto;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    background: var(--md-bg, #3a3a3a);
+    border: 1px solid var(--md-border, #555);
+    border-radius: 6px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.help-recherche-liste-chapitre {
+    padding: 6px 12px 2px;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #4ecdc4;
+}
+
+.help-recherche-liste-rubrique {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 5px 12px 5px 24px;
+    background: none;
+    border: none;
+    color: var(--md-text, #e0e0e0);
+    font-size: 0.88em;
+    text-align: left;
+    cursor: pointer;
+}
+
+.help-recherche-liste-rubrique:hover,
+.help-recherche-liste-rubrique.en-cours {
+    background: var(--md-hover, #505050);
+}
+
+.help-recherche-nombre {
+    flex: 0 0 auto;
+    min-width: 1.8em;
+    padding: 0 6px;
+    border-radius: 9px;
+    background: rgba(255, 200, 0, 0.35);
+    font-size: 0.85em;
+    text-align: center;
+}
+
+/* Surlignage des occurrences (API CSS Custom Highlight). */
+::highlight(aide-recherche) {
+    background-color: rgba(255, 200, 0, 0.45);
+}
+
+::highlight(aide-recherche-courante) {
+    background-color: #ff9800;
+    color: #000;
+}
+
+/* Le bouton ✕ de la barre efface déjà : pas de second bouton du navigateur. */
+.help-recherche-champ::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}

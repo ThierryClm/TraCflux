@@ -46,8 +46,11 @@ export const ouvrirExemple = async (page: Page) => {
  * refermer aussitôt (WebKit en CI). À chaque essai, survol franc (la souris
  * revient de l'extérieur), puis clic si le menu reste fermé.
  */
-export const ouvrirMenuFichier = async (page: Page, item: Locator) => {
-    const bouton = page.locator('.menu-bar').getByText('Fichier', { exact: true });
+export const ouvrirMenuFichier = (page: Page, item: Locator) => ouvrirMenu(page, 'Fichier', item);
+
+/** Ouvre le menu `menu` de la barre jusqu'à voir `item` (voir ouvrirMenuFichier). */
+export const ouvrirMenu = async (page: Page, menu: string, item: Locator) => {
+    const bouton = page.locator('.menu-bar').getByText(menu, { exact: true });
     for (let i = 0; i < 6 && !(await item.isVisible()); i++) {
         // La souris quitte d'abord la barre : un survol qui ne change pas de
         // cible ne déclenche rien, et le menu restait fermé (WebKit chargé).
