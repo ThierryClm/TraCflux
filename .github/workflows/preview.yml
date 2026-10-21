@@ -1,0 +1,84 @@
+name: Aperçu de la PR
+
+# Publie chaque PR sur une adresse fixe, https://tracflux-<branche>.surge.sh,
+# et en donne le lien dans un commentaire de la PR, mis à jour à chaque
+# poussée. Remplace les aperçus temporaires lancés à la main.
+#
+# Prérequis : les secrets SURGE_LOGIN et SURGE_TOKEN dans
+# Settings > Secrets and variables > Actions. Sans eux, le job s'arrête
+# proprement, sans faire échouer la PR. Les PR venant d'un fork n'y ont pas
+# accès (règle de GitHub) : pas d'aperçu pour elles.
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: apercu-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  apercu:
+    runs-on: ubuntu-latest
+    env:
+      SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
+      SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+    steps:
+      - name: Identifiants Surge présents ?
+        id: identifiants
+        run: |
+          if [ -n "$SURGE_LOGIN" ] && [ -n "$SURGE_TOKEN" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Pas d'aperçu : secrets SURGE_LOGIN / SURGE_TOKEN absents."
+          fi
+
+      - name: Checkout
+        if: steps.identifiants.outputs.ok == 'true'
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        if: steps.identifiants.outputs.ok == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.identifiants.outputs.ok == 'true'
+        run: npm ci
+
+      # scripts/deploy-preview.mjs : nom tiré de GITHUB_HEAD_REF, refus sur
+      # master, build puis envoi sur Surge ; il affiche PREVIEW_URL=...
+      - name: Construire et publier l'aperçu
+        if: steps.identifiants.outputs.ok == 'true'
+        id: publication
+        run: |
+          npm run preview:deploy | tee publication.log
+          url=$(grep -o 'PREVIEW_URL=.*' publication.log | tail -1 | cut -d= -f2)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Aperçu : $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Lien dans la PR
+        if: steps.publication.outputs.url != ''
+        uses: actions/github-script@v7
+        env:
+          URL_APERCU: ${{ steps.publication.outputs.url }}
+        with:
+          script: |
+            const marque = '<!-- apercu-tracflux -->';
+            const corps = `${marque}\n**Aperçu de cette PR** : ${process.env.URL_APERCU}\n\n` +
+              `Mis à jour à chaque poussée (dernière : \`${context.payload.pull_request.head.sha.slice(0, 7)}\`). ` +
+              `À ouvrir dans un onglet normal de Chrome ou d'Edge pour retrouver les fenêtres Ouvrir / Enregistrer.`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const commentaires = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existant = commentaires.find(c => c.body?.includes(marque));
+            if (existant) await github.rest.issues.updateComment({ owner, repo, comment_id: existant.id, body: corps });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body: corps });
