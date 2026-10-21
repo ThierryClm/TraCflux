@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { calculateSimulatedDiagram } from '.';
-import { DESCRIPTION_REPOS_DEFAUT, decouperDescription, lireDureeRepos, tempsApresRetraitRepos } from './dureeRepos';
+import { DESCRIPTION_REPOS_DEFAUT, decouperDescription, lireDureeRepos } from './dureeRepos';
 
 const groupe = (id, offset, green) => ({ id, name: `GF${id}`, type: 'VL', minGreen: 5, offset, durations: { green, orange: 3, red: 0 } });
 const repos = (id, deb, description) => ({ id, gf: '1', action: 'Point de repos', deb: String(deb), fin: '', description, plage1: '', plage2: '', actGf1: '', actGf1Gf2: '', actGf1Gf3: '', actGf1Gf4: '', abrv: '', micro: '' });
@@ -85,21 +85,6 @@ describe('simulation : chaque point de repos a sa durée', () => {
             [repos(1, 10, 'attente maxi 5 secondes'), repos(2, 40, 'attente maxi 20 secondes')], [1, 2], 90, matrice(1));
         expect(r.simulatedCycleLength).toBe(115);
         expect(r.restPoints.map(p => [p.originalDeb, p.deb, p.duration])).toEqual([[10, 10, 5], [40, 45, 20]]);
-    });
-});
-
-describe('tête de lecture quand on décoche un point de repos', () => {
-    const zone = { deb: 20, duration: 15 };
-    it('avant la zone : inchangée', () => {
-        expect(tempsApresRetraitRepos(12, zone)).toBe(12);
-        expect(tempsApresRetraitRepos(20, zone)).toBe(20);
-    });
-    it('dans la zone : revient au début du repos', () => {
-        expect(tempsApresRetraitRepos(27, zone)).toBe(20);
-    });
-    it('après la zone : recule de toute la durée du repos', () => {
-        expect(tempsApresRetraitRepos(35, zone)).toBe(20);
-        expect(tempsApresRetraitRepos(60, zone)).toBe(45);
     });
 });
 

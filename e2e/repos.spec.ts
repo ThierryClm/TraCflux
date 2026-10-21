@@ -69,6 +69,14 @@ test('décocher un point de repos recale la tête de lecture', async ({ page }) 
     const curseur = page.locator('input.time-slider').first();
     const tete = page.locator('.playhead-time').first();
 
+    // Cocher avec la tête après le repos (60 s) : elle avance de 10 s.
+    await curseur.fill('60');
+    await expect(tete).toHaveText('60s');
+    await caseRepos.check();
+    await expect(tete).toHaveText('70s');
+    await caseRepos.uncheck();
+    await expect(tete).toHaveText('60s');
+
     // Repos de 10 s à 30 s. Tête dans la zone (35 s) : retour au début du repos.
     await caseRepos.check();
     await expect(panneau).toContainText('Simulation · 100s');
@@ -112,4 +120,29 @@ test('Description des conditions en Automatique : seulement pour les plans qui o
     await modeDescription(page, 'Masquer');
     await ongletsPlans(page).filter({ hasText: 'PF_90' }).click();
     await expect(colonne).toHaveCount(0);
+});
+
+test('le déroulé continue sans s\'arrêter quand on coche et décoche des actions', async ({ page }) => {
+    await ouvrirExemple(page);
+    await ongletsPlans(page).filter({ hasText: 'PF_90' }).click();
+    await page.locator('.pf-tab.simulation-tab').click();
+    const panneau = page.locator('.simulation-panel');
+    const tete = page.locator('.playhead-time').first();
+    const seconde = async () => parseInt((await tete.innerText()).replace(/\D/g, ''), 10);
+    // Une action placée bien après le curseur : la cocher ne le déplace pas.
+    const caseLointaine = panneau.locator('label, li, .simulation-action').filter({ hasText: /GF2\s*Point de repos\s*79s/ }).last().locator('input[type=checkbox]');
+
+    await page.getByRole('button', { name: 'Lancer la simulation' }).click();
+    await expect.poll(seconde).toBeGreaterThanOrEqual(1);
+    const depart = await seconde();
+    const debut = Date.now();
+    for (let i = 0; i < 6; i++) {
+        await caseLointaine.setChecked(i % 2 === 0);
+        await page.waitForTimeout(400);
+    }
+    const ecoule = (Date.now() - debut) / 1000;
+    const avance = (await seconde()) - depart;
+    await page.getByRole('button', { name: 'Mettre la simulation en pause' }).click();
+    // Une seconde de cycle par seconde réelle : au plus une seconde perdue en tout.
+    expect(avance).toBeGreaterThanOrEqual(Math.floor(ecoule) - 1);
 });

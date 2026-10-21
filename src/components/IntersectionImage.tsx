@@ -734,6 +734,15 @@ const IntersectionImage = ({
         ? (currentTime ?? 0)
         : (hoveredDiagramTime ?? currentTime ?? 0);
 
+    // Durée du cycle lue par la boucle de défilement au moment où elle avance,
+    // et non captée à son lancement : cocher ou décocher une action change la
+    // simulation SANS relancer la boucle. La relancer remettait son compteur
+    // à zéro et le curseur marquait un arrêt à chaque case.
+    const cycleEffectifRef = useRef(cycleLength);
+    useEffect(() => {
+        cycleEffectifRef.current = simulationResult?.simulatedCycleLength || cycleLength;
+    }, [simulationResult, cycleLength]);
+
     // Animation loop
     useEffect(() => {
         if (isPlaying) {
@@ -755,9 +764,8 @@ const IntersectionImage = ({
                 if (elapsed >= intervalle) {
                     lastTimeRef.current = timestamp;
                     setCurrentTime?.(prev => {
-                        const effectiveCycleLength = simulationResult?.simulatedCycleLength || cycleLength;
                         const next = prev + 1;
-                        return next >= effectiveCycleLength ? 0 : next;
+                        return next >= cycleEffectifRef.current ? 0 : next;
                     });
                 }
 
@@ -777,7 +785,7 @@ const IntersectionImage = ({
                 cancelAnimationFrame(animationRef.current);
             }
         };
-    }, [isPlaying, playbackSpeed, cycleLength, simulationResult]);
+    }, [isPlaying, playbackSpeed, setCurrentTime]);
 
     return (
         <div className="intersection-image-container">

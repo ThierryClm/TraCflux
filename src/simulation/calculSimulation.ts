@@ -59,7 +59,7 @@ export const calculateSimulatedDiagram = (
     appliquerEscamotagesDePhase(etat);     // 5. en dernier, pour ne pas cumuler avec les effets existants
     placerZonesDeRepos(etat);
 
-    const { simulatedGroups, simulatedCycleLength, timeShifts, removedPeriods, contractions, restPoints } = etat;
+    const { simulatedGroups, simulatedCycleLength, timeShifts, removedPeriods, contractions, restPoints, journal } = etat;
     return {
         simulatedGroups,
         simulatedCycleLength,
@@ -67,7 +67,8 @@ export const calculateSimulatedDiagram = (
         timeShifts,
         removedPeriods,
         contractions,
-        restPoints
+        restPoints,
+        journal
     };
 };
 

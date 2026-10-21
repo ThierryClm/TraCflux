@@ -61,15 +61,3 @@ export const decouperDescription = (description: string | null | undefined): Mor
     ].filter(m => m.texte !== '');
 };
 
-/**
- * Position de la tête de lecture quand on décoche un point de repos pendant
- * le déroulé de la simulation. Le cycle perd la durée du repos : avant la
- * zone, rien ne bouge ; dans la zone, on revient à son début (la part déjà
- * parcourue disparaît) ; après, on recule de toute la durée du repos, pour
- * rester au même moment du cycle.
- */
-export const tempsApresRetraitRepos = (t: number, repos: { deb: number; duration: number }): number => {
-    if (t <= repos.deb) return t;
-    if (t < repos.deb + repos.duration) return repos.deb;
-    return t - repos.duration;
-};
