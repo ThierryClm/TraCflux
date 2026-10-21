@@ -7,6 +7,31 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.4] — 2026-10-21
+
+### Ajouté
+
+- **La durée d'un point de repos se lit dans sa description.** Choisir l'action « Point de repos »
+  propose la description « attente maxi 10 secondes », le nombre en violet comme les variables
+  d'Action_Micro. En simulation, le repos dure le nombre accolé à « maxi » ou « max » — juste après
+  (« maxi 15'' ») ou juste avant (« 12'' max ») —, 30 s au plus, 10 s sans valeur. Les descriptions
+  déjà rédigées ainsi sont prises en compte : un projet dont la description dit « maxi 12'' » simule
+  désormais un repos de 12 s, et non plus 10.
+- **Description des conditions micro : Afficher, Masquer ou Automatique**, comme les commentaires et
+  les remarques du diagramme. Automatique n'affiche la colonne que pour les plans dont une condition
+  est décrite ; une description proposée d'office fait passer Masquer en Automatique.
+
+### Modifié
+
+- **Le curseur de lecture reste au même instant du cycle** quand on coche ou décoche une action :
+  il avance ou recule de la durée d'un point de repos, d'un escamotage de phase ou d'un adaptatif
+  vertical situé avant lui, et se place au début d'une zone qui disparaît sous lui.
+
+### Corrigé
+
+- **Le déroulé de la simulation ne s'arrête plus** quand on coche ou décoche des actions : le curseur
+  restait figé tant qu'on cochait.
+
 ## [1.5.3] — 2026-10-21
 
 ### Modifié
