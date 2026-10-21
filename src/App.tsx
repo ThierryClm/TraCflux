@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { ChangeEvent } from 'react';
 import { useBooleenMemorise, usePrefsInfobulles } from './hooks/usePreferencesEspaceTravail';
 import { useImpressionDossier, useMiseEnPageImpression } from './hooks/useImpressionDossier';
+import { tempsApresRetraitRepos } from './simulation/dureeRepos';
 import { useTrafficLight } from './hooks/useTrafficLight';
 import { MAX_PF, mergePfFromProject } from './utils/pfHelpers';
 import { useAuth } from './hooks/useAuth';
@@ -642,6 +643,16 @@ function App() {
             conflictMatrix
         );
     }, [simulationEnabled, groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix]);
+
+    // Décocher un point de repos raccourcit le cycle simulé de sa durée : la
+    // tête de lecture se recale pour rester au même moment (cf. tempsApresRetraitRepos).
+    const basculerActionSimulation = useCallback((actionId: number) => {
+        const repos = simulationSelectedActions.includes(actionId)
+            ? simulationResult?.restPoints?.find(r => r.actionId === actionId)
+            : undefined;
+        if (repos) setSimulationCurrentTime(t => tempsApresRetraitRepos(t, repos));
+        toggleSimulationAction(actionId);
+    }, [simulationSelectedActions, simulationResult, setSimulationCurrentTime, toggleSimulationAction]);
 
     // Déclaré APRÈS simulationResult : son titre affiche le cycle simulé,
     // et un `const` n'est pas accessible avant son initialisation.
@@ -2208,7 +2219,7 @@ function App() {
                     model={{
                         sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
-                        tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction,
+                        tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction: basculerActionSimulation,
                         cycleLength, conflictMatrix, setMatrixValue, hoveredActionId,
                         setHoveredActionId, setSurvolActionSimulation, setHoveredConflict, simulationName, simulationScenarios, choisirScenarioSimulation,
                         creerScenarioSimulation, enregistrerScenarioSimulation, supprimerScenarioSimulation, activeTrafficDataset,

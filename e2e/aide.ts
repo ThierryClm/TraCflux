@@ -1,6 +1,7 @@
 /** Gestes et jeux de données partagés par les parcours. */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { expect } from '@playwright/test';
 import type { BrowserContext, Locator, Page } from '@playwright/test';
 
 const EXEMPLE = fileURLToPath(new URL('../public/Carrefour_Exemple.json', import.meta.url));
@@ -42,14 +43,18 @@ export const ouvrirExemple = async (page: Page) => {
 /**
  * Ouvre le menu Fichier jusqu'à voir `item`. Le menu s'ouvre au survol et un
  * clic le bascule : selon le navigateur et la charge, un clic seul pouvait le
- * refermer aussitôt (WebKit en CI). On alterne survol et clic, en attendant
- * chaque fois que l'entrée apparaisse.
+ * refermer aussitôt (WebKit en CI). À chaque essai, survol franc (la souris
+ * revient de l'extérieur), puis clic si le menu reste fermé.
  */
 export const ouvrirMenuFichier = async (page: Page, item: Locator) => {
     const bouton = page.locator('.menu-bar').getByText('Fichier', { exact: true });
-    for (let i = 0; i < 8 && !(await item.isVisible()); i++) {
-        if (i % 2 === 0) await bouton.hover();
-        else await bouton.click();
+    for (let i = 0; i < 6 && !(await item.isVisible()); i++) {
+        // La souris quitte d'abord la barre : un survol qui ne change pas de
+        // cible ne déclenche rien, et le menu restait fermé (WebKit chargé).
+        await page.mouse.move(5, 400);
+        await bouton.hover();
+        if (await item.waitFor({ state: 'visible', timeout: 1500 }).then(() => true, () => false)) break;
+        await bouton.click();
         await item.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
     }
 };
@@ -77,8 +82,13 @@ export const restaurer = async (page: Page, nom: string) => {
     const fenetre = page.locator('.modal-overlay').last();
     await fenetre.getByText(nom).first().click();
     await fenetre.locator('button', { hasText: /^Ouvrir$/ }).click();
+    // Si le projet affiché passe pour modifié (cf. l'astérisque sous charge),
+    // une confirmation s'ouvre, parfois avec retard : on attend qu'elle
+    // apparaisse ou que la fenêtre de restauration se ferme.
     const continuer = page.locator('.modal-overlay button', { hasText: 'Continuer' });
-    if (await continuer.isVisible().catch(() => false)) await continuer.click();
+    await expect.poll(async () => (await continuer.isVisible()) || !(await fenetre.isVisible()), { timeout: 15_000 }).toBe(true);
+    if (await continuer.isVisible()) await continuer.click();
+    await expect(page.locator('.modal-overlay')).toHaveCount(0);
 };
 
 /** Onglets des plans de feu (sans Simulation ni Phasage). */

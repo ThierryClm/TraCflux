@@ -5,6 +5,7 @@ import NumericInput from './NumericInput';
 import { useConfirm } from './ConfirmProvider';
 import { useMicroVariables } from './MicroVariablesProvider';
 import { tokenizeMicroText } from '../utils/microVariables';
+import { DESCRIPTION_REPOS_DEFAUT, decouperDescription } from '../simulation/dureeRepos';
 import type { ActionMicro } from '../types/projet';
 import './ActionTable.css';
 
@@ -427,6 +428,11 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
         if (newAction === 'Point de repos' && (!currentRow?.micro || currentRow.micro === '')) {
             updateActionRow(rowId, 'micro', 'Attente quittée si ');
         }
+        // Durée du repos proposée dans la description (lue par la simulation,
+        // cf. simulation/dureeRepos), sans écraser une description déjà saisie.
+        if (newAction === 'Point de repos' && !currentRow?.description) {
+            updateActionRow(rowId, 'description', DESCRIPTION_REPOS_DEFAUT);
+        }
 
         // Clear all Action GF fields if they become disabled
         if (GF_DISABLED_ACTIONS.includes(newAction)) {
@@ -519,7 +525,11 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
                     <tr key={row.id} className={hoveredActionId === row.id ? 'row-highlighted' : ''} onMouseEnter={() => isRowFilled(row) && setHoveredActionId(row.id)} onMouseLeave={() => setHoveredActionId(null)}>
                         <td><input ref={isRowFilled(row) ? undefined : addRowInputRef} type="number" min="0" max={maxGroup} className="input-gf" value={row.gf} onChange={(e) => handleGroupFieldChange(row.id, 'gf', e.target.value)} /></td>
                         <td><select className="input-action" value={row.action} onChange={(e) => handleActionChange(row.id, e.target.value, row)}>{ACTION_OPTIONS.map((opt) => (<option key={opt} value={opt}>{opt || '—'}</option>))}</select></td>
-                        {showDescription && <td><textarea ref={(el) => { descriptionRefs.current[row.id] = el; autoResizeTextarea(el); }} maxLength={60} className="input-desc" value={row.description || ''} onChange={(e) => { updateActionRow(row.id, 'description', e.target.value); autoResizeTextarea(e.target); }} rows={1} /></td>}
+                        {showDescription && <td>{row.action === 'Point de repos' ? (
+                            // Point de repos : la durée d'attente lue par la simulation apparaît en violet,
+                            // comme les variables d'Action_Micro (calque d'affichage sous un texte transparent).
+                            <div className="desc-highlight-container"><div className="micro-highlight-backdrop desc-highlight-backdrop" aria-hidden="true">{decouperDescription(row.description).map((m, i) => m.duree ? <span key={i} className="micro-keyword">{m.texte}</span> : m.texte)}</div><textarea ref={(el) => { descriptionRefs.current[row.id] = el; autoResizeTextarea(el); }} maxLength={60} className="input-desc micro-has-backdrop" value={row.description || ''} onChange={(e) => { updateActionRow(row.id, 'description', e.target.value); autoResizeTextarea(e.target); }} rows={1} /></div>
+                        ) : <textarea ref={(el) => { descriptionRefs.current[row.id] = el; autoResizeTextarea(el); }} maxLength={60} className="input-desc" value={row.description || ''} onChange={(e) => { updateActionRow(row.id, 'description', e.target.value); autoResizeTextarea(e.target); }} rows={1} />}</td>}
                         <td><NumericInput className="input-time-xs" value={row.deb} onCommit={(val) => updateActionRow(row.id, 'deb', val)} wrapAt={cycleLength} showWrapFlash={showWrapFlash} selectOnFocus /></td>
                         <td><NumericInput className={`input-time-xs ${FIN_DISABLED_ACTIONS.includes(row.action) ? 'input-disabled' : ''}`} value={row.fin} onCommit={(val) => updateActionRow(row.id, 'fin', val)} disabled={FIN_DISABLED_ACTIONS.includes(row.action)} wrapAt={cycleLength} showWrapFlash={showWrapFlash} selectOnFocus /></td>
                         <td><input type="text" maxLength={10} className="input-abrv" value={row.abrv || ''} onChange={(e) => updateActionRow(row.id, 'abrv', e.target.value)} /></td>

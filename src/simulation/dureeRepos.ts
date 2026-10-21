@@ -1,0 +1,57 @@
+/**
+ * Durée d'un point de repos, lue dans la description de sa condition :
+ * « attente maxi 15 secondes » fige le cycle 15 s en simulation.
+ *
+ * Seul le nombre écrit après « attente maxi » compte, pour ne pas confondre
+ * avec un autre chiffre de la description (« GF 3 »…). Plafonnée à 30 s ;
+ * sans valeur lisible, 10 s, la durée fixe d'avant.
+ */
+export const DUREE_REPOS_DEFAUT = 10;
+export const DUREE_REPOS_MAX = 30;
+
+/** Description proposée à la création d'un point de repos. */
+export const DESCRIPTION_REPOS_DEFAUT = `attente maxi ${DUREE_REPOS_DEFAUT} secondes`;
+
+/** « attente maxi » (ou maximum, maximale), puis le nombre. */
+const MOTIF_ATTENTE = /(attente\s+max(?:i|imum|imale)?\.?\s*:?\s*)(\d+)/i;
+
+/** Durée du repos, en secondes, d'après la description de la condition. */
+export const lireDureeRepos = (description: string | null | undefined): number => {
+    const trouve = MOTIF_ATTENTE.exec(description || '');
+    const valeur = trouve ? parseInt(trouve[2], 10) : NaN;
+    if (!(valeur > 0)) return DUREE_REPOS_DEFAUT;
+    return Math.min(valeur, DUREE_REPOS_MAX);
+};
+
+export interface MorceauDescription {
+    texte: string;
+    /** Le nombre de « attente maxi N », mis en couleur dans le tableau. */
+    duree: boolean;
+}
+
+/** Découpe une description pour colorer la durée d'attente. */
+export const decouperDescription = (description: string | null | undefined): MorceauDescription[] => {
+    const texte = description || '';
+    const trouve = MOTIF_ATTENTE.exec(texte);
+    if (!trouve) return texte ? [{ texte, duree: false }] : [];
+    const debutNombre = trouve.index + trouve[1].length;
+    const finNombre = debutNombre + trouve[2].length;
+    return [
+        { texte: texte.slice(0, debutNombre), duree: false },
+        { texte: texte.slice(debutNombre, finNombre), duree: true },
+        { texte: texte.slice(finNombre), duree: false },
+    ].filter(m => m.texte !== '');
+};
+
+/**
+ * Position de la tête de lecture quand on décoche un point de repos pendant
+ * le déroulé de la simulation. Le cycle perd la durée du repos : avant la
+ * zone, rien ne bouge ; dans la zone, on revient à son début (la part déjà
+ * parcourue disparaît) ; après, on recule de toute la durée du repos, pour
+ * rester au même moment du cycle.
+ */
+export const tempsApresRetraitRepos = (t: number, repos: { deb: number; duration: number }): number => {
+    if (t <= repos.deb) return t;
+    if (t < repos.deb + repos.duration) return repos.deb;
+    return t - repos.duration;
+};
