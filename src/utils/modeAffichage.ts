@@ -1,13 +1,15 @@
 /**
- * Affichage des commentaires et des remarques du diagramme.
+ * Affichage des commentaires et des remarques du diagramme, et de la
+ * colonne Description des conditions de micro-régulation.
  *
  * Un seul réglage pour tout le projet, à trois valeurs :
  * - 'afficher' : toujours affichés ;
  * - 'masquer'  : jamais affichés ;
  * - 'auto'     : affichés seulement pour les plans de feux qui en ont.
  *
- * Le projet enregistre le mode (commentsMode / remarksMode) ET l'ancien
- * booléen (showComments / showRemarks), pour qu'une version antérieure de
+ * Le projet enregistre le mode (commentsMode / remarksMode /
+ * actionDescriptionMode) ET l'ancien booléen (showComments / showRemarks /
+ * showActionDescription), pour qu'une version antérieure de
  * TraCflux ouvre le fichier sans perdre l'affichage.
  */
 export type ModeAffichage = 'afficher' | 'masquer' | 'auto';
@@ -28,6 +30,8 @@ interface OptionsAffichage {
     remarksMode?: unknown;
     showComments?: unknown;
     showRemarks?: unknown;
+    actionDescriptionMode?: unknown;
+    showActionDescription?: unknown;
 }
 
 /**
@@ -36,12 +40,12 @@ interface OptionsAffichage {
  */
 export const lireModeAffichage = (
     lo: OptionsAffichage | null | undefined,
-    quoi: 'comments' | 'remarks'
+    quoi: 'comments' | 'remarks' | 'description'
 ): ModeAffichage | undefined => {
     if (!lo) return undefined;
-    const mode = quoi === 'comments' ? lo.commentsMode : lo.remarksMode;
+    const mode = quoi === 'comments' ? lo.commentsMode : quoi === 'remarks' ? lo.remarksMode : lo.actionDescriptionMode;
     if (estModeAffichage(mode)) return mode;
-    const booleen = quoi === 'comments' ? lo.showComments : lo.showRemarks;
+    const booleen = quoi === 'comments' ? lo.showComments : quoi === 'remarks' ? lo.showRemarks : lo.showActionDescription;
     return typeof booleen === 'boolean' ? modeDuBooleen(booleen) : undefined;
 };
 
@@ -51,6 +55,10 @@ export const estAffiche = (mode: ModeAffichage, planEnContient: boolean): boolea
 
 export const texteRenseigne = (texte: unknown): boolean =>
     typeof texte === 'string' && texte.trim() !== '';
+
+/** Le plan courant a-t-il au moins une condition de micro-régulation décrite ? */
+export const planADescriptions = (conditions: ReadonlyArray<{ description?: string }> | null | undefined): boolean =>
+    !!conditions?.some(c => texteRenseigne(c.description));
 
 /** Le plan courant a-t-il au moins un commentaire de groupe ? */
 export const planACommentaires = (groups: ReadonlyArray<{ comment?: string }> | null | undefined): boolean =>

@@ -135,7 +135,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                 <p><strong>① Optimiser sur petit écran ou en mobilité</strong> (ordinateur portable, sur le terrain, dans le train). L'objectif est de donner un maximum de place au diagramme en mono-fenêtre :</p>
                 <ul>
                     <li><strong>Masquer le panneau de configuration</strong> (case <em>Affichage des paramètres</em>, ou bouton Paramètre de l'en-tête) : libère toute la largeur pour le diagramme.</li>
-                    <li><strong>Masquer Commentaires, Remarques et Description des conditions micro</strong> : on ne garde que l'essentiel à l'écran. Pour Commentaires et Remarques, le choix <em>Automatique</em> n'affiche la colonne que pour les plans de feu qui en ont.</li>
+                    <li><strong>Masquer Commentaires, Remarques et Description des conditions micro</strong> : on ne garde que l'essentiel à l'écran. Pour chacun des trois, le choix <em>Automatique</em> n'affiche la colonne que pour les plans de feu qui en ont — pour la Description, ceux dont au moins une condition est décrite.</li>
                     <li><strong>Masquer le nom des groupes de feu dans le formulaire</strong> : récupère ~160 px supplémentaires.</li>
                     <li><strong>Dilatation du diagramme (Zoom)</strong> : ajustez l'échelle horizontale pour voir tout le cycle sans défilement (ou Ctrl + molette).</li>
                     <li><strong>Désactiver les Infobulles</strong> une fois l'outil bien en main : interface plus épurée.</li>

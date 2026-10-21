@@ -57,7 +57,9 @@ const useDarkMode = () => {
     const [showGroupNamesForm, setShowGroupNamesForm] = useState(() => readBoolLS('showGroupNamesForm', true));
     const [showGroupNamesMatrix, setShowGroupNamesMatrix] = useState(() => readBoolLS('showGroupNamesMatrix', true));
     const [showGroupNamesDiagram, setShowGroupNamesDiagram] = useState(() => readBoolLS('showGroupNamesDiagram', true));
-    const [showActionDescription, setShowActionDescription] = useState(true);
+    // Colonne Description des conditions de micro-régulation : même réglage
+    // à trois valeurs, enregistré avec le projet.
+    const [descriptionMode, setDescriptionMode] = useState<ModeAffichage>('afficher');
 
     useEffect(() => {
         try { localStorage.setItem('showGroupNamesForm', String(showGroupNamesForm)); } catch {}
@@ -98,7 +100,7 @@ const useDarkMode = () => {
         showGroupNamesForm, setShowGroupNamesForm,
         showGroupNamesMatrix, setShowGroupNamesMatrix,
         showGroupNamesDiagram, setShowGroupNamesDiagram,
-        showActionDescription, setShowActionDescription
+        descriptionMode, setDescriptionMode
     };
 };
 

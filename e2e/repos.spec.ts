@@ -3,22 +3,14 @@
  * simulation applique (30 s au plus, 10 s sans valeur).
  */
 import { expect, test } from '@playwright/test';
-import { lignesConditions, ongletsPlans, ouvrirExemple } from './aide';
+import { lignesConditions, modeDescription, ongletsPlans, ouvrirExemple, projetEnCache, projetExemple, restaurer } from './aide';
 
 test('la durée écrite dans la description fixe la durée du repos simulé', async ({ page }) => {
     await ouvrirExemple(page);
     await ongletsPlans(page).filter({ hasText: 'PF_90' }).click();
 
-    // La colonne Description est masquée dans l'exemple : Mise en page > Description des conditions micro.
-    const entree = page.locator('.menu-bar').getByText(/Description des conditions/).first();
-    const miseEnPage = page.locator('.menu-bar').getByText('Mise en page', { exact: true });
-    for (let i = 0; i < 8 && !(await entree.isVisible()); i++) {
-        if (i % 2 === 0) await miseEnPage.hover();
-        else await miseEnPage.click();
-        await entree.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
-    }
-    await entree.click();
-    await page.keyboard.press('Escape');
+    // La colonne Description est masquée dans l'exemple : Mise en page > Description des conditions micro > Afficher.
+    await modeDescription(page, 'Afficher');
     await expect(page.locator('.action-table textarea.input-desc').first()).toBeVisible();
 
     // Nouvelle condition : GF 4, point de repos à 30 s.
@@ -95,4 +87,27 @@ test('décocher un point de repos recale la tête de lecture', async ({ page }) 
     await curseur.fill('20');
     await caseRepos.uncheck();
     await expect(tete).toHaveText('20s');
+});
+
+test('Description des conditions en Automatique : seulement pour les plans qui ont une condition décrite', async ({ page, context }) => {
+    // Exemple dont le plan PF_80 n'a aucune description.
+    const projet = projetExemple();
+    const pf80 = projet.pfTabs.find((pf: { name: string }) => pf.name === 'PF_80');
+    pf80.data = pf80.data.map((c: Record<string, unknown>) => ({ ...c, description: '' }));
+    await projetEnCache(context, 'Sans description', projet);
+    await ouvrirExemple(page);
+    await restaurer(page, 'Sans description');
+
+    await modeDescription(page, 'Automatique');
+    const colonne = page.locator('.action-table textarea.input-desc');
+    await ongletsPlans(page).filter({ hasText: 'PF_90' }).click();
+    await expect(colonne.first()).toBeVisible();
+    await ongletsPlans(page).filter({ hasText: 'PF_80' }).click();
+    await expect(colonne).toHaveCount(0);
+
+    await modeDescription(page, 'Afficher');
+    await expect(colonne.first()).toBeVisible();
+    await modeDescription(page, 'Masquer');
+    await ongletsPlans(page).filter({ hasText: 'PF_90' }).click();
+    await expect(colonne).toHaveCount(0);
 });

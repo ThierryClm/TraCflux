@@ -72,7 +72,7 @@ import './components/GroupTable.css';
 import './components/IntergreenMatrix.css';
 import './App.css';
 import { lireMiseEnPage, appliquerMiseEnPage, affichageCommentairesRemarques } from './utils/miseEnPageProjet';
-import { estAffiche, planACommentaires, texteRenseigne } from './utils/modeAffichage';
+import { estAffiche, planACommentaires, planADescriptions, texteRenseigne } from './utils/modeAffichage';
 import { entier } from './utils/entier';
 import type { ChampsProjet } from './hooks/useTrafficLight';
 import type { GreenWaveProjectSource, SavedGreenWave } from './types/greenWave';
@@ -411,12 +411,15 @@ function App() {
         showGroupNamesForm, setShowGroupNamesForm,
         showGroupNamesMatrix, setShowGroupNamesMatrix,
         showGroupNamesDiagram, setShowGroupNamesDiagram,
-        showActionDescription, setShowActionDescription
+        descriptionMode, setDescriptionMode
     } = useDarkMode();
     // Affichage effectif pour le plan de feux courant : en mode automatique,
     // seulement si ce plan a des commentaires (resp. une remarque).
     const showComments = estAffiche(commentsMode, planACommentaires(groups));
     const showRemarks = estAffiche(remarksMode, texteRenseigne(currentRemarques));
+    // Colonne Description des conditions : en automatique, seulement si une
+    // condition du plan courant a une description.
+    const showActionDescription = estAffiche(descriptionMode, planADescriptions(actionData));
 
     // Cases d'affichage de l'image du carrefour (numéros, noms, ajout de
     // flèches) : enregistrées avec le projet, cf. champsProjetRef. Leur
@@ -427,7 +430,7 @@ function App() {
     const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
         useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, intersectionDisplay,
             // Enregistrés dans le projet : les changer est une modification.
-            commentsMode, remarksMode]);
+            commentsMode, remarksMode, descriptionMode]);
 
     // Passer d'un plan de feux à un autre n'est pas une modification du projet :
     // l'écran recharge les groupes, le cycle, la matrice et les actions du plan
@@ -894,7 +897,7 @@ function App() {
             dossierSections,
             ...lireMiseEnPage({
                 diagramHeight, floatingCrop, floatingZoom,
-                sidebarVisible, commentsMode, remarksMode, showActionDescription,
+                sidebarVisible, commentsMode, remarksMode, descriptionMode,
                 showFloatingForm, showFloatingMatrix, showFloatingTraffic,
                 showFloatingImage, showFloatingConditions, showFloatingVariables,
                 showFloatingRemarks,
@@ -913,7 +916,7 @@ function App() {
         ecrire: (etat) => appliquerMiseEnPage(etat, {
             setDiagramHeight, resetDiagramHeight,
             setFloatingCrop, setFloatingZoom, markLegacyCrop,
-            setSidebarVisible, setCommentsMode, setRemarksMode, setShowActionDescription,
+            setSidebarVisible, setCommentsMode, setRemarksMode, setDescriptionMode,
             setShowFloatingForm, setShowFloatingMatrix, setShowFloatingTraffic,
             setShowFloatingImage, setShowFloatingConditions, setShowFloatingVariables,
             setShowFloatingRemarks, setDossierSections,
@@ -937,8 +940,8 @@ function App() {
         setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
         setCommentsMode, setRemarksMode, setIntersectionName,
         // Layout options sauvegardées au niveau projet
-        commentsMode, remarksMode, showActionDescription, sidebarVisible,
-        setShowActionDescription, setSidebarVisible,
+        commentsMode, remarksMode, descriptionMode, sidebarVisible,
+        setDescriptionMode, setSidebarVisible,
         // Flags de détachement (niveau projet : dimensions des popups
         // dépendent du nombre de groupes, donc liées au projet)
         showFloatingForm, setShowFloatingForm,
@@ -1519,8 +1522,14 @@ function App() {
             case 'toggleGroupNamesDiagram':
                 setShowGroupNamesDiagram(v => !v);
                 break;
-            case 'toggleActionDescription':
-                setShowActionDescription(v => !v);
+            case 'descriptionShow':
+                setDescriptionMode('afficher');
+                break;
+            case 'descriptionHide':
+                setDescriptionMode('masquer');
+                break;
+            case 'descriptionAuto':
+                setDescriptionMode('auto');
                 break;
             case 'enableAccounts':
                 (async () => {
@@ -2185,7 +2194,7 @@ function App() {
                     onManageUsers={() => setShowUserManager(true)}
                     accountsEnabled={accountsEnabled}
                     biCarrefourSeparator={biCarrefourSeparator}
-                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
+                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, descriptionMode, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
                     pixelsPerSecond={pixelsPerSecond}
                     onPixelsPerSecondChange={setPixelsPerSecond}
                     showMicroOnHover={showMicroOnHover}

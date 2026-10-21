@@ -8,7 +8,7 @@ const etatCourant = {
     sidebarVisible: false,
     commentsMode: 'auto',
     remarksMode: 'masquer',
-    showActionDescription: true,
+    descriptionMode: 'auto',
     showFloatingForm: true,
     showFloatingMatrix: false,
     showFloatingTraffic: true,
@@ -37,7 +37,7 @@ const poseurs = () => {
             setSidebarVisible: espion('panneau'),
             setCommentsMode: espion('commentaires'),
             setRemarksMode: espion('remarques'),
-            setShowActionDescription: espion('description'),
+            setDescriptionMode: espion('description'),
             setShowFloatingForm: espion('formulaire'),
             setShowFloatingMatrix: espion('matrice'),
             setShowFloatingTraffic: espion('trafic'),
@@ -65,12 +65,23 @@ describe('miseEnPageProjet — aller-retour', () => {
         expect(vus.panneau).toBe(false);
         expect(vus.commentaires).toBe('auto');
         expect(vus.remarques).toBe('masquer');
-        expect(vus.description).toBe(true);
+        expect(vus.description).toBe('auto');
         expect(vus.formulaire).toBe(true);
         expect(vus.matrice).toBe(false);
         expect(vus.trafic).toBe(true);
         expect(vus.conditions).toBe(true);
         expect(vus.remarquesDetachees).toBe(true);
+    });
+
+    it('Description des conditions : le mode est écrit avec l\'ancien booléen, relu par les anciens fichiers', () => {
+        const paquet = lireMiseEnPage({ ...etatCourant, descriptionMode: 'masquer' });
+        expect(paquet.layoutOptions.actionDescriptionMode).toBe('masquer');
+        expect(paquet.layoutOptions.showActionDescription).toBe(false);
+        const vus = {};
+        appliquerMiseEnPage({ layoutOptions: { showActionDescription: false } }, { setDescriptionMode: (m) => { vus.description = m; } });
+        expect(vus.description).toBe('masquer');
+        appliquerMiseEnPage({ layoutOptions: { showActionDescription: true } }, { setDescriptionMode: (m) => { vus.description = m; } });
+        expect(vus.description).toBe('afficher');
     });
 
     it('le paquet porte bien les six clés attendues du fichier', () => {
