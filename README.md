@@ -143,6 +143,7 @@ L'application s'ouvre à `http://localhost:3000`.
 | `npx vitest run` | Lancer les tests une seule fois |
 | `npm run test:coverage` | Les tests avec la mesure de couverture ; échoue sous les seuils fixés dans `vite.config.ts` |
 | `npm run test:ui` | Les mêmes tests dans l'interface graphique de Vitest |
+| `npm run e2e` | Parcours réels dans Chrome, Edge, Firefox et Safari (Playwright) sur la version compilée : ouvrir et sauvegarder, projet exemple, couleurs de la matrice, ajout de condition, fenêtre détachée, export PNG, dossier imprimé. Première fois : `npx playwright install --with-deps` |
 | `npm run types` | Vérification des types TypeScript (`tsc --noEmit`) |
 | `npm run lint` | Analyse du code par Oxlint (`.oxlintrc.json`) : les erreurs bloquent l'intégration continue, les avertissements sont une dette à réduire |
 | `npm run preview:deploy` | Construit et publie la branche en cours sur une adresse de prévisualisation Surge ; refuse de s'exécuter sur `master` |

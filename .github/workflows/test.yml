@@ -45,3 +45,38 @@ jobs:
 
       - name: Production build (smoke check)
         run: npm run build
+
+  # Parcours réels dans Chrome, Edge, Firefox et Safari (WebKit), sur la version
+  # compilée : ouvrir et sauvegarder, projet exemple et restauration,
+  # couleurs de la matrice, ajout de condition, dossier imprimé. Chaque
+  # régression trouvée à l'usage y devient un cas (cf. e2e/).
+  parcours:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Navigateurs Playwright
+        run: npx playwright install --with-deps chromium msedge firefox webkit
+
+      - name: Parcours (Playwright)
+        run: npm run e2e
+
+      - name: Rapport en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-parcours
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

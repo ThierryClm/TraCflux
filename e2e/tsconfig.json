@@ -1,0 +1,10 @@
+{
+    // Parcours Playwright : du code Node (lecture de fichiers, process.env)
+    // qui pilote des navigateurs, d'où un jeu de types distinct de src/.
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "types": ["node"],
+        "noEmit": true
+    },
+    "include": ["./**/*.ts", "../playwright.config.ts"]
+}

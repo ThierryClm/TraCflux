@@ -49,3 +49,7 @@ desktop.ini
 /.tmp-anonymisation/
 # Données de travail (originaux clients non anonymisés, dumps web)
 /examples/
+
+# Parcours Playwright
+test-results/
+playwright-report/
