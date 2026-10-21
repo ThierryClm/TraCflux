@@ -4,15 +4,12 @@
  */
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { ouvrirExemple } from './aide';
+import { ouvrirExemple, ouvrirMenuFichier } from './aide';
 
 test('Exporter en PNG > Diagramme télécharge une image du diagramme', async ({ page }) => {
     await ouvrirExemple(page);
     const racine = page.locator('.menu-item-with-submenu', { hasText: 'Exporter en PNG' });
-    for (let i = 0; i < 4 && !(await racine.isVisible()); i++) {
-        await page.locator('.menu-bar').getByText('Fichier', { exact: true }).click();
-        await page.waitForTimeout(250);
-    }
+    await ouvrirMenuFichier(page, racine);
     // Le sous-menu s'ouvre au survol de son entrée.
     await racine.hover();
     const entree = racine.locator('.submenu-dropdown').getByText('Diagramme', { exact: true });

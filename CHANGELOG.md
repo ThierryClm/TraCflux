@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.3] — 2026-10-21
+
+### Modifié
+
+- **Chaque page du dossier imprimé dit d'où elle vient.** À partir de la 2e page — la 1re étant la
+  page de garde —, le nom du carrefour s'imprime en haut au centre et le nom du fichier projet, avec
+  son extension `.json`, en bas au centre, entre la version de l'outil et le numéro de page. Une
+  feuille isolée se rattache ainsi à son carrefour et à son fichier, qui peuvent porter des noms
+  différents. Pour un projet qui ne vient pas d'un fichier (restauré du navigateur, exemple), le nom
+  du projet en tient lieu.
+
+*Sous le capot : 32 parcours réels rejoués à chaque PR dans Chrome, Edge, Firefox et Safari (ouvrir
+et sauvegarder, projet exemple, couleurs de la matrice, conditions de micro-régulation, fenêtre
+détachée, export PNG, dossier imprimé), et le code du dossier imprimé sorti d'`App.tsx`.*
+
 ## [1.5.2] — 2026-10-19
 
 ### Corrigé

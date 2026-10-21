@@ -801,8 +801,8 @@ function App() {
         }
     };
 
-    // Project path
-    const [, setCurrentProjectPath] = useState<string | null>('');
+    // Nom du fichier projet ouvert ou enregistré (repris en bas des pages du dossier imprimé)
+    const [currentProjectPath, setCurrentProjectPath] = useState<string | null>('');
 
     // Modal and dialog states
     const {
@@ -1024,7 +1024,9 @@ function App() {
 
     // Impression du dossier dans un onglet indépendant (cf. hooks/useImpressionDossier).
     const { imprimerApercu, handleDossierConfirm, handleDossierExportPDF } = useImpressionDossier({
-        dossierPortrait, setDossierDialog, setPrintType, setPrintPreviewModal
+        dossierPortrait, setDossierDialog, setPrintType, setPrintPreviewModal,
+        // Sans fichier (projet restauré du cache, exemple), le nom du projet en tient lieu.
+        nomCarrefour: intersectionName, nomFichier: currentProjectPath || projectName
     });
 
     // Capture la première occurrence du sélecteur en PNG. Le suffixe sert à
@@ -1746,6 +1748,9 @@ function App() {
 
         const data = loadProject(projectNameToOpen) || null;
         if (data) {
+            // Restauré du cache : aucun fichier ouvert. Le nom du fichier du projet
+            // précédent ne doit pas passer en bas des pages du dossier.
+            setCurrentProjectPath('');
             // loadProject ne passe pas par le wrapper loadFullState : sans cet
             // appel, un projet restauré depuis une fenêtre exemple restait
             // en mode exemple (Sauvegarder grisé, aucune sauvegarde auto).

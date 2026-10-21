@@ -1,7 +1,7 @@
 /** Gestes et jeux de données partagés par les parcours. */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { BrowserContext, Page } from '@playwright/test';
+import type { BrowserContext, Locator, Page } from '@playwright/test';
 
 const EXEMPLE = fileURLToPath(new URL('../public/Carrefour_Exemple.json', import.meta.url));
 
@@ -39,23 +39,31 @@ export const ouvrirExemple = async (page: Page) => {
     await page.locator('.pf-tab').first().waitFor({ timeout: 30_000 });
 };
 
-/** Clique une entrée du menu Fichier. Le menu s'ouvre au survol et un clic le referme : on insiste jusqu'à le voir. */
+/**
+ * Ouvre le menu Fichier jusqu'à voir `item`. Le menu s'ouvre au survol et un
+ * clic le bascule : selon le navigateur et la charge, un clic seul pouvait le
+ * refermer aussitôt (WebKit en CI). On alterne survol et clic, en attendant
+ * chaque fois que l'entrée apparaisse.
+ */
+export const ouvrirMenuFichier = async (page: Page, item: Locator) => {
+    const bouton = page.locator('.menu-bar').getByText('Fichier', { exact: true });
+    for (let i = 0; i < 8 && !(await item.isVisible()); i++) {
+        if (i % 2 === 0) await bouton.hover();
+        else await bouton.click();
+        await item.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
+    }
+};
+
+/** Clique une entrée du menu Fichier. */
 export const menuFichier = async (page: Page, entree: string | RegExp) => {
     const item = page.locator('.menu-bar').getByText(entree).first();
-    for (let i = 0; i < 4 && !(await item.isVisible()); i++) {
-        await page.locator('.menu-bar').getByText('Fichier', { exact: true }).click();
-        await page.waitForTimeout(250);
-    }
+    await ouvrirMenuFichier(page, item);
     await item.click();
 };
 
 /** Entrées du menu Fichier grisées. */
 export const entreesGrisees = async (page: Page) => {
-    const item = page.locator('.menu-bar').getByText('Nouveau projet').first();
-    for (let i = 0; i < 4 && !(await item.isVisible()); i++) {
-        await page.locator('.menu-bar').getByText('Fichier', { exact: true }).click();
-        await page.waitForTimeout(250);
-    }
+    await ouvrirMenuFichier(page, page.locator('.menu-bar').getByText('Nouveau projet').first());
     const grises = await page.evaluate(() => [...document.querySelectorAll('.menu-item.disabled, .menu-item[aria-disabled=true], .menu-item:disabled')]
         .map(e => (e.textContent || '').trim()));
     await page.keyboard.press('Escape');

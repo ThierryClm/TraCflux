@@ -36,6 +36,11 @@ for (const format of ['Paysage', 'Portrait'] as const) {
         // Les 5 plans de feu y sont, avec leurs diagrammes.
         for (const plan of ['PF1_120', 'PF_90', 'PF_80', 'ACTUEL', 'PF_Aiguillage']) expect(html).toContain(plan);
         expect((html.match(/<svg/g) || []).length).toBeGreaterThan(100);
+        // Marges de page : à partir de la 2e page, nom du carrefour en haut au
+        // centre et nom du fichier en bas au centre ; rien de tel sur la page de garde.
+        expect(html).toMatch(/@top-center \{ content: "Carrefour_exemple"/);
+        expect(html).toMatch(/@bottom-center \{ content: "Carrefour_exemple\.json"/);
+        expect(html).toMatch(/@page dossier-page(-portrait)?:first \{\s*@top-center \{ content: none; \}/);
         // L'aperçu hors écran est refermé, TraCflux reste utilisable.
         await expect(page.locator('.print-preview-overlay')).toHaveCount(0);
     });

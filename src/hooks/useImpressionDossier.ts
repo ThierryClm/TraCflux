@@ -195,38 +195,81 @@ export const useMiseEnPageImpression = ({ actionColWidths, activeTab, simulation
 
 interface EntreesImpression {
     dossierPortrait: boolean;
+    /** Nom du carrefour, repris en haut des pages à partir de la 2e. */
+    nomCarrefour?: string;
+    /** Nom du fichier projet (avec ou sans .json), repris en bas des pages à partir de la 2e. */
+    nomFichier?: string | null;
     setDossierDialog: Dispatch<SetStateAction<boolean>>;
     setPrintType: Dispatch<SetStateAction<TypeImpression | null>>;
     setPrintPreviewModal: Dispatch<SetStateAction<boolean>>;
 }
 
 /** Impression de l'aperçu dans un onglet indépendant ; Imprimer et Exporter PDF. */
-export const useImpressionDossier = ({ dossierPortrait, setDossierDialog, setPrintType, setPrintPreviewModal }: EntreesImpression) => {
-    // Inject dynamic @page margin box content for dossier footer
+/** Chaîne CSS entre guillemets : guillemets et barres obliques échappés, sauts de ligne aplatis. */
+const chaineCss = (texte: string) => `"${texte.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ')}"`;
+
+interface MentionsPages {
+    /** Outil et version, en bas à gauche de chaque page. */
+    signature: string;
+    /** Nom du carrefour, en haut au centre à partir de la 2e page. */
+    carrefour?: string;
+    /** Nom du fichier, extension comprise, en bas au centre à partir de la 2e page. */
+    fichier?: string;
+}
+
+/**
+ * Marges de page du dossier imprimé (boîtes de marge @page).
+ *
+ * Sur chaque page : l'outil et sa version en bas à gauche, le numéro de page
+ * en bas à droite. À partir de la 2e page — la première est la page de garde,
+ * qui porte déjà le nom du carrefour en titre — le nom du carrefour en haut au
+ * centre et le nom du fichier, extension comprise, en bas au centre : une feuille
+ * isolée dit de quel carrefour et de quel fichier elle vient.
+ *
+ * Le chemin du fichier et la date ne figurent pas : le navigateur imprime
+ * déjà la date, l'heure et le titre du document en tête de chaque feuille.
+ */
+export const stylePagesDossier = ({ signature, carrefour, fichier }: MentionsPages): string => {
+    const police = 'font-size: 10px; color: #444;';
+    const marges = [
+        `@bottom-left { content: ${chaineCss(signature)}; ${police} }`,
+        `@bottom-right { content: "Page " counter(page); ${police} }`,
+        carrefour ? `@top-center { content: ${chaineCss(carrefour)}; ${police} }` : '',
+        fichier ? `@bottom-center { content: ${chaineCss(fichier)}; ${police} }` : '',
+    ].filter(Boolean).join('\n    ');
+    return ['dossier-page', 'dossier-page-portrait'].map(page => `
+@page ${page} {
+    ${marges}
+}
+@page ${page}:first {
+    @top-center { content: none; }
+    @bottom-center { content: none; }
+}`).join('\n');
+};
+
+/**
+ * Nom du fichier projet tel qu'imprimé, avec son extension .json. Un projet
+ * sans fichier (restauré du cache, exemple) est désigné par son nom de projet,
+ * complété de .json : c'est le nom qu'aurait son fichier.
+ */
+export const nomDeFichier = (nom: string | null | undefined): string => {
+    const brut = (nom || '').trim();
+    if (!brut) return '';
+    return /\.json$/i.test(brut) ? brut : `${brut}.json`;
+};
+
+export const useImpressionDossier = ({ dossierPortrait, setDossierDialog, setPrintType, setPrintPreviewModal, nomCarrefour, nomFichier }: EntreesImpression) => {
+    // Injecte les marges de page du dossier le temps de la copie (cf. stylePagesDossier).
     const injectDossierFooterStyle = () => {
-        // Remove previous if exists
         const prev = document.getElementById('dossier-print-footer-style');
         if (prev) prev.remove();
-        // Pied de page : l'outil et sa version, puis le numéro de page.
-        //
-        // Il portait le chemin du fichier à gauche et la date au centre. Or le
-        // navigateur imprime déjà, en tête de chaque feuille, la date, l'heure et
-        // le titre du document : c'était redit deux fois. Reste ce que la feuille
-        // seule ne dit pas — avec quel outil, et dans quelle version, elle a été
-        // produite.
-        const signature = `${APP_NAME} ${APP_VERSION}`;
         const style = document.createElement('style');
         style.id = 'dossier-print-footer-style';
-        style.textContent = `
-            @page dossier-page {
-                @bottom-left { content: "${signature}"; font-size: 10px; color: #444; }
-                @bottom-right { content: "Page " counter(page); font-size: 10px; color: #444; }
-            }
-            @page dossier-page-portrait {
-                @bottom-left { content: "${signature}"; font-size: 10px; color: #444; }
-                @bottom-right { content: "Page " counter(page); font-size: 10px; color: #444; }
-            }
-        `;
+        style.textContent = stylePagesDossier({
+            signature: `${APP_NAME} ${APP_VERSION}`,
+            carrefour: nomCarrefour?.trim(),
+            fichier: nomDeFichier(nomFichier),
+        });
         document.head.appendChild(style);
         return style;
     };
