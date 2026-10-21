@@ -18,6 +18,12 @@ const PPS = 10;
 const POINT_REPOS_GF2 = 3;
 
 const projet = JSON.parse(readFileSync(path.join(process.cwd(), 'public', 'Carrefour_Exemple.json'), 'utf8'));
+// Ces tests vérifient la géométrie d'un repos de 10 s. Les descriptions de
+// l'exemple (« maxi 12'' »…) fixent désormais d'autres durées (cf.
+// simulation/dureeRepos, testé à part) : on les ramène à 10 s ici.
+for (const pf of projet.pfTabs) {
+    pf.data = pf.data.map(a => (a.action === 'Point de repos' ? { ...a, description: 'attente maxi 10 secondes' } : a));
+}
 const plan = projet.pfTabs.find(p => p.name === 'PF_Aiguillage');
 const groupes = projet.groups.map(g => {
     const l = plan.diagram.find(d => d.groupId === g.id);

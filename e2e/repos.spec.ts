@@ -9,9 +9,9 @@ test('la durée écrite dans la description fixe la durée du repos simulé', as
     await ouvrirExemple(page);
     await ongletsPlans(page).filter({ hasText: 'PF_90' }).click();
 
-    // La colonne Description est masquée dans l'exemple : Mise en page > Description des conditions micro > Afficher.
-    await modeDescription(page, 'Afficher');
-    await expect(page.locator('.action-table textarea.input-desc').first()).toBeVisible();
+    // La colonne Description est masquée dans l'exemple : elle le reste
+    // jusqu'à ce qu'un point de repos y propose un texte.
+    await expect(page.locator('.action-table textarea.input-desc')).toHaveCount(0);
 
     // Nouvelle condition : GF 4, point de repos à 30 s.
     await page.locator('.add-condition-btn').first().click();
@@ -20,6 +20,8 @@ test('la durée écrite dans la description fixe la durée du repos simulé', as
     await expect.poll(() => lignesConditions(page)).toContain('4');
     const ligne = lignes.nth((await lignes.count()) - 2);
     await ligne.locator('select').first().selectOption('Point de repos');
+    // Masquée, la colonne passe en Automatique : la description proposée se voit.
+    await expect(ligne.locator('textarea.input-desc')).toHaveValue('attente maxi 10 secondes');
     const debut = ligne.locator('input.input-time-xs').first();
     await debut.fill('30');
     await debut.press('Tab');

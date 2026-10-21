@@ -240,6 +240,13 @@ describe('ActionTable — champs selon l’action', () => {
         expect(updateActionRow).toHaveBeenCalledWith(1, 'description', 'attente maxi 10 secondes');
     });
 
+    it('la description proposée prévient l\'application, pour rendre la colonne visible', () => {
+        const onDescriptionProposee = vi.fn();
+        renderTable({ actionData: donnees({ gf: '1', action: 'Escamotage' }), onDescriptionProposee });
+        fireEvent.change(champ(0, COL.action), { target: { value: 'Point de repos' } });
+        expect(onDescriptionProposee).toHaveBeenCalledTimes(1);
+    });
+
     it('choisir Point de repos garde une description déjà saisie', () => {
         const { updateActionRow } = renderTable({ actionData: donnees({ gf: '1', action: 'Escamotage', description: 'Bus V2' }) });
         fireEvent.change(champ(0, COL.action), { target: { value: 'Point de repos' } });

@@ -420,6 +420,11 @@ function App() {
     // Colonne Description des conditions : en automatique, seulement si une
     // condition du plan courant a une description.
     const showActionDescription = estAffiche(descriptionMode, planADescriptions(actionData));
+    // Une description proposée d'office (point de repos) ne doit pas rester
+    // invisible : Masquer passe en Automatique, les autres choix sont gardés.
+    const revelerDescription = useCallback(() => {
+        setDescriptionMode(mode => (mode === 'masquer' ? 'auto' : mode));
+    }, [setDescriptionMode]);
 
     // Cases d'affichage de l'image du carrefour (numéros, noms, ajout de
     // flèches) : enregistrées avec le projet, cf. champsProjetRef. Leur
@@ -2265,7 +2270,7 @@ function App() {
                         setIntersectionArrows, setIntersectionDisplayOption, setIntersectionImage, setIsPlayingSimulation, setPhasageBubbleRatio, setPhasageBubbleScale,
                         setPhasageBulleCount, setPhasageBulleEnabled, setPhasageBulleModal, setPhasageBulleTimes, setPhasageBulleVersion,
                         setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
-                        setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
+                        setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription, revelerDescription,
                         showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
                         showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,
                         sidebarVisible, simulationCurrentTime, simulationEnabled, simulationResult, simulationSelectedActions,

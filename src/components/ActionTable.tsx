@@ -36,6 +36,11 @@ export interface ActionTableProps {
     setShowFloatingVariables: Dispatch<SetStateAction<boolean>>;
     showWrapFlash?: boolean;
     showDescription?: boolean;
+    /**
+     * Une description vient d'être proposée (point de repos) : l'application
+     * rend la colonne visible si elle était masquée.
+     */
+    onDescriptionProposee?: () => void;
     actionColWidths?: LargeursColonnes;
     setActionColWidths?: Dispatch<SetStateAction<LargeursColonnes>>;
     tooltipsEnabled?: boolean;
@@ -123,7 +128,7 @@ const isRowFilled = (row: ActionMicro) => {
         row.actGf1 || row.actGf1Gf2 || row.actGf1Gf3 || row.actGf1Gf4;
 };
 
-const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength = 100, maxGroup = 16, hoveredActionId, setHoveredActionId, microCustomFields = [], updateMicroCustomField, onResizePanel, showFloatingConditions, setShowFloatingConditions, showFloatingVariables, setShowFloatingVariables, showWrapFlash = true, showDescription = true, actionColWidths = { description: 160, micro: 420 }, setActionColWidths = () => {}, tooltipsEnabled = true }: ActionTableProps) => {
+const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength = 100, maxGroup = 16, hoveredActionId, setHoveredActionId, microCustomFields = [], updateMicroCustomField, onResizePanel, showFloatingConditions, setShowFloatingConditions, showFloatingVariables, setShowFloatingVariables, showWrapFlash = true, showDescription = true, onDescriptionProposee, actionColWidths = { description: 160, micro: 420 }, setActionColWidths = () => {}, tooltipsEnabled = true }: ActionTableProps) => {
     const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
     const { names: microVariableNames } = useMicroVariables();
     const askConfirm = useConfirm();
@@ -432,6 +437,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
         // cf. simulation/dureeRepos), sans écraser une description déjà saisie.
         if (newAction === 'Point de repos' && !currentRow?.description) {
             updateActionRow(rowId, 'description', DESCRIPTION_REPOS_DEFAUT);
+            onDescriptionProposee?.();
         }
 
         // Clear all Action GF fields if they become disabled
@@ -447,7 +453,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             updateActionRow(rowId, 'actGf1Gf3', '');
             updateActionRow(rowId, 'actGf1Gf4', '');
         }
-    }, [updateActionRow, askConfirm]);
+    }, [updateActionRow, askConfirm, onDescriptionProposee]);
 
     // Handle sort - actually reorder the data permanently
     const handleSort = useCallback((field: 'gf' | 'action' | 'deb', direction: 'asc' | 'desc' = 'asc') => {
