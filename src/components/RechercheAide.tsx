@@ -108,6 +108,10 @@ const RechercheAide = ({ racine }: RechercheAideProps) => {
 
     useEffect(() => effacerSurlignages, []);
 
+    // À l'ouverture de l'aide, le curseur attend dans le champ, sans
+    // faire défiler (l'aide peut s'ouvrir sur un chapitre précis).
+    useEffect(() => { champ.current?.focus({ preventScroll: true }); }, []);
+
     // Ctrl+F, fenêtre d'aide ouverte : la recherche de l'aide plutôt que celle du navigateur.
     useEffect(() => {
         const surTouche = (e: globalThis.KeyboardEvent) => {
@@ -122,10 +126,13 @@ const RechercheAide = ({ racine }: RechercheAideProps) => {
     }, []);
 
     const total = occurrences.length;
+    // Pas de retour en boucle : on s'arrête à la première et à la dernière occurrence.
     const aller = useCallback((pas: number) => {
         if (total === 0) return;
-        setCourante(c => (c + pas + total) % total);
+        setCourante(c => Math.min(Math.max(c + pas, 0), total - 1));
     }, [total]);
+    const premiere = courante <= 0;
+    const derniere = courante >= total - 1;
 
     const vider = () => { setSaisie(''); lancer(''); setListeOuverte(false); champ.current?.focus(); };
 
@@ -166,9 +173,9 @@ const RechercheAide = ({ racine }: RechercheAideProps) => {
                     onKeyDown={surToucheChamp}
                 />
                 <span className={`help-recherche-compteur${actif && total === 0 ? ' help-recherche-vide' : ''}`} aria-live="polite">{compteur}</span>
-                <button type="button" className="help-recherche-btn" onClick={() => aller(-1)} disabled={total === 0}
+                <button type="button" className="help-recherche-btn" onClick={() => aller(-1)} disabled={total === 0 || premiere}
                     title="Occurrence précédente (Maj+Entrée)" aria-label="Occurrence précédente">▲</button>
-                <button type="button" className="help-recherche-btn" onClick={() => aller(1)} disabled={total === 0}
+                <button type="button" className="help-recherche-btn" onClick={() => aller(1)} disabled={total === 0 || derniere}
                     title="Occurrence suivante (Entrée)" aria-label="Occurrence suivante">▼</button>
                 <button type="button" className="help-recherche-btn help-recherche-chapitres" onClick={() => setListeOuverte(o => !o)}
                     disabled={total === 0} aria-expanded={listeOuverte} aria-haspopup="listbox"

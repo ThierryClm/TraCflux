@@ -35,7 +35,9 @@ const etat = (page: Page) => page.evaluate(() => {
 test("chercher un mot dans l'aide : surlignage, suivant / précédent, chapitres", async ({ page }) => {
     await ouvrirAide(page);
     const champ = page.getByRole('searchbox', { name: "Rechercher dans l'aide" });
-    await champ.fill('escamotage');
+    // Le curseur attend dans le champ dès l'ouverture : on tape directement.
+    await expect(champ).toBeFocused();
+    await page.keyboard.type('escamotage');
     const compteur = page.locator('.help-recherche-compteur');
     await expect(compteur).toHaveText(/^1 \/ \d+$/);
     const total = Number((await compteur.textContent())!.split('/ ')[1]);
@@ -45,6 +47,7 @@ test("chercher un mot dans l'aide : surlignage, suivant / précédent, chapitres
     expect(e.tous).toBe(total);
     expect(e.texte.toLowerCase()).toBe('escamotage');
     expect(e.visible).toBe(true);
+    await expect(page.getByRole('button', { name: 'Occurrence précédente' })).toBeDisabled();
 
     // Entrée : occurrence suivante, amenée à l'écran sous la barre, qui reste en haut.
     for (let i = 0; i < 5; i++) await champ.press('Enter');
@@ -66,6 +69,11 @@ test("chercher un mot dans l'aide : surlignage, suivant / précédent, chapitres
     e = await etat(page);
     expect(e.section).toBe('Simulation');
     expect(e.visible).toBe(true);
+
+    // Dernière occurrence : la flèche du bas se grise.
+    for (let i = 0; i < total; i++) await champ.press('Enter');
+    await expect(compteur).toHaveText(`${total} / ${total}`);
+    await expect(page.getByRole('button', { name: 'Occurrence suivante' })).toBeDisabled();
 
     // Sans accent ni majuscule ; Échap efface tout.
     await champ.fill('ecran');

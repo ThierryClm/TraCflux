@@ -132,3 +132,10 @@
     -webkit-appearance: none;
     appearance: none;
 }
+
+/* Un titre atteint par le sommaire ou par un lien direct s'arrête sous la
+   barre de recherche, qui sinon le masquerait. */
+.help-content h3,
+.help-content h4 {
+    scroll-margin-top: 64px;
+}

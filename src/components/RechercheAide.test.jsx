@@ -24,11 +24,26 @@ describe("recherche dans l'aide", () => {
         const compteur = screen.getByText(/^1 \/ \d+$/);
         const total = Number(compteur.textContent.split('/ ')[1]);
         expect(total).toBeGreaterThan(5);
-        fireEvent.click(screen.getByRole('button', { name: 'Occurrence suivante' }));
+        const precedente = screen.getByRole('button', { name: 'Occurrence précédente' });
+        const suivante = screen.getByRole('button', { name: 'Occurrence suivante' });
+        // Sur la première, la flèche du haut est grisée.
+        expect(precedente).toBeDisabled();
+        fireEvent.click(suivante);
         expect(compteur.textContent).toBe(`2 / ${total}`);
+        expect(precedente).toBeEnabled();
         fireEvent.keyDown(champ, { key: 'Enter', shiftKey: true });
         fireEvent.keyDown(champ, { key: 'Enter', shiftKey: true });
+        expect(compteur.textContent).toBe(`1 / ${total}`);
+        // Jusqu'à la dernière : la flèche du bas se grise, Entrée n'y revient pas au début.
+        for (let i = 0; i < total + 2; i++) fireEvent.keyDown(champ, { key: 'Enter' });
         expect(compteur.textContent).toBe(`${total} / ${total}`);
+        expect(suivante).toBeDisabled();
+        expect(precedente).toBeEnabled();
+    });
+
+    it("à l'ouverture de l'aide, le curseur est dans le champ de recherche", () => {
+        render(<HelpContent />);
+        expect(document.activeElement).toBe(screen.getByRole('searchbox'));
     });
 
     it('déroule la liste des chapitres et sections qui contiennent le mot', () => {
@@ -72,6 +87,7 @@ describe("recherche dans l'aide", () => {
 
     it('Ctrl+F place le curseur dans la recherche', () => {
         render(<HelpContent />);
+        document.activeElement.blur();
         fireEvent.keyDown(window, { key: 'f', ctrlKey: true });
         expect(document.activeElement).toBe(screen.getByRole('searchbox'));
     });
