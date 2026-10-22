@@ -7,6 +7,24 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.5] — 2026-10-22
+
+### Ajouté
+
+- **Recherche dans l'aide.** Un champ en haut de la fenêtre d'aide cherche un mot sans tenir compte
+  des majuscules ni des accents. Toutes les occurrences sont surlignées, la courante en orange ;
+  ▲ ▼ (ou Entrée, Maj+Entrée) passent de l'une à l'autre, et le bouton « Chapitres » déroule la liste
+  des sections qui contiennent le mot, avec leur nombre d'occurrences. Le curseur est dans le champ à
+  l'ouverture de l'aide, et Ctrl+F l'y ramène.
+
+### Corrigé
+
+- **Fenêtres détachées rouvertes au chargement d'un projet** : sous Firefox et Safari, leur
+  réouverture levait une erreur interne de React (n° 327), sans effet visible.
+- **Aide** : les titres atteints depuis le sommaire ne sont plus masqués par la barre de recherche ;
+  « workflow » remplacé par « enchaînement d'étapes ».
+- **FAQ** : l'import DiagFeux est présenté comme une ébauche à vérifier, et non comme « déjà réglé ».
+
 ## [1.5.4] — 2026-10-21
 
 ### Ajouté
