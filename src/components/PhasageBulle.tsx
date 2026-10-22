@@ -170,18 +170,21 @@ const PhasageBulle = ({
         const normalizedTime = time % effectiveCycleLength;
 
         // Check for "Seconde lucarne" action
+        // Hors simulation, la seconde lucarne fait partie du plan : elle est
+        // verte dans sa bulle. En simulation, seulement si elle est cochée.
+        // Le GF est comparé en texte : un projet peut l'enregistrer en nombre.
         const secondeLucarneAction = actionData.find(action =>
             action.action === 'Seconde lucarne' &&
-            action.gf === String(groupId) &&
+            String(action.gf) === String(groupId) &&
             action.deb !== '' &&
             action.fin !== '' &&
-            selectedActions.includes(action.id)
+            (!simulationResult || selectedActions.includes(action.id))
         );
 
         // Check for "Priorité piétons" action
         const prioritePietonsAction = actionData.find(action =>
             action.action === 'Priorité piétons' &&
-            action.gf === String(groupId) &&
+            String(action.gf) === String(groupId) &&
             action.deb !== '' &&
             action.fin !== '' &&
             selectedActions.includes(action.id)
