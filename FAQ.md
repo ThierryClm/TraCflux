@@ -39,7 +39,7 @@ L'application étant gratuite et libre, son adoption par vos partenaires n'a auc
 
 ### J'utilise déjà un autre outil qui ne me satisfait pas pleinement, mais je ne souhaite pas ressaisir l'intégralité de mes plans de feux. Comment migrer mes données existantes ?
 
-**Si votre outil est DiagFeux, c'est déjà réglé :** TraCflux importe nativement les projets **`.dfe`** — voir [Puis-je récupérer mes anciennes études DiagFeux ?](#puis-je-récupérer-mes-anciennes-études-diagfeux-).
+**Si votre outil est DiagFeux, une piste existe, mais elle n'est pas encore aboutie :** TraCflux propose un import des projets **`.dfe`**, encore à l'état d'ébauche. Il n'a jamais été éprouvé sur un fichier réel : le plan importé est une base de reprise à vérifier, pas une conversion fidèle. Détails et moyen de faire avancer ce point : [Puis-je récupérer mes anciennes études DiagFeux ?](#puis-je-récupérer-mes-anciennes-études-diagfeux-).
 
 Pour les autres outils, l'import natif reste aujourd'hui limité (Excel partiel, HTM, JSON pour le format propre à l'application). L'**interopérabilité** avec d'autres systèmes de programmation de contrôleurs de carrefour — propriétaires ou ouverts — est un axe d'évolution majeur de l'outil.
 
@@ -297,7 +297,7 @@ Un point à connaître en attendant de l'avoir fait : lorsqu'une fenêtre est re
 | Format | Import | Export |
 |---|---|---|
 | JSON (format natif) | ✓ | ✓ |
-| **DiagFeux `.dfe`** (CERTU/Cerema) | ✓ | (envisagé) |
+| **DiagFeux `.dfe`** (CERTU/Cerema) | ébauche, à vérifier | (envisagé) |
 | Excel `.xlsx` | (envisageable selon modèle) | ✓ |
 | CSV | ✓ | — |
 | HTM | ✓ | — |
