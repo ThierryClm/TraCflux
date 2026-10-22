@@ -545,246 +545,263 @@ const usePopupWindow = ({
 
     // Open/close popup based on isOpen
     useEffect(() => {
+        let annule = false;
         if (isOpen) {
-            // Center the popup on screen
-            const left = window.screenX + Math.round((window.outerWidth - width) / 2);
-            const top = window.screenY + Math.round((window.outerHeight - height) / 2);
+            // Ouverture différée d'une micro-tâche. L'effet s'exécute parfois
+            // au milieu d'un rendu synchrone de React (chargement d'un projet
+            // qui rouvre ses fenêtres détachées). Firefox et Safari traitent
+            // alors, pendant window.open, des tâches en attente, dont celle du
+            // planificateur de React : « Should not already be working »
+            // (erreur React n° 327). Une micro-tâche passe après la fin du
+            // rendu, mais reste dans le même geste de l'utilisateur : le
+            // bloqueur de fenêtres ne voit pas de différence.
+            const ouvrir = () => {
+                // Center the popup on screen
+                const left = window.screenX + Math.round((window.outerWidth - width) / 2);
+                const top = window.screenY + Math.round((window.outerHeight - height) / 2);
 
-            const popup = window.open(
-                '',
-                title.replace(/\s+/g, '_'),
-                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,menubar=no,toolbar=yes,location=yes,status=no`
-            );
+                const popup = window.open(
+                    '',
+                    title.replace(/\s+/g, '_'),
+                    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,menubar=no,toolbar=yes,location=yes,status=no`
+                );
 
-            if (!popup) {
-                setPopupOpen(false);
-                if (!popupBlockedNotified) {
-                    popupBlockedNotified = true;
-                    toast.error("Fenêtre détachée bloquée par le navigateur. Cliquez sur l'icône popup bloqué dans la barre d'adresse et choisissez « Toujours autoriser » pour ce site, puis rouvrez la fenêtre (voir le menu Aide).");
-                }
-                // On NE referme PAS le détachement. Le faire remettait son
-                // drapeau à faux, et le projet enregistré dans la foulée
-                // retenait une mise en page amputée — silencieusement, alors
-                // que l'utilisateur n'avait rien décoché. Le refus vient du
-                // navigateur, pas de lui : son intention est conservée.
-                // Pas de risque de boucle, cet effet ne dépend que de `isOpen`,
-                // qui ne change pas ici.
-                return;
-            }
-
-            popupRef.current = popup;
-            setPopupOpen(true);
-            openPopups.add(popup);
-            installMainListener();
-            // Suivi de l'édition de champ dans cette popup (suspension des re-rendus).
-            installEditingListeners(popup.document);
-
-            // Fenêtre nommée potentiellement réutilisée : on repart d'un head
-            // vide, sinon les feuilles de style s'y recopient à chaque passage.
-            popup.document.head.replaceChildren();
-
-            // Set title
-            popup.document.title = title;
-
-            // Copie des feuilles de style de la fenêtre parente.
-            //
-            // Un <link> cloné se RECHARGE en asynchrone dans la fenêtre fille :
-            // le contenu React y est monté, mesuré et la fenêtre dimensionnée
-            // avant que la moindre règle s'applique. En développement le défaut
-            // ne se voit pas — Vite injecte le CSS en <style>, dont le clone
-            // porte déjà le texte. Dans le build de production, où le CSS est un
-            // fichier lié, la fenêtre s'ouvrait par moments sans style : image à
-            // sa taille native, flèches retombées dans le flux sous l'image (leur
-            // positionnement tient à la seule règle .floating-arrow-marker), et
-            // taille de fenêtre calculée sur cette mise en page fantôme.
-            //
-            // On insère donc le TEXTE des règles, qui s'applique dès l'insertion.
-            // Le <link> est conservé derrière : il ne change plus rien à la mise
-            // en page, mais garde une base d'URL correcte pour les ressources
-            // que le CSS référencerait.
-            const parentStyles = document.querySelectorAll('style, link[rel="stylesheet"]');
-            parentStyles.forEach(node => {
-                if (node.tagName === 'LINK') {
-                    const texte = cssTextOf(node as HTMLLinkElement);
-                    if (texte) {
-                        const inline = popup.document.createElement('style');
-                        inline.textContent = texte;
-                        popup.document.head.appendChild(inline);
-                    }
-                }
-                const clone = node.cloneNode(true);
-                // Filet pour la feuille restée illisible : elle n'arrive qu'après
-                // coup, et la fenêtre garde alors le gabarit mesuré sans style.
-                if (node.tagName === 'LINK') {
-                    clone.addEventListener('load', () => setTimeout(applySize, 0));
-                }
-                popup.document.head.appendChild(clone);
-            });
-
-            // Sync theme class on popup body
-            ['light-mode', 'high-contrast-mode', 'amber-mode', 'daltonian-mode', 'sepia-mode', 'blue-night-mode'].forEach(cls => {
-                if (document.body.classList.contains(cls)) {
-                    popup.document.body.classList.add(cls);
-                }
-            });
-
-            // Add base styles for popup body (all themes)
-            const popupStyle = popup.document.createElement('style');
-            popupStyle.textContent = `
-                body {
-                    margin: 0;
-                    padding: 0;
-                    background: #1e1e1e;
-                    overflow: auto;
-                }
-                body.light-mode {
-                    background: #f5f5f5;
-                }
-                body.high-contrast-mode {
-                    background: #0a0e2a;
-                }
-                body.amber-mode {
-                    background: #1a1a1a;
-                }
-                body.daltonian-mode {
-                    background: #0d1b2a;
-                }
-                body.sepia-mode {
-                    background: #f4ecd8;
-                }
-                body.blue-night-mode {
-                    background: #002b36;
-                }
-                /* Bandeau d'identification. Deux fenêtres détachées sombres
-                   qui se chevauchent sur un bureau sombre n'ont pas de
-                   frontière lisible : la barre de titre du navigateur est du
-                   chrome système, qu'une page ne peut pas styler. Ce bandeau
-                   est la première ligne que nous maîtrisons. Son gris est
-                   celui des barres de défilement du navigateur : l'œil le lit
-                   comme un cadre de fenêtre, pas comme du contenu. */
-                #popup-bandeau {
-                    height: ${BANDEAU_HAUTEUR}px;
-                    box-sizing: border-box;
-                    flex: 0 0 auto;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 12px;
-                    padding: 0 10px;
-                    background: linear-gradient(#6b6b6b, #5a5a5a);
-                    border-bottom: 1px solid #3a3a3a;
-                    color: #fff;
-                    font: bold 12px system-ui, sans-serif;
-                    letter-spacing: .2px;
-                    user-select: none;
-                    overflow: hidden;
-                    white-space: nowrap;
-                }
-                #popup-bandeau .bandeau-contexte {
-                    font-weight: 500;
-                    color: #efefef;
-                    opacity: .85;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-                #popup-bandeau .bandeau-nom {
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-                /* Les thèmes clairs reçoivent un gris qui reste un cadre sans
-                   trouer la page. */
-                body.light-mode #popup-bandeau,
-                body.sepia-mode #popup-bandeau {
-                    background: linear-gradient(#9a9a9a, #868686);
-                    border-bottom-color: #6f6f6f;
-                }
-                /* Le cadre de pourtour fait, sur les trois autres côtés, ce que
-                   le bandeau fait en haut : dire où la fenêtre s'arrête. Trois
-                   pixels et non un, dans le gris du bandeau : à un pixel et en
-                   gris sombre, il se confondait avec le fond de l'écran
-                   principal, qui est sombre lui aussi. */
-                body {
-                    box-shadow: inset 0 0 0 3px #6b6b6b;
-                }
-                body.light-mode, body.sepia-mode {
-                    box-shadow: inset 0 0 0 3px #8a8a8a;
-                }
-                #popup-root {
-                    height: calc(100vh - ${bannerHeight}px);
-                    display: flex;
-                    flex-direction: column;
-                }
-            `;
-            popup.document.head.appendChild(popupStyle);
-
-            // Create root container. La fenêtre nommée peut être RÉUTILISÉE par
-            // window.open (rejeu d'effet en StrictMode, réouverture) : on repart
-            // d'un body vide, sinon les racines s'empilent.
-            popup.document.body.replaceChildren();
-            if (showTitleBanner) {
-                const bandeau = popup.document.createElement('div');
-                bandeau.id = 'popup-bandeau';
-                bandeau.innerHTML = '<span class="bandeau-nom"></span><span class="bandeau-contexte"></span>';
-                popup.document.body.appendChild(bandeau);
-                ecrireBandeau(popup, title);
-            }
-            const container = popup.document.createElement('div');
-            container.id = 'popup-root';
-            popup.document.body.appendChild(container);
-
-            // Create React root
-            rootRef.current = createRoot(container);
-
-            // Dimensionnement une fois la fenêtre réellement créée, puis une
-            // seconde passe quand le contenu est rendu. La fonction visant une
-            // taille absolue, la répétition est sans effet de bord.
-            setTimeout(applySize, 0);
-            setTimeout(applySize, 150);
-            // En dernier : la position se calcule sur la taille définitive.
-            // Deux passages, et non un : juste après l'ouverture, outerWidth vaut
-            // encore 0 sur certaines fenêtres — celles sans phase de
-            // redimensionnement, comme la matrice — et le centrage renonçait
-            // silencieusement, laissant la fenêtre dans l'angle. Le second
-            // passage rattrape, et opère sur la taille définitive.
-            placedRef.current = false;
-            lastPosRef.current = { x: null, y: null };
-            setTimeout(placeWindow, 60);
-            setTimeout(placeWindow, 300);
-
-            // When this popup gains focus, bring all other popups to front too
-            popup.addEventListener('focus', () => {
-                if (!isFilePickerActive() && !mainModalActive) {
-                    setTimeout(() => bringAllPopupsToFront(popup), 150);
-                }
-            });
-
-            // Detect popup close
-            intervalRef.current = setInterval(() => {
-                // La position se relève tant que la fenêtre vit : une fois
-                // popup.closed passé à true, screenX/screenY ne valent plus rien.
-                if (!popup.closed && placedRef.current && geometryKeyRef.current) {
-                    try {
-                        const x = popup.screenX;
-                        const y = popup.screenY;
-                        if (Number.isFinite(x) && Number.isFinite(y) &&
-                            (x !== lastPosRef.current.x || y !== lastPosRef.current.y)) {
-                            lastPosRef.current = { x, y };
-                            writePopupPosition(geometryKeyRef.current, x, y);
-                        }
-                    } catch { /* fenêtre en cours de fermeture */ }
-                }
-                if (popup.closed) {
-                    if (intervalRef.current !== null) clearInterval(intervalRef.current);
-                    intervalRef.current = null;
-                    rootRef.current = null;
-                    popupRef.current = null;
-                    pendingContentRef.current = null;
-                    openPopups.delete(popup);
-                    placesAttribuees.delete(popup);
+                if (!popup) {
                     setPopupOpen(false);
-                    onClose();
+                    if (!popupBlockedNotified) {
+                        popupBlockedNotified = true;
+                        toast.error("Fenêtre détachée bloquée par le navigateur. Cliquez sur l'icône popup bloqué dans la barre d'adresse et choisissez « Toujours autoriser » pour ce site, puis rouvrez la fenêtre (voir le menu Aide).");
+                    }
+                    // On NE referme PAS le détachement. Le faire remettait son
+                    // drapeau à faux, et le projet enregistré dans la foulée
+                    // retenait une mise en page amputée — silencieusement, alors
+                    // que l'utilisateur n'avait rien décoché. Le refus vient du
+                    // navigateur, pas de lui : son intention est conservée.
+                    // Pas de risque de boucle, cet effet ne dépend que de `isOpen`,
+                    // qui ne change pas ici.
+                    return;
                 }
-            }, 300);
+
+                popupRef.current = popup;
+                setPopupOpen(true);
+                openPopups.add(popup);
+                installMainListener();
+                // Suivi de l'édition de champ dans cette popup (suspension des re-rendus).
+                installEditingListeners(popup.document);
+
+                // Fenêtre nommée potentiellement réutilisée : on repart d'un head
+                // vide, sinon les feuilles de style s'y recopient à chaque passage.
+                popup.document.head.replaceChildren();
+
+                // Set title
+                popup.document.title = title;
+
+                // Copie des feuilles de style de la fenêtre parente.
+                //
+                // Un <link> cloné se RECHARGE en asynchrone dans la fenêtre fille :
+                // le contenu React y est monté, mesuré et la fenêtre dimensionnée
+                // avant que la moindre règle s'applique. En développement le défaut
+                // ne se voit pas — Vite injecte le CSS en <style>, dont le clone
+                // porte déjà le texte. Dans le build de production, où le CSS est un
+                // fichier lié, la fenêtre s'ouvrait par moments sans style : image à
+                // sa taille native, flèches retombées dans le flux sous l'image (leur
+                // positionnement tient à la seule règle .floating-arrow-marker), et
+                // taille de fenêtre calculée sur cette mise en page fantôme.
+                //
+                // On insère donc le TEXTE des règles, qui s'applique dès l'insertion.
+                // Le <link> est conservé derrière : il ne change plus rien à la mise
+                // en page, mais garde une base d'URL correcte pour les ressources
+                // que le CSS référencerait.
+                const parentStyles = document.querySelectorAll('style, link[rel="stylesheet"]');
+                parentStyles.forEach(node => {
+                    if (node.tagName === 'LINK') {
+                        const texte = cssTextOf(node as HTMLLinkElement);
+                        if (texte) {
+                            const inline = popup.document.createElement('style');
+                            inline.textContent = texte;
+                            popup.document.head.appendChild(inline);
+                        }
+                    }
+                    const clone = node.cloneNode(true);
+                    // Filet pour la feuille restée illisible : elle n'arrive qu'après
+                    // coup, et la fenêtre garde alors le gabarit mesuré sans style.
+                    if (node.tagName === 'LINK') {
+                        clone.addEventListener('load', () => setTimeout(applySize, 0));
+                    }
+                    popup.document.head.appendChild(clone);
+                });
+
+                // Sync theme class on popup body
+                ['light-mode', 'high-contrast-mode', 'amber-mode', 'daltonian-mode', 'sepia-mode', 'blue-night-mode'].forEach(cls => {
+                    if (document.body.classList.contains(cls)) {
+                        popup.document.body.classList.add(cls);
+                    }
+                });
+
+                // Add base styles for popup body (all themes)
+                const popupStyle = popup.document.createElement('style');
+                popupStyle.textContent = `
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        background: #1e1e1e;
+                        overflow: auto;
+                    }
+                    body.light-mode {
+                        background: #f5f5f5;
+                    }
+                    body.high-contrast-mode {
+                        background: #0a0e2a;
+                    }
+                    body.amber-mode {
+                        background: #1a1a1a;
+                    }
+                    body.daltonian-mode {
+                        background: #0d1b2a;
+                    }
+                    body.sepia-mode {
+                        background: #f4ecd8;
+                    }
+                    body.blue-night-mode {
+                        background: #002b36;
+                    }
+                    /* Bandeau d'identification. Deux fenêtres détachées sombres
+                       qui se chevauchent sur un bureau sombre n'ont pas de
+                       frontière lisible : la barre de titre du navigateur est du
+                       chrome système, qu'une page ne peut pas styler. Ce bandeau
+                       est la première ligne que nous maîtrisons. Son gris est
+                       celui des barres de défilement du navigateur : l'œil le lit
+                       comme un cadre de fenêtre, pas comme du contenu. */
+                    #popup-bandeau {
+                        height: ${BANDEAU_HAUTEUR}px;
+                        box-sizing: border-box;
+                        flex: 0 0 auto;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 12px;
+                        padding: 0 10px;
+                        background: linear-gradient(#6b6b6b, #5a5a5a);
+                        border-bottom: 1px solid #3a3a3a;
+                        color: #fff;
+                        font: bold 12px system-ui, sans-serif;
+                        letter-spacing: .2px;
+                        user-select: none;
+                        overflow: hidden;
+                        white-space: nowrap;
+                    }
+                    #popup-bandeau .bandeau-contexte {
+                        font-weight: 500;
+                        color: #efefef;
+                        opacity: .85;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    #popup-bandeau .bandeau-nom {
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    /* Les thèmes clairs reçoivent un gris qui reste un cadre sans
+                       trouer la page. */
+                    body.light-mode #popup-bandeau,
+                    body.sepia-mode #popup-bandeau {
+                        background: linear-gradient(#9a9a9a, #868686);
+                        border-bottom-color: #6f6f6f;
+                    }
+                    /* Le cadre de pourtour fait, sur les trois autres côtés, ce que
+                       le bandeau fait en haut : dire où la fenêtre s'arrête. Trois
+                       pixels et non un, dans le gris du bandeau : à un pixel et en
+                       gris sombre, il se confondait avec le fond de l'écran
+                       principal, qui est sombre lui aussi. */
+                    body {
+                        box-shadow: inset 0 0 0 3px #6b6b6b;
+                    }
+                    body.light-mode, body.sepia-mode {
+                        box-shadow: inset 0 0 0 3px #8a8a8a;
+                    }
+                    #popup-root {
+                        height: calc(100vh - ${bannerHeight}px);
+                        display: flex;
+                        flex-direction: column;
+                    }
+                `;
+                popup.document.head.appendChild(popupStyle);
+
+                // Create root container. La fenêtre nommée peut être RÉUTILISÉE par
+                // window.open (rejeu d'effet en StrictMode, réouverture) : on repart
+                // d'un body vide, sinon les racines s'empilent.
+                popup.document.body.replaceChildren();
+                if (showTitleBanner) {
+                    const bandeau = popup.document.createElement('div');
+                    bandeau.id = 'popup-bandeau';
+                    bandeau.innerHTML = '<span class="bandeau-nom"></span><span class="bandeau-contexte"></span>';
+                    popup.document.body.appendChild(bandeau);
+                    ecrireBandeau(popup, title);
+                }
+                const container = popup.document.createElement('div');
+                container.id = 'popup-root';
+                popup.document.body.appendChild(container);
+
+                // Create React root
+                rootRef.current = createRoot(container);
+                // Contenu demandé avant l'ouverture effective de la fenêtre.
+                if (pendingContentRef.current !== null) {
+                    rootRef.current.render(pendingContentRef.current);
+                    pendingContentRef.current = null;
+                }
+
+                // Dimensionnement une fois la fenêtre réellement créée, puis une
+                // seconde passe quand le contenu est rendu. La fonction visant une
+                // taille absolue, la répétition est sans effet de bord.
+                setTimeout(applySize, 0);
+                setTimeout(applySize, 150);
+                // En dernier : la position se calcule sur la taille définitive.
+                // Deux passages, et non un : juste après l'ouverture, outerWidth vaut
+                // encore 0 sur certaines fenêtres — celles sans phase de
+                // redimensionnement, comme la matrice — et le centrage renonçait
+                // silencieusement, laissant la fenêtre dans l'angle. Le second
+                // passage rattrape, et opère sur la taille définitive.
+                placedRef.current = false;
+                lastPosRef.current = { x: null, y: null };
+                setTimeout(placeWindow, 60);
+                setTimeout(placeWindow, 300);
+
+                // When this popup gains focus, bring all other popups to front too
+                popup.addEventListener('focus', () => {
+                    if (!isFilePickerActive() && !mainModalActive) {
+                        setTimeout(() => bringAllPopupsToFront(popup), 150);
+                    }
+                });
+
+                // Detect popup close
+                intervalRef.current = setInterval(() => {
+                    // La position se relève tant que la fenêtre vit : une fois
+                    // popup.closed passé à true, screenX/screenY ne valent plus rien.
+                    if (!popup.closed && placedRef.current && geometryKeyRef.current) {
+                        try {
+                            const x = popup.screenX;
+                            const y = popup.screenY;
+                            if (Number.isFinite(x) && Number.isFinite(y) &&
+                                (x !== lastPosRef.current.x || y !== lastPosRef.current.y)) {
+                                lastPosRef.current = { x, y };
+                                writePopupPosition(geometryKeyRef.current, x, y);
+                            }
+                        } catch { /* fenêtre en cours de fermeture */ }
+                    }
+                    if (popup.closed) {
+                        if (intervalRef.current !== null) clearInterval(intervalRef.current);
+                        intervalRef.current = null;
+                        rootRef.current = null;
+                        popupRef.current = null;
+                        pendingContentRef.current = null;
+                        openPopups.delete(popup);
+                        placesAttribuees.delete(popup);
+                        setPopupOpen(false);
+                        onClose();
+                    }
+                }, 300);
+            };
+            queueMicrotask(() => { if (!annule) ouvrir(); });
 
         } else {
             // Close popup if open
@@ -806,6 +823,7 @@ const usePopupWindow = ({
         }
 
         return () => {
+            annule = true;
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
@@ -833,7 +851,12 @@ const usePopupWindow = ({
     // champ actif et son curseur ne sont ainsi jamais perturbés.
     const renderToPopup = useCallback((content: ReactNode) => {
         const popup = popupRef.current;
-        if (!rootRef.current || !popup || popup.closed) return;
+        if (!rootRef.current || !popup || popup.closed) {
+            // Fenêtre pas encore ouverte (ouverture différée d'une
+            // micro-tâche) : le contenu l'attend et s'affiche à l'ouverture.
+            pendingContentRef.current = content;
+            return;
+        }
         // Défère si un champ de CETTE popup est en cours d'édition.
         if (isFieldEl(popup.document.activeElement)) {
             pendingContentRef.current = content;
