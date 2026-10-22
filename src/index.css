@@ -608,8 +608,17 @@ body.light-mode .micro-highlight-backdrop {
     color: #222;
 }
 
-body.light-mode .input-micro.micro-has-backdrop {
+body.light-mode .input-micro.micro-has-backdrop,
+body.light-mode .input-desc.micro-has-backdrop {
     caret-color: #222;
+}
+
+/* Description et Action_Micro sans mot-clé coloré : texte du champ lui-même.
+   Il gardait le gris clair du thème sombre (#ddd), presque invisible sur le
+   fond clair. Les champs à calque (micro-has-backdrop) restent transparents :
+   c'est le calque qui porte le texte. */
+body.light-mode .action-table textarea:not(.micro-has-backdrop) {
+    color: #222;
 }
 
 body.light-mode .action-table input:focus,
