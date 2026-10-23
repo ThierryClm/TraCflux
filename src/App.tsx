@@ -996,7 +996,7 @@ function App() {
         lastOpenDirectoryRef, lastSaveDirectoryRef, lastImportDirectoryRef,
         lastImageDirectoryRef,
         saveDirectoryHandle, loadDirectoryHandle,
-        recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
+        recentOpenDirs, recentSaveDirs,
         addRecentDirectory,
         askConfirm, showAlert
     });

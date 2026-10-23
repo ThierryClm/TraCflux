@@ -77,9 +77,6 @@ interface UseFileOperationsOptions {
     loadDirectoryHandle: (key: string) => Promise<FileSystemDirectoryHandleLike | null>;
     recentOpenDirs: RecentDirectory[];
     recentSaveDirs: RecentDirectory[];
-    recentImportDirs: RecentDirectory[];
-    recentImageDirs: RecentDirectory[];
-    recentGreenWaveDirs: RecentDirectory[];
     addRecentDirectory: (
         type: RecentDirectoryType,
         name: string,
@@ -118,7 +115,7 @@ const useFileOperations = ({
     dossierSections, setDossierSections,
     lastOpenDirectoryRef, lastSaveDirectoryRef,
     saveDirectoryHandle, loadDirectoryHandle,
-    recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
+    recentOpenDirs, recentSaveDirs,
     addRecentDirectory,
     askConfirm, showAlert
 }: UseFileOperationsOptions) => {
