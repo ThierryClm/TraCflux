@@ -24,10 +24,13 @@ const NouveauPlanDialog = ({
 }: NouveauPlanDialogProps) => {
     const defaut = jeuxAvecDonnees.includes(jeuActif) ? jeuActif : (jeuxAvecDonnees[0] ?? '');
     const [jeu, setJeu] = useState(defaut);
+    // Jeu déjà associé depuis l'ouverture : la fenêtre reste ouverte pour
+    // enchaîner sur la suggestion de cycle, ou pour être fermée.
+    const [associe, setAssocie] = useState<string | null>(null);
     const [ouverte, setOuverte] = useState(isOpen);
     if (ouverte !== isOpen) {
         setOuverte(isOpen);
-        if (isOpen) setJeu(defaut);
+        if (isOpen) { setJeu(defaut); setAssocie(null); }
     }
 
     return (
@@ -45,12 +48,18 @@ const NouveauPlanDialog = ({
                         </select>
                     </label>
                     <p className="sc-note" style={{ fontSize: '0.85em', opacity: 0.8 }}>
-                        Étape suivante : la suggestion de durée du cycle, à partir de ce trafic et des groupes déterminants de chaque phase.
+                        {associe === jeu
+                            ? <>Jeu <b>{jeu}</b> associé au plan. Étape suivante : la suggestion de durée du cycle.</>
+                            : 'Étape suivante : la suggestion de durée du cycle, à partir de ce trafic et des groupes déterminants de chaque phase.'}
                     </p>
                     <div className="modal-actions">
-                        <button className="modal-btn modal-btn-secondary" onClick={() => { onAssocier(jeu); onClose(); }}>Associer ce jeu</button>
-                        <button className="modal-btn modal-btn-primary" onClick={() => { onAssocier(jeu); onClose(); onSuggererCycle(); }}>
-                            Associer et suggérer le cycle…
+                        <button className="modal-btn modal-btn-secondary" onClick={onClose}>Fermer</button>
+                        <button className="modal-btn modal-btn-secondary" disabled={associe === jeu}
+                            onClick={() => { onAssocier(jeu); setAssocie(jeu); }}>
+                            Associer ce jeu
+                        </button>
+                        <button className="modal-btn modal-btn-primary" onClick={() => { if (associe !== jeu) onAssocier(jeu); onClose(); onSuggererCycle(); }}>
+                            {associe === jeu ? 'Suggérer le cycle…' : 'Associer et suggérer le cycle…'}
                         </button>
                     </div>
                 </>
