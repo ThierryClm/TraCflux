@@ -7,6 +7,44 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.6] — 2026-10-23
+
+### Ajouté
+
+- **Assistant de construction de diagramme.** Le menu Diagramme s'ouvre sur **Nouveau plan de feu…** :
+  un plan vierge (verts, DA, conditions et variables micro vides), associé à un jeu de trafic, ou une
+  invitation à saisir le trafic. **Suggérer une durée de cycle…** ouvre ensuite l'assistant, dans une
+  fenêtre détachée que l'on pose sur un autre écran :
+  - **chemin critique** lu sur le diagramme (groupe de plus forte capacité utilisée par phase, traversée
+    piétonne la plus défavorable quand une phase piétonne est déterminante), ou groupes déterminants
+    choisis à la main sur un plan vierge (2 à 6 phases) ;
+  - **cycle minimal et cycle de Webster**, arrondi à la dizaine supérieure, verts répartis au prorata des
+    demandes, sans descendre sous les verts minimaux ;
+  - **pré-remplissage** du diagramme et, au choix, du phasage bulle ;
+  - **placement des groupes associés**, avec la source de chaque déduction (matrice, nom, plan du
+    carrefour) et les cas « à vérifier » laissés à la main ;
+  - **adaptatifs verticaux** proposés par phase (AV1, AV2…), en mode itératif ou prudent, au taux visé de
+    90 %, chaque zone finissant avec le premier groupe de sa phase qui ferme ;
+  - **fermetures anticipées avec glissements** (FA1, FA2…) pour les groupes voitures sous 81 % de capacité
+    utilisée, les groupes qui peuvent ouvrir plus tôt sans conflit intervert en Action GF ;
+  - **point de repos bus** (« Att bus ») en fin de vert bus, avec sa condition de sortie, « Tx » dans la
+    colonne DA du groupe bus et la variable micro « TMABx = 10 » (x tient la place du code trajet).
+
+  **Appliquer le cycle** règle le cycle, place les groupes associés, puis inscrit les conditions dans la
+  table de micro-régulation, en remplaçant celles d'un passage précédent de l'assistant ; tout s'annule
+  par Ctrl+Z. Le README et la FAQ présentent l'assistant et ses limites : il dégrossit le plan, la
+  conception reste celle du traficien.
+
+### Modifié
+
+- **Conflits** : un groupe sans vert (Déb et Fin vides) n'est plus compté, pour qu'un plan en cours de
+  construction ne soit pas couvert d'alertes.
+
+### Corrigé
+
+- **Phasage bulle** : hors simulation, la flèche de la seconde lucarne est verte dans sa bulle, et plus
+  seulement quand l'action est cochée.
+
 ## [1.5.5] — 2026-10-22
 
 ### Ajouté
