@@ -60,9 +60,10 @@ TraCflux intègre un **assistant qui dégrossit un plan de feux en quelques minu
 - calcule le **cycle minimal** et le **cycle de Webster** (*Guide des carrefours à feux* du CERTU), arrondi à la dizaine supérieure, et répartit les verts au prorata des demandes ;
 - **pré-remplit** le diagramme et, si on le souhaite, le phasage bulle ;
 - **déduit le placement des groupes associés**, en affichant pour chacun la source de la déduction (matrice des temps interverts, nom du groupe, géométrie des flèches du plan) ;
-- **applique le tout en un clic** : la durée du cycle d'abord, puis les groupes associés, les adaptatifs verticaux et les fermetures anticipées — annulable par Ctrl+Z ;
+- **applique le tout en un clic** : la durée du cycle d'abord, puis les groupes associés, les adaptatifs verticaux, les fermetures anticipées et les points de repos bus — annulable par Ctrl+Z ;
 - **propose un adaptatif vertical par phase**, qui finit avec le premier groupe de la phase à fermer (temps interverts préservés) et dimensionné pour porter chaque groupe jusqu'au taux de saturation visé (90 % par défaut : une phase ne se contracte que lorsque sa demande est servie) sans passer sous les verts minimaux — en mode itératif (la contraction d'une phase redonne de la capacité aux autres) ou prudent (chaque zone tient seule) — et l'inscrit dans les conditions de micro-régulation (AV1, AV2…).
 - **propose des fermetures anticipées avec glissements** pour les groupes voitures peu chargés (sous 81 % de capacité utilisée) : environ les deux tiers de leur temps disponible en fin de vert, et en Action GF les groupes qui peuvent alors ouvrir plus tôt sans conflit intervert.
+- **propose un point de repos par groupe bus**, en fin de vert bus, à l'instant où le plus de groupes sont au vert, avec sa condition de sortie (« Attente quittée si TPPh_Ln + DAX > N + TMABX ») ; l'indice X tient la place du code trajet, à remplacer.
 
 L'assistant s'ouvre dans une fenêtre détachée, que l'on pose sur un autre écran : le diagramme garde toute la place et reste modifiable pendant qu'on le consulte. Sur un carrefour en croix à trois phases avec couloir bus, l'assistant pose un diagramme complet et sans conflit, prêt à être affiné.
 

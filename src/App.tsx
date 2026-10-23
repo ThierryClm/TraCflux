@@ -2086,11 +2086,11 @@ function App() {
         groups, conflictMatrix, cycleLength, getTrafficData,
         trafficDatasetName: activeTrafficDataset,
         phasageCycle, setPhasageCycle, setCycleLength, setPhasageBulleCount, setPhasageBulleTimes,
-        updateGroupParams, intersectionArrows, ajouterActions,
+        updateGroupParams, intersectionArrows, ajouterActions, variablesMicro: microCustomFields, setVariableMicro: updateMicroCustomField,
         readOnly: dossierReadOnly || activePfReadOnly,
     }), [activePFName, groups, conflictMatrix, cycleLength, getTrafficData, activeTrafficDataset, phasageCycle, setPhasageCycle,
         setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows, ajouterActions,
-        dossierReadOnly, activePfReadOnly]);
+        microCustomFields, updateMicroCustomField, dossierReadOnly, activePfReadOnly]);
     const renderSuggestionCycle = suggestionCyclePopup.renderToPopup;
     useEffect(() => {
         if (!suggestionCycleModal) return;

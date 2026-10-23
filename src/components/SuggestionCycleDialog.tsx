@@ -10,6 +10,8 @@ import { proposerAdaptatifs, PASSAGES_MAX, TAUX_VISE_ADAPTATIFS } from '../utils
 import type { AdaptatifPropose, ModeAdaptatifs } from '../utils/adaptatifsVerticaux';
 import { proposerFermetures, SEUIL_CAPACITE_FERMETURE, PART_TEMPS_DISPONIBLE } from '../utils/fermeturesAnticipees';
 import type { FermeturePropose } from '../utils/fermeturesAnticipees';
+import { proposerReposBus, lireTmabX, DESCRIPTION_REPOS_BUS, FENETRE_REPOS_BUS, TMAB_DEFAUT, VARIABLE_TMABX } from '../utils/reposBus';
+import type { ReposPropose } from '../utils/reposBus';
 import type { ActionMicro } from '../types/projet';
 import './SuggestionCycleDialog.css';
 
@@ -30,11 +32,15 @@ export interface SuggestionCycleDialogProps {
     setPhasageBulleCount: (count: number) => void;
     setPhasageBulleTimes: (times: number[]) => void;
     /** Pré-remplissage du diagramme pour les déterminants sans vert (Déb/Fin vides). */
-    updateGroupParams: (id: number, params: { offset?: number; durations?: { green?: number } }) => void;
+    updateGroupParams: (id: number, params: { offset?: number; durations?: { green?: number }; da?: string }) => void;
     /** Flèches du plan du carrefour : dernière source pour placer les groupes associés. */
     intersectionArrows?: { groupId: number; rotation?: number }[];
     /** Inscrit des conditions dans la table, après avoir vidé les lignes à remplacer ; renvoie le nombre inscrit. */
     ajouterActions?: (lignes: Partial<Omit<ActionMicro, 'id'>>[], remplacer?: (row: ActionMicro) => boolean) => number;
+    /** Variables micro du plan : TMABX donne la durée d'attente des repos bus. */
+    variablesMicro?: string[];
+    /** Écrit une variable micro du plan (index, texte) : ajout de « TMABX = 10 » s'il manque. */
+    setVariableMicro?: (index: number, value: string) => void;
     readOnly?: boolean;
     /** Rendu dans une fenêtre détachée du navigateur (usePopupWindow), sans cadre de modale. */
     detachee?: boolean;
@@ -54,7 +60,10 @@ interface Brouillon {
 const estAdaptatifAssistant = (row: ActionMicro) => row.action === 'Adaptatif vertical' && /^AV\d+$/.test(String(row.abrv ?? '').trim());
 /** Fermeture anticipée inscrite par l'assistant (FA1, FA2…) : remplacée elle aussi. */
 const estFermetureAssistant = (row: ActionMicro) => row.action === 'Fermeture anticipée' && /^FA\d+$/.test(String(row.abrv ?? '').trim());
-const estLigneAssistant = (row: ActionMicro) => estAdaptatifAssistant(row) || estFermetureAssistant(row);
+/** Point de repos bus inscrit par l'assistant (description « attente bus théorique… »). */
+const estReposAssistant = (row: ActionMicro) => row.action === 'Point de repos'
+    && String(row.description ?? '').trim().toLowerCase().startsWith(DESCRIPTION_REPOS_BUS);
+const estLigneAssistant = (row: ActionMicro) => estAdaptatifAssistant(row) || estFermetureAssistant(row) || estReposAssistant(row);
 
 const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
@@ -67,7 +76,7 @@ const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDig
 const SuggestionCycleDialog = ({
     isOpen, onClose, planName, groups, conflictMatrix, cycleLength, getTrafficData,
     trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
-    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, readOnly = false, detachee = false,
+    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, variablesMicro, setVariableMicro, readOnly = false, detachee = false,
 }: SuggestionCycleDialogProps) => {
     const [remplirBulle, setRemplirBulle] = useState(true);
     // Chemin critique lu sur le diagramme, quand il est renseigné : phases,
@@ -197,8 +206,15 @@ const SuggestionCycleDialog = ({
         // Enfin les adaptatifs verticaux proposés, qui remplacent ceux d'un
         // passage précédent (AV1, AV2… inscrits par l'assistant).
         if (ajouterActions && disposition) {
-            const lignes = [...avUtiles.map(conditionAdaptatif), ...faUtiles.map(conditionFermeture)];
+            const lignes = [...avUtiles.map(conditionAdaptatif), ...faUtiles.map(conditionFermeture), ...reposBus.map(conditionRepos)];
             const nb = ajouterActions(lignes, estLigneAssistant);
+            // DA du groupe bus : « TX », X tenant la place du code trajet.
+            reposBus.forEach(r => updateGroupParams(r.groupe, { da: 'TX' }));
+            // Variable micro TMABX, ajoutée dans la première case libre si le plan ne l'a pas.
+            if (reposBus.length && tmabX === null && setVariableMicro) {
+                const libre = (variablesMicro ?? []).findIndex(v => !v.trim());
+                setVariableMicro(libre >= 0 ? libre : (variablesMicro ?? []).length, VARIABLE_TMABX);
+            }
             setAvInscrits(lignes.slice(0, nb).map(l => String(l.abrv)));
         }
     };
@@ -237,11 +253,26 @@ const SuggestionCycleDialog = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [disposition, conflictMatrix, seuilFA]);
     const faUtiles = fermetures.filter(f => f.duree > 0);
+    const reposBus = useMemo(() => (disposition && resultat?.cycleSuggere ? proposerReposBus(disposition, resultat.cycleSuggere) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [disposition]);
+    const tmabX = lireTmabX(variablesMicro);
+    const tmab = tmabX ?? TMAB_DEFAUT;
     const avUtiles = propositionAV?.adaptatifs.filter(a => a.duree > 0) ?? [];
     const [avInscrits, setAvInscrits] = useState<string[] | null>(null);
     // Ligne de condition renseignée avec ce que l'assistant sait de la zone ;
     // la condition de contraction reste à adapter à la détection réelle.
     const court = (id: number) => nomCourt(groups.find(g => g.id === id)?.name, id);
+    // Point de repos bus : X tient la place du code trajet, à remplacer.
+    const conditionRepos = (r: ReposPropose) => ({
+        gf: String(r.groupe),
+        action: 'Point de repos',
+        deb: String(r.instant),
+        fin: '',
+        abrv: 'Att bus',
+        description: `${DESCRIPTION_REPOS_BUS} maxi ${tmab} secondes`,
+        micro: `Attente quittée si TPPh_L${r.groupe} + DAX > ${r.n} + TMABX`,
+    });
     // Fermeture anticipée : FA1, FA2… dans l'ordre du tableau, glissements en Action GF.
     const conditionFermeture = (f: FermeturePropose, k: number) => ({
         gf: String(f.groupe),
@@ -534,12 +565,40 @@ const SuggestionCycleDialog = ({
                         glissements en Action GF, en remplaçant celles d'un passage précédent. Une fermeture qui tombe dans une zone
                         d'adaptatif vertical ne joue que lorsque celui-ci n'est pas contracté.
                     </p>
+
+                    <h4>Points de repos bus (proposition)</h4>
+                    {reposBus.length > 0 ? (
+                        <table className="sc-table">
+                            <thead><tr><th>Groupe bus</th>
+                                <th title={`Dans les ${FENETRE_REPOS_BUS} dernières secondes du vert bus, à l'instant où le plus de groupes sont au vert`}>Repos à</th>
+                                <th>Groupes au vert</th>
+                                <th title="Temps passé dans la phase bus à l'instant du repos, moins 1">N</th>
+                                <th>Condition</th></tr></thead>
+                            <tbody>
+                                {reposBus.map(r => (
+                                    <tr key={r.groupe}>
+                                        <td className="sc-gauche sc-nom" title={nomGroupe(r.groupe)}>GF{r.groupe} {nomGroupe(r.groupe)}</td>
+                                        <td>{r.instant} s</td>
+                                        <td>{r.inclus.map(court).join(', ')}</td>
+                                        <td>{r.n}</td>
+                                        <td className="sc-gauche">{conditionRepos(r).micro}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : <p className="sc-attente">Aucun groupe bus (type B ou TC) dans le plan.</p>}
+                    <p className="sc-note">
+                        « Appliquer le cycle » inscrit un point de repos par groupe bus (« Att bus », « {DESCRIPTION_REPOS_BUS} maxi {tmab} secondes »),
+                        écrit « TX » dans la colonne DA du groupe bus{tmabX === null ? <> et ajoute la variable micro « {VARIABLE_TMABX} »</> : ''}. L'indice X tient la place du
+                        code trajet : remplacez-le dans DAX, TMABX et TX. Les repos d'un passage précédent sont remplacés ; les autres ne
+                        sont pas touchés.
+                    </p>
                     {avInscrits !== null && (
                         <p className="sc-note">
                             {avInscrits.length
                                 ? `Inscrits : ${avInscrits.join(', ')} (Ctrl+Z pour annuler). Adaptez les conditions à la détection réelle et vérifiez dans l'onglet Simulation.`
                                 : 'Aucune condition à inscrire.'}
-                            {avInscrits.length < avUtiles.length + faUtiles.length ? ' La table est pleine (30 conditions) : certaines lignes n\'ont pas été inscrites.' : ''}
+                            {avInscrits.length < avUtiles.length + faUtiles.length + reposBus.length ? ' La table est pleine (30 conditions) : certaines lignes n\'ont pas été inscrites.' : ''}
                         </p>
                     )}
                 </div>
@@ -561,7 +620,8 @@ const SuggestionCycleDialog = ({
                     disabled={!calculable || resultat?.cycleSuggere == null || readOnly}
                     title={['Règle la durée du cycle du plan',
                         aPlacer.length ? `place ${aPlacer.length} groupe${aPlacer.length > 1 ? 's' : ''} associé${aPlacer.length > 1 ? 's' : ''}` : '',
-                        avUtiles.length || faUtiles.length ? `inscrit ${[...avUtiles.map(a => `AV${a.phase}`), ...faUtiles.map((_, k) => `FA${k + 1}`)].join(', ')}` : ''].filter(Boolean).join(', puis ')}
+                        avUtiles.length || faUtiles.length || reposBus.length
+                            ? `inscrit ${[...avUtiles.map(a => `AV${a.phase}`), ...faUtiles.map((_, k) => `FA${k + 1}`), ...reposBus.map(() => 'Att bus')].join(', ')}` : ''].filter(Boolean).join(', puis ')}
                     onClick={appliquer}>
                     Appliquer le cycle{calculable && resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
                 </button>
