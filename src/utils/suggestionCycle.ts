@@ -182,3 +182,136 @@ export const debutsDesPhases = (verts: number[], degagements: number[]): number[
     });
     return debuts;
 };
+
+/** Groupe tel qu'il est lu dans le diagramme, pour la détection du chemin critique. */
+export interface GroupeDiagramme {
+    id: number;
+    offset: number;
+    vert: number;
+    /** Durée suivant le vert (jaune, ou dégagement des piétons). */
+    jaune: number;
+    vertMini: number;
+    trafic: number;
+    coefVoie: number;
+}
+
+export interface CheminCritique {
+    determinants: number[];
+    degagements: (number | null)[];
+    /** Membres de chaque phase (déterminant compris). */
+    phases: number[][];
+    /** Capacité utilisée (%) des groupes qui ont du trafic et un vert. */
+    capaciteUtilisee: Record<number, number>;
+}
+
+const mod = (v: number, c: number) => ((v % c) + c) % c;
+/** Écart signé b − a sur le cercle du cycle, ramené dans ]−c/2, c/2]. */
+const ecart = (a: number, b: number, c: number) => {
+    const d = mod(b - a, c);
+    return d > c / 2 ? d - c : d;
+};
+
+/**
+ * Chemin critique proposé à partir d'un diagramme renseigné.
+ *
+ * 1. Phases : les groupes à trafic verts en même temps (recouvrement d'au
+ *    moins la moitié du plus court des deux verts), dans l'ordre d'ouverture.
+ *    Un groupe sans trafic (piétons) rejoint la phase qu'il recouvre le plus ;
+ *    s'il n'en recouvre aucune, il forme une phase de piétons.
+ * 2. Déterminant : dans chaque phase, la plus forte capacité utilisée ; dans
+ *    une phase de piétons, la traversée la plus défavorable (vert mini +
+ *    dégagement). C'est une règle générale, pas une vérité : l'utilisateur
+ *    garde la main.
+ * 3. Dégagement d'une phase à la suivante : le plus contraignant de la matrice
+ *    entre leurs groupes, corrigé de l'écart entre la fin de vert du groupe et
+ *    la fin de sa phase, et entre le début de la phase suivante et celui du
+ *    groupe. null s'il n'y a aucun conflit entre les deux phases.
+ */
+export const detecterCheminCritique = (
+    groupes: GroupeDiagramme[], matrice: Matrice | undefined, cycle: number, saturation = SATURATION_FLOW,
+): CheminCritique | null => {
+    if (cycle <= 0) return null;
+    const verts = groupes.filter(g => g.vert > 0);
+    const masque = (g: GroupeDiagramme) => {
+        const m = new Array<boolean>(cycle).fill(false);
+        for (let t = 0; t < Math.min(g.vert, cycle); t++) m[mod(g.offset + t, cycle)] = true;
+        return m;
+    };
+    const masques = new Map(verts.map(g => [g.id, masque(g)]));
+    const recouvrement = (a: number, ids: number[]) => {
+        const ma = masques.get(a)!;
+        let n = 0;
+        for (let t = 0; t < cycle; t++) if (ma[t] && ids.some(id => masques.get(id)![t])) n++;
+        return n;
+    };
+    const parId = new Map(verts.map(g => [g.id, g]));
+    const regrouper = (liste: GroupeDiagramme[], phases: number[][]) => {
+        [...liste].sort((a, b) => mod(a.offset, cycle) - mod(b.offset, cycle)).forEach(g => {
+            const p = phases.find(ph => {
+                const graine = parId.get(ph[0])!;
+                return recouvrement(g.id, [ph[0]]) >= Math.min(g.vert, graine.vert) / 2;
+            });
+            if (p) p.push(g.id); else phases.push([g.id]);
+        });
+    };
+    const aTrafic = verts.filter(g => g.trafic > 0);
+    const phases: number[][] = [];
+    regrouper(aTrafic, phases);
+    const pietons: GroupeDiagramme[] = [];
+    verts.filter(g => !(g.trafic > 0)).forEach(g => {
+        let meilleure = -1, max = 0;
+        phases.forEach((ph, i) => {
+            const r = recouvrement(g.id, ph.filter(id => (parId.get(id)!.trafic > 0)));
+            if (r > max) { max = r; meilleure = i; }
+        });
+        if (meilleure >= 0 && max >= g.vert / 2) phases[meilleure].push(g.id); else pietons.push(g);
+    });
+    const phasesPietons: number[][] = [];
+    regrouper(pietons, phasesPietons);
+    phases.push(...phasesPietons);
+    if (phases.length < NB_PHASES_MIN) return null;
+
+    // Bornes d'une phase : ses groupes à trafic, ou tous pour une phase de piétons.
+    const coeur = (ph: number[]) => {
+        const t = ph.filter(id => parId.get(id)!.trafic > 0);
+        return (t.length ? t : ph).map(id => parId.get(id)!);
+    };
+    const debutPhase = (ph: number[]) => {
+        const gs = coeur(ph);
+        const ref = gs[0].offset;
+        return gs.reduce((m, g) => (ecart(ref, g.offset, cycle) < ecart(ref, m, cycle) ? g.offset : m), ref);
+    };
+    phases.sort((a, b) => mod(debutPhase(a), cycle) - mod(debutPhase(b), cycle));
+    const finPhase = (ph: number[]) => {
+        const gs = coeur(ph);
+        const ref = gs[0].offset + gs[0].vert;
+        return gs.reduce((m, g) => (ecart(ref, g.offset + g.vert, cycle) > ecart(ref, m, cycle) ? g.offset + g.vert : m), ref);
+    };
+
+    const capaciteUtilisee: Record<number, number> = {};
+    verts.forEach(g => {
+        if (g.trafic > 0) capaciteUtilisee[g.id] = (g.trafic * cycle) / (saturation * (g.coefVoie || 1) * g.vert) * 100;
+    });
+    const determinants = phases.map(ph => {
+        const t = ph.filter(id => capaciteUtilisee[id] !== undefined);
+        if (t.length) return t.reduce((a, b) => (capaciteUtilisee[b] > capaciteUtilisee[a] ? b : a));
+        return ph.reduce((a, b) => {
+            const ga = parId.get(a)!, gb = parId.get(b)!;
+            return gb.vertMini + gb.jaune > ga.vertMini + ga.jaune ? b : a;
+        });
+    });
+    const degagements = phases.map((ph, i) => {
+        const suivante = phases[(i + 1) % phases.length];
+        const fin = finPhase(ph), debut = debutPhase(suivante);
+        let max: number | null = null;
+        ph.forEach(a => suivante.forEach(b => {
+            const v = degagementMatrice(matrice, a, b);
+            if (v === null) return;
+            const ga = parId.get(a)!, gb = parId.get(b)!;
+            const utile = v - ecart(ga.offset + ga.vert, fin, cycle) - ecart(debut, gb.offset, cycle);
+            if (max === null || utile > max) max = utile;
+        }));
+        return max === null ? null : Math.max(0, Math.round(max));
+    });
+    return { determinants, degagements, phases, capaciteUtilisee };
+};

@@ -26,3 +26,6 @@
 }
 .suggestion-cycle .sc-intro { font-size: 0.85em; }
 .suggestion-cycle .sc-table { font-size: 0.84em; }
+
+.suggestion-cycle .sc-proposition { font-size: 0.85em; border-left: 3px solid #ff9800; padding: 4px 8px; margin: 4px 0 8px; }
+.suggestion-cycle .sc-relire { padding: 3px 10px; font-size: 0.85em; margin-bottom: 6px; }

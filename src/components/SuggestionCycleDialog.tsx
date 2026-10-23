@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import type { Groupe, Matrice } from '../types/projet';
 import {
-    calculerSuggestionCycle, debutsDesPhases, degagementMatrice, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
+    calculerSuggestionCycle, debutsDesPhases, degagementMatrice, detecterCheminCritique, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
     NB_PHASES_MAX, NB_PHASES_MIN, TAUX_VISE_DEFAUT,
 } from '../utils/suggestionCycle';
 import type { PhasageCycle } from '../utils/suggestionCycle';
@@ -50,17 +50,34 @@ const SuggestionCycleDialog = ({
     setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, readOnly = false,
 }: SuggestionCycleDialogProps) => {
     const [remplirBulle, setRemplirBulle] = useState(true);
+    // Chemin critique lu sur le diagramme, quand il est renseigné : phases,
+    // groupe à la plus forte capacité utilisée, dégagements effectifs.
+    const chemin = useMemo(() => detecterCheminCritique(groups.map(g => ({
+        id: g.id, offset: Number(g.offset) || 0, vert: Number(g.durations?.green) || 0,
+        jaune: Number(g.durations?.orange) || 0, vertMini: Number(g.minGreen) || 0,
+        trafic: Number(getTrafficData(g.id)?.trafficVol) || 0, coefVoie: Number(g.laneCoef) || 1,
+    })), conflictMatrix, cycleLength), [groups, getTrafficData, conflictMatrix, cycleLength]);
+    const [origine, setOrigine] = useState<'enregistre' | 'diagramme' | 'vide'>('vide');
+    const depuisDiagramme = (): Brouillon | null => chemin && {
+        determinants: [...chemin.determinants].slice(0, NB_PHASES_MAX),
+        degagements: chemin.degagements.slice(0, NB_PHASES_MAX).map(d => (d === null ? '' : String(d))),
+        tauxVise: phasageCycle?.tauxVise ?? TAUX_VISE_DEFAUT,
+    };
     const brouillonInitial = (): Brouillon => {
         if (phasageCycle && phasageCycle.determinants.length >= NB_PHASES_MIN) {
+            setOrigine('enregistre');
             return {
                 determinants: [...phasageCycle.determinants],
                 degagements: phasageCycle.degagements.map(d => (Number.isFinite(d) ? String(d) : '')),
                 tauxVise: phasageCycle.tauxVise ?? TAUX_VISE_DEFAUT,
             };
         }
+        const lu = depuisDiagramme();
+        if (lu) { setOrigine('diagramme'); return lu; }
+        setOrigine('vide');
         return { determinants: [null, null], degagements: ['', ''], tauxVise: TAUX_VISE_DEFAUT };
     };
-    const [brouillon, setBrouillon] = useState<Brouillon>(brouillonInitial);
+    const [brouillon, setBrouillon] = useState<Brouillon>({ determinants: [null, null], degagements: ['', ''], tauxVise: TAUX_VISE_DEFAUT });
     // Chaque ouverture repart du phasage enregistré pour le plan affiché.
     useEffect(() => { if (isOpen) setBrouillon(brouillonInitial()); }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -179,6 +196,20 @@ const SuggestionCycleDialog = ({
                 si le dégagement le plus contraignant vient d'un autre groupe de la phase.
                 Trafic : jeu <b>{trafficDatasetName || '—'}</b>.
             </p>
+            {origine === 'diagramme' && (
+                <p className="sc-proposition">
+                    Proposition lue sur le diagramme : dans chaque phase, le groupe à la plus forte capacité utilisée
+                    (pour une phase de piétons, la traversée la plus défavorable). C'est une règle générale, pas une
+                    certitude : vérifiez et corrigez si besoin.
+                </p>
+            )}
+            {chemin && (
+                <button type="button" className="modal-btn modal-btn-secondary sc-relire"
+                    title="Refaire la détection des phases et des groupes déterminants sur le diagramme actuel"
+                    onClick={() => { const lu = depuisDiagramme(); if (lu) { setBrouillon(lu); setOrigine('diagramme'); } }}>
+                    Relire le diagramme
+                </button>
+            )}
 
             <label className="sc-nb">
                 Nombre de phases :
@@ -190,7 +221,7 @@ const SuggestionCycleDialog = ({
 
             <table className="sc-table">
                 <thead>
-                    <tr><th>Phase</th><th>Groupe déterminant</th><th>Trafic (uvp/h)</th><th>Coef. voie</th><th>y</th>
+                    <tr><th>Phase</th><th>Groupe déterminant</th><th>Trafic (uvp/h)</th><th>Coef. voie</th><th>Cap. U</th><th>y</th>
                         <th>Vert mini</th><th>Dégagement vers la phase suivante</th></tr>
                 </thead>
                 <tbody>
@@ -211,6 +242,7 @@ const SuggestionCycleDialog = ({
                                 </td>
                                 <td>{g ? g.trafic : ''}</td>
                                 <td>{g ? g.coefVoie : ''}</td>
+                                <td>{det !== null && chemin?.capaciteUtilisee[det] !== undefined ? `${Math.round(chemin.capaciteUtilisee[det])} %` : ''}</td>
                                 <td>{p ? fmt(p.y) : ''}</td>
                                 <td>{g ? `${g.vertMini} s` : ''}</td>
                                 <td className={manque && det !== null ? 'sc-manque' : ''}>

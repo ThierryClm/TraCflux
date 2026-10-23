@@ -72,3 +72,43 @@ describe('suggestion de durée du cycle', () => {
         expect(instantsPhasageBulle([1, 3, 4], g, 70)).toEqual([14, 35, 54]);
     });
 });
+
+import { detecterCheminCritique } from './suggestionCycle';
+
+describe('chemin critique lu sur le diagramme', () => {
+    // TD, option A (cycle 70 s) : matrice de Thierry.
+    const M = [
+        ['', '', '', 6, 5, 4, 6, '', ''],
+        ['', '', 4, 5, 6, 6, 4, '', ''],
+        ['', 4, '', 6, 5, 7, 5, '', ''],
+        [6, 5, 5, '', '', '', '', 4, 6],
+        [6, 5, 5, '', '', '', '', 6, 4],
+        [8, 6, 6, '', '', '', '', '', ''],
+        [8, 10, 10, '', '', '', '', '', ''],
+        ['', '', '', 8, 6, '', '', '', ''],
+        ['', '', '', 6, 8, '', '', '', ''],
+    ];
+    const G = (id, offset, vert, jaune, vertMini, trafic) => ({ id, offset, vert, jaune, vertMini, trafic, coefVoie: 1 });
+    const td = [
+        G(1, 0, 28, 3, 8, 600), G(2, 0, 28, 3, 8, 500), G(3, 32, 6, 3, 6, 24), G(4, 44, 20, 3, 8, 380), G(5, 44, 20, 3, 8, 300),
+        G(6, 45, 15, 8, 7, 0), G(7, 43, 17, 10, 8, 0), G(8, 0, 36, 8, 6, 0), G(9, 0, 35, 8, 6, 0),
+    ];
+
+    it('TD : phases A, bus, C ; déterminants à la plus forte capacité utilisée ; dégagements 4, 6, 6', () => {
+        const c = detecterCheminCritique(td, M, 70);
+        expect(c.phases.map(p => [...p].sort())).toEqual([[1, 2, 8, 9], [3], [4, 5, 6, 7]]);
+        expect(c.determinants).toEqual([1, 3, 4]);
+        expect(c.degagements).toEqual([4, 6, 6]);
+        expect(Math.round(c.capaciteUtilisee[1])).toBe(83);
+    });
+
+    it('une phase de piétons seuls est déterminante, par sa traversée la plus défavorable', () => {
+        const g = [G(1, 0, 30, 3, 8, 600), G(4, 40, 20, 3, 8, 380), G(6, 66, 10, 8, 7, 0), G(7, 66, 10, 10, 8, 0)];
+        const c = detecterCheminCritique(g, M, 80);
+        expect(c.determinants).toEqual([1, 4, 7]);
+    });
+
+    it('diagramme vide : pas de proposition', () => {
+        expect(detecterCheminCritique(td.map(x => ({ ...x, vert: 0 })), M, 70)).toBeNull();
+    });
+});

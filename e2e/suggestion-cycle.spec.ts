@@ -13,15 +13,20 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
     await item.click();
     const fenetre = page.locator('.modal-content.suggestion-cycle');
     await expect(fenetre).toBeVisible();
-    // Fenêtre non modale : le diagramme reste visible et cliquable derrière.
-    const sousLaSouris = await page.evaluate(() => {
+    // Fenêtre non modale : pas de voile, et les clics traversent jusqu'à l'application.
+    const voile = await page.evaluate(() => {
+        const o = document.querySelector('.modal-overlay.modal-non-modale') as HTMLElement;
+        const st = getComputedStyle(o);
         const r = document.querySelector('.timeline-row-track')!.getBoundingClientRect();
-        const el = document.elementFromPoint(r.left + 20, r.top + r.height / 2);
-        return { overlay: !!el?.closest('.modal-overlay'), diagramme: !!el?.closest('.timeline-row-track, .timeline-row') };
+        const el = document.elementFromPoint(r.left - 120, r.top + r.height / 2);
+        return { fond: st.backgroundColor, clics: st.pointerEvents, sousLaSouris: !!el?.closest('.modal-overlay') };
     });
-    expect(sousLaSouris).toEqual({ overlay: false, diagramme: true });
+    expect(voile).toEqual({ fond: 'rgba(0, 0, 0, 0)', clics: 'none', sousLaSouris: false });
 
-    // Deux phases : rue Balise nord (GF1), puis rue Pestre (GF8).
+    // Diagramme renseigné : le tableau arrive pré-rempli (chemin critique).
+    await expect(fenetre.getByText(/Proposition lue sur le diagramme/)).toBeVisible();
+    // On le remplace par deux phases : rue Balise nord (GF1), puis rue Pestre (GF8).
+    await fenetre.getByLabel('Nombre de phases').selectOption('2');
     await fenetre.getByLabel('Groupe déterminant de la phase 1').selectOption('1');
     await fenetre.getByLabel('Groupe déterminant de la phase 2').selectOption('8');
     for (const [champ, valeur] of [['Dégagement de la phase 1 vers la phase 2', '6'], ['Dégagement de la phase 2 vers la phase 1', '6']] as const) {

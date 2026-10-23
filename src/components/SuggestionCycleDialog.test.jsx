@@ -71,4 +71,17 @@ describe('suggestion de durée du cycle', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le phasage' }));
         expect(setPhasageBulleCount).not.toHaveBeenCalled();
     });
+
+    it('diagramme renseigné : chemin critique pré-rempli (plus forte capacité utilisée)', () => {
+        const pos = { 1: [0, 28], 2: [0, 28], 3: [32, 6], 4: [44, 20], 5: [44, 20] };
+        const remplis = groups.map(gr => ({ ...gr, offset: pos[gr.id][0], durations: { green: pos[gr.id][1], orange: 3, red: 70 - pos[gr.id][1] - 3 } }));
+        ouvrir({ groups: remplis });
+        expect(screen.getByText(/Proposition lue sur le diagramme/)).toBeInTheDocument();
+        expect(screen.getByLabelText('Groupe déterminant de la phase 1')).toHaveValue('1');
+        expect(screen.getByLabelText('Groupe déterminant de la phase 2')).toHaveValue('3');
+        expect(screen.getByLabelText('Groupe déterminant de la phase 3')).toHaveValue('4');
+        expect(screen.getByLabelText('Dégagement de la phase 1 vers la phase 2')).toHaveValue(4);
+        expect(screen.getByText('83 %')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Relire le diagramme' })).toBeInTheDocument();
+    });
 });
