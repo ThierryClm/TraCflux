@@ -751,7 +751,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     }, [setActionData]);
 
     // Onglets des plans de feux.
-    const { duplicatePF, deletePF, renamePF, setPFColor, updatePFRemarques, reorderPF } = useGestionPlans({
+    const { duplicatePF, nouveauPF, deletePF, renamePF, setPFColor, updatePFRemarques, reorderPF } = useGestionPlans({
         pfTabs, setPfTabs, activePFId, setActivePFId, actionData, conflictMatrix, cycleLength, dossierReadOnlyRef
     });
 
@@ -1536,6 +1536,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         activePFId,
         setActivePFId,
         duplicatePF,
+        nouveauPF,
         deletePF,
         renamePF,
         setPFColor,

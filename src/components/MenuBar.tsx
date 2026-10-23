@@ -527,6 +527,12 @@ const MenuBar = ({
             label: 'Diagramme',
             disabled: !hasActiveProject,
             items: [
+                {
+                    label: 'Nouveau plan de feu...',
+                    action: 'newPF',
+                    disabled: !hasPermission('canDuplicate'),
+                    title: 'Plan vierge (verts, DA, conditions et variables micro vides), puis choix du jeu de trafic'
+                },
                 { label: 'Dupliquer le diagramme actif', action: 'duplicate', disabled: !hasPermission('canDuplicate') },
                 { label: 'Supprimer le diagramme actif', action: 'deleteActiveDiagram', disabled: !hasPermission('canModifyDiagram') },
                 { label: 'Déplacer un groupe de feu...', action: 'moveGroup', disabled: !hasPermission('canModifyDiagram') },

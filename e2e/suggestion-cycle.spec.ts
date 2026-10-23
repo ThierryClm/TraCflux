@@ -43,3 +43,26 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
     await item.click();
     await expect(fenetre.getByLabel('Groupe déterminant de la phase 2')).toHaveValue('8');
 });
+
+test('Nouveau plan de feu : plan vierge, choix du jeu de trafic, puis suggestion du cycle', async ({ page }) => {
+    await ouvrirExemple(page);
+    const nbAvant = await page.locator('.pf-tab:not(.simulation-tab):not(.phasage-tab)').count();
+    const item = page.locator('.menu-bar').getByText('Nouveau plan de feu...', { exact: true });
+    await ouvrirMenu(page, 'Diagramme', item);
+    await item.click();
+    const onglets = page.locator('.pf-tab:not(.simulation-tab):not(.phasage-tab)');
+    await expect(onglets).toHaveCount(nbAvant + 1);
+    await expect(page.locator('.pf-tab.active').first()).toContainText('Nouveau PF');
+    await page.screenshot({ path: test.info().outputPath('nouveau-pf.png') });
+    // Conditions de micro-régulation vides.
+    const conditions = await page.evaluate(() => [...document.querySelectorAll<HTMLSelectElement>('.action-table tbody select')].filter(s => s.value).length);
+    expect(conditions).toBe(0);
+
+    const fenetre = page.locator('.modal-content.nouveau-plan');
+    await expect(fenetre).toBeVisible();
+    const jeu = fenetre.getByLabel('Jeu de trafic du nouveau plan');
+    await jeu.selectOption('HPS');
+    await fenetre.getByRole('button', { name: 'Associer et suggérer le cycle…' }).click();
+    await expect(page.locator('.modal-content.suggestion-cycle')).toBeVisible();
+    await expect(page.locator('.modal-content.suggestion-cycle')).toContainText('jeu HPS');
+});

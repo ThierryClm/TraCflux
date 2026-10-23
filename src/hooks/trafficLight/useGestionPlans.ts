@@ -4,8 +4,8 @@
  */
 import { useCallback } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import { MAX_PF } from '../../utils/pfHelpers';
-import type { ActionMicro, Matrice, PlanDeFeu } from '../../types/projet';
+import { MAX_PF, createEmptyActionData } from '../../utils/pfHelpers';
+import type { ActionMicro, LigneDiagramme, Matrice, PlanDeFeu } from '../../types/projet';
 
 interface EntreesGestionPlans {
     pfTabs: PlanDeFeu[];
@@ -47,6 +47,34 @@ export const useGestionPlans = ({
         setActivePFId(nextId);
         return nextId;
     }, [pfTabs, actionData, activePFId, conflictMatrix, cycleLength, dossierReadOnlyRef, setPfTabs, setActivePFId]);
+
+    // Nouveau plan de feu vierge, point de départ de l'assistant : verts, DA,
+    // conditions et variables micro vides ; même carrefour (groupes, matrice).
+    // Renvoie l'id créé, ou null si la limite MAX_PF est atteinte.
+    const nouveauPF = useCallback(() => {
+        if (dossierReadOnlyRef.current) return null;
+        if (pfTabs.length >= MAX_PF) return null;
+        const nextId = Math.max(...pfTabs.map(pf => pf.id)) + 1;
+        const noms = new Set(pfTabs.map(pf => pf.name));
+        let nom = 'Nouveau PF';
+        for (let n = 2; noms.has(nom); n++) nom = `Nouveau PF ${n}`;
+        const currentPF = pfTabs.find(pf => pf.id === activePFId);
+        const diagram: LigneDiagramme[] = (currentPF?.diagram || []).map(d => ({
+            groupId: d.groupId, offset: 0, greenDuration: 0, da: '', comment: '', commentColor: ''
+        }));
+        setPfTabs(prev => [...prev, {
+            id: nextId,
+            name: nom,
+            data: createEmptyActionData(),
+            remarques: '',
+            conflictMatrix: JSON.parse(JSON.stringify(conflictMatrix)),
+            diagram,
+            cycleLength: currentPF?.cycleLength || cycleLength,
+            microCustomFields: []
+        }]);
+        setActivePFId(nextId);
+        return nextId;
+    }, [pfTabs, activePFId, conflictMatrix, cycleLength, dossierReadOnlyRef, setPfTabs, setActivePFId]);
 
     // Delete a PF (cannot delete if only one remains)
     const deletePF = useCallback((pfId: number) => {
@@ -93,5 +121,5 @@ export const useGestionPlans = ({
         });
     }, [setPfTabs]);
 
-    return { duplicatePF, deletePF, renamePF, setPFColor, updatePFRemarques, reorderPF };
+    return { duplicatePF, nouveauPF, deletePF, renamePF, setPFColor, updatePFRemarques, reorderPF };
 };

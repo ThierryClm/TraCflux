@@ -81,6 +81,7 @@ import type { TrafficConflict } from './utils/conflictUtils';
 import type { HoveredConflict } from './components/ConflictList';
 import type { VertUtileSurvole } from './components/TimelineDiagram';
 import SuggestionCycleDialog from './components/SuggestionCycleDialog';
+import NouveauPlanDialog from './components/NouveauPlanDialog';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
 interface OptionsExportPng {
@@ -144,6 +145,7 @@ function App() {
         activePFId,
         setActivePFId,
         duplicatePF,
+        nouveauPF,
         deletePF,
         renamePF,
         setPFColor,
@@ -687,6 +689,10 @@ function App() {
     // Suggestion de durée du cycle (menu Diagramme) : possible dès que le plan
     // affiché a du trafic dans son jeu.
     const [suggestionCycleModal, setSuggestionCycleModal] = useState(false);
+    // Nouveau plan de feu (menu Diagramme) : choix du jeu de trafic du plan créé.
+    const [nouveauPlanModal, setNouveauPlanModal] = useState(false);
+    const jeuxAvecDonnees = useMemo(() => trafficDatasetNames.filter(n =>
+        Object.values(trafficDatasets[n] || {}).some(d => (Number(d?.trafficVol) || 0) > 0)), [trafficDatasetNames, trafficDatasets]);
     const traficRenseigne = useMemo(() => groups.some(g => (Number(getTrafficData(g.id)?.trafficVol) || 0) > 0), [groups, getTrafficData]);
 
     // Mise en page du dossier imprimé : orientation, largeur de la feuille,
@@ -1447,6 +1453,12 @@ function App() {
             case 'help':
                 setHelpModal(true);
                 break;
+            case 'newPF': {
+                const newId = nouveauPF();
+                if (newId) setNouveauPlanModal(true);
+                else toast.error(`Limite de ${MAX_PF} plans de feux atteinte. Supprimez-en un avant d'en ajouter un nouveau.`);
+                break;
+            }
             case 'cycleSuggestion':
                 setSuggestionCycleModal(true);
                 break;
@@ -2365,6 +2377,16 @@ function App() {
                 }}
             />
 
+            <NouveauPlanDialog
+                isOpen={nouveauPlanModal}
+                onClose={() => setNouveauPlanModal(false)}
+                planName={pfTabs.find(pf => pf.id === activePFId)?.name || ''}
+                jeuxAvecDonnees={jeuxAvecDonnees}
+                jeuActif={activeTrafficDataset}
+                onAssocier={setActiveTrafficDataset}
+                onSuggererCycle={() => setSuggestionCycleModal(true)}
+                onOuvrirTrafic={() => { setSidebarVisible(true); setActiveTab('traffic'); }}
+            />
             <SuggestionCycleDialog
                 isOpen={suggestionCycleModal}
                 onClose={() => setSuggestionCycleModal(false)}
