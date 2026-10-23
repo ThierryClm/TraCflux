@@ -19,6 +19,25 @@ interface GroupTableProps {
     titreEnBandeau?: boolean;
 }
 
+// Infobulles des colonnes Mini et Jaune, d'après l'ISR (livre 1, 6e partie,
+// art. 110 C1). Les feux piétons R12 n'ont pas de jaune : pour un piéton (et
+// un cycle géré par R12m), la colonne Jaune porte le temps de dégagement,
+// dessiné en rouge après le vert.
+const INFOBULLE_MINI = "Durée minimale du vert : 6 s au moins (ISR, 6e partie, art. 110 C1)";
+const INFOBULLE_JAUNE_ENTETE = "Véhicules : jaune fixe de 3 s (agglomération) ou 5 s (hors agglomération, feu au jaune clignotant). "
+    + "Piétons : temps de dégagement, les feux piétons n'ayant pas de jaune (ISR, 6e partie, art. 110 C1)";
+const infobulleJaune = (type: string | undefined): string => {
+    if (type === 'P' || type === 'Piéton') {
+        return "Temps de dégagement piéton : les feux piétons R12 n'ont pas de jaune (ISR, 6e partie, art. 110 C1). "
+            + "Durée de traversée à 1 m/s, dessinée en rouge après le vert";
+    }
+    if (type === 'CY' || type === 'Cycliste') {
+        return "Temps de dégagement du cycle, dessiné en pointillé rouge après le vert. "
+            + "Sur feu tricolore cycles (R13c), jaune fixe de 3 s ou 5 s (ISR, 6e partie, art. 110 C1)";
+    }
+    return "Jaune fixe : 3 s en agglomération, 5 s hors agglomération ou pour un feu au jaune clignotant (ISR, 6e partie, art. 110 C1)";
+};
+
 const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }: GroupTableProps) => {
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
@@ -74,8 +93,8 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                         {showGroupNames && <th>Nom</th>}
                         <th>Type</th>
                         <th>Courant</th>
-                        <th>Mini</th>
-                        <th>Jaune</th>
+                        <th title={tip(INFOBULLE_MINI)}>Mini</th>
+                        <th title={tip(INFOBULLE_JAUNE_ENTETE)}>Jaune</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -151,7 +170,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                         min={0}
                                         max={cycleLength}
                                         allowEmpty={false}
-                                        title={tip("Durée minimale du vert")}
+                                        title={tip(INFOBULLE_MINI)}
                                     />
                                 </td>
                                 {/* Yellow Duration */}
@@ -164,7 +183,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                         min={0}
                                         max={cycleLength}
                                         allowEmpty={false}
-                                        title={tip("Durée de l'orange / dégagement piéton")}
+                                        title={tip(infobulleJaune(g.type))}
                                     />
                                 </td>
                             </tr>
