@@ -92,6 +92,9 @@ export const calculerConflits = (
         );
     };
 
+    // Groupe sans vert : ni vert principal, ni flèche d'anticipation.
+    const sansVert = (g: Groupe) => !((g.durations?.green ?? 0) > 0) && !flecheAnticipations[g.id];
+
     // Check intergreen time conflicts (existing logic)
     for (let from = 0; from < count; from++) {
         // Safety check: skip if row doesn't exist in matrix
@@ -104,6 +107,12 @@ export const calculerConflits = (
 
             const gFrom = groups[from];
             const gTo = groups[to];
+
+            // Un groupe sans vert (Déb et Fin vides : plan en cours de saisie)
+            // n'entre pas dans le calcul : il n'a pas encore de phase à
+            // protéger. Sa seconde lucarne éventuelle reste contrôlée plus bas.
+            const fromSansVert = sansVert(gFrom);
+            const toSansVert = sansVert(gTo);
 
             // Check if groups have flèche d'anticipation - use those timings instead
             const flecheFrom = flecheAnticipations[gFrom.id];
@@ -121,7 +130,7 @@ export const calculerConflits = (
 
             let distance = (startGreenB_Absolute - endGreenA_Absolute + cycleLength) % cycleLength;
 
-            if (distance < minGap) {
+            if (distance < minGap && !fromSansVert && !toSansVert) {
                 list.push({
                     from: gFrom.id,
                     to: gTo.id,
@@ -138,7 +147,7 @@ export const calculerConflits = (
             const startB = flecheTo ? flecheTo.deb : gTo.offset;
             const endB = flecheTo ? flecheTo.fin : gTo.offset + gTo.durations.green;
 
-            if (rangesOverlap(startA, endA, startB, endB, cycleLength)) {
+            if (!fromSansVert && !toSansVert && rangesOverlap(startA, endA, startB, endB, cycleLength)) {
                 // Skip if there's an escamotage between these groups (overlap is managed)
                 if (hasEscamotage(gFrom.id, gTo.id)) {
                     continue;
@@ -161,7 +170,7 @@ export const calculerConflits = (
             secondeLucarnes.forEach(sl => {
                 if (sl.gf === gFrom.id) {
                     // Check SL of gFrom against green of gTo
-                    if (rangesOverlap(sl.deb, sl.fin, startB, endB, cycleLength)) {
+                    if (!toSansVert && rangesOverlap(sl.deb, sl.fin, startB, endB, cycleLength)) {
                         list.push({
                             from: gFrom.id,
                             to: gTo.id,
@@ -172,7 +181,7 @@ export const calculerConflits = (
                 }
                 if (sl.gf === gTo.id) {
                     // Check SL of gTo against green of gFrom
-                    if (rangesOverlap(sl.deb, sl.fin, startA, endA, cycleLength)) {
+                    if (!fromSansVert && rangesOverlap(sl.deb, sl.fin, startA, endA, cycleLength)) {
                         list.push({
                             from: gTo.id,
                             to: gFrom.id,
