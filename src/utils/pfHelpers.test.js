@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     DEFAULT_CYCLE,
     createEmptyActionRow,
+    inscrireActions,
     createEmptyActionData,
     buildDiagramFromGroups,
     buildEmptyMatrix,
@@ -498,5 +499,32 @@ describe('ensurePFIntegrity — champs hors liste', () => {
         expect(pf.cycleLength).toBe(60);
         expect(pf.data.length).toBe(30);
         expect(pf.phasageBulleCount).toBe(6);
+    });
+});
+
+
+describe('inscrireActions', () => {
+    const ligne = (id, champs) => ({ ...createEmptyActionRow(id), ...champs });
+    const av = (n, deb) => ({ action: 'Adaptatif vertical', gf: '1', abrv: `AV${n}`, deb, fin: deb + 2 });
+    const estAV = row => row.action === 'Adaptatif vertical' && /^AV\d+$/.test(row.abrv);
+
+    it('remplace les lignes désignées, à leur place, et garde les autres', () => {
+        const data = [ligne(1, { action: 'Point de repos' }), ligne(2, av(1, 10)), ligne(3, av(3, 50)), ligne(4, {})];
+        const { data: r, nb } = inscrireActions(data, [av(1, 25)], estAV);
+        expect(nb).toBe(1);
+        expect(r.map(x => [x.id, x.action, x.abrv, x.deb])).toEqual([
+            [1, 'Point de repos', '', ''], [2, 'Adaptatif vertical', 'AV1', 25], [3, '', '', ''], [4, '', '', ''],
+        ]);
+    });
+
+    it('table sans ligne : crée les lignes nécessaires', () => {
+        const { data: r, nb } = inscrireActions([], [av(1, 25), av(3, 57)]);
+        expect(nb).toBe(2);
+        expect(r.map(x => x.abrv)).toEqual(['AV1', 'AV3']);
+    });
+
+    it('rien à inscrire ni à remplacer : table inchangée', () => {
+        const data = [ligne(1, { action: 'Point de repos' })];
+        expect(inscrireActions(data, [], estAV).data).toBe(data);
     });
 });

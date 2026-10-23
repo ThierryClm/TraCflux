@@ -9,9 +9,9 @@ const td = [
 ];
 
 describe('adaptatifs verticaux proposés', () => {
-    it('TD : V1 25–29 et V4 61–64 après trois passages, cycle contracté de 63 s', () => {
+    it('TD : V1 25–29 et V4 57–60 (fin de P7) après trois passages, cycle contracté de 63 s', () => {
         const r = proposerAdaptatifs([1, 3, 4], td, 70, 85);
-        expect(r.adaptatifs.map(a => [a.determinant, a.deb, a.fin])).toEqual([[1, 25, 29], [3, 39, 39], [4, 61, 64]]);
+        expect(r.adaptatifs.map(a => [a.determinant, a.deb, a.fin])).toEqual([[1, 25, 29], [3, 37, 37], [4, 57, 60]]);
         expect(r.cycleContracte).toBe(63);
         expect(r.passages).toBe(3);
         const [v1, b3, v4] = r.adaptatifs;
@@ -43,14 +43,34 @@ describe('adaptatifs verticaux proposés', () => {
         expect(r.adaptatifs.map(a => a.determinant)).toEqual([1, 3]);
     });
 
-    it('mode prudent : chaque zone tient seule, V1 27–29 et V4 62–64, cycle contracté de 66 s', () => {
+    it('mode prudent : chaque zone tient seule, V1 27–29 et V4 58–60, cycle contracté de 66 s', () => {
         const r = proposerAdaptatifs([1, 3, 4], td, 70, 85, 'prudent');
-        expect(r.adaptatifs.map(a => [a.determinant, a.deb, a.fin])).toEqual([[1, 27, 29], [3, 39, 39], [4, 62, 64]]);
+        expect(r.adaptatifs.map(a => [a.determinant, a.deb, a.fin])).toEqual([[1, 27, 29], [3, 37, 37], [4, 58, 60]]);
         expect(r.cycleContracte).toBe(66);
         expect(r.passages).toBe(1);
         r.adaptatifs.filter(a => a.duree > 0).forEach(a => {
             expect(a.capSeule).toBeLessThanOrEqual(85);
             expect(a.capContractee).toBeLessThanOrEqual(85);
         });
+    });
+
+    it('la zone finit avec le premier groupe de la phase qui ferme, sans fin de vert à l\'intérieur', () => {
+        const r = proposerAdaptatifs([1, 3, 4], td, 70, 85);
+        const v4 = r.adaptatifs[2];
+        // P7 ferme à 60 s, avant V4 (64 s) : contracter au-delà rapprocherait V2 de P7 (intervert 10 s).
+        expect(v4.fin).toBe(60);
+        expect(v4.aussiRaccourcis).toEqual([5, 6, 7]);
+    });
+
+    it('le groupe de la phase qui ferme le plus tôt fixe la fin de zone', () => {
+        const groupes = td.map(x => (x.id === 6 ? { ...x, vert: 12 } : x)); // P6 ferme à 58 s
+        expect(proposerAdaptatifs([1, 3, 4], groupes, 70, 85).adaptatifs[2].fin).toBe(58);
+    });
+
+    it('un début de vert dans la zone l\'arrête (temps de dégagement)', () => {
+        const groupes = td.map(x => (x.id === 9 ? { ...x, debut: 58, vert: 17 } : x)); // P9 ouvre à 58 s
+        const v4 = proposerAdaptatifs([1, 3, 4], groupes, 70, 85).adaptatifs[2];
+        expect([v4.deb, v4.fin]).toEqual([58, 60]);
+        expect(v4.limite).toEqual({ id: 9, raison: 'degagement' });
     });
 });

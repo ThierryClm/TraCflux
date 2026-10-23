@@ -60,8 +60,8 @@ TraCflux intègre un **assistant qui dégrossit un plan de feux en quelques minu
 - calcule le **cycle minimal** et le **cycle de Webster** (*Guide des carrefours à feux* du CERTU), arrondi à la dizaine supérieure, et répartit les verts au prorata des demandes ;
 - **pré-remplit** le diagramme et, si on le souhaite, le phasage bulle ;
 - **déduit le placement des groupes associés**, en affichant pour chacun la source de la déduction (matrice des temps interverts, nom du groupe, géométrie des flèches du plan) ;
-- **applique le tout en un clic** : la durée du cycle d'abord, puis les groupes associés — annulable par Ctrl+Z ;
-- **propose un adaptatif vertical par phase**, dimensionné pour porter chaque groupe jusqu'au taux de saturation visé (85 %) sans passer sous les verts minimaux — en mode itératif (la contraction d'une phase redonne de la capacité aux autres) ou prudent (chaque zone tient seule) — et l'inscrit dans les conditions de micro-régulation.
+- **applique le tout en un clic** : la durée du cycle d'abord, puis les groupes associés et les adaptatifs verticaux — annulable par Ctrl+Z ;
+- **propose un adaptatif vertical par phase**, qui finit avec le premier groupe de la phase à fermer (temps interverts préservés) et dimensionné pour porter chaque groupe jusqu'au taux de saturation visé (85 %) sans passer sous les verts minimaux — en mode itératif (la contraction d'une phase redonne de la capacité aux autres) ou prudent (chaque zone tient seule) — et l'inscrit dans les conditions de micro-régulation (AV1, AV2…).
 
 La fenêtre n'est pas modale : le diagramme reste visible et modifiable pendant qu'on la consulte. Sur un carrefour en croix à trois phases avec couloir bus, l'assistant pose un diagramme complet et sans conflit, prêt à être affiné.
 

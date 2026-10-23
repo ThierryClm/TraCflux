@@ -5,9 +5,12 @@
  * contracté : tout groupe vert dans la zone perd ce temps, et le cycle
  * raccourcit d'autant (cf. simulation/operations/adaptatifVertical.ts).
  *
- * Pour chaque phase, la zone finit à la fin du vert du groupe déterminant et
- * s'allonge vers la gauche, seconde par seconde, tant que, sur le cycle où
- * toutes les zones sont contractées :
+ * Pour chaque phase, la zone finit au plus tôt des fins de vert des groupes
+ * de la phase (ceux dont le vert recouvre celui du déterminant) : contracter
+ * au-delà de la fin d'un groupe rapprocherait son antagoniste suivant et
+ * entamerait le temps intervert. Elle s'allonge vers la gauche, seconde par
+ * seconde, sans contenir de début ni de fin de vert, tant que, sur le cycle
+ * où toutes les zones sont contractées :
  *  - chaque groupe à trafic reste sous le taux visé (85 % par défaut) ;
  *  - chaque groupe raccourci garde au moins son vert mini.
  * Raccourcir le cycle redonne de la capacité aux autres phases : on refait
@@ -37,7 +40,8 @@ export interface GroupeAdaptatif {
 
 export interface LimiteZone {
     id: number;
-    raison: 'mini' | 'capacite';
+    /** vert mini atteint, taux visé atteint, ou début/fin de vert du groupe dans la zone. */
+    raison: 'mini' | 'capacite' | 'degagement';
 }
 
 export interface AdaptatifPropose {
@@ -52,8 +56,6 @@ export interface AdaptatifPropose {
     capSeule: number | null;
     /** Ce qui empêche la zone de s'allonger d'une seconde de plus. */
     limite: LimiteZone | null;
-    /** Temps passé dans la phase (depuis l'ouverture du déterminant) au début de la zone. */
-    tpph: number;
     /** Autres groupes dont le vert est raccourci par la zone. */
     aussiRaccourcis: number[];
 }
@@ -96,7 +98,21 @@ export const proposerAdaptatifs = (
 ): PropositionAdaptatifs => {
     const verts = groupes.filter(g => g.vert > 0);
     const det = determinants.map(id => verts.find(g => g.id === id));
-    const fins = det.map(g => (g ? g.debut + g.vert : 0));
+    // Fin de zone : la plus précoce des fins de vert des groupes de la phase,
+    // lues dans le repère du déterminant (rebouclage compris).
+    const fins = det.map(g => {
+        if (!g) return 0;
+        const finDet = g.debut + g.vert;
+        let fin = finDet;
+        for (const x of verts) {
+            for (const decalage of [-cycle, 0, cycle]) {
+                const a = x.debut + decalage;
+                const b = a + x.vert;
+                if (b > g.debut && a < finDet) fin = Math.min(fin, b);
+            }
+        }
+        return fin;
+    });
     const durees = determinants.map(() => 0);
     const limites: (LimiteZone | null)[] = determinants.map(() => null);
 
@@ -106,6 +122,10 @@ export const proposerAdaptatifs = (
             .filter((z, i) => z.x > 0 && (seule === undefined || i === seule));
         const cycleContracte = cycle - zones.reduce((s, z) => s + z.x, 0);
         for (const g of verts) {
+            // Un début ou une fin de vert dans la zone : la contracter rapprocherait
+            // ce groupe de ses antagonistes, au détriment des temps interverts.
+            const instants = [g.debut, g.debut + g.vert].flatMap(t => [t - cycle, t, t + cycle]);
+            if (zones.some(z => instants.some(t => t > z.deb && t < z.fin))) return { id: g.id, raison: 'degagement' };
             const coupe = zones.reduce((s, z) => s + recouvrement(g, z.deb, z.fin, cycle), 0);
             const vert = g.vert - coupe;
             if (coupe > 0 && vert < g.vertMini) return { id: g.id, raison: 'mini' };
@@ -121,7 +141,7 @@ export const proposerAdaptatifs = (
         let allonge = false;
         det.forEach((g, i) => {
             if (!g) return;
-            while (durees[i] < g.vert) {
+            while (durees[i] < fins[i] - g.debut) {
                 const essai = durees.map((x, k) => (k === i ? x + 1 : x));
                 const b = (mode === 'prudent' ? bloquant(essai, i) : null) ?? bloquant(essai);
                 if (b) { limites[i] = b; return; }
@@ -148,7 +168,6 @@ export const proposerAdaptatifs = (
             capContractee: capaciteUtilisee(g, g.vert - coupe(durees), cycle - total),
             capSeule: capaciteUtilisee(g, g.vert - durees[i], cycle - durees[i]),
             limite: limites[i],
-            tpph: fins[i] - durees[i] - g.debut,
             aussiRaccourcis: durees[i] > 0
                 ? verts.filter(x => x.id !== g.id && recouvrement(x, fins[i] - durees[i], fins[i], cycle) > 0).map(x => x.id)
                 : [],

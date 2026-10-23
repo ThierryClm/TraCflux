@@ -71,6 +71,37 @@ export const createEmptyActionData = (): ActionMicro[] =>
     Array.from({ length: LIGNES_ACTIONS_MAX }, (_, i) => createEmptyActionRow(i + 1));
 
 /**
+ * Inscrit des conditions dans les lignes libres d'une table d'actions, après
+ * avoir vidé celles que « remplacer » désigne (elles redeviennent libres, à
+ * leur place). Crée des lignes vides s'il en manque, sans dépasser
+ * LIGNES_ACTIONS_MAX. Renvoie la table d'origine si rien ne change.
+ */
+export const inscrireActions = (
+    data: ActionMicro[],
+    lignes: Partial<Omit<ActionMicro, 'id'>>[],
+    remplacer?: (row: ActionMicro) => boolean,
+): { data: ActionMicro[]; nb: number } => {
+    const videes = remplacer ? data.map(row => (remplacer(row) ? createEmptyActionRow(row.id) : row)) : data;
+    const aVide = videes.some((row, i) => row !== data[i]);
+    const libres = videes.filter(row => !ligneActionRemplie(row)).map(row => row.id);
+    let idMax = videes.reduce((m, row) => Math.max(m, row.id), 0);
+    const nouvelles: ActionMicro[] = [];
+    while (libres.length + nouvelles.length < lignes.length && videes.length + nouvelles.length < LIGNES_ACTIONS_MAX) {
+        nouvelles.push(createEmptyActionRow(++idMax));
+    }
+    const cibles = [...libres, ...nouvelles.map(row => row.id)];
+    const nb = Math.min(cibles.length, lignes.length);
+    if (!nb && !aVide) return { data, nb: 0 };
+    return {
+        data: [...videes, ...nouvelles].map(row => {
+            const k = cibles.indexOf(row.id);
+            return k >= 0 && k < nb ? { ...row, ...lignes[k], id: row.id } : row;
+        }),
+        nb,
+    };
+};
+
+/**
  * Build a diagram array from a list of groups.
  * Used to initialize pf.diagram when missing.
  */

@@ -121,7 +121,7 @@ describe('suggestion de durée du cycle', () => {
         expect(updateGroupParams).toHaveBeenCalledWith(6, { offset: 46, durations: { green: 16 } });
     });
 
-    it('adaptatifs verticaux : proposés par phase, ajoutés aux conditions une fois le cycle appliqué', () => {
+    it('adaptatifs verticaux : proposés par phase, inscrits par « Appliquer le cycle » en remplaçant les AV précédents', () => {
         const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
         const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
         const ajouterActions = vi.fn(lignes => lignes.length);
@@ -131,20 +131,18 @@ describe('suggestion de durée du cycle', () => {
         expect(within(bloc).getByText('61 – 64 s')).toBeInTheDocument();
         expect(within(bloc).getByText(/vert mini de B3/)).toBeInTheDocument();
         expect(within(bloc).getByText(/63 s avec toutes les zones contractées/)).toBeInTheDocument();
-        fireEvent.click(within(bloc).getByRole('button', { name: 'Contraction de phase' }));
-        expect(ajouterActions).toHaveBeenCalledWith([
-            {
-                gf: '1', action: 'Adaptatif vertical', deb: '25', fin: '29', abrv: 'CP1',
-                description: 'Contraction de phase 1 : fin de demande V1 — Cap. U 80 % → 84 % (zone seule 88 %) ; raccourcit aussi V2',
-                micro: 'Contraction si absence de demande sur V1 et TPPh ≥ 25',
-            },
-            {
-                gf: '4', action: 'Adaptatif vertical', deb: '61', fin: '64', abrv: 'CP3',
-                description: 'Contraction de phase 3 : fin de demande V4 — Cap. U 78 % → 83 % (zone seule 88 %) ; raccourcit aussi V5',
-                micro: 'Contraction si absence de demande sur V4 et TPPh ≥ 16',
-            },
+        expect(screen.queryByRole('button', { name: 'Contraction de phase' })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
+        const [lignes, remplacer] = ajouterActions.mock.calls[0];
+        expect(lignes).toEqual([
+            { gf: '1', action: 'Adaptatif vertical', deb: '25', fin: '29', abrv: 'AV1', description: 'Contraction théorique', micro: 'Contraction si absence de demande sur V1' },
+            { gf: '4', action: 'Adaptatif vertical', deb: '61', fin: '64', abrv: 'AV3', description: 'Contraction théorique', micro: 'Contraction si absence de demande sur V4' },
         ]);
-        expect(within(bloc).getByText(/2 conditions ajoutées/)).toBeInTheDocument();
+        // Remplacés : les AVn de l'assistant ; conservés : les autres adaptatifs et conditions.
+        expect(remplacer({ action: 'Adaptatif vertical', abrv: 'AV2' })).toBe(true);
+        expect(remplacer({ action: 'Adaptatif vertical', abrv: 'DA1' })).toBe(false);
+        expect(remplacer({ action: 'Point de repos', abrv: 'AV1' })).toBe(false);
+        expect(within(bloc).getByText(/Inscrits : AV1, AV3/)).toBeInTheDocument();
     });
 
     it('adaptatifs verticaux : mode prudent, chaque zone calculée seule', () => {
@@ -156,12 +154,5 @@ describe('suggestion de durée du cycle', () => {
         expect(within(bloc).getByText('27 – 29 s')).toBeInTheDocument();
         expect(within(bloc).getByText('62 – 64 s')).toBeInTheDocument();
         expect(within(bloc).getByText(/66 s avec toutes les zones contractées/)).toBeInTheDocument();
-    });
-
-    it('adaptatifs verticaux : bouton grisé tant que le cycle proposé n\'est pas appliqué', () => {
-        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
-        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
-        ouvrir({ groups: places, cycleLength: 90, ajouterActions: vi.fn(), phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
-        expect(screen.getByRole('button', { name: 'Contraction de phase' })).toBeDisabled();
     });
 });

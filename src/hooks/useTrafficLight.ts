@@ -8,9 +8,7 @@ import {
     createEmptyPF,
     ensurePFIntegrity,
     cycleDuPlanActif,
-    ligneActionRemplie,
-    createEmptyActionRow,
-    LIGNES_ACTIONS_MAX
+    inscrireActions
 } from '../utils/pfHelpers';
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
@@ -1197,27 +1195,15 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         ));
     }, [saveToHistory]);
 
-    // Inscrit des conditions dans les premières lignes vides de la table
-    // (assistant : adaptatifs verticaux proposés). Une seule étape d'annulation.
-    // Renvoie le nombre de lignes inscrites (30 lignes au plus par plan).
-    const ajouterActions = useCallback((lignes: Partial<Omit<ActionMicro, 'id'>>[]): number => {
-        if (isEditLocked() || !lignes.length) return 0;
-        // Un plan peut n'avoir aucune ligne vide (fichier enregistré sans elles) :
-        // on en crée, sans dépasser les 30 lignes d'un plan.
-        const libres = actionData.filter(row => !ligneActionRemplie(row)).map(row => row.id);
-        let idMax = actionData.reduce((m, row) => Math.max(m, row.id), 0);
-        const nouvelles: ActionMicro[] = [];
-        while (libres.length + nouvelles.length < lignes.length && actionData.length + nouvelles.length < LIGNES_ACTIONS_MAX) {
-            nouvelles.push(createEmptyActionRow(++idMax));
-        }
-        const cibles = [...libres, ...nouvelles.map(row => row.id)];
-        const nb = Math.min(cibles.length, lignes.length);
-        if (!nb) return 0;
+    // Inscrit des conditions dans la table (assistant : adaptatifs verticaux
+    // proposés), après avoir vidé les lignes que « remplacer » désigne. Une
+    // seule étape d'annulation. Renvoie le nombre de lignes inscrites.
+    const ajouterActions = useCallback((lignes: Partial<Omit<ActionMicro, 'id'>>[], remplacer?: (row: ActionMicro) => boolean): number => {
+        if (isEditLocked()) return 0;
+        const { data, nb } = inscrireActions(actionData, lignes, remplacer);
+        if (data === actionData) return 0;
         saveToHistory();
-        setActionData(prev => [...prev, ...nouvelles].map(row => {
-            const k = cibles.indexOf(row.id);
-            return k >= 0 && k < nb ? { ...row, ...lignes[k], id: row.id } : row;
-        }));
+        setActionData(prev => inscrireActions(prev, lignes, remplacer).data);
         return nb;
     }, [actionData, saveToHistory, setActionData]);
 
