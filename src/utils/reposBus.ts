@@ -5,8 +5,8 @@
  * vert bus, à l'instant où le plus de groupes sont au vert (ils profitent
  * tous de l'attente), le plus tard possible à égalité. La condition de sortie
  * compare l'arrivée du bus au temps maxi d'attente :
- * « Attente quittée si TPPh_Ln + DAX > N + TMABX », avec N le temps passé
- * dans la phase bus à l'instant du repos, moins 1. L'indice X tient la place
+ * « Attente quittée si TPPh_Ln + DAx > N + TMABx », avec N le temps passé
+ * dans la phase bus à l'instant du repos, moins 1. L'indice x tient la place
  * du code trajet, à remplacer par l'utilisateur.
  */
 
@@ -57,12 +57,12 @@ export const proposerReposBus = (groupes: GroupeRepos[], cycle: number): ReposPr
 
 export const TMAB_DEFAUT = 10;
 /** Variable micro ajoutée au plan quand elle manque. */
-export const VARIABLE_TMABX = `TMABX = ${TMAB_DEFAUT}`;
+export const VARIABLE_TMABX = `TMABx = ${TMAB_DEFAUT}`;
 
-/** Valeur de TMABX dans les variables micro du plan (« TMABX = 12 »), ou null si elle n'y est pas. */
+/** Valeur de TMABx dans les variables micro du plan (« TMABx = 12 »), ou null si elle n'y est pas. */
 export const lireTmabX = (variables: string[] | undefined): number | null => {
     for (const v of variables ?? []) {
-        const m = /^\s*TMABX\s*=\s*(\d+)/i.exec(v);
+        const m = /^\s*TMABx\s*=\s*(\d+)/i.exec(v);
         if (m) return parseInt(m[1], 10);
     }
     return null;

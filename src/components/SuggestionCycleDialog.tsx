@@ -37,9 +37,9 @@ export interface SuggestionCycleDialogProps {
     intersectionArrows?: { groupId: number; rotation?: number }[];
     /** Inscrit des conditions dans la table, après avoir vidé les lignes à remplacer ; renvoie le nombre inscrit. */
     ajouterActions?: (lignes: Partial<Omit<ActionMicro, 'id'>>[], remplacer?: (row: ActionMicro) => boolean) => number;
-    /** Variables micro du plan : TMABX donne la durée d'attente des repos bus. */
+    /** Variables micro du plan : TMABx donne la durée d'attente des repos bus. */
     variablesMicro?: string[];
-    /** Écrit une variable micro du plan (index, texte) : ajout de « TMABX = 10 » s'il manque. */
+    /** Écrit une variable micro du plan (index, texte) : ajout de « TMABx = 10 » s'il manque. */
     setVariableMicro?: (index: number, value: string) => void;
     readOnly?: boolean;
     /** Rendu dans une fenêtre détachée du navigateur (usePopupWindow), sans cadre de modale. */
@@ -208,9 +208,9 @@ const SuggestionCycleDialog = ({
         if (ajouterActions && disposition) {
             const lignes = [...avUtiles.map(conditionAdaptatif), ...faUtiles.map(conditionFermeture), ...reposBus.map(conditionRepos)];
             const nb = ajouterActions(lignes, estLigneAssistant);
-            // DA du groupe bus : « TX », X tenant la place du code trajet.
-            reposBus.forEach(r => updateGroupParams(r.groupe, { da: 'TX' }));
-            // Variable micro TMABX, ajoutée dans la première case libre si le plan ne l'a pas.
+            // DA du groupe bus : « Tx », x tenant la place du code trajet.
+            reposBus.forEach(r => updateGroupParams(r.groupe, { da: 'Tx' }));
+            // Variable micro TMABx, ajoutée dans la première case libre si le plan ne l'a pas.
             if (reposBus.length && tmabX === null && setVariableMicro) {
                 const libre = (variablesMicro ?? []).findIndex(v => !v.trim());
                 setVariableMicro(libre >= 0 ? libre : (variablesMicro ?? []).length, VARIABLE_TMABX);
@@ -263,7 +263,7 @@ const SuggestionCycleDialog = ({
     // Ligne de condition renseignée avec ce que l'assistant sait de la zone ;
     // la condition de contraction reste à adapter à la détection réelle.
     const court = (id: number) => nomCourt(groups.find(g => g.id === id)?.name, id);
-    // Point de repos bus : X tient la place du code trajet, à remplacer.
+    // Point de repos bus : x tient la place du code trajet, à remplacer.
     const conditionRepos = (r: ReposPropose) => ({
         gf: String(r.groupe),
         action: 'Point de repos',
@@ -271,7 +271,7 @@ const SuggestionCycleDialog = ({
         fin: '',
         abrv: 'Att bus',
         description: `${DESCRIPTION_REPOS_BUS} maxi ${tmab} secondes`,
-        micro: `Attente quittée si TPPh_L${r.groupe} + DAX > ${r.n} + TMABX`,
+        micro: `Attente quittée si TPPh_L${r.groupe} + DAx > ${r.n} + TMABx`,
     });
     // Fermeture anticipée : FA1, FA2… dans l'ordre du tableau, glissements en Action GF.
     const conditionFermeture = (f: FermeturePropose, k: number) => ({
@@ -589,8 +589,8 @@ const SuggestionCycleDialog = ({
                     ) : <p className="sc-attente">Aucun groupe bus (type B ou TC) dans le plan.</p>}
                     <p className="sc-note">
                         « Appliquer le cycle » inscrit un point de repos par groupe bus (« Att bus », « {DESCRIPTION_REPOS_BUS} maxi {tmab} secondes »),
-                        écrit « TX » dans la colonne DA du groupe bus{tmabX === null ? <> et ajoute la variable micro « {VARIABLE_TMABX} »</> : ''}. L'indice X tient la place du
-                        code trajet : remplacez-le dans DAX, TMABX et TX. Les repos d'un passage précédent sont remplacés ; les autres ne
+                        écrit « Tx » dans la colonne DA du groupe bus{tmabX === null ? <> et ajoute la variable micro « {VARIABLE_TMABX} »</> : ''}. L'indice x tient la place du
+                        code trajet : remplacez-le dans DAx, TMABx et Tx. Les repos d'un passage précédent sont remplacés ; les autres ne
                         sont pas touchés.
                     </p>
                     {avInscrits !== null && (

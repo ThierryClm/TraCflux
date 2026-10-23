@@ -23,8 +23,8 @@ describe('point de repos bus proposé', () => {
         expect(proposerReposBus(td.filter(x => x.id !== 3), 70)).toEqual([]);
     });
 
-    it('TMABX lu dans les variables micro, sinon absent', () => {
-        expect(lireTmabX(['TMAB1 = 12', 'TMABX = 15'])).toBe(15);
+    it('TMABx lu dans les variables micro, sinon absent', () => {
+        expect(lireTmabX(['TMAB1 = 12', 'TMABx = 15'])).toBe(15);
         expect(lireTmabX(['TMAB1 = 12'])).toBeNull();
     });
 });
