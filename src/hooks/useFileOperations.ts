@@ -77,9 +77,6 @@ interface UseFileOperationsOptions {
     loadDirectoryHandle: (key: string) => Promise<FileSystemDirectoryHandleLike | null>;
     recentOpenDirs: RecentDirectory[];
     recentSaveDirs: RecentDirectory[];
-    recentImportDirs: RecentDirectory[];
-    recentImageDirs: RecentDirectory[];
-    recentGreenWaveDirs: RecentDirectory[];
     addRecentDirectory: (
         type: RecentDirectoryType,
         name: string,
@@ -96,7 +93,9 @@ interface UseFileOperationsOptions {
 const useFileOperations = ({
     projectName, diagramHeight, floatingCrop, floatingZoom,
     setSelectedProject, setOpenModal, setCurrentProjectPath, setProjectModified,
-    projectModifiedSkip, setHasUnsavedChanges,
+    // Réf nommée « …Ref » : les règles de React la reconnaissent comme une
+    // référence mutable, et non comme une prop à ne pas modifier.
+    projectModifiedSkip: projectModifiedSkipRef, setHasUnsavedChanges,
     isDirty,
     setDiagramHeight, resetDiagramHeight, setFloatingCrop, setFloatingZoom, markLegacyCrop,
     setCommentsMode, setRemarksMode, setIntersectionName,
@@ -116,12 +115,16 @@ const useFileOperations = ({
     dossierSections, setDossierSections,
     lastOpenDirectoryRef, lastSaveDirectoryRef,
     saveDirectoryHandle, loadDirectoryHandle,
-    recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
+    recentOpenDirs, recentSaveDirs,
     addRecentDirectory,
     askConfirm, showAlert
 }: UseFileOperationsOptions) => {
     // Fallback : si showAlert n'est pas fourni, on retombe sur window.alert
-    const alertFn = showAlert || (({ message }: DialogMessage) => { window.alert(message); return Promise.resolve(); });
+    const alertFn = useCallback((dialogue: DialogMessage) => {
+        if (showAlert) return showAlert(dialogue);
+        window.alert(dialogue.message);
+        return Promise.resolve();
+    }, [showAlert]);
     // Ouvrir un fichier JSON avec File System Access API
     const handleOpenFileWithPicker = useCallback(async () => {
         if (!window.showOpenFilePicker) {
@@ -217,7 +220,7 @@ const useFileOperations = ({
             // Mémoriser le chemin du projet
             setCurrentProjectPath(file.name);
             setProjectModified(true); // active "Nouveau projet" dans le menu
-            projectModifiedSkip.current = true; // absorbe le prochain changement de deps
+            projectModifiedSkipRef.current = true; // absorbe le prochain changement de deps
             setHasUnsavedChanges(false); // pas de modifications non sauvegardées
 
             // Hauteur du diagramme : donnée de projet. Absente du fichier, on
@@ -399,7 +402,7 @@ const useFileOperations = ({
             // Mémoriser le chemin du projet
             setCurrentProjectPath(file.name);
             setProjectModified(true); // active "Nouveau projet" dans le menu
-            projectModifiedSkip.current = true; // absorbe le prochain changement de deps
+            projectModifiedSkipRef.current = true; // absorbe le prochain changement de deps
             setHasUnsavedChanges(false); // pas de modifications non sauvegardées
 
             // Hauteur du diagramme : donnée de projet. Absente du fichier, on
@@ -565,7 +568,7 @@ const useFileOperations = ({
             // Mémoriser le chemin du projet
             setCurrentProjectPath(fileHandle.name);
             setProjectModified(true); // active "Nouveau projet" dans le menu
-            projectModifiedSkip.current = true; // absorbe setIntersectionName(savedName)
+            projectModifiedSkipRef.current = true; // absorbe setIntersectionName(savedName)
             setHasUnsavedChanges(false); // projet sauvegardé, pas de modifications
 
             // Sauvegarder aussi dans localStorage pour cohérence
@@ -579,12 +582,11 @@ const useFileOperations = ({
                 toast.error('Échec de la sauvegarde : ' + e.message);
             }
         }
-    }, [projectName, getFullState, setIntersectionName, saveProject, saveDirectoryHandle, addRecentDirectory, recentOpenDirs, recentSaveDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
-        // Layout options sauvegardées dans le projet — sans ces deps, le
-        // callback memoisé garde les valeurs périmées du premier rendu.
-        sidebarVisible, commentsMode, remarksMode, descriptionMode,
-        showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
-        showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Les options de mise en page n'y figurent pas : getFullState, recréé à
+    // chaque rendu, les lit au moment d'enregistrer (champsProjetRef d'App).
+    }, [projectName, getFullState, setIntersectionName, saveProject, saveDirectoryHandle, addRecentDirectory,
+        setCurrentProjectPath, setProjectModified, projectModifiedSkipRef, setHasUnsavedChanges,
+        lastSaveDirectoryRef, alertFn]);
 
     // Enregistrer un fichier dans un répertoire récent
     const handleSaveFileToRecentDir = useCallback(async (dirIndex: number) => {
@@ -661,7 +663,7 @@ const useFileOperations = ({
             // Mémoriser le chemin du projet
             setCurrentProjectPath(fileHandle.name);
             setProjectModified(true); // active "Nouveau projet" dans le menu
-            projectModifiedSkip.current = true; // absorbe setIntersectionName(savedName)
+            projectModifiedSkipRef.current = true; // absorbe setIntersectionName(savedName)
             setHasUnsavedChanges(false); // projet sauvegardé, pas de modifications
 
             // Sauvegarder aussi dans localStorage pour cohérence
@@ -675,10 +677,9 @@ const useFileOperations = ({
                 toast.error('Échec de la sauvegarde : ' + e.message);
             }
         }
-    }, [recentSaveDirs, projectName, loadDirectoryHandle, saveDirectoryHandle, addRecentDirectory, getFullState, setIntersectionName, saveProject, recentOpenDirs, recentImportDirs, recentImageDirs, recentGreenWaveDirs,
-        sidebarVisible, commentsMode, remarksMode, descriptionMode,
-        showFloatingForm, showFloatingMatrix, showFloatingTraffic, showFloatingImage,
-        showFloatingConditions, showFloatingVariables, showFloatingRemarks]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [recentSaveDirs, projectName, loadDirectoryHandle, saveDirectoryHandle, addRecentDirectory, getFullState, setIntersectionName, saveProject,
+        setCurrentProjectPath, setProjectModified, projectModifiedSkipRef, setHasUnsavedChanges,
+        lastSaveDirectoryRef, alertFn]);
 
     // Export SÉLECTIF d'un sous-ensemble de plans de feux, dans un fichier à part.
     // Contrairement à « Enregistrer », c'est une copie SORTANTE : on ne touche
