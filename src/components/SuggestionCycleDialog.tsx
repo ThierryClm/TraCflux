@@ -161,15 +161,20 @@ const SuggestionCycleDialog = ({
         })), dets as { id: number; debut: number; fin: number }[], conflictMatrix, cycleRef);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [resultat, calculable, complet, brouillon, groups, getTrafficData, intersectionArrows, conflictMatrix, cycleLength]);
-    const cocheParDefaut = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }) => {
+    // Groupes associés placés par « Appliquer le cycle » : ceux qui n'ont pas
+    // encore de vert et dont la déduction est sûre. Les groupes déjà réglés ne
+    // sont jamais touchés ; ceux « à vérifier » restent à placer à la main.
+    const statutPlacement = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }) => {
         const g = groups.find(gr => gr.id === p.id);
-        return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut && !(g && g.durations?.green > 0);
+        if (g && g.durations?.green > 0) return 'regle' as const;
+        return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' as const : 'main' as const;
     };
-    const [coches, setCoches] = useState<Record<number, boolean>>({});
-    const estCoche = (p: Parameters<typeof cocheParDefaut>[0]) => coches[p.id] ?? cocheParDefaut(p);
-    const placerCoches = () => {
-        placements.filter(estCoche).forEach(p => updateGroupParams(p.id, { offset: p.debut, durations: { green: p.fin - p.debut } }));
-        setCoches({});
+    const aPlacer = placements.filter(p => statutPlacement(p) === 'auto');
+    const appliquer = () => {
+        if (!resultat?.cycleSuggere) return;
+        if (resultat.cycleSuggere !== cycleLength) setCycleLength(resultat.cycleSuggere);
+        enregistrer();
+        aPlacer.forEach(p => updateGroupParams(p.id, { offset: p.debut, durations: { green: p.fin - p.debut } }));
     };
 
     // Déterminants sans vert dans le diagramme (Déb/Fin vides) : pré-remplis au
@@ -331,13 +336,10 @@ const SuggestionCycleDialog = ({
                 <div className="sc-associes" aria-label="Groupes associés">
                     <h4>Groupes associés</h4>
                     <table className="sc-table">
-                        <thead><tr><th></th><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th></tr></thead>
+                        <thead><tr><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th><th>Placement</th></tr></thead>
                         <tbody>
                             {placements.map(p => (
                                 <tr key={p.id} className={p.aVerifier ? 'sc-a-verifier' : ''}>
-                                    <td><input type="checkbox" aria-label={`Placer ${nomGroupe(p.id)}`} checked={estCoche(p)}
-                                        disabled={readOnly || !(p.fin > p.debut)}
-                                        onChange={e => setCoches(c => ({ ...c, [p.id]: e.target.checked }))} /></td>
                                     <td className="sc-gauche sc-nom" title={nomGroupe(p.id)}>GF{p.id} {nomGroupe(p.id)}</td>
                                     <td>{p.phases.length ? p.phases.map(i => i + 1).join(', ') : '—'}</td>
                                     <td className="sc-insecable">{p.fin > p.debut ? `${p.debut} – ${p.fin} s` : '—'}</td>
@@ -345,14 +347,16 @@ const SuggestionCycleDialog = ({
                                         {p.source && <span className={`sc-badge sc-badge-${p.source}`}>{p.source === 'matrice' ? 'Matrice' : p.source === 'nom' ? 'Nom' : 'Plan'}</span>}
                                         {' '}{p.explication}{p.aVerifier ? ' — à vérifier' : ''}
                                     </td>
+                                    <td className="sc-insecable">{{ auto: 'avec le cycle', regle: 'déjà réglé', main: 'à la main' }[statutPlacement(p)]}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    <button type="button" className="modal-btn modal-btn-secondary" disabled={readOnly || !placements.some(estCoche)} onClick={placerCoches}
-                        title="Inscrit les groupes cochés dans le diagramme (Ctrl+Z pour annuler)">
-                        Placer les groupes cochés
-                    </button>
+                    <p className="sc-note">
+                        « Appliquer le cycle » règle d'abord la durée du cycle, puis inscrit dans le diagramme les groupes
+                        « avec le cycle » (Ctrl+Z pour annuler). Les groupes déjà réglés ne sont pas modifiés ; ceux
+                        « à vérifier » restent à placer à la main.
+                    </p>
                 </div>
             )}
             </div>
@@ -370,7 +374,8 @@ const SuggestionCycleDialog = ({
                 </button>
                 <button className="modal-btn modal-btn-primary"
                     disabled={!calculable || resultat?.cycleSuggere == null || readOnly}
-                    onClick={() => { if (resultat?.cycleSuggere) { if (resultat.cycleSuggere !== cycleLength) setCycleLength(resultat.cycleSuggere); enregistrer(); } }}>
+                    title={aPlacer.length ? `Règle le cycle, puis place ${aPlacer.length} groupe${aPlacer.length > 1 ? 's' : ''} associé${aPlacer.length > 1 ? 's' : ''} dans le diagramme` : 'Règle la durée du cycle du plan'}
+                    onClick={appliquer}>
                     Appliquer le cycle{calculable && resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
                 </button>
             </div>

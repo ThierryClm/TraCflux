@@ -151,7 +151,7 @@ Ces vérifications ne remplacent pas le jugement du concepteur — elles libère
 
 L'application est conçue pour la **conception et l'optimisation** de plans de feux, pas pour piloter des installations réelles. Elle ne fait pas de simulation microscopique de trafic (type AIMSUN, VISSIM), ne se connecte pas à des contrôleurs sur le terrain, et ne gère qu'une coordination simple (onde verte) — pas de réseau multi-carrefours complet.
 
-Son [assistant de construction](#quelles-sont-les-limites-de-lassistant-de-construction-) propose un cycle et un premier placement des groupes, mais ne remplace pas la conception : les données d'entrée et les choix de phasage restent ceux de l'utilisateur.
+Son [assistant de construction](#tracflux-peut-il-maider-à-construire-un-diagramme-de-feux-) dégrossit un plan de feux à partir des trafics — cycle, verts, placement des groupes ; les données d'entrée et les choix de phasage restent ceux de l'utilisateur ([voir ses limites](#quelles-sont-les-limites-de-lassistant-de-construction-)).
 
 ### Proposez-vous un accompagnement pour les carrefours complexes ?
 
@@ -223,27 +223,32 @@ Vous pouvez à tout moment ouvrir le **projet exemple** depuis l'écran d'accuei
 
 ### TraCflux peut-il m'aider à construire un diagramme de feux ?
 
-Oui, pour le **point de départ**. Le menu **Diagramme → Nouveau plan de feu…** crée un plan vierge (verts, débuts et fins vides, sans micro-régulation) et vous invite à lui associer un jeu de trafic — ou à en saisir un dans l'onglet *Trafic*. **Diagramme → Suggérer une durée de cycle…** ouvre ensuite l'assistant, dans une fenêtre non modale qui laisse le diagramme accessible :
+Oui : c'est le rôle de l'**assistant de construction**, un module conçu pour **dégrossir rapidement un plan de feux** à partir des trafics. En quelques minutes, il pose une base cohérente et chiffrée — chemin critique, durée de cycle, répartition des verts, placement des groupes — que l'on affine ensuite plutôt que de partir d'une page blanche.
 
-1. **Chemin critique** — sur un diagramme déjà ébauché, l'assistant regroupe en phases les groupes dont les verts se recouvrent et retient dans chacune le groupe déterminant : celui de plus forte capacité utilisée, ou la traversée piétonne la plus défavorable lorsqu'une phase piétonne est déterminante. Sur un plan vierge, vous désignez vous-même les groupes déterminants (2 à 6 phases). Le tableau reste modifiable dans tous les cas.
-2. **Durée de cycle** — cycle minimal, cycle de Webster (valeur exacte affichée) et cycle proposé, arrondi à la dizaine supérieure ; les verts sont répartis au prorata des demandes, sans descendre sous les verts minimaux.
-3. **Pré-remplissage** — les groupes déterminants sans vert sont placés dans le diagramme, et le phasage bulle peut être pré-rempli (case à cocher).
-4. **Groupes associés** — l'assistant propose un placement des autres groupes et indique pour chacun **d'où vient la déduction** : la matrice des temps interverts, le nom du groupe (même voie que le déterminant) ou la géométrie des flèches du plan du carrefour. Les déductions fragiles sont marquées **« à vérifier »** ; rien n'est placé sans que vous l'ayez coché.
+Le menu **Diagramme → Nouveau plan de feu…** crée un plan vierge (verts, débuts et fins vides, sans micro-régulation) et vous invite à lui associer un jeu de trafic — ou à en saisir un dans l'onglet *Trafic*. **Diagramme → Suggérer une durée de cycle…** ouvre ensuite l'assistant, dans une fenêtre non modale qui laisse le diagramme sous les yeux :
 
-Les groupes sans vert ne sont pas comptés dans les conflits : un plan en cours de construction n'est pas couvert d'alertes.
+1. **Chemin critique** — sur un diagramme déjà ébauché, l'assistant reconnaît les phases (groupes dont les verts se recouvrent) et retient dans chacune le groupe déterminant : celui de plus forte capacité utilisée, ou la traversée piétonne la plus défavorable lorsqu'une phase piétonne est déterminante. Sur un plan vierge, vous désignez les groupes déterminants (2 à 6 phases), et la matrice propose aussitôt les dégagements entre phases.
+2. **Durée de cycle** — cycle minimal, cycle de Webster selon le *Guide des carrefours à feux* (valeur exacte affichée) et cycle proposé, arrondi à la dizaine supérieure ; les verts sont répartis au prorata des demandes, sans descendre sous les verts minimaux.
+3. **Pré-remplissage** — les groupes déterminants sans vert sont placés dans le diagramme au fil de la saisie, et le phasage bulle peut être construit dans la foulée.
+4. **Groupes associés** — l'assistant déduit la phase et les instants de début et de fin des autres groupes, et indique pour chacun **d'où vient la déduction** : la matrice des temps interverts, le nom du groupe (même voie que le déterminant) ou la géométrie des flèches du plan du carrefour.
+5. **Application** — *Appliquer le cycle* règle la durée du cycle, puis inscrit les groupes associés dans le diagramme. Tout s'annule par Ctrl+Z.
+
+Sur le carrefour du TD « croix avec couloir bus d'approche », l'assistant produit en un clic un diagramme complet, **sans aucun conflit** avec la matrice. Les groupes sans vert n'étant pas comptés dans les conflits, un plan en cours de construction n'est pas couvert d'alertes.
+
+Ce qu'il apporte surtout : **la rigueur et le temps**. Les calculs fastidieux et les vérifications mécaniques sont faits, chaque proposition est justifiée, et l'on peut consacrer son énergie aux vrais choix de conception.
 
 ### Quelles sont les limites de l'assistant de construction ?
 
-L'assistant **calcule, il ne conçoit pas**. Concrètement :
+L'assistant est un **excellent point de départ**, pas une conception clé en main. Il est d'autant plus utile qu'on sait ce qu'il fait et ce qu'il laisse à l'utilisateur :
 
-- **Vous restez maître des données d'entrée.** Trafics, coefficients d'équivalence, verts minimaux et temps interverts sont les vôtres : l'assistant ne les contrôle pas, et une proposition ne vaut que ce que valent ces données.
-- **Ses règles sont générales.** Le recouvrement des verts, la capacité utilisée, la lecture des noms ou des flèches donnent des **hypothèses**, pas des certitudes : un nom ambigu, une matrice incomplète ou un phasage atypique peuvent l'induire en erreur. D'où l'affichage systématique de la source et de la mention « à vérifier ».
-- **Le cycle de Webster est un repère**, qui minimise le retard moyen des véhicules sous des hypothèses de trafic régulier. Il ne tient compte ni des piétons qui attendent, ni de la coordination avec les carrefours voisins, ni d'une priorité accordée aux transports en commun.
-- **Il ne choisit pas le phasage.** Le nombre et l'ordre des phases, le traitement des tourne-à-gauche, la place des piétons et des cycles sont des choix de conception qu'il ne fait pas à votre place.
-- **Il ne traite pas les fonctionnements conditionnels** — seconde lucarne, escamotage, adaptatif, priorité bus : la détection du chemin critique s'appuie sur le fonctionnement de base du plan.
-- **Il ne connaît pas le site** : géométrie fine, visibilité, comportement des usagers, contexte urbain, objectifs de la collectivité.
+- **Vous restez maître des données d'entrée.** Trafics, coefficients, verts minimaux et temps interverts sont les vôtres : la qualité de la proposition suit celle des données.
+- **Ses déductions sont transparentes.** Chaque placement affiche sa source ; une déduction incertaine (nom ambigu, matrice muette) est signalée « à vérifier » et laissée à votre main plutôt que posée d'office.
+- **Le cycle de Webster est un repère reconnu**, qui minimise le retard moyen des véhicules. Il ne tient pas compte, à lui seul, de l'attente des piétons, de la coordination avec les carrefours voisins ou d'une priorité accordée aux transports en commun.
+- **Le phasage reste votre choix** : nombre et ordre des phases, traitement des tourne-à-gauche, place des piétons et des cycles.
+- **Les fonctionnements conditionnels** — seconde lucarne, escamotage, adaptatif, priorité bus — relèvent de la micro-régulation, que l'on construit ensuite sur la base posée par l'assistant.
+- **La connaissance du site** — géométrie fine, visibilité, comportement des usagers, objectifs de la collectivité — reste celle du concepteur.
 
-L'élaboration d'un diagramme de feux est une **discipline à part entière**. Arbitrer entre sécurité, capacité, temps d'attente, lisibilité pour l'usager et stratégie de déplacement demande une approche de **traficien ou d'expert** — c'est elle qui donne toute sa dimension à la performance recherchée. L'assistant vous épargne le calcul et la saisie mécaniques pour vous laisser ce travail-là ; chaque valeur qu'il propose reste à relire, à ajuster et à assumer.
+L'élaboration d'un diagramme de feux est une **discipline à part entière** : arbitrer entre sécurité, capacité, temps d'attente, lisibilité pour l'usager et stratégie de déplacement demande une approche de **traficien ou d'expert**, qui donne toute sa dimension à la performance recherchée. L'assistant est pensé pour servir cette expertise : il dégrossit le sujet avec méthode, pour que le concepteur se concentre sur ce qui fait la qualité d'un plan de feux.
 
 ### Quels navigateurs et systèmes sont supportés ?
 

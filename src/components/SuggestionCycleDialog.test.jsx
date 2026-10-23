@@ -94,7 +94,12 @@ describe('suggestion de durée du cycle', () => {
         expect(within(tableau).getByText(/GF2 V2/)).toBeInTheDocument();
         expect(within(tableau).getAllByText('Matrice').length).toBeGreaterThan(0);
         updateGroupParams.mockClear();
-        fireEvent.click(screen.getByRole('button', { name: 'Placer les groupes cochés' }));
+        expect(screen.queryByRole('button', { name: /Placer/ })).toBeNull();
+        expect(within(tableau).queryByRole('checkbox')).toBeNull();
+        expect(within(tableau).getAllByText('avec le cycle').length).toBeGreaterThan(0);
+        // Rien n'est placé avant « Appliquer le cycle », qui règle d'abord le cycle.
+        expect(updateGroupParams).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
         expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: 0 }));
         expect(updateGroupParams).toHaveBeenCalledWith(5, expect.objectContaining({ offset: 45 }));
     });
