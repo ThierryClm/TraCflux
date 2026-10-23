@@ -136,15 +136,23 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.queryByRole('button', { name: 'Contraction de phase' })).toBeNull();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
         const [lignes, remplacer] = ajouterActions.mock.calls[0];
-        expect(lignes).toEqual([
+        expect(lignes.slice(0, 2)).toEqual([
             { gf: '1', action: 'Adaptatif vertical', deb: '22', fin: '29', abrv: 'AV1', description: 'Contraction théorique', micro: 'Contraction si absence de demande sur V1' },
             { gf: '4', action: 'Adaptatif vertical', deb: '59', fin: '64', abrv: 'AV3', description: 'Contraction théorique', micro: 'Contraction si absence de demande sur V4' },
         ]);
+        // Puis les fermetures anticipées, glissements en Action GF.
+        expect(lignes[2]).toEqual({
+            gf: '2', action: 'Fermeture anticipée', deb: '23', fin: '29', abrv: 'FA1', description: 'Fermeture théorique',
+            micro: 'Fermeture si absence de demande sur V2', actGf1: '3', actGf1Gf2: '', actGf1Gf3: '', actGf1Gf4: '',
+        });
+        expect(lignes.map(l => l.abrv)).toEqual(['AV1', 'AV3', 'FA1', 'FA2']);
+        expect(remplacer({ action: 'Fermeture anticipée', abrv: 'FA4' })).toBe(true);
         // Remplacés : les AVn de l'assistant ; conservés : les autres adaptatifs et conditions.
         expect(remplacer({ action: 'Adaptatif vertical', abrv: 'AV2' })).toBe(true);
         expect(remplacer({ action: 'Adaptatif vertical', abrv: 'DA1' })).toBe(false);
         expect(remplacer({ action: 'Point de repos', abrv: 'AV1' })).toBe(false);
-        expect(within(bloc).getByText(/Inscrits : AV1, AV3/)).toBeInTheDocument();
+        expect(within(bloc).getByText(/Inscrits : AV1, AV3, FA1, FA2/)).toBeInTheDocument();
+        expect(within(bloc).getByText('23 – 29 s (6 s)')).toBeInTheDocument();
     });
 
     it('adaptatifs verticaux : mode prudent, chaque zone calculée seule', () => {

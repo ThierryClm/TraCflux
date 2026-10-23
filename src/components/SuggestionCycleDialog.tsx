@@ -8,6 +8,8 @@ import {
 import type { PhasageCycle } from '../utils/suggestionCycle';
 import { proposerAdaptatifs, PASSAGES_MAX, TAUX_VISE_ADAPTATIFS } from '../utils/adaptatifsVerticaux';
 import type { AdaptatifPropose, ModeAdaptatifs } from '../utils/adaptatifsVerticaux';
+import { proposerFermetures, SEUIL_CAPACITE_FERMETURE, PART_TEMPS_DISPONIBLE } from '../utils/fermeturesAnticipees';
+import type { FermeturePropose } from '../utils/fermeturesAnticipees';
 import type { ActionMicro } from '../types/projet';
 import './SuggestionCycleDialog.css';
 
@@ -50,6 +52,9 @@ interface Brouillon {
 
 /** Adaptatif vertical inscrit par l'assistant (abréviation AV1, AV2…) : remplacé au passage suivant. */
 const estAdaptatifAssistant = (row: ActionMicro) => row.action === 'Adaptatif vertical' && /^AV\d+$/.test(String(row.abrv ?? '').trim());
+/** Fermeture anticipée inscrite par l'assistant (FA1, FA2…) : remplacée elle aussi. */
+const estFermetureAssistant = (row: ActionMicro) => row.action === 'Fermeture anticipée' && /^FA\d+$/.test(String(row.abrv ?? '').trim());
+const estLigneAssistant = (row: ActionMicro) => estAdaptatifAssistant(row) || estFermetureAssistant(row);
 
 const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
@@ -191,9 +196,10 @@ const SuggestionCycleDialog = ({
         aPlacer.forEach(p => updateGroupParams(p.id, { offset: p.debut, durations: { green: p.fin - p.debut } }));
         // Enfin les adaptatifs verticaux proposés, qui remplacent ceux d'un
         // passage précédent (AV1, AV2… inscrits par l'assistant).
-        if (ajouterActions && propositionAV) {
-            const nb = ajouterActions(avUtiles.map(conditionAdaptatif), estAdaptatifAssistant);
-            setAvInscrits(avUtiles.slice(0, nb).map(a => `AV${a.phase}`));
+        if (ajouterActions && disposition) {
+            const lignes = [...avUtiles.map(conditionAdaptatif), ...faUtiles.map(conditionFermeture)];
+            const nb = ajouterActions(lignes, estLigneAssistant);
+            setAvInscrits(lignes.slice(0, nb).map(l => String(l.abrv)));
         }
     };
 
@@ -201,13 +207,15 @@ const SuggestionCycleDialog = ({
     // diagramme actuel, déterminants proposés et groupes placés avec le cycle.
     const [modeAV, setModeAV] = useState<ModeAdaptatifs>('iteratif');
     const [tauxAV, setTauxAV] = useState(TAUX_VISE_ADAPTATIFS);
-    const propositionAV = useMemo(() => {
+    // Disposition prévue des groupes : diagramme actuel, déterminants proposés
+    // et groupes placés avec le cycle. Base des adaptatifs et des fermetures.
+    const disposition = useMemo(() => {
         if (!resultat || !calculable || !complet || !resultat.cycleSuggere) return null;
         const dets = brouillon.determinants as number[];
-        const disposition = groups.map(g => {
+        return groups.map(g => {
             const base = {
-                id: g.id, vertMini: Number(g.minGreen) || 0, trafic: Number(getTrafficData(g.id)?.trafficVol) || 0,
-                coefVoie: Number(g.laneCoef) || 1,
+                id: g.id, type: String(g.type ?? ''), vertMini: Number(g.minGreen) || 0,
+                trafic: Number(getTrafficData(g.id)?.trafficVol) || 0, coefVoie: Number(g.laneCoef) || 1,
             };
             if (g.durations?.green > 0) return { ...base, debut: Number(g.offset) || 0, vert: g.durations.green };
             const i = dets.indexOf(g.id);
@@ -215,14 +223,39 @@ const SuggestionCycleDialog = ({
             const p = aPlacer.find(x => x.id === g.id);
             return p ? { ...base, debut: p.debut, vert: p.fin - p.debut } : { ...base, debut: 0, vert: 0 };
         });
-        return proposerAdaptatifs(dets, disposition, resultat.cycleSuggere, tauxAV, modeAV);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [resultat, calculable, complet, brouillon, groups, getTrafficData, placements, modeAV, tauxAV]);
+    }, [resultat, calculable, complet, brouillon, groups, getTrafficData, placements]);
+    const propositionAV = useMemo(() => (disposition && resultat?.cycleSuggere
+        ? proposerAdaptatifs(brouillon.determinants as number[], disposition, resultat.cycleSuggere, tauxAV, modeAV)
+        : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [disposition, modeAV, tauxAV]);
+    const [seuilFA, setSeuilFA] = useState(SEUIL_CAPACITE_FERMETURE);
+    const fermetures = useMemo(() => (disposition && resultat?.cycleSuggere
+        ? proposerFermetures(disposition, conflictMatrix, resultat.cycleSuggere, seuilFA)
+        : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [disposition, conflictMatrix, seuilFA]);
+    const faUtiles = fermetures.filter(f => f.duree > 0);
     const avUtiles = propositionAV?.adaptatifs.filter(a => a.duree > 0) ?? [];
     const [avInscrits, setAvInscrits] = useState<string[] | null>(null);
     // Ligne de condition renseignée avec ce que l'assistant sait de la zone ;
     // la condition de contraction reste à adapter à la détection réelle.
     const court = (id: number) => nomCourt(groups.find(g => g.id === id)?.name, id);
+    // Fermeture anticipée : FA1, FA2… dans l'ordre du tableau, glissements en Action GF.
+    const conditionFermeture = (f: FermeturePropose, k: number) => ({
+        gf: String(f.groupe),
+        action: 'Fermeture anticipée',
+        deb: String(f.deb),
+        fin: String(f.fin),
+        abrv: `FA${k + 1}`,
+        description: 'Fermeture théorique',
+        micro: `Fermeture si absence de demande sur ${court(f.groupe)}`,
+        actGf1: f.glissements[0] !== undefined ? String(f.glissements[0]) : '',
+        actGf1Gf2: f.glissements[1] !== undefined ? String(f.glissements[1]) : '',
+        actGf1Gf3: f.glissements[2] !== undefined ? String(f.glissements[2]) : '',
+        actGf1Gf4: f.glissements[3] !== undefined ? String(f.glissements[3]) : '',
+    });
     const conditionAdaptatif = (a: AdaptatifPropose) => ({
         gf: String(a.determinant),
         action: 'Adaptatif vertical',
@@ -435,7 +468,7 @@ const SuggestionCycleDialog = ({
                         <thead><tr><th>Phase</th><th>Déterminant</th><th>Zone Déb – Fin</th><th>Durée</th>
                             <th title={`Capacité utilisée du déterminant au cycle de ${propositionAV.cycleNominal} s`}>Cap. U nominale</th>
                             <th title="Toutes les zones contractées ensemble">Cap. U tout contracté</th>
-                            <th title="Cette zone seule contractée, les autres en extension">Cap. U zone seule</th>
+                            <th title="Cette zone seule contractée, les autres en extension. Taux fourni à titre indicatif, car sur le principe, la demande a été satisfaite.">Cap. U zone seule</th>
                             <th>Limité par</th></tr></thead>
                         <tbody>
                             {propositionAV.adaptatifs.map(a => (
@@ -468,12 +501,45 @@ const SuggestionCycleDialog = ({
                         « Appliquer le cycle » inscrit les zones dans les conditions de micro-régulation (AV1, AV2…, selon la phase),
                         en remplaçant celles d'un passage précédent.
                     </p>
+
+                    <h4>Fermetures anticipées avec glissements (proposition)</h4>
+                    <label className="sc-nb" title="Groupes voitures dont la capacité utilisée, au cycle proposé, est sous ce seuil">
+                        Groupes voitures sous
+                        <input type="number" min={30} max={99} value={seuilFA} aria-label="Seuil de capacité des fermetures anticipées"
+                            onChange={e => setSeuilFA(Math.max(30, Math.min(99, parseInt(e.target.value, 10) || SEUIL_CAPACITE_FERMETURE)))} />
+                        % de capacité utilisée
+                    </label>
+                    {fermetures.length > 0 ? (
+                        <table className="sc-table">
+                            <thead><tr><th>Groupe</th><th>Cap. U</th><th title="Vert moins V.utile">Temps disponible</th>
+                                <th title={`Environ ${Math.round(PART_TEMPS_DISPONIBLE * 100)} % du temps disponible, en fin de vert, sans passer sous le vert mini`}>Fermeture Déb – Fin</th>
+                                <th title="Groupes antagonistes qui ouvrent après la fermeture et peuvent ouvrir plus tôt sans conflit intervert (Action GF)">Glissements</th>
+                                <th>Non retenus</th></tr></thead>
+                            <tbody>
+                                {fermetures.map(f => (
+                                    <tr key={f.groupe} className={f.duree > 0 ? '' : 'sc-sans-objet'}>
+                                        <td className="sc-gauche sc-nom" title={nomGroupe(f.groupe)}>GF{f.groupe} {nomGroupe(f.groupe)}</td>
+                                        <td>{pct(f.capacite)}</td>
+                                        <td>{fmt(f.disponible, 1)} s</td>
+                                        <td className="sc-insecable">{f.duree > 0 ? `${f.deb} – ${f.fin} s (${f.duree} s)` : '—'}</td>
+                                        <td>{f.glissements.length ? f.glissements.map(court).join(', ') : 'aucun : rien à proposer'}</td>
+                                        <td className="sc-gauche">{f.retenus.length ? f.retenus.map(r => `${court(r.id)} (tenu par ${court(r.par)})`).join(', ') : '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : <p className="sc-attente">Aucun groupe voitures sous {seuilFA} % de capacité utilisée.</p>}
+                    <p className="sc-note">
+                        « Appliquer le cycle » inscrit aussi ces fermetures (FA1, FA2…, description « Fermeture théorique »), les
+                        glissements en Action GF, en remplaçant celles d'un passage précédent. Une fermeture qui tombe dans une zone
+                        d'adaptatif vertical ne joue que lorsque celui-ci n'est pas contracté.
+                    </p>
                     {avInscrits !== null && (
                         <p className="sc-note">
                             {avInscrits.length
-                                ? `Inscrits : ${avInscrits.join(', ')} (Ctrl+Z pour annuler). Adaptez la condition de contraction à la détection réelle et vérifiez dans l'onglet Simulation.`
-                                : 'Aucune zone à inscrire.'}
-                            {avInscrits.length < avUtiles.length ? ' La table est pleine (30 conditions) : certaines zones n\'ont pas été inscrites.' : ''}
+                                ? `Inscrits : ${avInscrits.join(', ')} (Ctrl+Z pour annuler). Adaptez les conditions à la détection réelle et vérifiez dans l'onglet Simulation.`
+                                : 'Aucune condition à inscrire.'}
+                            {avInscrits.length < avUtiles.length + faUtiles.length ? ' La table est pleine (30 conditions) : certaines lignes n\'ont pas été inscrites.' : ''}
                         </p>
                     )}
                 </div>
@@ -495,7 +561,7 @@ const SuggestionCycleDialog = ({
                     disabled={!calculable || resultat?.cycleSuggere == null || readOnly}
                     title={['Règle la durée du cycle du plan',
                         aPlacer.length ? `place ${aPlacer.length} groupe${aPlacer.length > 1 ? 's' : ''} associé${aPlacer.length > 1 ? 's' : ''}` : '',
-                        avUtiles.length ? `inscrit ${avUtiles.map(a => `AV${a.phase}`).join(', ')}` : ''].filter(Boolean).join(', puis ')}
+                        avUtiles.length || faUtiles.length ? `inscrit ${[...avUtiles.map(a => `AV${a.phase}`), ...faUtiles.map((_, k) => `FA${k + 1}`)].join(', ')}` : ''].filter(Boolean).join(', puis ')}
                     onClick={appliquer}>
                     Appliquer le cycle{calculable && resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
                 </button>

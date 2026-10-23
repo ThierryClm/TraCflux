@@ -78,3 +78,4 @@
     flex-direction: column;
 }
 .modal-content.suggestion-cycle.sc-detachee .modal-body { flex: 1 1 auto; min-height: 0; }
+.suggestion-cycle .sc-sans-objet td { opacity: 0.6; }
