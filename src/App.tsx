@@ -453,14 +453,15 @@ function App() {
     }, [activePFId, setActivePFId]);
 
     // Update document title (browser tab) to reflect project name and unsaved status.
-    // Sur l'écran d'accueil (aucun projet ouvert), on affiche juste
-    // « Diagramme de Feux » sans le nom de carrefour par défaut. C'est
+    // Sur l'écran d'accueil (aucun projet ouvert), on affiche le nom de
+    // l'outil sans le nom de carrefour par défaut : c'est aussi le titre que
+    // Google retient pour tracflux.com, d'où « TraCflux » en tête. C'est
     // hasActiveProject qui fait foi : intersectionName reste à
     // « Nouveau Carrefour » par défaut, ce qui ne reflète pas l'absence
     // de projet ouvert.
     useEffect(() => {
         if (!hasActiveProject) {
-            document.title = 'Diagramme de Feux';
+            document.title = 'TraCflux — logiciel libre de diagrammes de feux tricolores';
             return;
         }
         const prefix = isDirty ? '* ' : '';

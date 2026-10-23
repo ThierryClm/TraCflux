@@ -24,6 +24,15 @@ function WelcomeScreen({ hasActiveProject, showExampleInvite }: WelcomeScreenPro
                         {' '}(s'ouvre dans une nouvelle fenêtre).
                     </p>
                     )}
+                    {showExampleInvite && (
+                    <p className="welcome-hint">
+                        {/* Lien suivi par les moteurs de recherche : l'accueil n'a
+                            presque pas de texte, la page de présentation le porte. */}
+                        <a className="welcome-example-link" href="presentation/" target="_blank" rel="noopener">
+                            Qu'est-ce que TraCflux ?
+                        </a>
+                    </p>
+                    )}
                 </div>
             )}
 
