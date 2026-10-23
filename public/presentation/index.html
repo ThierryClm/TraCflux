@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TraCflux — logiciel libre de diagrammes de feux tricolores</title>
+    <meta name="description" content="TraCflux conçoit et optimise les plans de feux tricolores : matrice des temps interverts, diagramme temporel, micro-régulation, priorité bus, onde verte. Libre, gratuit, dans le navigateur, sans installation." />
+    <link rel="canonical" href="https://tracflux.com/presentation/" />
+    <link rel="icon" type="image/svg+xml" href="../icon.svg" />
+    <link rel="alternate icon" type="image/png" href="../favicon.png" />
+    <meta name="theme-color" content="#1e1e1e" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="TraCflux" />
+    <meta property="og:title" content="TraCflux — logiciel libre de diagrammes de feux tricolores" />
+    <meta property="og:description" content="Concevoir et optimiser les plans de feux : matrice des temps interverts, micro-régulation, priorité bus, onde verte. Libre, gratuit, sans installation." />
+    <meta property="og:url" content="https://tracflux.com/presentation/" />
+    <meta property="og:image" content="https://tracflux.com/social-preview.png" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #1e1e1e;
+        color: #e6e6e6;
+        font: 17px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      header, main, footer { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+      header { padding-top: 48px; text-align: center; }
+      header img { width: 88px; height: 88px; }
+      h1 { margin: 12px 0 4px; font-size: 2.2em; color: #4ecdc4; letter-spacing: 0.5px; }
+      .accroche { margin: 0 auto 28px; max-width: 680px; font-size: 1.15em; color: #cfcfcf; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 40px; }
+      .bouton {
+        display: inline-block; padding: 12px 22px; border-radius: 6px;
+        font-weight: 600; text-decoration: none;
+      }
+      .principal { background: #4ecdc4; color: #102422; }
+      .secondaire { border: 1px solid #4ecdc4; color: #4ecdc4; }
+      h2 { margin: 48px 0 12px; font-size: 1.45em; color: #ffffff; }
+      a { color: #4ecdc4; }
+      figure { margin: 24px 0; }
+      figure img { width: 100%; height: auto; border-radius: 6px; border: 1px solid #333; }
+      figcaption { margin-top: 6px; font-size: 0.9em; color: #9a9a9a; }
+      ul { padding-left: 1.2em; }
+      li { margin: 4px 0; }
+      footer { margin-top: 56px; padding-bottom: 40px; border-top: 1px solid #333; font-size: 0.9em; color: #9a9a9a; }
+    </style>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "TraCflux",
+        "alternateName": ["Tracflux", "TraCflux Diagramme de Feux"],
+        "url": "https://tracflux.com/",
+        "description": "Logiciel libre de conception et d'optimisation de plans de feux tricolores : matrice des temps interverts, diagramme temporel, micro-régulation, priorité bus, onde verte.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Navigateur web (Windows, macOS, Linux)",
+        "inLanguage": "fr",
+        "isAccessibleForFree": true,
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "image": "https://tracflux.com/social-preview.png",
+        "screenshot": "https://tracflux.com/presentation/diagramme-de-feux.jpg",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "sameAs": ["https://github.com/ThierryClm/TraCflux"]
+      }
+    </script>
+  </head>
+  <body>
+    <header>
+      <img src="../logo.svg" alt="Logo TraCflux" width="88" height="88" />
+      <h1>TraCflux</h1>
+      <p class="accroche">
+        Logiciel libre et gratuit de conception et d'optimisation de
+        <strong>plans de feux tricolores</strong>, pour les traficiens,
+        ingénieurs de la circulation, bureaux d'études et collectivités.
+      </p>
+      <div class="actions">
+        <a class="bouton principal" href="../?example=carrefour">Essayer avec un carrefour d'exemple</a>
+        <a class="bouton secondaire" href="../">Ouvrir TraCflux</a>
+      </div>
+    </header>
+
+    <main>
+      <figure>
+        <img src="diagramme-de-feux.jpg" width="1400" height="896"
+             alt="Module Diagramme de Feux : matrice des temps interverts à gauche, diagramme temporel d'un carrefour à 13 groupes au centre, conditions de micro-régulation en bas" />
+        <figcaption>Le module Diagramme de Feux : matrice des temps interverts, diagramme temporel et conditions de micro-régulation.</figcaption>
+      </figure>
+
+      <h2>Concevoir le diagramme de feux d'un carrefour</h2>
+      <p>
+        TraCflux réunit sur un même écran les groupes de feux, la
+        <strong>matrice des temps interverts</strong> et le
+        <strong>diagramme temporel</strong> du cycle. Chaque conflit avec la
+        matrice est signalé en direct, pendant que l'on déplace les verts.
+        Un projet peut porter plusieurs plans de feux (multiprogrammation),
+        associés chacun à un jeu de trafic : heure de pointe du matin, du soir,
+        heures creuses…
+      </p>
+      <p>
+        Le modèle combine <strong>gestion par phases et par groupes de feux</strong> :
+        le phasage reste disponible, mais chaque groupe garde ses propres instants
+        d'ouverture et de fermeture. Les chevauchements partiels et la
+        micro-régulation fine s'expriment ainsi directement.
+      </p>
+
+      <h2>Micro-régulation et priorité bus</h2>
+      <ul>
+        <li>Seconde lucarne, escamotage de phase ou de groupe, flèche d'anticipation.</li>
+        <li>Adaptatif vertical, fermeture et ouverture anticipées, point de repos.</li>
+        <li>Variables propres à la priorité bus : délai d'approche, temps maxi d'attente bus, allongement de vert.</li>
+        <li>Simulation du diagramme tel qu'il tourne une fois les actions activées, avec vérification des conflits.</li>
+      </ul>
+
+      <h2>Un assistant pour dégrossir le plan de feux</h2>
+      <p>
+        À partir des trafics, l'assistant repère le chemin critique, calcule le
+        <strong>cycle minimal et le cycle de Webster</strong> selon le
+        <em>Guide des carrefours à feux</em> du CERTU, répartit les verts au
+        prorata des demandes et propose adaptatifs verticaux, fermetures
+        anticipées et points de repos bus. Le concepteur garde la main sur
+        chaque choix.
+      </p>
+
+      <h2>Onde verte : coordonner les carrefours d'un axe</h2>
+      <figure>
+        <img src="onde-verte.jpg" width="1400" height="733" loading="lazy"
+             alt="Module Onde verte : diagramme espace-temps de 5 carrefours coordonnés sur un axe, avec bandes passantes en sens montant et descendant" />
+        <figcaption>Le module Onde verte : diagramme espace-temps et bandes passantes dans les deux sens.</figcaption>
+      </figure>
+      <p>
+        Le module Onde verte place sur un diagramme espace-temps les carrefours
+        conçus dans TraCflux et calcule les bandes passantes en sens montant
+        et descendant.
+      </p>
+
+      <h2>Reprendre les études existantes</h2>
+      <p>
+        TraCflux importe les projets Excel et HTM, et propose un import des
+        projets <strong>DiagFeux (.dfe)</strong>, le logiciel du CERTU qui n'est
+        plus maintenu. Cet import est encore une ébauche : le plan importé est
+        une base de reprise à vérifier. Les diagrammes s'exportent en PNG et en
+        PDF pour les dossiers et les comités.
+      </p>
+
+      <h2>Sans installation, et vos données restent chez vous</h2>
+      <ul>
+        <li>S'ouvre dans le navigateur, sur Windows, macOS et Linux : rien à faire valider par une DSI.</li>
+        <li>Installable comme une application et utilisable hors connexion.</li>
+        <li>Aucun serveur : les projets restent sur votre poste.</li>
+        <li>Libre et open source, sans compte ni abonnement.</li>
+      </ul>
+
+      <div class="actions" style="margin-top: 32px">
+        <a class="bouton principal" href="../?example=carrefour">Essayer TraCflux</a>
+        <a class="bouton secondaire" href="https://github.com/ThierryClm/TraCflux/blob/master/FAQ.md">Questions fréquentes</a>
+      </div>
+    </main>
+
+    <footer>
+      <p>
+        TraCflux est un projet libre :
+        <a href="https://github.com/ThierryClm/TraCflux">code source sur GitHub</a>.
+        Pour signaler un problème ou proposer une amélioration,
+        <a href="https://github.com/ThierryClm/TraCflux/issues">ouvrez une issue</a>.
+      </p>
+    </footer>
+  </body>
+</html>

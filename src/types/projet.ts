@@ -6,6 +6,7 @@
  */
 
 import type { ModeAffichage } from '../utils/modeAffichage';
+import type { PhasageCycle } from '../utils/suggestionCycle';
 
 /** Durées d'un groupe de feu, en secondes. Leur somme vaut le cycle. */
 export interface Durees {
@@ -118,6 +119,8 @@ export interface PlanDeFeu {
     phasageBubbleScale?: number;
     phasageEllipseScale?: number;
     phasageBubbleRatio?: number;
+    /** Groupes déterminants et dégagements saisis pour la suggestion de durée du cycle. */
+    phasageCycle?: PhasageCycle;
 }
 
 /** Une flèche de courant posée sur l'image du carrefour. */

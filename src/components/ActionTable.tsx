@@ -7,6 +7,7 @@ import { useMicroVariables } from './MicroVariablesProvider';
 import { tokenizeMicroText } from '../utils/microVariables';
 import { DESCRIPTION_REPOS_DEFAUT, decouperDescription } from '../simulation/dureeRepos';
 import type { ActionMicro } from '../types/projet';
+import { ligneActionRemplie } from '../utils/pfHelpers';
 import './ActionTable.css';
 
 /** Champ modifiable d'une condition de micro-régulation. */
@@ -121,12 +122,7 @@ const FIN_DISABLED_ACTIONS = [
     'Synchro BTS'
 ];
 
-// Check if a row has any data
-const isRowFilled = (row: ActionMicro) => {
-    return row.gf || row.action || row.description || row.deb !== '' || row.fin !== '' ||
-        row.abrv || row.micro || row.plage1 || row.plage2 ||
-        row.actGf1 || row.actGf1Gf2 || row.actGf1Gf3 || row.actGf1Gf4;
-};
+const isRowFilled = ligneActionRemplie;
 
 const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength = 100, maxGroup = 16, hoveredActionId, setHoveredActionId, microCustomFields = [], updateMicroCustomField, onResizePanel, showFloatingConditions, setShowFloatingConditions, showFloatingVariables, setShowFloatingVariables, showWrapFlash = true, showDescription = true, onDescriptionProposee, actionColWidths = { description: 160, micro: 420 }, setActionColWidths = () => {}, tooltipsEnabled = true }: ActionTableProps) => {
     const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;

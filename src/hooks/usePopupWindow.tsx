@@ -60,6 +60,8 @@ export interface PopupWindowHandle {
     popupWindow: RefObject<Window | null>;
     popupOpen: boolean;
     retryOpen: () => void;
+    /** Dernière ouverture refusée par le bloqueur de fenêtres (tant que la fenêtre est demandée). */
+    bloquee: boolean;
 }
 
 const readPopupPosition = (key: string | null): PopupPosition | null => {
@@ -401,6 +403,7 @@ const usePopupWindow = ({
     const bannerHeight = showTitleBanner ? BANDEAU_HAUTEUR : 0;
     const popupRef = useRef<Window | null>(null);
     const [popupOpen, setPopupOpen] = useState(false);
+    const [refusee, setRefusee] = useState(false);
     const [openAttempt, setOpenAttempt] = useState(0);
     const rootRef = useRef<Root | null>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -568,6 +571,7 @@ const usePopupWindow = ({
 
                 if (!popup) {
                     setPopupOpen(false);
+                    setRefusee(true);
                     if (!popupBlockedNotified) {
                         popupBlockedNotified = true;
                         toast.error("Fenêtre détachée bloquée par le navigateur. Cliquez sur l'icône popup bloqué dans la barre d'adresse et choisissez « Toujours autoriser » pour ce site, puis rouvrez la fenêtre (voir le menu Aide).");
@@ -584,6 +588,7 @@ const usePopupWindow = ({
 
                 popupRef.current = popup;
                 setPopupOpen(true);
+                setRefusee(false);
                 openPopups.add(popup);
                 installMainListener();
                 // Suivi de l'édition de champ dans cette popup (suspension des re-rendus).
@@ -924,7 +929,7 @@ const usePopupWindow = ({
         };
     }, []);
 
-    return { renderToPopup, popupWindow: popupRef, popupOpen, retryOpen };
+    return { renderToPopup, popupWindow: popupRef, popupOpen, retryOpen, bloquee: refusee && isOpen };
 };
 
 export default usePopupWindow;

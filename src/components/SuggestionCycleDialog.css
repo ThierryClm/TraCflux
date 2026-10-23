@@ -1,0 +1,81 @@
+.suggestion-cycle .sc-intro { font-size: 0.9em; margin: 0 0 10px; line-height: 1.4; }
+.suggestion-cycle .sc-nb { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 0.9em; }
+.suggestion-cycle .sc-nb input[type="number"] { width: 60px; margin-left: 0; }
+.suggestion-cycle .sc-table { width: 100%; border-collapse: collapse; font-size: 0.88em; margin: 6px 0 10px; }
+.suggestion-cycle .sc-table th, .suggestion-cycle .sc-table td { border: 1px solid var(--md-separator, #555); padding: 4px 6px; text-align: center; }
+.suggestion-cycle .sc-table td input[type="number"] { width: 52px; margin-left: 0; padding: 3px 6px; }
+.suggestion-cycle .sc-table select { max-width: 230px; }
+.suggestion-cycle .sc-manque { background: rgba(255, 152, 0, 0.18); }
+.suggestion-cycle .sc-note { color: var(--md-muted, #aaa); font-size: 0.9em; }
+.suggestion-cycle .sc-attente { color: var(--md-muted, #aaa); font-style: italic; }
+.suggestion-cycle .sc-alerte { color: #e57373; font-weight: bold; }
+.suggestion-cycle .sc-resultat { border-left: 4px solid #4ecdc4; padding: 6px 12px; margin: 8px 0; font-size: 0.92em; }
+.suggestion-cycle .sc-resultat ul { margin: 4px 0; padding-left: 20px; }
+
+/* Non modale, posée en bas à droite : le diagramme reste lisible pendant le
+   choix des groupes déterminants. Déplaçable par son bandeau. */
+.modal-overlay.suggestion-cycle-overlay {
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding: 0 16px 16px 0;
+}
+.modal-content.suggestion-cycle {
+    max-width: 760px;
+    width: min(760px, 96vw);
+    /* Assez haute pour 5 phases sans ascenseur sur un écran courant. */
+    max-height: calc(100vh - 32px);
+}
+.suggestion-cycle .sc-intro { font-size: 0.85em; }
+.suggestion-cycle .sc-table { font-size: 0.84em; }
+
+.suggestion-cycle .sc-proposition { font-size: 0.85em; border-left: 3px solid #ff9800; padding: 4px 8px; margin: 4px 0 8px; }
+.suggestion-cycle .sc-relire { padding: 3px 10px; font-size: 0.85em; margin-bottom: 6px; }
+
+/* Seul le contenu défile : la case du phasage bulle et les boutons, qui
+   valident la fenêtre, restent toujours visibles en bas. */
+.modal-content.suggestion-cycle .modal-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 8px;
+}
+.suggestion-cycle .sc-defilement { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px; }
+.suggestion-cycle .sc-pied { flex: 0 0 auto; border-top: 1px solid var(--md-separator, #555); padding-top: 6px; margin-top: 6px; }
+.suggestion-cycle .sc-pied .sc-nb { margin: 2px 0 6px; }
+.suggestion-cycle .sc-pied .modal-actions { margin-top: 4px; }
+
+.suggestion-cycle .sc-table td:last-child { white-space: nowrap; }
+
+.suggestion-cycle .sc-associes h4 { margin: 10px 0 4px; font-size: 0.95em; }
+.suggestion-cycle .sc-associes .sc-gauche { text-align: left; }
+.suggestion-cycle .sc-associes .sc-source { font-size: 0.92em; }
+.suggestion-cycle .sc-a-verifier td { background: rgba(255, 152, 0, 0.12); }
+.suggestion-cycle .sc-badge { display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 0.85em; font-weight: bold; color: #fff; }
+.suggestion-cycle .sc-badge-matrice { background: #2e7d6f; }
+.suggestion-cycle .sc-badge-nom { background: #6d5bb7; }
+.suggestion-cycle .sc-badge-plan { background: #b07a1e; }
+.suggestion-cycle .sc-associes > button { margin-top: 6px; }
+
+.suggestion-cycle .sc-associes .sc-nom { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggestion-cycle .sc-associes .sc-insecable { white-space: nowrap; }
+
+.suggestion-cycle .sc-depasse { color: #ff9800; font-weight: bold; }
+
+/* Fenêtre détachée : le contenu occupe toute la fenêtre du navigateur, que
+   l'on peut poser sur un autre écran pour laisser le diagramme dégagé. */
+.modal-content.suggestion-cycle.sc-detachee {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+}
+.modal-content.suggestion-cycle.sc-detachee .modal-body { flex: 1 1 auto; min-height: 0; }
+.suggestion-cycle .sc-sans-objet td { opacity: 0.6; }

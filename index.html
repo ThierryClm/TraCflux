@@ -7,7 +7,7 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <meta name="theme-color" content="#b0b0b0" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TraCflux</title>
+    <title>TraCflux — logiciel libre de diagrammes de feux tricolores</title>
     <meta name="description" content="Outil libre de conception et d'optimisation de plans de feux tricolores. S'ouvre dans le navigateur, sans installation ni serveur : les données restent sur votre poste." />
 
     <!-- Balises de partage : ce que voient LinkedIn, Slack, Teams ou un client
@@ -24,6 +24,32 @@
     <meta property="og:image:height" content="640" />
     <meta property="og:locale" content="fr_FR" />
     <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Référencement : adresse officielle de la page, et fiche « logiciel »
+         lue par les moteurs de recherche. Elle distingue TraCflux des noms
+         voisins, que Google proposait à la place en octobre 2026. La page de
+         présentation (public/presentation/) porte le texte descriptif que
+         l'application elle-même n'affiche pas. -->
+    <link rel="canonical" href="https://tracflux.com/" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "TraCflux",
+        "alternateName": ["Tracflux", "TraCflux Diagramme de Feux"],
+        "url": "https://tracflux.com/",
+        "description": "Logiciel libre de conception et d'optimisation de plans de feux tricolores : matrice des temps interverts, diagramme temporel, micro-régulation, priorité bus, onde verte.",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Navigateur web (Windows, macOS, Linux)",
+        "inLanguage": "fr",
+        "isAccessibleForFree": true,
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "image": "https://tracflux.com/social-preview.png",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "sameAs": ["https://github.com/ThierryClm/TraCflux"],
+        "subjectOf": { "@type": "WebPage", "url": "https://tracflux.com/presentation/" }
+      }
+    </script>
   </head>
   <body>
     <div id="root">

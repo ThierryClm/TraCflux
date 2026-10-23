@@ -25,6 +25,8 @@ Conçue pour être utilisée **localement**, sans serveur : les données de vos 
 
 **[Ouvrir l'application](https://tracflux.com/?example=carrefour)** — un carrefour d'exemple s'ouvre directement, sans compte à créer et sans rien installer.
 
+Présentation de l'outil, en une page : [tracflux.com/presentation](https://tracflux.com/presentation/).
+
 Pour l'avoir sous la main : le bouton **« Installer cette app »** de la barre d'adresse (Chrome ou Edge) en fait un raccourci sur le bureau, et l'application fonctionne ensuite hors connexion.
 
 ## Pourquoi TraCflux
@@ -51,6 +53,23 @@ C'est cette combinaison qui permet d'exprimer directement les **chevauchements p
 ### Priorité bus
 
 La prise en compte des transports en commun est pensée comme une **orientation de fond** de TraCflux : les variables et actions de micro-régulation propres à la priorité bus (délai d'approche, temps maxi d'attente bus, allongement de vert, escamotage de phase, point de repos…) sont intégrées au cœur de l'outil. L'objectif est de rendre une stratégie de priorité **explicite, visualisable et vérifiable** — sans boîte noire, hors ligne et interopérable — tout en laissant la décision d'ingénierie à l'utilisateur. TraCflux ne décide pas du niveau de priorité accordé : il en offre le langage et la lecture, en préservant les contraintes de sécurité et la cohérence du plan de feux.
+
+### Assistant de construction de diagramme
+
+TraCflux intègre un **assistant qui dégrossit un plan de feux en quelques minutes**, à partir des trafics. **Diagramme → Nouveau plan de feu…** crée un plan vierge associé à un jeu de trafic ; **Diagramme → Suggérer une durée de cycle…** :
+
+- repère le **chemin critique** sur le diagramme : les phases et, dans chacune, le groupe déterminant — celui de plus forte capacité utilisée, une traversée piétonne pouvant l'être ;
+- calcule le **cycle minimal** et le **cycle de Webster** (*Guide des carrefours à feux* du CERTU), arrondi à la dizaine supérieure, et répartit les verts au prorata des demandes ;
+- **pré-remplit** le diagramme et, si on le souhaite, le phasage bulle ;
+- **déduit le placement des groupes associés**, en affichant pour chacun la source de la déduction (matrice des temps interverts, nom du groupe, géométrie des flèches du plan) ;
+- **applique le tout en un clic** : la durée du cycle d'abord, puis les groupes associés, les adaptatifs verticaux, les fermetures anticipées et les points de repos bus — annulable par Ctrl+Z ;
+- **propose un adaptatif vertical par phase**, qui finit avec le premier groupe de la phase à fermer (temps interverts préservés) et dimensionné pour porter chaque groupe jusqu'au taux de saturation visé (90 % par défaut : une phase ne se contracte que lorsque sa demande est servie) sans passer sous les verts minimaux — en mode itératif (la contraction d'une phase redonne de la capacité aux autres) ou prudent (chaque zone tient seule) — et l'inscrit dans les conditions de micro-régulation (AV1, AV2…).
+- **propose des fermetures anticipées avec glissements** pour les groupes voitures peu chargés (sous 81 % de capacité utilisée) : environ les deux tiers de leur temps disponible en fin de vert, et en Action GF les groupes qui peuvent alors ouvrir plus tôt sans conflit intervert.
+- **propose un point de repos par groupe bus**, en fin de vert bus, à l'instant où le plus de groupes sont au vert, avec sa condition de sortie (« Attente quittée si TPPh_Ln + DAx > N + TMABx ») ; l'indice x tient la place du code trajet, à remplacer.
+
+L'assistant s'ouvre dans une fenêtre détachée, que l'on pose sur un autre écran : le diagramme garde toute la place et reste modifiable pendant qu'on le consulte. Sur un carrefour en croix à trois phases avec couloir bus, l'assistant pose un diagramme complet et sans conflit, prêt à être affiné.
+
+**Un assistant au service de l'expertise.** L'utilisateur reste maître des données d'entrée — trafics, verts minimaux, temps interverts — et des choix de conception : phasage, conditions de contraction des adaptatifs et autres fonctionnements conditionnels (seconde lucarne, escamotage, priorité bus), adaptation au site. Les déductions incertaines sont signalées « à vérifier » et laissées à sa main. L'élaboration d'un diagramme de feux est une **discipline à part entière**, qui demande une approche de traficien ou d'expert et donne toute sa dimension à la performance recherchée : l'assistant prend en charge le calcul et la mise en place, pour que le concepteur se concentre sur ce qui fait la qualité d'un plan ([voir la FAQ](FAQ.md#tracflux-peut-il-maider-à-construire-un-diagramme-de-feux-)).
 
 ### Reprendre les études DiagFeux
 
@@ -79,6 +98,7 @@ Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèc
 - Définition des groupes de feux (VL, TC, Cycliste, Piéton) avec durées vert/orange/rouge
 - Matrice d'intervert avec détection automatique des conflits
 - Diagramme temporel horizontal avec tête de lecture
+- **Assistant de construction** — nouveau plan de feu vierge, chemin critique, cycle de Webster arrondi à la dizaine supérieure, pré-remplissage du diagramme et du phasage bulle, placement des groupes associés avec la source de chaque déduction, le tout appliqué en un clic ([en savoir plus](#assistant-de-construction-de-diagramme))
 - **Multiprogrammation** — plans de feux multiples (PF) gérés par onglets : un même carrefour décliné en plusieurs programmes (pointe du matin, pointe du soir, heure creuse, nuit, événementiel…), chacun avec son cycle, ses durées de vert, ses offsets, sa matrice intervert et sa micro-régulation propres
 - Table d'actions de micro-régulation par plan (escamotage, ouverture/fermeture anticipée, etc.)
 - **Mode simulation** — les actions cochées se combinent et le diagramme se redessine sur le cycle recalculé, sans toucher au plan d'origine : les actions qui chevauchent la fin du cycle sont prises en compte, le vert escamotable est barré d'un bandeau hachuré, et survoler une action allume ses flèches dans l'image du carrefour

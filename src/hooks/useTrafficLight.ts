@@ -7,7 +7,8 @@ import {
     buildDiagramFromGroups,
     createEmptyPF,
     ensurePFIntegrity,
-    cycleDuPlanActif
+    cycleDuPlanActif,
+    inscrireActions
 } from '../utils/pfHelpers';
 import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
@@ -710,7 +711,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         microCustomFields, updateMicroCustomField,
         phasageBulleCount, setPhasageBulleCount, phasageBulleTimes, setPhasageBulleTimes,
         phasageBubbleScale, setPhasageBubbleScale, phasageEllipseScale, setPhasageEllipseScale,
-        phasageBubbleRatio, setPhasageBubbleRatio
+        phasageBubbleRatio, setPhasageBubbleRatio,
+        phasageCycle, setPhasageCycle
     } = useReglagesPlanActif({ pfTabs, setPfTabs, activePFId });
 
     // Le nom visible d'un PF peut différer de la clé de son jeu de trafic.
@@ -750,7 +752,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     }, [setActionData]);
 
     // Onglets des plans de feux.
-    const { duplicatePF, deletePF, renamePF, setPFColor, updatePFRemarques, reorderPF } = useGestionPlans({
+    const { duplicatePF, nouveauPF, deletePF, renamePF, setPFColor, updatePFRemarques, reorderPF } = useGestionPlans({
         pfTabs, setPfTabs, activePFId, setActivePFId, actionData, conflictMatrix, cycleLength, dossierReadOnlyRef
     });
 
@@ -1193,6 +1195,18 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         ));
     }, [saveToHistory]);
 
+    // Inscrit des conditions dans la table (assistant : adaptatifs verticaux
+    // proposés), après avoir vidé les lignes que « remplacer » désigne. Une
+    // seule étape d'annulation. Renvoie le nombre de lignes inscrites.
+    const ajouterActions = useCallback((lignes: Partial<Omit<ActionMicro, 'id'>>[], remplacer?: (row: ActionMicro) => boolean): number => {
+        if (isEditLocked()) return 0;
+        const { data, nb } = inscrireActions(actionData, lignes, remplacer);
+        if (data === actionData) return 0;
+        saveToHistory();
+        setActionData(prev => inscrireActions(prev, lignes, remplacer).data);
+        return nb;
+    }, [actionData, saveToHistory, setActionData]);
+
     // Wrapped setCycleLength that saves to history
     const setCycleLengthWithHistory = useCallback((newCycle: number) => {
         if (isEditLocked()) return;
@@ -1514,6 +1528,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         // Action Table
         actionData,
         updateActionRow: updateActionRowWithHistory,
+        ajouterActions,
         reorderActions,
         microCustomFields,
         updateMicroCustomField,
@@ -1528,11 +1543,14 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         setPhasageEllipseScale,
         phasageBubbleRatio,
         setPhasageBubbleRatio,
+        phasageCycle,
+        setPhasageCycle,
         // PF (Plans de Feux) management
         pfTabs,
         activePFId,
         setActivePFId,
         duplicatePF,
+        nouveauPF,
         deletePF,
         renamePF,
         setPFColor,

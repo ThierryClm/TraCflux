@@ -85,6 +85,8 @@ describe('WelcomeScreen', () => {
         fireEvent.click(screen.getByRole('button', { name: /découvrir avec un projet exemple/i }));
         expect(open).toHaveBeenCalledWith(expect.stringContaining('?example=carrefour'), '_blank');
 
+        expect(screen.getByRole('link', { name: /qu'est-ce que tracflux/i })).toHaveAttribute('href', 'presentation/');
+
         rerender(<WelcomeScreen hasActiveProject showExampleInvite />);
         expect(screen.queryByText(/commencez par/i)).not.toBeInTheDocument();
         open.mockRestore();
