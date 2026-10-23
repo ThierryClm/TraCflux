@@ -52,6 +52,21 @@ C'est cette combinaison qui permet d'exprimer directement les **chevauchements p
 
 La prise en compte des transports en commun est pensée comme une **orientation de fond** de TraCflux : les variables et actions de micro-régulation propres à la priorité bus (délai d'approche, temps maxi d'attente bus, allongement de vert, escamotage de phase, point de repos…) sont intégrées au cœur de l'outil. L'objectif est de rendre une stratégie de priorité **explicite, visualisable et vérifiable** — sans boîte noire, hors ligne et interopérable — tout en laissant la décision d'ingénierie à l'utilisateur. TraCflux ne décide pas du niveau de priorité accordé : il en offre le langage et la lecture, en préservant les contraintes de sécurité et la cohérence du plan de feux.
 
+### Assistant de construction de diagramme
+
+Pour un nouveau plan de feux, TraCflux propose un **assistant** qui donne un point de départ chiffré : **Diagramme → Nouveau plan de feu…** crée un plan vierge et l'associe à un jeu de trafic, puis **Diagramme → Suggérer une durée de cycle…** :
+
+- repère le **chemin critique** sur le diagramme (les phases et, dans chacune, le groupe déterminant — celui de plus forte capacité utilisée, une traversée piétonne pouvant l'être) ;
+- calcule le **cycle minimal** et le **cycle de Webster** (*Guide des carrefours à feux* du CERTU), arrondi à la dizaine supérieure, et répartit les verts au prorata des demandes ;
+- **pré-remplit** le diagramme et, si on le souhaite, le phasage bulle ;
+- propose un **placement des groupes associés**, en indiquant pour chacun la source de la déduction (matrice des temps interverts, nom du groupe, géométrie des flèches du plan) et ce qui reste **à vérifier**.
+
+La fenêtre n'est pas modale : le diagramme reste visible et modifiable pendant qu'on la consulte.
+
+**Ce que l'assistant ne fait pas.** Il applique des règles générales à des données qu'il ne juge pas : trafics, débits de saturation, verts minimaux et temps interverts restent **sous la responsabilité de l'utilisateur**, et une proposition ne vaut que ce que valent ces données. Il ne choisit ni le phasage ni l'ordre des phases, ne connaît ni le site, ni ses usagers, ni la stratégie recherchée (priorité bus, modes actifs, coordination, sécurité), et ne traite pas les fonctionnements conditionnels — seconde lucarne, escamotage, adaptatif — qui relèvent de la micro-régulation. Le cycle de Webster minimise le retard moyen des véhicules : c'est un repère, pas une prescription.
+
+L'élaboration d'un diagramme de feux est une **discipline à part entière** : arbitrer entre sécurité, capacité, temps d'attente et lisibilité pour l'usager demande une approche de traficien ou d'expert, et c'est elle qui donne toute sa dimension à la performance recherchée. L'assistant épargne le calcul et la saisie mécaniques ; **la conception reste celle de l'utilisateur**, qui garde la main sur chaque valeur proposée.
+
 ### Reprendre les études DiagFeux
 
 > ⚠️ **Fonctionnalité en objectif de développement.** L'importateur est construit à partir du schéma XML officiel et de la documentation de DiagFeux, et testé sur des jeux d'essai construits pour cela. Il **n'a pas encore été confronté à un fichier `.dfe` réel**. Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) — cela accélérera directement la mise au point.
@@ -79,6 +94,7 @@ Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèc
 - Définition des groupes de feux (VL, TC, Cycliste, Piéton) avec durées vert/orange/rouge
 - Matrice d'intervert avec détection automatique des conflits
 - Diagramme temporel horizontal avec tête de lecture
+- **Assistant de construction** — nouveau plan de feu vierge, chemin critique, cycle de Webster arrondi à la dizaine supérieure, pré-remplissage du diagramme et du phasage bulle, placement des groupes associés avec la source de chaque déduction ([voir ses limites](#assistant-de-construction-de-diagramme))
 - **Multiprogrammation** — plans de feux multiples (PF) gérés par onglets : un même carrefour décliné en plusieurs programmes (pointe du matin, pointe du soir, heure creuse, nuit, événementiel…), chacun avec son cycle, ses durées de vert, ses offsets, sa matrice intervert et sa micro-régulation propres
 - Table d'actions de micro-régulation par plan (escamotage, ouverture/fermeture anticipée, etc.)
 - **Mode simulation** — les actions cochées se combinent et le diagramme se redessine sur le cycle recalculé, sans toucher au plan d'origine : les actions qui chevauchent la fin du cycle sont prises en compte, le vert escamotable est barré d'un bandeau hachuré, et survoler une action allume ses flèches dans l'image du carrefour
