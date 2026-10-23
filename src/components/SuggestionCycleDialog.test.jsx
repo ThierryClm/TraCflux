@@ -103,4 +103,21 @@ describe('suggestion de durée du cycle', () => {
         expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: 0 }));
         expect(updateGroupParams).toHaveBeenCalledWith(5, expect.objectContaining({ offset: 45 }));
     });
+
+    it('groupes associés : calés sur le cycle proposé, pas sur le cycle actuel du plan', () => {
+        // Déterminants déjà posés aux positions proposées pour 70 s, plan encore à 100 s :
+        // la fermeture du piéton P6 dépend du rebouclage sur V1 (P6→V1 8 s).
+        const pose = { 1: [0, 29], 3: [33, 6], 4: [45, 19] };
+        const avecP6 = [...groups, { id: 6, name: 'P6', type: 'P', minGreen: 7, offset: 0, laneCoef: 1, durations: { green: 0, orange: 8, red: 0 } }]
+            .map(gr => ({ ...gr, offset: pose[gr.id]?.[0] ?? 0, durations: { ...gr.durations, green: pose[gr.id]?.[1] ?? 0 } }));
+        const m = Array.from({ length: 6 }, (_, i) => [...(matrice[i] ?? Array(5).fill('')), '']);
+        m[1][3] = 5; m[3][1] = 5; m[4][0] = 6; m[0][4] = 5; m[4][2] = 5; m[2][4] = 5; m[1][4] = 6; m[4][1] = 5;
+        m[0][5] = 4; m[1][5] = 6; m[2][5] = 7; m[5][0] = 8; m[5][1] = 6; m[5][2] = 6;
+        const { updateGroupParams } = ouvrir({ groups: avecP6, conflictMatrix: m, cycleLength: 100,
+            getTrafficData: id => ({ trafficVol: trafic[id] ?? 0 }), phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        expect(screen.getByText(/calés sur le cycle proposé de 70 s/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
+        // Sur 70 s, P6 doit fermer 8 s avant le retour de V1 (fin à 62 s), et non avec V4 à 64 s.
+        expect(updateGroupParams).toHaveBeenCalledWith(6, { offset: 46, durations: { green: 16 } });
+    });
 });

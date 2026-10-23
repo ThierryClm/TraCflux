@@ -152,8 +152,9 @@ const SuggestionCycleDialog = ({
             return debuts[i] === undefined ? null : { id, debut: debuts[i], fin: debuts[i] + resultat.verts[i] };
         });
         if (dets.some(d => d === null)) return [];
-        const cycleRef = groups.some(g => (brouillon.determinants as number[]).includes(g.id) && g.durations?.green > 0)
-            ? cycleLength : (resultat.cycleSuggere ?? cycleLength);
+        // Calage sur le cycle qu'appliquera « Appliquer le cycle », et non sur
+        // le cycle actuel du plan : les fermetures qui rebouclent en dépendent.
+        const cycleRef = resultat.cycleSuggere ?? cycleLength;
         return placerGroupesAssocies(groups.map(g => ({
             id: g.id, nom: g.name || `GF${g.id}`, offset: Number(g.offset) || 0, vert: Number(g.durations?.green) || 0,
             vertMini: Number(g.minGreen) || 0, trafic: Number(getTrafficData(g.id)?.trafficVol) || 0,
@@ -334,7 +335,7 @@ const SuggestionCycleDialog = ({
 
             {placements.length > 0 && (
                 <div className="sc-associes" aria-label="Groupes associés">
-                    <h4>Groupes associés</h4>
+                    <h4>Groupes associés{resultat?.cycleSuggere ? ` — calés sur le cycle proposé de ${resultat.cycleSuggere} s` : ''}</h4>
                     <table className="sc-table">
                         <thead><tr><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th><th>Placement</th></tr></thead>
                         <tbody>
