@@ -344,6 +344,12 @@ export interface PlacementPropose {
 }
 
 /** Voie d'un groupe d'après son nom : sans code (V1, P6…), sens, ni mots de type. */
+/** Nom court d'un groupe : le code en tête de son nom (« V2 »), sinon GFn. */
+export const nomCourt = (nom: string | undefined, id: number): string => {
+    const premier = (nom || '').trim().split(/\s+/)[0];
+    return /^[A-Za-z]{1,3}\d+$/.test(premier) ? premier : `GF${id}`;
+};
+
 export const voieDuNom = (nom: string): string => nom
     .normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
     .replace(/\b[a-z]{1,2}\d+\b/g, ' ')
@@ -371,11 +377,7 @@ export const placerGroupesAssocies = (
     const idsDet = new Set(determinants.map(d => d.id));
     const conflit = (a: number, b: number) => degagementMatrice(matrice, a, b) !== null || degagementMatrice(matrice, b, a) !== null;
     const parId = new Map(groupes.map(g => [g.id, g]));
-    // Nom court dans les explications : le code en tête du nom (« V2 »), sinon GFn.
-    const nomDe = (id: number) => {
-        const premier = (parId.get(id)?.nom || '').trim().split(/\s+/)[0];
-        return /^[A-Za-z]{1,3}\d+$/.test(premier) ? premier : `GF${id}`;
-    };
+    const nomDe = (id: number) => nomCourt(parId.get(id)?.nom, id);
 
     // Intervalles connus : déterminants, groupes déjà réglés, puis propositions au fil de l'eau.
     const connus = new Map<number, { debut: number; fin: number }>();

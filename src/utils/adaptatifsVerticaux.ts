@@ -52,6 +52,10 @@ export interface AdaptatifPropose {
     capSeule: number | null;
     /** Ce qui empêche la zone de s'allonger d'une seconde de plus. */
     limite: LimiteZone | null;
+    /** Temps passé dans la phase (depuis l'ouverture du déterminant) au début de la zone. */
+    tpph: number;
+    /** Autres groupes dont le vert est raccourci par la zone. */
+    aussiRaccourcis: number[];
 }
 
 export interface PropositionAdaptatifs {
@@ -144,6 +148,10 @@ export const proposerAdaptatifs = (
             capContractee: capaciteUtilisee(g, g.vert - coupe(durees), cycle - total),
             capSeule: capaciteUtilisee(g, g.vert - durees[i], cycle - durees[i]),
             limite: limites[i],
+            tpph: fins[i] - durees[i] - g.debut,
+            aussiRaccourcis: durees[i] > 0
+                ? verts.filter(x => x.id !== g.id && recouvrement(x, fins[i] - durees[i], fins[i], cycle) > 0).map(x => x.id)
+                : [],
         }];
     });
     return { adaptatifs, cycleNominal: cycle, cycleContracte: cycle - total, passages };

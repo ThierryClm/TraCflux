@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import type { Groupe, Matrice } from '../types/projet';
 import {
-    calculerSuggestionCycle, debutsDesPhases, degagementMatrice, detecterCheminCritique, placerGroupesAssocies, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
+    calculerSuggestionCycle, debutsDesPhases, nomCourt, degagementMatrice, detecterCheminCritique, placerGroupesAssocies, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
     NB_PHASES_MAX, NB_PHASES_MIN, TAUX_VISE_DEFAUT,
 } from '../utils/suggestionCycle';
 import type { PhasageCycle } from '../utils/suggestionCycle';
@@ -209,9 +209,27 @@ const SuggestionCycleDialog = ({
     const planPret = resultat?.cycleSuggere === cycleLength && aPlacer.length === 0
         && (brouillon.determinants as number[]).every(id => (groups.find(g => g.id === id)?.durations?.green ?? 0) > 0);
     const [avAjoutes, setAvAjoutes] = useState<number | null>(null);
+    // Ligne de condition renseignée avec ce que l'assistant sait de la zone ;
+    // la condition de contraction reste à adapter à la détection réelle.
+    const court = (id: number) => nomCourt(groups.find(g => g.id === id)?.name, id);
+    const conditionAdaptatif = (a: NonNullable<typeof propositionAV>['adaptatifs'][number]) => {
+        const det = court(a.determinant);
+        const cap = (v: number | null) => (v === null ? '—' : `${Math.round(v)} %`);
+        const aussi = a.aussiRaccourcis.length ? ` ; raccourcit aussi ${a.aussiRaccourcis.map(court).join(', ')}` : '';
+        return {
+            gf: String(a.determinant),
+            action: 'Adaptatif vertical',
+            deb: String(a.deb),
+            fin: String(a.fin),
+            abrv: `CP${a.phase}`,
+            description: `Contraction de phase ${a.phase} : fin de demande ${det} — Cap. U ${cap(a.capNominale)} → ${cap(a.capContractee)}`
+                + `${modeAV === 'iteratif' ? ` (zone seule ${cap(a.capSeule)})` : ''}${aussi}`,
+            micro: `Contraction si absence de demande sur ${det} et TPPh ≥ ${a.tpph}`,
+        };
+    };
     const ajouterAdaptatifs = () => {
         if (!ajouterActions) return;
-        setAvAjoutes(ajouterActions(avUtiles.map(a => ({ gf: String(a.determinant), action: 'Adaptatif vertical', deb: String(a.deb), fin: String(a.fin) }))));
+        setAvAjoutes(ajouterActions(avUtiles.map(a => conditionAdaptatif(a))));
     };
     const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)} %`);
 

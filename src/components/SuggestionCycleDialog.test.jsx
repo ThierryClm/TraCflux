@@ -133,8 +133,16 @@ describe('suggestion de durée du cycle', () => {
         expect(within(bloc).getByText(/63 s avec toutes les zones contractées/)).toBeInTheDocument();
         fireEvent.click(within(bloc).getByRole('button', { name: 'Contraction de phase' }));
         expect(ajouterActions).toHaveBeenCalledWith([
-            { gf: '1', action: 'Adaptatif vertical', deb: '25', fin: '29' },
-            { gf: '4', action: 'Adaptatif vertical', deb: '61', fin: '64' },
+            {
+                gf: '1', action: 'Adaptatif vertical', deb: '25', fin: '29', abrv: 'CP1',
+                description: 'Contraction de phase 1 : fin de demande V1 — Cap. U 80 % → 84 % (zone seule 88 %) ; raccourcit aussi V2',
+                micro: 'Contraction si absence de demande sur V1 et TPPh ≥ 25',
+            },
+            {
+                gf: '4', action: 'Adaptatif vertical', deb: '61', fin: '64', abrv: 'CP3',
+                description: 'Contraction de phase 3 : fin de demande V4 — Cap. U 78 % → 83 % (zone seule 88 %) ; raccourcit aussi V5',
+                micro: 'Contraction si absence de demande sur V4 et TPPh ≥ 16',
+            },
         ]);
         expect(within(bloc).getByText(/2 conditions ajoutées/)).toBeInTheDocument();
     });
