@@ -55,11 +55,20 @@ export const createEmptyActionRow = (id: number): ActionMicro => ({
     actGf1Gf4: ''
 });
 
+/** Une ligne de la table d'actions contient-elle une saisie ? */
+export const ligneActionRemplie = (row: ActionMicro): boolean => Boolean(
+    row.gf || row.action || row.description || row.deb !== '' || row.fin !== '' ||
+    row.abrv || row.micro || row.plage1 || row.plage2 ||
+    row.actGf1 || row.actGf1Gf2 || row.actGf1Gf3 || row.actGf1Gf4);
+
+/** Nombre de lignes de la table d'actions d'un plan. */
+export const LIGNES_ACTIONS_MAX = 30;
+
 /**
  * Create an array of 30 empty action rows (default PF data).
  */
 export const createEmptyActionData = (): ActionMicro[] =>
-    Array.from({ length: 30 }, (_, i) => createEmptyActionRow(i + 1));
+    Array.from({ length: LIGNES_ACTIONS_MAX }, (_, i) => createEmptyActionRow(i + 1));
 
 /**
  * Build a diagram array from a list of groups.

@@ -126,6 +126,7 @@ function App() {
         resetToNewProject,
         actionData,
         updateActionRow,
+        ajouterActions,
         reorderActions,
         microCustomFields,
         updateMicroCustomField,
@@ -2403,6 +2404,7 @@ function App() {
                 setPhasageBulleTimes={setPhasageBulleTimes}
                 updateGroupParams={updateGroupParams}
                 intersectionArrows={intersectionArrows}
+                ajouterActions={ajouterActions}
                 readOnly={dossierReadOnly || activePfReadOnly}
             />
             <SupportDialogs

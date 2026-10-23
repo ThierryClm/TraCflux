@@ -81,7 +81,7 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByLabelText('Groupe déterminant de la phase 2')).toHaveValue('3');
         expect(screen.getByLabelText('Groupe déterminant de la phase 3')).toHaveValue('4');
         expect(screen.getByLabelText('Dégagement de la phase 1 vers la phase 2')).toHaveValue(4);
-        expect(screen.getByText('83 %')).toBeInTheDocument();
+        expect(within(document.querySelector('.sc-table')).getByText('83 %')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Relire le diagramme' })).toBeInTheDocument();
     });
 
@@ -119,5 +119,41 @@ describe('suggestion de durée du cycle', () => {
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
         // Sur 70 s, P6 doit fermer 8 s avant le retour de V1 (fin à 62 s), et non avec V4 à 64 s.
         expect(updateGroupParams).toHaveBeenCalledWith(6, { offset: 46, durations: { green: 16 } });
+    });
+
+    it('adaptatifs verticaux : proposés par phase, ajoutés aux conditions une fois le cycle appliqué', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        const ajouterActions = vi.fn(lignes => lignes.length);
+        ouvrir({ groups: places, ajouterActions, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        const bloc = screen.getByLabelText('Adaptatifs verticaux');
+        expect(within(bloc).getByText('25 – 29 s')).toBeInTheDocument();
+        expect(within(bloc).getByText('61 – 64 s')).toBeInTheDocument();
+        expect(within(bloc).getByText(/vert mini de B3/)).toBeInTheDocument();
+        expect(within(bloc).getByText(/63 s avec toutes les zones contractées/)).toBeInTheDocument();
+        fireEvent.click(within(bloc).getByRole('button', { name: 'Contraction de phase' }));
+        expect(ajouterActions).toHaveBeenCalledWith([
+            { gf: '1', action: 'Adaptatif vertical', deb: '25', fin: '29' },
+            { gf: '4', action: 'Adaptatif vertical', deb: '61', fin: '64' },
+        ]);
+        expect(within(bloc).getByText(/2 conditions ajoutées/)).toBeInTheDocument();
+    });
+
+    it('adaptatifs verticaux : mode prudent, chaque zone calculée seule', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        ouvrir({ groups: places, ajouterActions: vi.fn(), phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        const bloc = screen.getByLabelText('Adaptatifs verticaux');
+        fireEvent.change(within(bloc).getByLabelText('Mode de calcul des adaptatifs'), { target: { value: 'prudent' } });
+        expect(within(bloc).getByText('27 – 29 s')).toBeInTheDocument();
+        expect(within(bloc).getByText('62 – 64 s')).toBeInTheDocument();
+        expect(within(bloc).getByText(/66 s avec toutes les zones contractées/)).toBeInTheDocument();
+    });
+
+    it('adaptatifs verticaux : bouton grisé tant que le cycle proposé n\'est pas appliqué', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        ouvrir({ groups: places, cycleLength: 90, ajouterActions: vi.fn(), phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        expect(screen.getByRole('button', { name: 'Contraction de phase' })).toBeDisabled();
     });
 });

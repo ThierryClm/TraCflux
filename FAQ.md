@@ -232,6 +232,7 @@ Le menu **Diagramme → Nouveau plan de feu…** crée un plan vierge (verts, d�
 3. **Pré-remplissage** — les groupes déterminants sans vert sont placés dans le diagramme au fil de la saisie, et le phasage bulle peut être construit dans la foulée.
 4. **Groupes associés** — l'assistant déduit la phase et les instants de début et de fin des autres groupes, et indique pour chacun **d'où vient la déduction** : la matrice des temps interverts, le nom du groupe (même voie que le déterminant) ou la géométrie des flèches du plan du carrefour.
 5. **Application** — *Appliquer le cycle* règle la durée du cycle, puis inscrit les groupes associés dans le diagramme. Tout s'annule par Ctrl+Z.
+6. **Adaptatifs verticaux** — l'assistant propose, pour chaque phase, une zone d'adaptatif vertical qui finit avec le vert du déterminant, aussi longue que le permettent le taux de saturation visé (85 %) et les verts minimaux ; il indique ce qui limite chaque zone. En mode *itératif*, la contraction d'une phase redonne de la capacité aux autres (jusqu'à 3 passages) ; en mode *prudent*, chaque zone tient seule, quelle que soit la combinaison contractée. Un bouton les inscrit dans les conditions de micro-régulation, prêtes à être vérifiées en simulation.
 
 Sur le carrefour du TD « croix avec couloir bus d'approche », l'assistant produit en un clic un diagramme complet, **sans aucun conflit** avec la matrice. Les groupes sans vert n'étant pas comptés dans les conflits, un plan en cours de construction n'est pas couvert d'alertes.
 
@@ -245,7 +246,7 @@ L'assistant est un **excellent point de départ**, pas une conception clé en ma
 - **Ses déductions sont transparentes.** Chaque placement affiche sa source ; une déduction incertaine (nom ambigu, matrice muette) est signalée « à vérifier » et laissée à votre main plutôt que posée d'office.
 - **Le cycle de Webster est un repère reconnu**, qui minimise le retard moyen des véhicules. Il ne tient pas compte, à lui seul, de l'attente des piétons, de la coordination avec les carrefours voisins ou d'une priorité accordée aux transports en commun.
 - **Le phasage reste votre choix** : nombre et ordre des phases, traitement des tourne-à-gauche, place des piétons et des cycles.
-- **Les fonctionnements conditionnels** — seconde lucarne, escamotage, adaptatif, priorité bus — relèvent de la micro-régulation, que l'on construit ensuite sur la base posée par l'assistant.
+- **Les fonctionnements conditionnels** — l'assistant dimensionne les zones d'adaptatif vertical, mais la condition de contraction (détection, demande, priorité bus) reste à rédiger ; seconde lucarne et escamotage se construisent ensuite sur la base posée.
 - **La connaissance du site** — géométrie fine, visibilité, comportement des usagers, objectifs de la collectivité — reste celle du concepteur.
 
 L'élaboration d'un diagramme de feux est une **discipline à part entière** : arbitrer entre sécurité, capacité, temps d'attente, lisibilité pour l'usager et stratégie de déplacement demande une approche de **traficien ou d'expert**, qui donne toute sa dimension à la performance recherchée. L'assistant est pensé pour servir cette expertise : il dégrossit le sujet avec méthode, pour que le concepteur se concentre sur ce qui fait la qualité d'un plan de feux.

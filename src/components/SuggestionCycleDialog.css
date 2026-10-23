@@ -58,3 +58,5 @@
 
 .suggestion-cycle .sc-associes .sc-nom { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .suggestion-cycle .sc-associes .sc-insecable { white-space: nowrap; }
+
+.suggestion-cycle .sc-depasse { color: #ff9800; font-weight: bold; }

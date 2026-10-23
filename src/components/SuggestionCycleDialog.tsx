@@ -6,6 +6,9 @@ import {
     NB_PHASES_MAX, NB_PHASES_MIN, TAUX_VISE_DEFAUT,
 } from '../utils/suggestionCycle';
 import type { PhasageCycle } from '../utils/suggestionCycle';
+import { proposerAdaptatifs, PASSAGES_MAX } from '../utils/adaptatifsVerticaux';
+import type { ModeAdaptatifs } from '../utils/adaptatifsVerticaux';
+import type { ActionMicro } from '../types/projet';
 import './SuggestionCycleDialog.css';
 
 export interface SuggestionCycleDialogProps {
@@ -28,6 +31,8 @@ export interface SuggestionCycleDialogProps {
     updateGroupParams: (id: number, params: { offset?: number; durations?: { green?: number } }) => void;
     /** Flèches du plan du carrefour : dernière source pour placer les groupes associés. */
     intersectionArrows?: { groupId: number; rotation?: number }[];
+    /** Inscrit des conditions dans les lignes vides de la table ; renvoie le nombre inscrit. */
+    ajouterActions?: (lignes: Partial<Omit<ActionMicro, 'id'>>[]) => number;
     readOnly?: boolean;
 }
 
@@ -49,7 +54,7 @@ const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDig
 const SuggestionCycleDialog = ({
     isOpen, onClose, planName, groups, conflictMatrix, cycleLength, getTrafficData,
     trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
-    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], readOnly = false,
+    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, readOnly = false,
 }: SuggestionCycleDialogProps) => {
     const [remplirBulle, setRemplirBulle] = useState(true);
     // Chemin critique lu sur le diagramme, quand il est renseigné : phases,
@@ -177,6 +182,38 @@ const SuggestionCycleDialog = ({
         enregistrer();
         aPlacer.forEach(p => updateGroupParams(p.id, { offset: p.debut, durations: { green: p.fin - p.debut } }));
     };
+
+    // Adaptatifs verticaux proposés, un par phase, sur la disposition prévue :
+    // diagramme actuel, déterminants proposés et groupes placés avec le cycle.
+    const [modeAV, setModeAV] = useState<ModeAdaptatifs>('iteratif');
+    const propositionAV = useMemo(() => {
+        if (!resultat || !calculable || !complet || !resultat.cycleSuggere) return null;
+        const dets = brouillon.determinants as number[];
+        const disposition = groups.map(g => {
+            const base = {
+                id: g.id, vertMini: Number(g.minGreen) || 0, trafic: Number(getTrafficData(g.id)?.trafficVol) || 0,
+                coefVoie: Number(g.laneCoef) || 1,
+            };
+            if (g.durations?.green > 0) return { ...base, debut: Number(g.offset) || 0, vert: g.durations.green };
+            const i = dets.indexOf(g.id);
+            if (i >= 0 && debuts[i] !== undefined) return { ...base, debut: debuts[i], vert: resultat.verts[i] };
+            const p = aPlacer.find(x => x.id === g.id);
+            return p ? { ...base, debut: p.debut, vert: p.fin - p.debut } : { ...base, debut: 0, vert: 0 };
+        });
+        return proposerAdaptatifs(dets, disposition, resultat.cycleSuggere, brouillon.tauxVise, modeAV);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resultat, calculable, complet, brouillon, groups, getTrafficData, placements, modeAV]);
+    const avUtiles = propositionAV?.adaptatifs.filter(a => a.duree > 0) ?? [];
+    // Les instants des conditions sont ceux du plan une fois le cycle appliqué
+    // et les groupes placés : le bouton attend que ce soit fait.
+    const planPret = resultat?.cycleSuggere === cycleLength && aPlacer.length === 0
+        && (brouillon.determinants as number[]).every(id => (groups.find(g => g.id === id)?.durations?.green ?? 0) > 0);
+    const [avAjoutes, setAvAjoutes] = useState<number | null>(null);
+    const ajouterAdaptatifs = () => {
+        if (!ajouterActions) return;
+        setAvAjoutes(ajouterActions(avUtiles.map(a => ({ gf: String(a.determinant), action: 'Adaptatif vertical', deb: String(a.deb), fin: String(a.fin) }))));
+    };
+    const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)} %`);
 
     // Déterminants sans vert dans le diagramme (Déb/Fin vides) : pré-remplis au
     // fil de la saisie, à la position proposée, dès que la phase tient dans le
@@ -358,6 +395,63 @@ const SuggestionCycleDialog = ({
                         « avec le cycle » (Ctrl+Z pour annuler). Les groupes déjà réglés ne sont pas modifiés ; ceux
                         « à vérifier » restent à placer à la main.
                     </p>
+                </div>
+            )}
+
+            {propositionAV && propositionAV.adaptatifs.length > 0 && (
+                <div className="sc-associes sc-adaptatifs" aria-label="Adaptatifs verticaux">
+                    <h4>Adaptatifs verticaux (proposition) — taux visé {brouillon.tauxVise} %</h4>
+                    <label className="sc-nb">
+                        Calcul :
+                        <select value={modeAV} aria-label="Mode de calcul des adaptatifs" onChange={e => setModeAV(e.target.value as ModeAdaptatifs)}>
+                            <option value="iteratif">Itératif ({PASSAGES_MAX} passages au plus)</option>
+                            <option value="prudent">Prudent (chaque zone seule)</option>
+                        </select>
+                    </label>
+                    <table className="sc-table">
+                        <thead><tr><th>Phase</th><th>Déterminant</th><th>Zone Déb – Fin</th><th>Durée</th>
+                            <th title={`Capacité utilisée du déterminant au cycle de ${propositionAV.cycleNominal} s`}>Cap. U nominale</th>
+                            <th title="Toutes les zones contractées ensemble">Cap. U tout contracté</th>
+                            <th title="Cette zone seule contractée, les autres en extension">Cap. U zone seule</th>
+                            <th>Limité par</th></tr></thead>
+                        <tbody>
+                            {propositionAV.adaptatifs.map(a => (
+                                <tr key={a.phase}>
+                                    <td>{a.phase}</td>
+                                    <td className="sc-gauche sc-nom" title={nomGroupe(a.determinant)}>GF{a.determinant} {nomGroupe(a.determinant)}</td>
+                                    <td className="sc-insecable">{a.duree > 0 ? `${a.deb} – ${a.fin} s` : '—'}</td>
+                                    <td>{a.duree > 0 ? `${a.duree} s` : '—'}</td>
+                                    <td>{pct(a.capNominale)}</td>
+                                    <td>{a.duree > 0 ? pct(a.capContractee) : '—'}</td>
+                                    <td className={a.capSeule !== null && a.capSeule > brouillon.tauxVise ? 'sc-depasse' : ''}>{a.duree > 0 ? pct(a.capSeule) : '—'}</td>
+                                    <td className="sc-gauche">{a.limite
+                                        ? (a.limite.raison === 'mini' ? `vert mini de ${nomGroupe(a.limite.id)}` : `Cap. U de ${nomGroupe(a.limite.id)} à ${brouillon.tauxVise} %`)
+                                        : '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <p className="sc-note">
+                        Cycle de {propositionAV.cycleNominal} s, {propositionAV.cycleContracte} s avec toutes les zones contractées
+                        {modeAV === 'iteratif'
+                            ? <> ({propositionAV.passages} passage{propositionAV.passages > 1 ? 's' : ''} sur {PASSAGES_MAX} au plus).
+                                Le taux visé n'est tenu que si toutes les zones se contractent ensemble : voir « zone seule ».</>
+                            : <>. Chaque zone est calculée seule : le taux visé tient quelle que soit la combinaison de zones contractées.</>}
+                    </p>
+                    <button type="button" className="modal-btn modal-btn-secondary"
+                        disabled={readOnly || !ajouterActions || !avUtiles.length || !planPret}
+                        title={!planPret ? "Appliquez d'abord le cycle : les zones se lisent sur le plan une fois les groupes placés"
+                            : 'Une ligne « Adaptatif vertical » par zone dans les conditions de micro-régulation (Ctrl+Z pour annuler)'}
+                        onClick={ajouterAdaptatifs}>
+                        Contraction de phase
+                    </button>
+                    {avAjoutes !== null && (
+                        <p className="sc-note">
+                            {avAjoutes === avUtiles.length
+                                ? `${avAjoutes} condition${avAjoutes > 1 ? 's' : ''} ajoutée${avAjoutes > 1 ? 's' : ''} (Ctrl+Z pour annuler) : rédigez leur description et vérifiez-les dans l'onglet Simulation.`
+                                : `${avAjoutes} condition(s) ajoutée(s) sur ${avUtiles.length} : la table est pleine (30 conditions).`}
+                        </p>
+                    )}
                 </div>
             )}
             </div>

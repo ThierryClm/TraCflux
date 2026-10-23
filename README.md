@@ -60,11 +60,12 @@ TraCflux intègre un **assistant qui dégrossit un plan de feux en quelques minu
 - calcule le **cycle minimal** et le **cycle de Webster** (*Guide des carrefours à feux* du CERTU), arrondi à la dizaine supérieure, et répartit les verts au prorata des demandes ;
 - **pré-remplit** le diagramme et, si on le souhaite, le phasage bulle ;
 - **déduit le placement des groupes associés**, en affichant pour chacun la source de la déduction (matrice des temps interverts, nom du groupe, géométrie des flèches du plan) ;
-- **applique le tout en un clic** : la durée du cycle d'abord, puis les groupes associés — annulable par Ctrl+Z.
+- **applique le tout en un clic** : la durée du cycle d'abord, puis les groupes associés — annulable par Ctrl+Z ;
+- **propose un adaptatif vertical par phase**, dimensionné pour porter chaque groupe jusqu'au taux de saturation visé (85 %) sans passer sous les verts minimaux — en mode itératif (la contraction d'une phase redonne de la capacité aux autres) ou prudent (chaque zone tient seule) — et l'inscrit dans les conditions de micro-régulation.
 
 La fenêtre n'est pas modale : le diagramme reste visible et modifiable pendant qu'on la consulte. Sur un carrefour en croix à trois phases avec couloir bus, l'assistant pose un diagramme complet et sans conflit, prêt à être affiné.
 
-**Un assistant au service de l'expertise.** L'utilisateur reste maître des données d'entrée — trafics, verts minimaux, temps interverts — et des choix de conception : phasage, fonctionnements conditionnels (seconde lucarne, escamotage, adaptatif, priorité bus), adaptation au site. Les déductions incertaines sont signalées « à vérifier » et laissées à sa main. L'élaboration d'un diagramme de feux est une **discipline à part entière**, qui demande une approche de traficien ou d'expert et donne toute sa dimension à la performance recherchée : l'assistant prend en charge le calcul et la mise en place, pour que le concepteur se concentre sur ce qui fait la qualité d'un plan ([voir la FAQ](FAQ.md#tracflux-peut-il-maider-à-construire-un-diagramme-de-feux-)).
+**Un assistant au service de l'expertise.** L'utilisateur reste maître des données d'entrée — trafics, verts minimaux, temps interverts — et des choix de conception : phasage, conditions de contraction des adaptatifs et autres fonctionnements conditionnels (seconde lucarne, escamotage, priorité bus), adaptation au site. Les déductions incertaines sont signalées « à vérifier » et laissées à sa main. L'élaboration d'un diagramme de feux est une **discipline à part entière**, qui demande une approche de traficien ou d'expert et donne toute sa dimension à la performance recherchée : l'assistant prend en charge le calcul et la mise en place, pour que le concepteur se concentre sur ce qui fait la qualité d'un plan ([voir la FAQ](FAQ.md#tracflux-peut-il-maider-à-construire-un-diagramme-de-feux-)).
 
 ### Reprendre les études DiagFeux
 
