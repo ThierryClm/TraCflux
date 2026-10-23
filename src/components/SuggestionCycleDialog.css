@@ -60,3 +60,21 @@
 .suggestion-cycle .sc-associes .sc-insecable { white-space: nowrap; }
 
 .suggestion-cycle .sc-depasse { color: #ff9800; font-weight: bold; }
+
+/* Fenêtre détachée : le contenu occupe toute la fenêtre du navigateur, que
+   l'on peut poser sur un autre écran pour laisser le diagramme dégagé. */
+.modal-content.suggestion-cycle.sc-detachee {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+}
+.modal-content.suggestion-cycle.sc-detachee .modal-body { flex: 1 1 auto; min-height: 0; }

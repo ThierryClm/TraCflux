@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { proposerAdaptatifs } from './adaptatifsVerticaux';
+import { proposerAdaptatifs, TAUX_VISE_ADAPTATIFS } from './adaptatifsVerticaux';
 
 // TD « carrefour en croix avec couloir bus d'approche », plan à 70 s (HPM).
 const g = (id, debut, vert, vertMini, trafic = 0) => ({ id, debut, vert, vertMini, trafic, coefVoie: 1 });
@@ -72,5 +72,14 @@ describe('adaptatifs verticaux proposés', () => {
         const v4 = proposerAdaptatifs([1, 3, 4], groupes, 70, 85).adaptatifs[2];
         expect([v4.deb, v4.fin]).toEqual([58, 60]);
         expect(v4.limite).toEqual({ id: 9, raison: 'degagement' });
+    });
+
+    it('TD au taux par défaut des zones (90 %) : AV1 22–29, AV3 55–60, cycle contracté de 58 s', () => {
+        const r = proposerAdaptatifs([1, 3, 4], td, 70, TAUX_VISE_ADAPTATIFS);
+        expect(TAUX_VISE_ADAPTATIFS).toBe(90);
+        expect(r.adaptatifs.filter(a => a.duree > 0).map(a => [a.deb, a.fin])).toEqual([[22, 29], [55, 60]]);
+        expect(r.cycleContracte).toBe(58);
+        const prudent = proposerAdaptatifs([1, 3, 4], td, 70, TAUX_VISE_ADAPTATIFS, 'prudent');
+        expect(prudent.adaptatifs.filter(a => a.duree > 0).map(a => [a.deb, a.fin])).toEqual([[25, 29], [57, 60]]);
     });
 });

@@ -6,22 +6,18 @@
 import { expect, test } from '@playwright/test';
 import { ouvrirExemple, ouvrirMenu } from './aide';
 
-test('le cycle de Webster calculé sur les groupes déterminants s\'applique au plan', async ({ page }) => {
+test('le cycle de Webster calculé sur les groupes déterminants s\'applique au plan', async ({ page, context }) => {
     await ouvrirExemple(page);
     const item = page.locator('.menu-bar').getByText('Suggérer une durée de cycle...', { exact: true });
     await ouvrirMenu(page, 'Diagramme', item);
+    // Fenêtre détachée du navigateur, déplaçable sur un autre écran : la page
+    // principale garde tout l'espace du diagramme.
+    const nouvelle = context.waitForEvent('page');
     await item.click();
-    const fenetre = page.locator('.modal-content.suggestion-cycle');
+    const popup = await nouvelle;
+    const fenetre = popup.locator('.suggestion-cycle.sc-detachee');
     await expect(fenetre).toBeVisible();
-    // Fenêtre non modale : pas de voile, et les clics traversent jusqu'à l'application.
-    const voile = await page.evaluate(() => {
-        const o = document.querySelector('.modal-overlay.modal-non-modale') as HTMLElement;
-        const st = getComputedStyle(o);
-        const r = document.querySelector('.timeline-row-track')!.getBoundingClientRect();
-        const el = document.elementFromPoint(r.left - 120, r.top + r.height / 2);
-        return { fond: st.backgroundColor, clics: st.pointerEvents, sousLaSouris: !!el?.closest('.modal-overlay') };
-    });
-    expect(voile).toEqual({ fond: 'rgba(0, 0, 0, 0)', clics: 'none', sousLaSouris: false });
+    await expect(page.locator('.modal-content.suggestion-cycle')).toHaveCount(0);
 
     // Diagramme renseigné : le tableau arrive pré-rempli (chemin critique).
     await expect(fenetre.getByText(/Proposition lue sur le diagramme/)).toBeVisible();
@@ -40,16 +36,20 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
     expect(cycle).toBeGreaterThan(20);
 
     await fenetre.getByRole('button', { name: `Appliquer le cycle (${cycle} s)` }).click();
-    await fenetre.getByRole('button', { name: 'Fermer' }).click();
     await expect(page.locator('.cycle-input-label input').first()).toHaveValue(String(cycle));
+    const fermee = popup.waitForEvent('close');
+    await fenetre.getByRole('button', { name: 'Fermer' }).click();
+    await fermee;
 
     // Le phasage est gardé avec le plan : on le retrouve à la réouverture.
     await ouvrirMenu(page, 'Diagramme', item);
+    const rouverte = context.waitForEvent('page');
     await item.click();
-    await expect(fenetre.getByLabel('Groupe déterminant de la phase 2')).toHaveValue('8');
+    const popup2 = await rouverte;
+    await expect(popup2.locator('.suggestion-cycle').getByLabel('Groupe déterminant de la phase 2')).toHaveValue('8');
 });
 
-test('Nouveau plan de feu : plan vierge, choix du jeu de trafic, puis suggestion du cycle', async ({ page }) => {
+test('Nouveau plan de feu : plan vierge, choix du jeu de trafic, puis suggestion du cycle', async ({ page, context }) => {
     await ouvrirExemple(page);
     const nbAvant = await page.locator('.pf-tab:not(.simulation-tab):not(.phasage-tab)').count();
     const item = page.locator('.menu-bar').getByText('Nouveau plan de feu...', { exact: true });
@@ -67,7 +67,8 @@ test('Nouveau plan de feu : plan vierge, choix du jeu de trafic, puis suggestion
     await expect(fenetre).toBeVisible();
     const jeu = fenetre.getByLabel('Jeu de trafic du nouveau plan');
     await jeu.selectOption('HPS');
+    const nouvelle = context.waitForEvent('page');
     await fenetre.getByRole('button', { name: 'Associer et suggérer le cycle…' }).click();
-    await expect(page.locator('.modal-content.suggestion-cycle')).toBeVisible();
-    await expect(page.locator('.modal-content.suggestion-cycle')).toContainText('jeu HPS');
+    const popup = await nouvelle;
+    await expect(popup.locator('.suggestion-cycle')).toContainText('jeu HPS');
 });

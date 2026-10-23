@@ -6,7 +6,7 @@ import {
     NB_PHASES_MAX, NB_PHASES_MIN, TAUX_VISE_DEFAUT,
 } from '../utils/suggestionCycle';
 import type { PhasageCycle } from '../utils/suggestionCycle';
-import { proposerAdaptatifs, PASSAGES_MAX } from '../utils/adaptatifsVerticaux';
+import { proposerAdaptatifs, PASSAGES_MAX, TAUX_VISE_ADAPTATIFS } from '../utils/adaptatifsVerticaux';
 import type { AdaptatifPropose, ModeAdaptatifs } from '../utils/adaptatifsVerticaux';
 import type { ActionMicro } from '../types/projet';
 import './SuggestionCycleDialog.css';
@@ -34,7 +34,12 @@ export interface SuggestionCycleDialogProps {
     /** Inscrit des conditions dans la table, après avoir vidé les lignes à remplacer ; renvoie le nombre inscrit. */
     ajouterActions?: (lignes: Partial<Omit<ActionMicro, 'id'>>[], remplacer?: (row: ActionMicro) => boolean) => number;
     readOnly?: boolean;
+    /** Rendu dans une fenêtre détachée du navigateur (usePopupWindow), sans cadre de modale. */
+    detachee?: boolean;
 }
+
+/** Titre de la fenêtre, partagé avec la fenêtre détachée. */
+export const titreSuggestionCycle = (planName: string) => `Suggérer une durée de cycle${planName ? ` — ${planName}` : ''}`;
 
 /** Saisie en cours : le dégagement reste vide tant que la matrice ne dit rien. */
 interface Brouillon {
@@ -57,7 +62,7 @@ const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDig
 const SuggestionCycleDialog = ({
     isOpen, onClose, planName, groups, conflictMatrix, cycleLength, getTrafficData,
     trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
-    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, readOnly = false,
+    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, readOnly = false, detachee = false,
 }: SuggestionCycleDialogProps) => {
     const [remplirBulle, setRemplirBulle] = useState(true);
     // Chemin critique lu sur le diagramme, quand il est renseigné : phases,
@@ -195,6 +200,7 @@ const SuggestionCycleDialog = ({
     // Adaptatifs verticaux proposés, un par phase, sur la disposition prévue :
     // diagramme actuel, déterminants proposés et groupes placés avec le cycle.
     const [modeAV, setModeAV] = useState<ModeAdaptatifs>('iteratif');
+    const [tauxAV, setTauxAV] = useState(TAUX_VISE_ADAPTATIFS);
     const propositionAV = useMemo(() => {
         if (!resultat || !calculable || !complet || !resultat.cycleSuggere) return null;
         const dets = brouillon.determinants as number[];
@@ -209,9 +215,9 @@ const SuggestionCycleDialog = ({
             const p = aPlacer.find(x => x.id === g.id);
             return p ? { ...base, debut: p.debut, vert: p.fin - p.debut } : { ...base, debut: 0, vert: 0 };
         });
-        return proposerAdaptatifs(dets, disposition, resultat.cycleSuggere, brouillon.tauxVise, modeAV);
+        return proposerAdaptatifs(dets, disposition, resultat.cycleSuggere, tauxAV, modeAV);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [resultat, calculable, complet, brouillon, groups, getTrafficData, placements, modeAV]);
+    }, [resultat, calculable, complet, brouillon, groups, getTrafficData, placements, modeAV, tauxAV]);
     const avUtiles = propositionAV?.adaptatifs.filter(a => a.duree > 0) ?? [];
     const [avInscrits, setAvInscrits] = useState<string[] | null>(null);
     // Ligne de condition renseignée avec ce que l'assistant sait de la zone ;
@@ -274,9 +280,8 @@ const SuggestionCycleDialog = ({
 
     const nomGroupe = (id: number) => groups.find(g => g.id === id)?.name || `GF${id}`;
 
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} nonModale className="suggestion-cycle" overlayClassName="suggestion-cycle-overlay"
-            title={`Suggérer une durée de cycle${planName ? ` — ${planName}` : ''}`}>
+    const corps = (
+        <>
             <div className="sc-defilement">
             <p className="sc-intro">
                 Choisissez, dans l'ordre du cycle, le <b>groupe déterminant</b> de chaque phase : le courant le plus
@@ -413,7 +418,12 @@ const SuggestionCycleDialog = ({
 
             {propositionAV && propositionAV.adaptatifs.length > 0 && (
                 <div className="sc-associes sc-adaptatifs" aria-label="Adaptatifs verticaux">
-                    <h4>Adaptatifs verticaux (proposition) — taux visé {brouillon.tauxVise} %</h4>
+                    <h4>Adaptatifs verticaux (proposition)</h4>
+                    <label className="sc-nb" title="Une phase ne se contracte que lorsque sa demande est servie : le taux visé peut être plus haut que pour le cycle">
+                        Taux de saturation visé pour les zones :
+                        <input type="number" min={50} max={99} value={tauxAV} aria-label="Taux visé des adaptatifs"
+                            onChange={e => setTauxAV(Math.max(50, Math.min(99, parseInt(e.target.value, 10) || TAUX_VISE_ADAPTATIFS)))} /> %
+                    </label>
                     <label className="sc-nb">
                         Calcul :
                         <select value={modeAV} aria-label="Mode de calcul des adaptatifs" onChange={e => setModeAV(e.target.value as ModeAdaptatifs)}>
@@ -436,11 +446,11 @@ const SuggestionCycleDialog = ({
                                     <td>{a.duree > 0 ? `${a.duree} s` : '—'}</td>
                                     <td>{pct(a.capNominale)}</td>
                                     <td>{a.duree > 0 ? pct(a.capContractee) : '—'}</td>
-                                    <td className={a.capSeule !== null && a.capSeule > brouillon.tauxVise ? 'sc-depasse' : ''}>{a.duree > 0 ? pct(a.capSeule) : '—'}</td>
+                                    <td className={a.capSeule !== null && a.capSeule > tauxAV ? 'sc-depasse' : ''}>{a.duree > 0 ? pct(a.capSeule) : '—'}</td>
                                     <td className="sc-gauche">{a.limite
-                                        ? (a.limite.raison === 'mini' ? `vert mini de ${nomGroupe(a.limite.id)}`
-                                            : a.limite.raison === 'degagement' ? `début ou fin de vert de ${nomGroupe(a.limite.id)}`
-                                            : `Cap. U de ${nomGroupe(a.limite.id)} à ${brouillon.tauxVise} %`)
+                                        ? (a.limite.raison === 'mini' ? `vert mini de ${court(a.limite.id)}`
+                                            : a.limite.raison === 'degagement' ? `début ou fin de vert de ${court(a.limite.id)}`
+                                            : `Cap. U de ${court(a.limite.id)} à ${tauxAV} %`)
                                         : '—'}</td>
                                 </tr>
                             ))}
@@ -491,6 +501,22 @@ const SuggestionCycleDialog = ({
                 </button>
             </div>
             </div>
+        </>
+    );
+
+    // Fenêtre détachée (déplaçable sur un autre écran) : le contenu seul, la
+    // fenêtre du navigateur porte le titre. Sinon, fenêtre non modale de la page.
+    if (detachee) {
+        return isOpen ? (
+            <div className="modal-content suggestion-cycle sc-detachee">
+                <div className="modal-body">{corps}</div>
+            </div>
+        ) : null;
+    }
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} nonModale className="suggestion-cycle" overlayClassName="suggestion-cycle-overlay"
+            title={titreSuggestionCycle(planName)}>
+            {corps}
         </Modal>
     );
 };

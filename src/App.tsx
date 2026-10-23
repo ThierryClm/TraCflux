@@ -80,7 +80,7 @@ import type { CreatedIntersection } from './components/CreateGreenWaveDialog';
 import type { TrafficConflict } from './utils/conflictUtils';
 import type { HoveredConflict } from './components/ConflictList';
 import type { VertUtileSurvole } from './components/TimelineDiagram';
-import SuggestionCycleDialog from './components/SuggestionCycleDialog';
+import SuggestionCycleDialog, { titreSuggestionCycle } from './components/SuggestionCycleDialog';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
@@ -690,6 +690,23 @@ function App() {
     // Suggestion de durée du cycle (menu Diagramme) : possible dès que le plan
     // affiché a du trafic dans son jeu.
     const [suggestionCycleModal, setSuggestionCycleModal] = useState(false);
+    // Elle s'ouvre en fenêtre détachée, déplaçable sur un autre écran pour
+    // laisser le diagramme dégagé ; dans la page seulement si le navigateur
+    // bloque la fenêtre.
+    const suggestionCyclePopup = usePopupWindow({
+        geometryKey: 'suggestionCycle',
+        isOpen: suggestionCycleModal,
+        onClose: () => setSuggestionCycleModal(false),
+        title: titreSuggestionCycle(activePFName),
+        width: 820,
+        height: 780
+    });
+    // Redemander la fenêtre déjà ouverte la ramène au premier plan (ou retente
+    // l'ouverture qu'un bloqueur avait refusée).
+    const ouvrirSuggestionCycle = () => {
+        if (suggestionCycleModal) suggestionCyclePopup.retryOpen();
+        else setSuggestionCycleModal(true);
+    };
     // Nouveau plan de feu (menu Diagramme) : choix du jeu de trafic du plan créé.
     const [nouveauPlanModal, setNouveauPlanModal] = useState(false);
     const jeuxAvecDonnees = useMemo(() => trafficDatasetNames.filter(n =>
@@ -1461,7 +1478,7 @@ function App() {
                 break;
             }
             case 'cycleSuggestion':
-                setSuggestionCycleModal(true);
+                ouvrirSuggestionCycle();
                 break;
             case 'compareCapacity':
                 setCapacityCompareModal(true);
@@ -2062,6 +2079,24 @@ function App() {
         return () => { if (!popup.closed) popup.cancelAnimationFrame(raf); };
     }, [showFloatingLegend, legendPopup.renderToPopup]);
 
+    // Assistant « Suggérer une durée de cycle », rendu dans sa fenêtre détachée.
+    const propsSuggestionCycle = useMemo(() => ({
+        onClose: () => setSuggestionCycleModal(false),
+        planName: activePFName,
+        groups, conflictMatrix, cycleLength, getTrafficData,
+        trafficDatasetName: activeTrafficDataset,
+        phasageCycle, setPhasageCycle, setCycleLength, setPhasageBulleCount, setPhasageBulleTimes,
+        updateGroupParams, intersectionArrows, ajouterActions,
+        readOnly: dossierReadOnly || activePfReadOnly,
+    }), [activePFName, groups, conflictMatrix, cycleLength, getTrafficData, activeTrafficDataset, phasageCycle, setPhasageCycle,
+        setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows, ajouterActions,
+        dossierReadOnly, activePfReadOnly]);
+    const renderSuggestionCycle = suggestionCyclePopup.renderToPopup;
+    useEffect(() => {
+        if (!suggestionCycleModal) return;
+        renderSuggestionCycle(<SuggestionCycleDialog {...propsSuggestionCycle} isOpen detachee />);
+    }, [suggestionCycleModal, propsSuggestionCycle, renderSuggestionCycle]);
+
     // Render capacity comparison into its detached popup window
     useEffect(() => {
         if (!capacityCompareModal) return;
@@ -2385,28 +2420,11 @@ function App() {
                 jeuxAvecDonnees={jeuxAvecDonnees}
                 jeuActif={activeTrafficDataset}
                 onAssocier={setActiveTrafficDataset}
-                onSuggererCycle={() => setSuggestionCycleModal(true)}
+                onSuggererCycle={ouvrirSuggestionCycle}
                 onOuvrirTrafic={() => { setSidebarVisible(true); setActiveTab('traffic'); }}
             />
-            <SuggestionCycleDialog
-                isOpen={suggestionCycleModal}
-                onClose={() => setSuggestionCycleModal(false)}
-                planName={pfTabs.find(pf => pf.id === activePFId)?.name || ''}
-                groups={groups}
-                conflictMatrix={conflictMatrix}
-                cycleLength={cycleLength}
-                getTrafficData={getTrafficData}
-                trafficDatasetName={activeTrafficDataset}
-                phasageCycle={phasageCycle}
-                setPhasageCycle={setPhasageCycle}
-                setCycleLength={setCycleLength}
-                setPhasageBulleCount={setPhasageBulleCount}
-                setPhasageBulleTimes={setPhasageBulleTimes}
-                updateGroupParams={updateGroupParams}
-                intersectionArrows={intersectionArrows}
-                ajouterActions={ajouterActions}
-                readOnly={dossierReadOnly || activePfReadOnly}
-            />
+            {/* Repli dans la page quand le navigateur bloque la fenêtre détachée. */}
+            <SuggestionCycleDialog {...propsSuggestionCycle} isOpen={suggestionCycleModal && suggestionCyclePopup.bloquee} />
             <SupportDialogs
                 model={{
                         aboutModal, actionData, activePFId, activePfReadOnly, conflictMatrix,

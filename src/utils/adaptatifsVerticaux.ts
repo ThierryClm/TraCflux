@@ -25,6 +25,12 @@
 import { SATURATION_FLOW } from './capacityCalc';
 
 export const PASSAGES_MAX = 3;
+/**
+ * Taux de saturation visé par défaut pour les zones : 90 %, au-dessus des 85 %
+ * du calcul de cycle. Une phase ne se contracte que lorsque sa demande est
+ * servie : viser plus bas ne protégerait rien.
+ */
+export const TAUX_VISE_ADAPTATIFS = 90;
 
 export type ModeAdaptatifs = 'iteratif' | 'prudent';
 
