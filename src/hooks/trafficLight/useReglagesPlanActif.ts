@@ -6,6 +6,7 @@
 import { useCallback, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { PlanDeFeu } from '../../types/projet';
+import type { PhasageCycle } from '../../utils/suggestionCycle';
 
 interface EntreesReglagesPlan {
     pfTabs: PlanDeFeu[];
@@ -115,7 +116,19 @@ export const useReglagesPlanActif = ({ pfTabs, setPfTabs, activePFId }: EntreesR
         ));
     }, [activePFId, setPfTabs]);
 
+    // Phasage saisi pour la suggestion de durée du cycle (groupes déterminants).
+    const phasageCycle = useMemo(
+        () => pfTabs.find(pf => pf.id === activePFId)?.phasageCycle ?? null,
+        [pfTabs, activePFId]);
+
+    const setPhasageCycle = useCallback((phasage: PhasageCycle) => {
+        setPfTabs(prev => prev.map(pf =>
+            pf.id === activePFId ? { ...pf, phasageCycle: phasage } : pf
+        ));
+    }, [activePFId, setPfTabs]);
+
     return {
+        phasageCycle, setPhasageCycle,
         microCustomFields, updateMicroCustomField,
         phasageBulleCount, setPhasageBulleCount, phasageBulleTimes, setPhasageBulleTimes,
         phasageBubbleScale, setPhasageBubbleScale, phasageEllipseScale, setPhasageEllipseScale,

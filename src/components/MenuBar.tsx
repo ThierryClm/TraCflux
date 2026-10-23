@@ -110,6 +110,8 @@ export interface MenuBarProps {
     initialOpenMenu?: string | null;
     accountsEnabled?: boolean;
     pfCount?: number;
+    /** Le plan affiché a du trafic : la suggestion de durée du cycle est possible. */
+    traficRenseigne?: boolean;
 }
 
 const MenuBar = ({
@@ -129,7 +131,8 @@ const MenuBar = ({
     showMicroOnHover = true,
     initialOpenMenu = null,
     accountsEnabled = false,
-    pfCount = 0
+    pfCount = 0,
+    traficRenseigne = false
 }: MenuBarProps) => {
     const [openMenu, setOpenMenu] = useState<string | null>(initialOpenMenu);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
@@ -524,6 +527,12 @@ const MenuBar = ({
             label: 'Diagramme',
             disabled: !hasActiveProject,
             items: [
+                {
+                    label: 'Nouveau plan de feu...',
+                    action: 'newPF',
+                    disabled: !hasPermission('canDuplicate'),
+                    title: 'Plan vierge (verts, DA, conditions et variables micro vides), puis choix du jeu de trafic'
+                },
                 { label: 'Dupliquer le diagramme actif', action: 'duplicate', disabled: !hasPermission('canDuplicate') },
                 { label: 'Supprimer le diagramme actif', action: 'deleteActiveDiagram', disabled: !hasPermission('canModifyDiagram') },
                 { label: 'Déplacer un groupe de feu...', action: 'moveGroup', disabled: !hasPermission('canModifyDiagram') },
@@ -549,6 +558,14 @@ const MenuBar = ({
                 { label: 'Inserer...', action: 'insert', disabled: !hasPermission('canModifyDiagram') },
                 { label: 'Réduire...', action: 'reduce', disabled: !hasPermission('canModifyDiagram') },
                 { type: 'separator' },
+                {
+                    label: 'Suggérer une durée de cycle...',
+                    action: 'cycleSuggestion',
+                    disabled: !traficRenseigne,
+                    title: traficRenseigne
+                        ? 'Cycle de Webster à partir des groupes déterminants de chaque phase'
+                        : 'Renseignez le trafic du plan de feu (onglet Trafic)'
+                },
                 {
                     label: 'Comparer la capacité des plans de feu...',
                     action: 'compareCapacity',
