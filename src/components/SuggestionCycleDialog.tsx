@@ -39,7 +39,7 @@ interface Brouillon {
 const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
 /**
- * « Suggestion de durée du cycle… » (menu Diagramme). L'utilisateur choisit le
+ * « Suggérer une durée de cycle… » (menu Diagramme). L'utilisateur choisit le
  * groupe déterminant de chaque phase, dans l'ordre du cycle ; la fenêtre en
  * déduit Y, le temps perdu, les cycles minimal, de Webster et pour un taux de
  * saturation visé, et une répartition des verts par phase.
@@ -189,7 +189,8 @@ const SuggestionCycleDialog = ({
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} nonModale className="suggestion-cycle" overlayClassName="suggestion-cycle-overlay"
-            title={`Suggestion de durée du cycle${planName ? ` — ${planName}` : ''}`}>
+            title={`Suggérer une durée de cycle${planName ? ` — ${planName}` : ''}`}>
+            <div className="sc-defilement">
             <p className="sc-intro">
                 Choisissez, dans l'ordre du cycle, le <b>groupe déterminant</b> de chaque phase : le courant le plus
                 chargé de la phase. Le dégagement vers la phase suivante est proposé par la matrice ; corrigez-le
@@ -252,8 +253,8 @@ const SuggestionCycleDialog = ({
                                             const degagements = [...b.degagements];
                                             degagements[i] = e.target.value;
                                             return { ...b, degagements };
-                                        })} /> s → phase {suivante}
-                                    {manque && det !== null && <span className="sc-note"> case vide dans la matrice : à préciser</span>}
+                                        })} /> s → ph. {suivante}
+                                    {manque && det !== null && <span className="sc-note"> à préciser</span>}
                                 </td>
                             </tr>
                         );
@@ -295,9 +296,11 @@ const SuggestionCycleDialog = ({
                 </div>
             )}
 
-            <label className="sc-nb">
+            </div>
+            <div className="sc-pied">
+            <label className="sc-nb" title="Une bulle par phase, au milieu du vert de son groupe déterminant">
                 <input type="checkbox" checked={remplirBulle} onChange={e => setRemplirBulle(e.target.checked)} />
-                Modifier ou pré-remplir le phasage bulle (une bulle par phase, au milieu du vert de son déterminant)
+                Modifier ou pré-remplir le phasage bulle
             </label>
 
             <div className="modal-actions">
@@ -309,8 +312,9 @@ const SuggestionCycleDialog = ({
                 <button className="modal-btn modal-btn-primary"
                     disabled={!calculable || resultat?.cycleSuggere == null || readOnly}
                     onClick={() => { if (resultat?.cycleSuggere) { if (resultat.cycleSuggere !== cycleLength) setCycleLength(resultat.cycleSuggere); enregistrer(); } }}>
-                    Appliquer le cycle{resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
+                    Appliquer le cycle{calculable && resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
                 </button>
+            </div>
             </div>
         </Modal>
     );

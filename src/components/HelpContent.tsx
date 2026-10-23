@@ -457,7 +457,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Réduire :</strong> Réduit la plage de temps dans le cycle à une position donnée</li>
                     <li><strong>Déplacer un groupe :</strong> Déplace un groupe vers une nouvelle position. <em>Cette action synchronise automatiquement les données (diagramme, matrice, actions, données de trafic) dans tous les plans de feux.</em> La fenêtre reste ouverte après chaque déplacement pour enchaîner plusieurs opérations ; seuls la croix ou le bouton Annuler la ferment.</li>
                     <li><strong>Intégrer un bi-Carrefour :</strong> Permet de séparer visuellement le carrefour en deux zones en désignant un groupe de feu de séparation. Une ligne blanche horizontale et verticale apparaît dans la matrice des temps interverts (onglet Configuration et onglet Matrice), ainsi qu'une ligne blanche de séparation dans le diagramme du plan de feu. Le menu bascule ensuite en « Rétablir en uni-carrefour » pour supprimer la séparation. Cette option est sauvegardée avec le projet.</li>
-                    <li><strong>Suggestion de durée du cycle :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase (voir la section du même nom)</li>
+                    <li><strong>Suggérer une durée de cycle :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase (voir la section du même nom)</li>
                     <li><strong>Options :</strong> Affiche la légende visuelle des actions</li>
                 </ul>
             </section>
@@ -614,8 +614,8 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
             </section>
 
             <section className="help-section">
-                <h4>Suggestion de durée du cycle</h4>
-                <p>Le menu <strong>Diagramme → Suggestion de durée du cycle…</strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
+                <h4>Suggérer une durée de cycle</h4>
+                <p>Le menu <strong>Diagramme → Suggérer une durée de cycle…</strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
                 <ul>
                     <li><strong>Phasage :</strong> choisissez le nombre de phases (2 à 6), puis, dans l'ordre du cycle, le <strong>groupe déterminant</strong> de chaque phase : son courant le plus chargé.</li>
                     <li><strong>Chemin critique proposé :</strong> si le diagramme est déjà renseigné (et qu'aucun phasage n'est enregistré pour le plan), le tableau est pré-rempli : phases lues sur le diagramme, groupe à la plus forte capacité utilisée dans chaque phase (pour une phase de piétons, la traversée la plus défavorable) et dégagements effectifs entre phases. C'est une règle générale, pas une certitude : vérifiez et corrigez si besoin. Le bouton <em>Relire le diagramme</em> refait la détection.</li>

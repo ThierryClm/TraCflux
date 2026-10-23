@@ -559,7 +559,7 @@ const MenuBar = ({
                 { label: 'Réduire...', action: 'reduce', disabled: !hasPermission('canModifyDiagram') },
                 { type: 'separator' },
                 {
-                    label: 'Suggestion de durée du cycle...',
+                    label: 'Suggérer une durée de cycle...',
                     action: 'cycleSuggestion',
                     disabled: !traficRenseigne,
                     title: traficRenseigne
