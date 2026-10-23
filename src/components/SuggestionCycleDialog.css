@@ -1,0 +1,13 @@
+.suggestion-cycle .sc-intro { font-size: 0.9em; margin: 0 0 10px; line-height: 1.4; }
+.suggestion-cycle .sc-nb { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 0.9em; }
+.suggestion-cycle .sc-nb input[type="number"] { width: 60px; margin-left: 0; }
+.suggestion-cycle .sc-table { width: 100%; border-collapse: collapse; font-size: 0.88em; margin: 6px 0 10px; }
+.suggestion-cycle .sc-table th, .suggestion-cycle .sc-table td { border: 1px solid var(--md-separator, #555); padding: 4px 6px; text-align: center; }
+.suggestion-cycle .sc-table td input[type="number"] { width: 52px; margin-left: 0; padding: 3px 6px; }
+.suggestion-cycle .sc-table select { max-width: 230px; }
+.suggestion-cycle .sc-manque { background: rgba(255, 152, 0, 0.18); }
+.suggestion-cycle .sc-note { color: var(--md-muted, #aaa); font-size: 0.9em; }
+.suggestion-cycle .sc-attente { color: var(--md-muted, #aaa); font-style: italic; }
+.suggestion-cycle .sc-alerte { color: #e57373; font-weight: bold; }
+.suggestion-cycle .sc-resultat { border-left: 4px solid #4ecdc4; padding: 6px 12px; margin: 8px 0; font-size: 0.92em; }
+.suggestion-cycle .sc-resultat ul { margin: 4px 0; padding-left: 20px; }

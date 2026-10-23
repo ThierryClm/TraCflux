@@ -710,7 +710,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         microCustomFields, updateMicroCustomField,
         phasageBulleCount, setPhasageBulleCount, phasageBulleTimes, setPhasageBulleTimes,
         phasageBubbleScale, setPhasageBubbleScale, phasageEllipseScale, setPhasageEllipseScale,
-        phasageBubbleRatio, setPhasageBubbleRatio
+        phasageBubbleRatio, setPhasageBubbleRatio,
+        phasageCycle, setPhasageCycle
     } = useReglagesPlanActif({ pfTabs, setPfTabs, activePFId });
 
     // Le nom visible d'un PF peut différer de la clé de son jeu de trafic.
@@ -1528,6 +1529,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         setPhasageEllipseScale,
         phasageBubbleRatio,
         setPhasageBubbleRatio,
+        phasageCycle,
+        setPhasageCycle,
         // PF (Plans de Feux) management
         pfTabs,
         activePFId,

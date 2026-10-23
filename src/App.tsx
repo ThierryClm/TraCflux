@@ -80,6 +80,7 @@ import type { CreatedIntersection } from './components/CreateGreenWaveDialog';
 import type { TrafficConflict } from './utils/conflictUtils';
 import type { HoveredConflict } from './components/ConflictList';
 import type { VertUtileSurvole } from './components/TimelineDiagram';
+import SuggestionCycleDialog from './components/SuggestionCycleDialog';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
 interface OptionsExportPng {
@@ -131,6 +132,8 @@ function App() {
         phasageBulleTimes,
         setPhasageBulleCount,
         setPhasageBulleTimes,
+        phasageCycle,
+        setPhasageCycle,
         phasageBubbleScale,
         phasageEllipseScale,
         setPhasageBubbleScale,
@@ -681,6 +684,10 @@ function App() {
     // Local input states for validation on Enter/blur
     const [groupCountInput, setGroupCountInput] = useState(groups.length.toString());
     const [cycleLengthInput, setCycleLengthInput] = useState(cycleLength.toString());
+    // Suggestion de durée du cycle (menu Diagramme) : possible dès que le plan
+    // affiché a du trafic dans son jeu.
+    const [suggestionCycleModal, setSuggestionCycleModal] = useState(false);
+    const traficRenseigne = useMemo(() => groups.some(g => (Number(getTrafficData(g.id)?.trafficVol) || 0) > 0), [groups, getTrafficData]);
 
     // Mise en page du dossier imprimé : orientation, largeur de la feuille,
     // largeurs relevées sur le tableau des conditions (cf. hooks/useImpressionDossier).
@@ -1439,6 +1446,9 @@ function App() {
             }
             case 'help':
                 setHelpModal(true);
+                break;
+            case 'cycleSuggestion':
+                setSuggestionCycleModal(true);
                 break;
             case 'compareCapacity':
                 setCapacityCompareModal(true);
@@ -2207,6 +2217,7 @@ function App() {
                     showMicroOnHover={showMicroOnHover}
                     initialOpenMenu={!hasActiveProject ? 'fichier' : null}
                     pfCount={pfTabs.length}
+                    traficRenseigne={traficRenseigne}
                 />
             <WelcomeScreen
                 hasActiveProject={hasActiveProject}
@@ -2354,6 +2365,20 @@ function App() {
                 }}
             />
 
+            <SuggestionCycleDialog
+                isOpen={suggestionCycleModal}
+                onClose={() => setSuggestionCycleModal(false)}
+                planName={pfTabs.find(pf => pf.id === activePFId)?.name || ''}
+                groups={groups}
+                conflictMatrix={conflictMatrix}
+                cycleLength={cycleLength}
+                getTrafficData={getTrafficData}
+                trafficDatasetName={activeTrafficDataset}
+                phasageCycle={phasageCycle}
+                setPhasageCycle={setPhasageCycle}
+                setCycleLength={setCycleLength}
+                readOnly={dossierReadOnly || activePfReadOnly}
+            />
             <SupportDialogs
                 model={{
                         aboutModal, actionData, activePFId, activePfReadOnly, conflictMatrix,

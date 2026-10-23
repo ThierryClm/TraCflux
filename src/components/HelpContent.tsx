@@ -456,6 +456,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Réduire :</strong> Réduit la plage de temps dans le cycle à une position donnée</li>
                     <li><strong>Déplacer un groupe :</strong> Déplace un groupe vers une nouvelle position. <em>Cette action synchronise automatiquement les données (diagramme, matrice, actions, données de trafic) dans tous les plans de feux.</em> La fenêtre reste ouverte après chaque déplacement pour enchaîner plusieurs opérations ; seuls la croix ou le bouton Annuler la ferment.</li>
                     <li><strong>Intégrer un bi-Carrefour :</strong> Permet de séparer visuellement le carrefour en deux zones en désignant un groupe de feu de séparation. Une ligne blanche horizontale et verticale apparaît dans la matrice des temps interverts (onglet Configuration et onglet Matrice), ainsi qu'une ligne blanche de séparation dans le diagramme du plan de feu. Le menu bascule ensuite en « Rétablir en uni-carrefour » pour supprimer la séparation. Cette option est sauvegardée avec le projet.</li>
+                    <li><strong>Suggestion de durée du cycle :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase (voir la section du même nom)</li>
                     <li><strong>Options :</strong> Affiche la légende visuelle des actions</li>
                 </ul>
             </section>
@@ -608,6 +609,18 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Données trafic :</strong> Les données V.Utile, Cap.U, Retard et File d'attente sont toujours affichées. Les valeurs inhibées par les actions cochées apparaissent en grisé.</li>
                     <li><strong>Tout coché / Tout décoché</strong> (en tête de la liste <em>Scénario</em>) : Scénarios fixes qui cochent ou décochent toutes les actions rejouées. Un plan sans scénario choisi affiche celui qui correspond à ses cases.</li>
                     <li><strong>Impression des scénarios :</strong> Les scénarios enregistrés de tous les plans de feu s'impriment dans le dossier (case <em>Scénarios</em>), que l'onglet Simulation soit ouvert ou non. Seule la version enregistrée s'imprime : enregistre tes modifications avant. Voir « Impression du dossier », plus bas.</li>
+                </ul>
+            </section>
+
+            <section className="help-section">
+                <h4>Suggestion de durée du cycle</h4>
+                <p>Le menu <strong>Diagramme → Suggestion de durée du cycle…</strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
+                <ul>
+                    <li><strong>Phasage :</strong> choisissez le nombre de phases (2 à 6), puis, dans l'ordre du cycle, le <strong>groupe déterminant</strong> de chaque phase : son courant le plus chargé.</li>
+                    <li><strong>Dégagements :</strong> le dégagement d'une phase vers la suivante est proposé par la matrice des temps interverts, du déterminant d'une phase vers celui de la suivante. Il reste modifiable : le dégagement le plus contraignant peut venir d'un autre groupe de la phase. Une case vide de la matrice est signalée en orange.</li>
+                    <li><strong>Résultat :</strong> y = trafic / (1 800 × coefficient de voie) pour chaque phase, Y = Σ y, temps perdu L = Σ dégagements ; cycle minimal L / (1 − Y), cycle optimal de Webster (1,5 L + 5) / (1 − Y), cycle tenant un taux de saturation visé (85 % par défaut), et verts proposés par phase, proportionnels aux y et jamais sous le vert minimum. Une alerte s'affiche quand Y atteint 0,9 : le carrefour est saturé.</li>
+                    <li><strong>Boutons :</strong> <em>Appliquer le cycle</em> règle la durée du cycle du plan (annulable par Ctrl+Z) ; <em>Enregistrer le phasage</em> garde les groupes déterminants avec le plan de feu. Les verts restent à placer dans le diagramme.</li>
+                    <li><strong>Phasage bulle :</strong> une fois le diagramme saisi, le bouton <em>Initialiser depuis les groupes déterminants</em> du panneau de réglage du phasage bulle crée une bulle par phase, au milieu du vert de son groupe déterminant.</li>
                 </ul>
             </section>
 

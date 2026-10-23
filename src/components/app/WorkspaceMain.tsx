@@ -1,4 +1,5 @@
 import TimelineDiagram from '../TimelineDiagram';
+import { instantsPhasageBulle } from '../../utils/suggestionCycle';
 import type { TimelineDiagramProps } from '../TimelineDiagram';
 import type { PhasageBulleProps } from '../PhasageBulle';
 import type useUILayout from '../../hooks/useUILayout';
@@ -461,6 +462,26 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                             </div>
                                         ))}
                                     </div>
+                                    {(() => {
+                                        // Groupes déterminants saisis dans « Suggestion de durée du cycle » :
+                                        // une bulle par phase, au milieu du vert de son déterminant.
+                                        const phasage = pfTabs.find(p => p.id === activePFId)?.phasageCycle;
+                                        if (!phasage || phasage.determinants.length < 2) return null;
+                                        return (
+                                            <button
+                                                className="modal-btn modal-btn-secondary phasage-depuis-determinants"
+                                                style={{ padding: '3px 10px', fontSize: '0.8em', marginTop: '8px', width: '100%' }}
+                                                title={tip("Une bulle par phase, placée au milieu du vert de son groupe déterminant (menu Diagramme → Suggestion de durée du cycle)")}
+                                                onClick={() => {
+                                                    const instants = instantsPhasageBulle(phasage.determinants, groups, cycleLength);
+                                                    const times = [...instants, 0, 0, 0, 0, 0, 0].slice(0, 6);
+                                                    setBrouillonPhasage({ count: phasage.determinants.length, times });
+                                                }}
+                                            >
+                                                Initialiser depuis les groupes déterminants
+                                            </button>
+                                        );
+                                    })()}
                                     <div style={{ display: 'flex', gap: '6px', marginTop: '8px', justifyContent: 'flex-end' }}>
                                         <button
                                             className="modal-btn modal-btn-secondary"
