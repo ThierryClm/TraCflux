@@ -2377,6 +2377,9 @@ function App() {
                 phasageCycle={phasageCycle}
                 setPhasageCycle={setPhasageCycle}
                 setCycleLength={setCycleLength}
+                setPhasageBulleCount={setPhasageBulleCount}
+                setPhasageBulleTimes={setPhasageBulleTimes}
+                updateGroupParams={updateGroupParams}
                 readOnly={dossierReadOnly || activePfReadOnly}
             />
             <SupportDialogs

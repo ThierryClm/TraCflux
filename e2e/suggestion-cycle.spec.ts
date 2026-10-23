@@ -13,6 +13,13 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
     await item.click();
     const fenetre = page.locator('.modal-content.suggestion-cycle');
     await expect(fenetre).toBeVisible();
+    // Fenêtre non modale : le diagramme reste visible et cliquable derrière.
+    const sousLaSouris = await page.evaluate(() => {
+        const r = document.querySelector('.timeline-row-track')!.getBoundingClientRect();
+        const el = document.elementFromPoint(r.left + 20, r.top + r.height / 2);
+        return { overlay: !!el?.closest('.modal-overlay'), diagramme: !!el?.closest('.timeline-row-track, .timeline-row') };
+    });
+    expect(sousLaSouris).toEqual({ overlay: false, diagramme: true });
 
     // Deux phases : rue Balise nord (GF1), puis rue Pestre (GF8).
     await fenetre.getByLabel('Groupe déterminant de la phase 1').selectOption('1');
@@ -22,8 +29,9 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
         if (!(await c.inputValue())) await c.fill(valeur);
     }
     const webster = fenetre.getByText(/Cycle optimal de Webster/);
-    await expect(webster).toContainText(/\d+ s/);
-    const cycle = Number(((await webster.textContent()) || '').match(/: (\d+) s/)?.[1]);
+    await expect(webster).toContainText(/cycle proposé de \d+ s/);
+    const cycle = Number(((await webster.textContent()) || '').match(/cycle proposé de (\d+) s/)?.[1]);
+    expect(cycle % 10).toBe(0);
     expect(cycle).toBeGreaterThan(20);
 
     await fenetre.getByRole('button', { name: `Appliquer le cycle (${cycle} s)` }).click();

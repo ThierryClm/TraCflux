@@ -49,4 +49,18 @@ describe('Modal', () => {
         fireEvent.click(screen.getByRole('button'));
         expect(onClose).toHaveBeenCalledTimes(2);
     });
+
+    it('non modale : un clic à côté ne la ferme pas, et le bandeau la déplace', () => {
+        const onClose = vi.fn();
+        const { container } = render(<Modal isOpen nonModale onClose={onClose} title="Titre">Contenu</Modal>);
+        const overlay = container.querySelector('.modal-overlay') as HTMLElement;
+        expect(overlay).toHaveClass('modal-non-modale');
+        fireEvent.click(overlay);
+        expect(onClose).not.toHaveBeenCalled();
+        const bandeau = container.querySelector('.modal-header') as HTMLElement;
+        fireEvent.mouseDown(bandeau, { clientX: 100, clientY: 100 });
+        fireEvent.mouseMove(document, { clientX: 140, clientY: 70 });
+        fireEvent.mouseUp(document);
+        expect((container.querySelector('.modal-content') as HTMLElement).style.transform).toBe('translate(40px, -30px)');
+    });
 });

@@ -11,3 +11,18 @@
 .suggestion-cycle .sc-alerte { color: #e57373; font-weight: bold; }
 .suggestion-cycle .sc-resultat { border-left: 4px solid #4ecdc4; padding: 6px 12px; margin: 8px 0; font-size: 0.92em; }
 .suggestion-cycle .sc-resultat ul { margin: 4px 0; padding-left: 20px; }
+
+/* Non modale, posée en bas à droite : le diagramme reste lisible pendant le
+   choix des groupes déterminants. Déplaçable par son bandeau. */
+.modal-overlay.suggestion-cycle-overlay {
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding: 0 16px 16px 0;
+}
+.modal-content.suggestion-cycle {
+    max-width: 760px;
+    width: min(760px, 96vw);
+    max-height: 70vh;
+}
+.suggestion-cycle .sc-intro { font-size: 0.85em; }
+.suggestion-cycle .sc-table { font-size: 0.84em; }

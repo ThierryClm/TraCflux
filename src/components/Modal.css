@@ -338,3 +338,19 @@ body.sepia-mode .modal-header {
     outline: none;
     background: rgba(255, 255, 255, .2);
 }
+
+/* Fenêtre non modale : la page reste visible et utilisable derrière (pas de
+   voile sombre, les clics la traversent) ; seule la fenêtre capte la souris. */
+.modal-overlay.modal-non-modale {
+    background: transparent;
+    pointer-events: none;
+}
+
+.modal-overlay.modal-non-modale .modal-content {
+    pointer-events: auto;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+}
+
+.modal-header-deplacable {
+    cursor: move;
+}

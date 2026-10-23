@@ -59,12 +59,14 @@ export interface ResultatCycle {
     L: number;
     /** null quand Y ≥ 1 : aucun cycle ne suffit. */
     cycleMinimal: number | null;
-    /** Valeur exacte de Webster, avant arrondi à la seconde. */
+    /** Valeur exacte de Webster, avant arrondi. */
     websterExact: number | null;
     cycleWebster: number | null;
+    /** Cycle proposé : Webster arrondi à la dizaine supérieure. */
+    cycleSuggere: number | null;
     cycleTauxVise: number | null;
     sature: boolean;
-    /** Verts proposés pour le cycle de Webster, arrondis à la seconde. */
+    /** Verts proposés pour le cycle proposé, arrondis à la seconde. */
     verts: number[];
     /** Phases dont le dégagement vers la suivante n'est pas renseigné. */
     degagementsManquants: number[];
@@ -83,6 +85,8 @@ export const degagementsParDefaut = (determinants: number[], matrice: Matrice | 
     determinants.map((d, i) => degagementMatrice(matrice, d, determinants[(i + 1) % determinants.length]));
 
 const arrondi = (v: number) => Math.round(v);
+/** Le cycle proposé s'arrondit à la dizaine supérieure (65,6 s → 70 s). */
+export const dizaineSuperieure = (v: number) => Math.ceil(v / 10 - 1e-9) * 10;
 /** Un cycle « minimal » ne s'arrondit jamais vers le bas. */
 const parExces = (v: number) => Math.ceil(v - 1e-9);
 
@@ -112,12 +116,13 @@ export const calculerSuggestionCycle = (
     const cycleMinimal = possible ? parExces(L / (1 - Y)) : null;
     const websterExact = possible ? (1.5 * L + 5) / (1 - Y) : null;
     const cycleWebster = websterExact === null ? null : arrondi(websterExact);
+    const cycleSuggere = websterExact === null ? null : dizaineSuperieure(websterExact);
     const cycleTauxVise = Y < taux && taux > 0 ? parExces(L / (1 - Y / taux)) : null;
 
     return {
-        phases, Y, L, cycleMinimal, websterExact, cycleWebster, cycleTauxVise,
+        phases, Y, L, cycleMinimal, websterExact, cycleWebster, cycleSuggere, cycleTauxVise,
         sature: Y >= Y_SATURE,
-        verts: cycleWebster ? repartirVerts(phases, cycleWebster - L) : phases.map(p => p.vertMini),
+        verts: cycleSuggere ? repartirVerts(phases, cycleSuggere - L) : phases.map(p => p.vertMini),
         degagementsManquants,
     };
 };
@@ -162,3 +167,18 @@ export const instantsPhasageBulle = (
     if (!g || cycle <= 0) return 0;
     return Math.floor((g.offset + g.durations.green / 2) % cycle);
 });
+
+/**
+ * Position des phases dans le cycle : la phase 1 ouvre à 0 s, chaque suivante
+ * après le vert de la précédente et son dégagement. Renvoie le début de vert
+ * de chaque phase.
+ */
+export const debutsDesPhases = (verts: number[], degagements: number[]): number[] => {
+    const debuts: number[] = [];
+    let t = 0;
+    verts.forEach((v, i) => {
+        debuts.push(t);
+        t += v + (degagements[i] || 0);
+    });
+    return debuts;
+};

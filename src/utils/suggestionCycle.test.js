@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculerSuggestionCycle, degagementsParDefaut, instantsPhasageBulle, repartirVerts } from './suggestionCycle';
+import { calculerSuggestionCycle, debutsDesPhases, degagementsParDefaut, dizaineSuperieure, instantsPhasageBulle, repartirVerts } from './suggestionCycle';
 
 // Cas du TD « carrefour en croix avec couloir bus d'approche », option A.
 const groupes = [
@@ -17,7 +17,7 @@ describe('suggestion de durée du cycle', () => {
         expect(degagementsParDefaut([1, 3, 4], matrice)).toEqual([null, 6, 6]);
     });
 
-    it('TD : Y = 0,558, L = 16 s, Webster 65,6 s arrondi à 66 s', () => {
+    it('TD : Y = 0,558, L = 16 s, Webster 65,6 s, cycle proposé 70 s', () => {
         const r = calculerSuggestionCycle({ determinants: [1, 3, 4], degagements: [4, 6, 6] }, groupes);
         expect(r.Y).toBeCloseTo(0.558, 3);
         expect(r.L).toBe(16);
@@ -26,8 +26,9 @@ describe('suggestion de durée du cycle', () => {
         expect(r.cycleMinimal).toBe(37);
         expect(r.cycleTauxVise).toBe(47);
         expect(r.sature).toBe(false);
-        expect(r.verts).toEqual([27, 6, 17]);
-        expect(r.verts.reduce((a, b) => a + b, 0) + r.L).toBe(66);
+        expect(r.cycleSuggere).toBe(70);
+        expect(r.verts).toEqual([29, 6, 19]);
+        expect(r.verts.reduce((a, b) => a + b, 0) + r.L).toBe(70);
     });
 
     it('un dégagement manquant est signalé', () => {
@@ -54,6 +55,16 @@ describe('suggestion de durée du cycle', () => {
         const v = repartirVerts([{ y: 0.5, vertMini: 8 }, { y: 0.01, vertMini: 10 }, { y: 0.2, vertMini: 8 }], 40);
         expect(v[1]).toBe(10);
         expect(v.reduce((a, b) => a + b, 0)).toBe(40);
+    });
+
+    it('arrondi à la dizaine supérieure', () => {
+        expect(dizaineSuperieure(65.6)).toBe(70);
+        expect(dizaineSuperieure(70)).toBe(70);
+        expect(dizaineSuperieure(70.2)).toBe(80);
+    });
+
+    it('début de vert de chaque phase, dégagements compris', () => {
+        expect(debutsDesPhases([30, 6, 18], [4, 6, 6])).toEqual([0, 34, 46]);
     });
 
     it('phasage bulle : milieu du vert de chaque déterminant', () => {

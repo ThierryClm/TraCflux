@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import type { Groupe, Matrice } from '../types/projet';
 import {
-    calculerSuggestionCycle, degagementMatrice, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
+    calculerSuggestionCycle, debutsDesPhases, degagementMatrice, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
     NB_PHASES_MAX, NB_PHASES_MIN, TAUX_VISE_DEFAUT,
 } from '../utils/suggestionCycle';
 import type { PhasageCycle } from '../utils/suggestionCycle';
@@ -21,6 +21,11 @@ export interface SuggestionCycleDialogProps {
     phasageCycle: PhasageCycle | null;
     setPhasageCycle: (phasage: PhasageCycle) => void;
     setCycleLength: (cycle: number) => void;
+    /** Phasage bulle du plan, rempli d'après les groupes déterminants (case à cocher). */
+    setPhasageBulleCount: (count: number) => void;
+    setPhasageBulleTimes: (times: number[]) => void;
+    /** Pré-remplissage du diagramme pour les déterminants sans vert (Déb/Fin vides). */
+    updateGroupParams: (id: number, params: { offset?: number; durations?: { green?: number } }) => void;
     readOnly?: boolean;
 }
 
@@ -41,8 +46,10 @@ const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDig
  */
 const SuggestionCycleDialog = ({
     isOpen, onClose, planName, groups, conflictMatrix, cycleLength, getTrafficData,
-    trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength, readOnly = false,
+    trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
+    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, readOnly = false,
 }: SuggestionCycleDialogProps) => {
+    const [remplirBulle, setRemplirBulle] = useState(true);
     const brouillonInitial = (): Brouillon => {
         if (phasageCycle && phasageCycle.determinants.length >= NB_PHASES_MIN) {
             return {
@@ -114,8 +121,46 @@ const SuggestionCycleDialog = ({
     const calculable = resultat !== null && resultat.degagementsManquants.length === 0 && !sansTrafic;
     const horsBornes = (c: number | null) => c !== null && (c < CYCLE_MIN_CONSEILLE || c > CYCLE_MAX_CONSEILLE);
 
+    // Disposition proposée : début de vert de chaque phase dans le cycle proposé.
+    const debuts = resultat && calculable ? debutsDesPhases(resultat.verts, resultat.phases.map((_, i) => degagementsNum[i] ?? 0)) : [];
+
+    // Déterminants sans vert dans le diagramme (Déb/Fin vides) : pré-remplis au
+    // fil de la saisie, à la position proposée, dès que la phase tient dans le
+    // cycle du plan. Les groupes déjà réglés ne sont jamais touchés.
+    const aPreremplir = !readOnly && resultat && calculable
+        ? resultat.phases
+            .map((p, i) => ({ id: p.determinant, offset: debuts[i], vert: resultat.verts[i] }))
+            .filter(x => {
+                const g = groups.find(gr => gr.id === x.id);
+                return g && !(g.durations?.green > 0) && x.offset + x.vert <= cycleLength;
+            })
+        : [];
+    const clePreremplissage = aPreremplir.map(x => `${x.id}:${x.offset}:${x.vert}`).join('|');
+    const [preremplis, setPreremplis] = useState<number[]>([]);
+    useEffect(() => {
+        if (!isOpen || !aPreremplir.length) return;
+        aPreremplir.forEach(x => updateGroupParams(x.id, { offset: x.offset, durations: { green: x.vert } }));
+        setPreremplis(p => [...new Set([...p, ...aPreremplir.map(x => x.id)])]);
+    }, [isOpen, clePreremplissage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Phasage bulle : milieu du vert de chaque déterminant, lu dans le diagramme
+    // s'il est réglé, sinon pris dans la disposition proposée.
+    const remplirPhasageBulle = () => {
+        if (!resultat || !complet) return;
+        const dets = brouillon.determinants as number[];
+        const lus = instantsPhasageBulle(dets, groups, cycleLength);
+        const instants = dets.map((id, i) => {
+            const g = groups.find(gr => gr.id === id);
+            if (g && g.durations?.green > 0) return lus[i];
+            return debuts[i] !== undefined ? Math.floor(debuts[i] + (resultat.verts[i] || 0) / 2) : 0;
+        });
+        setPhasageBulleCount(dets.length);
+        setPhasageBulleTimes([...instants, 0, 0, 0, 0, 0, 0].slice(0, 6));
+    };
+
     const enregistrer = () => {
         if (!complet) return;
+        if (remplirBulle) remplirPhasageBulle();
         setPhasageCycle({
             determinants: brouillon.determinants as number[],
             degagements: degagementsNum.map(d => (d === null || !Number.isFinite(d) ? 0 : d)),
@@ -126,7 +171,7 @@ const SuggestionCycleDialog = ({
     const nomGroupe = (id: number) => groups.find(g => g.id === id)?.name || `GF${id}`;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} className="modal-wide suggestion-cycle"
+        <Modal isOpen={isOpen} onClose={onClose} nonModale className="suggestion-cycle" overlayClassName="suggestion-cycle-overlay"
             title={`Suggestion de durée du cycle${planName ? ` — ${planName}` : ''}`}>
             <p className="sc-intro">
                 Choisissez, dans l'ordre du cycle, le <b>groupe déterminant</b> de chaque phase : le courant le plus
@@ -202,20 +247,26 @@ const SuggestionCycleDialog = ({
                     {resultat.cycleWebster !== null && (
                         <ul>
                             <li>Cycle minimal (saturation à 100 %) : <b>{resultat.cycleMinimal} s</b></li>
-                            <li>Cycle optimal de Webster (1,5 L + 5) / (1 − Y) : <b>{resultat.cycleWebster} s</b>
-                                <span className="sc-note"> ({fmt(resultat.websterExact ?? 0, 1)} s)</span>
-                                {horsBornes(resultat.cycleWebster) && <span className="sc-alerte"> hors de la plage usuelle {CYCLE_MIN_CONSEILLE}–{CYCLE_MAX_CONSEILLE} s</span>}</li>
+                            <li>Cycle optimal de Webster (1,5 L + 5) / (1 − Y) : {fmt(resultat.websterExact ?? 0, 1)} s,
+                                soit un <b>cycle proposé de {resultat.cycleSuggere} s</b> (dizaine supérieure)
+                                {horsBornes(resultat.cycleSuggere) && <span className="sc-alerte"> hors de la plage usuelle {CYCLE_MIN_CONSEILLE}–{CYCLE_MAX_CONSEILLE} s</span>}</li>
                             <li>Cycle pour une saturation de {brouillon.tauxVise} % : <b>{resultat.cycleTauxVise ?? '—'}{resultat.cycleTauxVise !== null ? ' s' : ''}</b></li>
                         </ul>
                     )}
                     {resultat.cycleWebster !== null && (
-                        <p>Verts proposés pour {resultat.cycleWebster} s :{' '}
+                        <p>Verts proposés pour {resultat.cycleSuggere} s :{' '}
                             {resultat.verts.map((v, i) => `phase ${i + 1} (${nomGroupe(resultat.phases[i].determinant)}) ${v} s`).join(' · ')}
                         </p>
                     )}
                     <p className="sc-note">Cycle actuel du plan : {cycleLength} s.</p>
+                    {preremplis.length > 0 && <p className="sc-note">Diagramme pré-rempli pour les groupes sans vert : {preremplis.map(id => `GF${id}`).join(', ')} (Ctrl+Z pour annuler).</p>}
                 </div>
             )}
+
+            <label className="sc-nb">
+                <input type="checkbox" checked={remplirBulle} onChange={e => setRemplirBulle(e.target.checked)} />
+                Modifier ou pré-remplir le phasage bulle (une bulle par phase, au milieu du vert de son déterminant)
+            </label>
 
             <div className="modal-actions">
                 <button className="modal-btn modal-btn-secondary" onClick={onClose}>Fermer</button>
@@ -224,9 +275,9 @@ const SuggestionCycleDialog = ({
                     Enregistrer le phasage
                 </button>
                 <button className="modal-btn modal-btn-primary"
-                    disabled={!calculable || resultat?.cycleWebster == null || readOnly || resultat.cycleWebster === cycleLength}
-                    onClick={() => { if (resultat?.cycleWebster) { enregistrer(); setCycleLength(resultat.cycleWebster); } }}>
-                    Appliquer le cycle{resultat?.cycleWebster ? ` (${resultat.cycleWebster} s)` : ''}
+                    disabled={!calculable || resultat?.cycleSuggere == null || readOnly}
+                    onClick={() => { if (resultat?.cycleSuggere) { if (resultat.cycleSuggere !== cycleLength) setCycleLength(resultat.cycleSuggere); enregistrer(); } }}>
+                    Appliquer le cycle{resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
                 </button>
             </div>
         </Modal>

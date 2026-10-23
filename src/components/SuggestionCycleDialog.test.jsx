@@ -10,17 +10,16 @@ const matrice = Array.from({ length: 5 }, () => Array(5).fill(''));
 matrice[1][2] = 4; matrice[2][3] = 6; matrice[3][0] = 6;
 
 const ouvrir = (props = {}) => {
-    const setCycleLength = vi.fn();
-    const setPhasageCycle = vi.fn();
+    const f = { setCycleLength: vi.fn(), setPhasageCycle: vi.fn(), setPhasageBulleCount: vi.fn(), setPhasageBulleTimes: vi.fn(), updateGroupParams: vi.fn() };
     render(<SuggestionCycleDialog isOpen onClose={() => {}} planName="PF1" groups={groups} conflictMatrix={matrice}
         cycleLength={70} getTrafficData={id => ({ trafficVol: trafic[id] })} trafficDatasetName="HPM"
-        phasageCycle={null} setPhasageCycle={setPhasageCycle} setCycleLength={setCycleLength} {...props} />);
-    return { setCycleLength, setPhasageCycle };
+        phasageCycle={null} {...f} {...props} />);
+    return f;
 };
 
 describe('suggestion de durée du cycle', () => {
     it('saisie des groupes déterminants, dégagement à préciser, cycle de Webster appliqué', () => {
-        const { setCycleLength, setPhasageCycle } = ouvrir();
+        const { setCycleLength, setPhasageCycle, setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams } = ouvrir();
         fireEvent.change(screen.getByLabelText('Nombre de phases'), { target: { value: '3' } });
         fireEvent.change(screen.getByLabelText('Groupe déterminant de la phase 1'), { target: { value: '1' } });
         fireEvent.change(screen.getByLabelText('Groupe déterminant de la phase 2'), { target: { value: '3' } });
@@ -32,22 +31,44 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByLabelText('Dégagement de la phase 3 vers la phase 1')).toHaveValue(6);
         fireEvent.change(screen.getByLabelText('Dégagement de la phase 1 vers la phase 2'), { target: { value: '4' } });
         expect(screen.getByText(/temps perdu L =/).textContent).toContain('16 s');
-        expect(screen.getByText(/Cycle optimal de Webster/).textContent).toContain('66 s');
-        fireEvent.click(screen.getByRole('button', { name: 'Appliquer le cycle (66 s)' }));
-        expect(setCycleLength).toHaveBeenCalledWith(66);
+        expect(screen.getByText(/Cycle optimal de Webster/).textContent).toMatch(/65,6 s.*cycle proposé de 70 s/);
+        // Les groupes ont déjà un vert : le diagramme n'est pas touché.
+        expect(updateGroupParams).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Appliquer le cycle (70 s)' }));
+        expect(setCycleLength).not.toHaveBeenCalled(); // le plan est déjà à 70 s
         expect(setPhasageCycle).toHaveBeenCalledWith({ determinants: [1, 3, 4], degagements: [4, 6, 6], tauxVise: 85 });
+        // Phasage bulle : une bulle par phase, au milieu du vert de chaque déterminant (lu dans le diagramme).
+        expect(setPhasageBulleCount).toHaveBeenCalledWith(3);
+        expect(setPhasageBulleTimes).toHaveBeenCalledWith([5, 5, 5, 0, 0, 0]);
     });
 
     it('reprend le phasage enregistré avec le plan', () => {
         ouvrir({ phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6], tauxVise: 80 } });
         expect(screen.getByLabelText('Groupe déterminant de la phase 2')).toHaveValue('3');
         expect(screen.getByLabelText('Taux de saturation visé')).toHaveValue(80);
-        expect(screen.getByText(/Cycle optimal de Webster/).textContent).toContain('66 s');
+        expect(screen.getByText(/Cycle optimal de Webster/).textContent).toContain('70 s');
     });
 
     it('sans trafic pour les déterminants, le dit', () => {
         ouvrir({ getTrafficData: () => ({ trafficVol: 0 }), phasageCycle: { determinants: [1, 4], degagements: [6, 6] } });
         expect(screen.getByText(/Aucun trafic pour ces groupes/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Appliquer le cycle/ })).toBeDisabled();
+    });
+
+    it('déterminants sans vert (Déb/Fin vides) : diagramme pré-rempli à la position proposée', () => {
+        const vides = groups.map(gr => ({ ...gr, durations: { green: 0, orange: 3, red: 0 } }));
+        const { updateGroupParams } = ouvrir({ groups: vides, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        // Cycle proposé 70 s : V1 0 → 29 s, B3 33 → 39 s, V4 45 → 64 s.
+        expect(updateGroupParams).toHaveBeenCalledWith(1, { offset: 0, durations: { green: 29 } });
+        expect(updateGroupParams).toHaveBeenCalledWith(3, { offset: 33, durations: { green: 6 } });
+        expect(updateGroupParams).toHaveBeenCalledWith(4, { offset: 45, durations: { green: 19 } });
+        expect(screen.getByText(/Diagramme pré-rempli/)).toBeInTheDocument();
+    });
+
+    it('case décochée : le phasage bulle n\'est pas modifié', () => {
+        const { setPhasageBulleCount } = ouvrir({ phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        fireEvent.click(screen.getByRole('checkbox', { name: /phasage bulle/ }));
+        fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le phasage' }));
+        expect(setPhasageBulleCount).not.toHaveBeenCalled();
     });
 });
