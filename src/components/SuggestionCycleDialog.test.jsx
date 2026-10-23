@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import SuggestionCycleDialog from './SuggestionCycleDialog';
 
 // TD « carrefour en croix avec couloir bus d'approche ».
@@ -83,5 +83,19 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByLabelText('Dégagement de la phase 1 vers la phase 2')).toHaveValue(4);
         expect(screen.getByText('83 %')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Relire le diagramme' })).toBeInTheDocument();
+    });
+
+    it('groupes associés : placement déduit de la matrice, avec sa source', () => {
+        const vides = groups.map(gr => ({ ...gr, durations: { green: 0, orange: 3, red: 0 } }));
+        const m = matrice.map(r => [...r]);
+        m[1][3] = 5; m[3][1] = 5; m[4][0] = 6; m[0][4] = 5; m[4][2] = 5; m[2][4] = 5; m[1][4] = 6; m[4][1] = 5;
+        const { updateGroupParams } = ouvrir({ groups: vides, conflictMatrix: m, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        const tableau = screen.getByLabelText('Groupes associés');
+        expect(within(tableau).getByText(/GF2 V2/)).toBeInTheDocument();
+        expect(within(tableau).getAllByText('Matrice').length).toBeGreaterThan(0);
+        updateGroupParams.mockClear();
+        fireEvent.click(screen.getByRole('button', { name: 'Placer les groupes cochés' }));
+        expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: 0 }));
+        expect(updateGroupParams).toHaveBeenCalledWith(5, expect.objectContaining({ offset: 45 }));
     });
 });

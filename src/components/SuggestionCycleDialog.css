@@ -45,3 +45,16 @@
 .suggestion-cycle .sc-pied .modal-actions { margin-top: 4px; }
 
 .suggestion-cycle .sc-table td:last-child { white-space: nowrap; }
+
+.suggestion-cycle .sc-associes h4 { margin: 10px 0 4px; font-size: 0.95em; }
+.suggestion-cycle .sc-associes .sc-gauche { text-align: left; }
+.suggestion-cycle .sc-associes .sc-source { font-size: 0.92em; }
+.suggestion-cycle .sc-a-verifier td { background: rgba(255, 152, 0, 0.12); }
+.suggestion-cycle .sc-badge { display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 0.85em; font-weight: bold; color: #fff; }
+.suggestion-cycle .sc-badge-matrice { background: #2e7d6f; }
+.suggestion-cycle .sc-badge-nom { background: #6d5bb7; }
+.suggestion-cycle .sc-badge-plan { background: #b07a1e; }
+.suggestion-cycle .sc-associes > button { margin-top: 6px; }
+
+.suggestion-cycle .sc-associes .sc-nom { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggestion-cycle .sc-associes .sc-insecable { white-space: nowrap; }

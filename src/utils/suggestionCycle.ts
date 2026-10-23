@@ -315,3 +315,178 @@ export const detecterCheminCritique = (
     });
     return { determinants, degagements, phases, capaciteUtilisee };
 };
+
+/** Groupe à placer, avec ce qu'il faut pour déduire sa phase. */
+export interface GroupeAPlacer {
+    id: number;
+    nom: string;
+    offset: number;
+    vert: number;
+    vertMini: number;
+    trafic: number;
+    /** Flèche du plan du carrefour (rotation en degrés, 0 = vers le haut), si elle existe. */
+    rotation?: number;
+}
+
+export type SourceDeduction = 'matrice' | 'nom' | 'plan';
+
+export interface PlacementPropose {
+    id: number;
+    /** Phases couvertes (indices), dans l'ordre du cycle. */
+    phases: number[];
+    debut: number;
+    fin: number;
+    source: SourceDeduction | null;
+    /** Explication lisible de la déduction. */
+    explication: string;
+    /** Déduction incertaine : à vérifier, non cochée par défaut. */
+    aVerifier: boolean;
+}
+
+/** Voie d'un groupe d'après son nom : sans code (V1, P6…), sens, ni mots de type. */
+export const voieDuNom = (nom: string): string => nom
+    .normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    .replace(/\b[a-z]{1,2}\d+\b/g, ' ')
+    .replace(/\b(nord|sud|est|ouest|n|s|e|o|bus|bus\b|pietons?|cycles?|velos?|branche|tad|tag|td|voie|couloir)\b/g, ' ')
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * Place les groupes non déterminants, une fois les déterminants placés.
+ *
+ * Sources, par ordre de fiabilité :
+ * 1. matrice : le groupe rejoint la ou les phases dont le déterminant ne lui
+ *    est pas antagoniste ; il ouvre au plus tôt avec le déterminant de sa
+ *    première phase, après les dégagements depuis ses antagonistes, et ferme
+ *    au plus tard avant les dégagements vers eux (vert le plus long permis) ;
+ * 2. nom : même voie qu'un déterminant (« Av. du Parc nord » / « sud ») ;
+ * 3. plan : flèche opposée à celle d'un déterminant (à 180° près).
+ */
+export const placerGroupesAssocies = (
+    groupes: GroupeAPlacer[],
+    determinants: { id: number; debut: number; fin: number }[],
+    matrice: Matrice | undefined,
+    cycle: number,
+): PlacementPropose[] => {
+    if (cycle <= 0 || determinants.length < NB_PHASES_MIN) return [];
+    const idsDet = new Set(determinants.map(d => d.id));
+    const conflit = (a: number, b: number) => degagementMatrice(matrice, a, b) !== null || degagementMatrice(matrice, b, a) !== null;
+    const parId = new Map(groupes.map(g => [g.id, g]));
+    // Nom court dans les explications : le code en tête du nom (« V2 »), sinon GFn.
+    const nomDe = (id: number) => {
+        const premier = (parId.get(id)?.nom || '').trim().split(/\s+/)[0];
+        return /^[A-Za-z]{1,3}\d+$/.test(premier) ? premier : `GF${id}`;
+    };
+
+    // Intervalles connus : déterminants, groupes déjà réglés, puis propositions au fil de l'eau.
+    const connus = new Map<number, { debut: number; fin: number }>();
+    determinants.forEach(d => connus.set(d.id, { debut: d.debut, fin: d.fin }));
+    groupes.forEach(g => { if (!idsDet.has(g.id) && g.vert > 0) connus.set(g.id, { debut: g.offset, fin: g.offset + g.vert }); });
+
+    // Groupes à trafic d'abord (ils fixent les fins de phase), puis les autres.
+    const aPlacer = groupes.filter(g => !idsDet.has(g.id))
+        .sort((a, b) => (b.trafic > 0 ? 1 : 0) - (a.trafic > 0 ? 1 : 0));
+
+    const runs = (ok: boolean[]) => {
+        // Suites de phases consécutives compatibles (le cycle reboucle).
+        const n = ok.length;
+        if (ok.every(Boolean)) return [ok.map((_, i) => i)];
+        const res: number[][] = [];
+        const depart = ok.findIndex(v => !v);
+        let cur: number[] = [];
+        for (let k = 1; k <= n; k++) {
+            const i = (depart + k) % n;
+            if (ok[i]) cur.push(i); else if (cur.length) { res.push(cur); cur = []; }
+        }
+        if (cur.length) res.push(cur);
+        return res;
+    };
+
+    return aPlacer.map(g => {
+        const compatibles = determinants.map(d => !conflit(g.id, d.id));
+        let candidats = runs(compatibles);
+        let source: SourceDeduction | null = 'matrice';
+        let explication = '';
+        let aVerifier = false;
+        const voie = voieDuNom(g.nom);
+        const parNom = (liste: number[][]) => liste.filter(r => r.some(i => voie && voieDuNom(parId.get(determinants[i].id)?.nom || "") === voie));
+        const parPlan = (liste: number[][]) => liste.filter(r => r.some(i => {
+            const rd = parId.get(determinants[i].id)?.rotation, rg = g.rotation;
+            if (rd === undefined || rg === undefined) return false;
+            const d = Math.abs(mod(rg - rd, 360) - 180);
+            return d <= 20;
+        }));
+
+        // Aucun conflit avec aucun déterminant : la matrice ne dit rien de sa phase.
+        if (candidats.length === 1 && candidats[0].length === determinants.length) {
+            candidats = determinants.map((_, i) => [i]);
+            source = null;
+        }
+        if (candidats.length === 0) {
+            // En conflit avec tous les déterminants : la matrice ne tranche pas.
+            const toutes = [determinants.map((_, i) => i)].flatMap(r => r.map(i => [i]));
+            const n = parNom(toutes);
+            const p = n.length ? n : parPlan(toutes);
+            if (p.length) { candidats = [p[0]]; source = n.length ? 'nom' : 'plan'; aVerifier = true; }
+            else return { id: g.id, phases: [], debut: 0, fin: 0, source: null, explication: 'En conflit avec tous les groupes déterminants : à placer à la main.', aVerifier: true };
+        } else if (candidats.length > 1) {
+            const n = parNom(candidats);
+            const p = n.length ? n : parPlan(candidats);
+            if (p.length === 1) { candidats = p; source = n.length ? 'nom' : 'plan'; }
+            else if (p.length > 1) {
+                // Plusieurs voies homonymes (voitures et bus de la même avenue) :
+                // celle du déterminant le plus chargé, à vérifier.
+                const charge = (r: number[]) => Math.max(...r.map(i => parId.get(determinants[i].id)?.trafic || 0));
+                candidats = [p.reduce((a, b) => (charge(b) > charge(a) ? b : a))];
+                source = n.length ? 'nom' : 'plan';
+                aVerifier = true;
+            } else { aVerifier = true; if (source === null) source = 'matrice'; }
+        }
+        const run = candidats[0];
+        const premier = determinants[run[0]], dernier = determinants[run[run.length - 1]];
+        const w0 = premier.debut, w1 = dernier.fin;
+        const milieu = w0 + mod(w1 - w0, cycle) / 2;
+        // Début : au plus tôt avec le déterminant de la première phase, et pas
+        // avant les dégagements depuis les antagonistes qui viennent de finir.
+        // Un groupe à trafic ouvre au plus tôt avec le déterminant (pas de
+        // décalage à l'ouverture) ; un piéton, dès que la matrice le permet.
+        let debut = w0;
+        let contraint = g.trafic > 0;
+        const contraintes: string[] = [];
+        connus.forEach((iv, a) => {
+            if (a === g.id || !conflit(g.id, a)) return;
+            const mA = iv.debut + mod(iv.fin - iv.debut, cycle) / 2;
+            if (ecart(milieu, mA, cycle) >= 0) return;
+            const v = degagementMatrice(matrice, a, g.id);
+            if (v === null) return;
+            const t = milieu + ecart(milieu, iv.fin + v, cycle);
+            if (!contraint || ecart(debut, t, cycle) > 0) { debut = t; contraint = true; contraintes.push(`${nomDe(a)}→${nomDe(g.id)} ${v} s`); }
+        });
+        // Fin : au plus tard avant les dégagements vers les antagonistes qui suivent.
+        let finMin: number | null = null;
+        const finsDe: string[] = [];
+        connus.forEach((iv, a) => {
+            if (a === g.id || !conflit(g.id, a)) return;
+            const mA = iv.debut + mod(iv.fin - iv.debut, cycle) / 2;
+            if (ecart(milieu, mA, cycle) < 0) return;
+            const v = degagementMatrice(matrice, g.id, a);
+            if (v === null) return;
+            const t = milieu + ecart(milieu, iv.debut - v, cycle);
+            if (finMin === null || t < finMin) { finMin = t; finsDe.length = 0; finsDe.push(`${nomDe(g.id)}→${nomDe(a)} ${v} s`); }
+        });
+        const fin = finMin ?? w1;
+        debut = Math.round(mod(debut, cycle));
+        let duree = Math.round(fin - (milieu + ecart(milieu, debut, cycle)));
+        if (duree < g.vertMini) aVerifier = true;
+        duree = Math.max(0, duree);
+        const phasesTxt = run.length > 1 ? `phases ${run.map(i => i + 1).join(' et ')}` : `phase ${run[0] + 1}`;
+        const ouvre = contraintes.length ? contraintes[contraintes.length - 1] : `ouvre avec ${nomDe(premier.id)}`;
+        const ferme = finsDe.length ? finsDe[0] : `ferme avec ${nomDe(dernier.id)}`;
+        if (source === 'matrice') explication = `compatible avec ${run.map(i => nomDe(determinants[i].id)).join(', ')} (${phasesTxt}) ; ${ouvre} ; ${ferme}`;
+        else if (source === 'nom') explication = `même voie que ${nomDe(premier.id)} (${phasesTxt})`;
+        else explication = `flèche opposée à celle de ${nomDe(premier.id)} (${phasesTxt})`;
+        if (duree < g.vertMini) explication += ` — vert ${duree} s, sous le minimum (${g.vertMini} s)`;
+        const prop: PlacementPropose = { id: g.id, phases: run, debut, fin: debut + duree, source, explication, aVerifier };
+        if (duree > 0) connus.set(g.id, { debut, fin: debut + duree });
+        return prop;
+    });
+};

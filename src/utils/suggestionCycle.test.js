@@ -112,3 +112,49 @@ describe('chemin critique lu sur le diagramme', () => {
         expect(detecterCheminCritique(td.map(x => ({ ...x, vert: 0 })), M, 70)).toBeNull();
     });
 });
+
+import { placerGroupesAssocies, voieDuNom } from './suggestionCycle';
+
+describe('placement des groupes associés', () => {
+    const M = [
+        ['', '', '', 6, 5, 4, 6, '', ''],
+        ['', '', 4, 5, 6, 6, 4, '', ''],
+        ['', 4, '', 6, 5, 7, 5, '', ''],
+        [6, 5, 5, '', '', '', '', 4, 6],
+        [6, 5, 5, '', '', '', '', 6, 4],
+        [8, 6, 6, '', '', '', '', '', ''],
+        [8, 10, 10, '', '', '', '', '', ''],
+        ['', '', '', 8, 6, '', '', '', ''],
+        ['', '', '', 6, 8, '', '', '', ''],
+    ];
+    const noms = { 1: 'V1 Av. du Parc nord', 2: 'V2 Av. du Parc sud', 3: 'B3 Bus av. du Parc sud', 4: 'V4 Rue de la Gare est', 5: 'V5 Rue de la Gare ouest', 6: 'P6 Piétons branche nord', 7: 'P7 Piétons branche sud', 8: 'P8 Piétons branche est', 9: 'P9 Piétons branche ouest' };
+    const trafic = { 1: 600, 2: 500, 3: 24, 4: 380, 5: 300 };
+    const mini = { 1: 8, 2: 8, 3: 6, 4: 8, 5: 8, 6: 7, 7: 8, 8: 6, 9: 6 };
+    const groupes = Object.keys(noms).map(Number).map(id => ({ id, nom: noms[id], offset: 0, vert: 0, vertMini: mini[id], trafic: trafic[id] || 0 }));
+    const dets = [{ id: 1, debut: 0, fin: 28 }, { id: 3, debut: 32, fin: 38 }, { id: 4, debut: 44, fin: 64 }];
+
+    it('TD : V2, V5 et les piétons placés d\'après la matrice', () => {
+        const p = Object.fromEntries(placerGroupesAssocies(groupes, dets, M, 70).map(x => [x.id, x]));
+        expect([p[2].debut, p[2].fin]).toEqual([0, 28]);
+        expect([p[5].debut, p[5].fin]).toEqual([44, 64]);
+        expect([p[8].debut, p[8].fin]).toEqual([0, 36]);
+        expect([p[9].debut, p[9].fin]).toEqual([0, 36]);
+        expect([p[6].debut, p[6].fin]).toEqual([45, 62]);
+        expect([p[7].debut, p[7].fin]).toEqual([43, 60]);
+        expect(p[2].source).toBe('matrice');
+        expect(p[2].explication).toContain('V2→B3 4 s');
+        expect(Object.values(p).every(x => !x.aVerifier)).toBe(true);
+    });
+
+    it('la voie se lit dans le nom', () => {
+        expect(voieDuNom('V1 Av. du Parc nord')).toBe(voieDuNom('V2 Av. du Parc sud'));
+        expect(voieDuNom('V4 Rue de la Gare est')).not.toBe(voieDuNom('V1 Av. du Parc nord'));
+    });
+
+    it('matrice muette : le nom départage', () => {
+        const vide = M.map(r => r.map(() => ''));
+        const p = placerGroupesAssocies(groupes.filter(g => [1, 2, 3, 4].includes(g.id)), dets, vide, 70).find(x => x.id === 2);
+        expect(p.source).toBe('nom');
+        expect(p.phases).toEqual([0]);
+    });
+});

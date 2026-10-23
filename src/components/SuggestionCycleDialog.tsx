@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import type { Groupe, Matrice } from '../types/projet';
 import {
-    calculerSuggestionCycle, debutsDesPhases, degagementMatrice, detecterCheminCritique, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
+    calculerSuggestionCycle, debutsDesPhases, degagementMatrice, detecterCheminCritique, placerGroupesAssocies, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
     NB_PHASES_MAX, NB_PHASES_MIN, TAUX_VISE_DEFAUT,
 } from '../utils/suggestionCycle';
 import type { PhasageCycle } from '../utils/suggestionCycle';
@@ -26,6 +26,8 @@ export interface SuggestionCycleDialogProps {
     setPhasageBulleTimes: (times: number[]) => void;
     /** Pré-remplissage du diagramme pour les déterminants sans vert (Déb/Fin vides). */
     updateGroupParams: (id: number, params: { offset?: number; durations?: { green?: number } }) => void;
+    /** Flèches du plan du carrefour : dernière source pour placer les groupes associés. */
+    intersectionArrows?: { groupId: number; rotation?: number }[];
     readOnly?: boolean;
 }
 
@@ -47,7 +49,7 @@ const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDig
 const SuggestionCycleDialog = ({
     isOpen, onClose, planName, groups, conflictMatrix, cycleLength, getTrafficData,
     trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
-    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, readOnly = false,
+    setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], readOnly = false,
 }: SuggestionCycleDialogProps) => {
     const [remplirBulle, setRemplirBulle] = useState(true);
     // Chemin critique lu sur le diagramme, quand il est renseigné : phases,
@@ -140,6 +142,35 @@ const SuggestionCycleDialog = ({
 
     // Disposition proposée : début de vert de chaque phase dans le cycle proposé.
     const debuts = resultat && calculable ? debutsDesPhases(resultat.verts, resultat.phases.map((_, i) => degagementsNum[i] ?? 0)) : [];
+
+    // Groupes associés : position déduite de la matrice, sinon du nom, sinon du plan.
+    const placements = useMemo(() => {
+        if (!resultat || !calculable || !complet) return [];
+        const dets = (brouillon.determinants as number[]).map((id, i) => {
+            const g = groups.find(gr => gr.id === id);
+            if (g && g.durations?.green > 0) return { id, debut: Number(g.offset) || 0, fin: (Number(g.offset) || 0) + g.durations.green };
+            return debuts[i] === undefined ? null : { id, debut: debuts[i], fin: debuts[i] + resultat.verts[i] };
+        });
+        if (dets.some(d => d === null)) return [];
+        const cycleRef = groups.some(g => (brouillon.determinants as number[]).includes(g.id) && g.durations?.green > 0)
+            ? cycleLength : (resultat.cycleSuggere ?? cycleLength);
+        return placerGroupesAssocies(groups.map(g => ({
+            id: g.id, nom: g.name || `GF${g.id}`, offset: Number(g.offset) || 0, vert: Number(g.durations?.green) || 0,
+            vertMini: Number(g.minGreen) || 0, trafic: Number(getTrafficData(g.id)?.trafficVol) || 0,
+            rotation: intersectionArrows.find(a => a.groupId === g.id)?.rotation,
+        })), dets as { id: number; debut: number; fin: number }[], conflictMatrix, cycleRef);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [resultat, calculable, complet, brouillon, groups, getTrafficData, intersectionArrows, conflictMatrix, cycleLength]);
+    const cocheParDefaut = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }) => {
+        const g = groups.find(gr => gr.id === p.id);
+        return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut && !(g && g.durations?.green > 0);
+    };
+    const [coches, setCoches] = useState<Record<number, boolean>>({});
+    const estCoche = (p: Parameters<typeof cocheParDefaut>[0]) => coches[p.id] ?? cocheParDefaut(p);
+    const placerCoches = () => {
+        placements.filter(estCoche).forEach(p => updateGroupParams(p.id, { offset: p.debut, durations: { green: p.fin - p.debut } }));
+        setCoches({});
+    };
 
     // Déterminants sans vert dans le diagramme (Déb/Fin vides) : pré-remplis au
     // fil de la saisie, à la position proposée, dès que la phase tient dans le
@@ -296,6 +327,34 @@ const SuggestionCycleDialog = ({
                 </div>
             )}
 
+            {placements.length > 0 && (
+                <div className="sc-associes" aria-label="Groupes associés">
+                    <h4>Groupes associés</h4>
+                    <table className="sc-table">
+                        <thead><tr><th></th><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th></tr></thead>
+                        <tbody>
+                            {placements.map(p => (
+                                <tr key={p.id} className={p.aVerifier ? 'sc-a-verifier' : ''}>
+                                    <td><input type="checkbox" aria-label={`Placer ${nomGroupe(p.id)}`} checked={estCoche(p)}
+                                        disabled={readOnly || !(p.fin > p.debut)}
+                                        onChange={e => setCoches(c => ({ ...c, [p.id]: e.target.checked }))} /></td>
+                                    <td className="sc-gauche sc-nom" title={nomGroupe(p.id)}>GF{p.id} {nomGroupe(p.id)}</td>
+                                    <td>{p.phases.length ? p.phases.map(i => i + 1).join(', ') : '—'}</td>
+                                    <td className="sc-insecable">{p.fin > p.debut ? `${p.debut} – ${p.fin} s` : '—'}</td>
+                                    <td className="sc-gauche sc-source">
+                                        {p.source && <span className={`sc-badge sc-badge-${p.source}`}>{p.source === 'matrice' ? 'Matrice' : p.source === 'nom' ? 'Nom' : 'Plan'}</span>}
+                                        {' '}{p.explication}{p.aVerifier ? ' — à vérifier' : ''}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <button type="button" className="modal-btn modal-btn-secondary" disabled={readOnly || !placements.some(estCoche)} onClick={placerCoches}
+                        title="Inscrit les groupes cochés dans le diagramme (Ctrl+Z pour annuler)">
+                        Placer les groupes cochés
+                    </button>
+                </div>
+            )}
             </div>
             <div className="sc-pied">
             <label className="sc-nb" title="Une bulle par phase, au milieu du vert de son groupe déterminant">

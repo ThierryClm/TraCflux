@@ -2402,6 +2402,7 @@ function App() {
                 setPhasageBulleCount={setPhasageBulleCount}
                 setPhasageBulleTimes={setPhasageBulleTimes}
                 updateGroupParams={updateGroupParams}
+                intersectionArrows={intersectionArrows}
                 readOnly={dossierReadOnly || activePfReadOnly}
             />
             <SupportDialogs
