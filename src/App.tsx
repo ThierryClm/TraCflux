@@ -81,6 +81,7 @@ import type { TrafficConflict } from './utils/conflictUtils';
 import type { HoveredConflict } from './components/ConflictList';
 import type { VertUtileSurvole } from './components/TimelineDiagram';
 import SuggestionCycleDialog, { titreSuggestionCycle } from './components/SuggestionCycleDialog';
+import { ECRAN_MOBILE } from './utils/ecranMobile';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
 import { basculerVerrou, definirPrefsVerrou, prefsVerrouAEnregistrer, usePrefsVerrou } from './utils/verrouSaisie';
 
@@ -696,11 +697,13 @@ function App() {
     // affiché a du trafic dans son jeu.
     const [suggestionCycleModal, setSuggestionCycleModal] = useState(false);
     // Elle s'ouvre en fenêtre détachée, déplaçable sur un autre écran pour
-    // laisser le diagramme dégagé ; dans la page seulement si le navigateur
-    // bloque la fenêtre.
+    // laisser le diagramme dégagé ; dans la page si le navigateur bloque la
+    // fenêtre, ou sur un téléphone : il n'a qu'un écran, et la « fenêtre »
+    // y devenait un onglet affiché en largeur d'ordinateur, illisible.
+    const assistantDansLaPage = !!window.matchMedia?.(ECRAN_MOBILE).matches;
     const suggestionCyclePopup = usePopupWindow({
         geometryKey: 'suggestionCycle',
-        isOpen: suggestionCycleModal,
+        isOpen: suggestionCycleModal && !assistantDansLaPage,
         onClose: () => setSuggestionCycleModal(false),
         title: titreSuggestionCycle(activePFName),
         width: 820,
@@ -709,7 +712,7 @@ function App() {
     // Redemander la fenêtre déjà ouverte la ramène au premier plan (ou retente
     // l'ouverture qu'un bloqueur avait refusée).
     const ouvrirSuggestionCycle = () => {
-        if (suggestionCycleModal) suggestionCyclePopup.retryOpen();
+        if (suggestionCycleModal) { if (!assistantDansLaPage) suggestionCyclePopup.retryOpen(); }
         else setSuggestionCycleModal(true);
     };
     // Nouveau plan de feu (menu Diagramme) : choix du jeu de trafic du plan créé.
@@ -2108,9 +2111,9 @@ function App() {
         microCustomFields, updateMicroCustomField, dossierReadOnly, activePfReadOnly]);
     const renderSuggestionCycle = suggestionCyclePopup.renderToPopup;
     useEffect(() => {
-        if (!suggestionCycleModal) return;
+        if (!suggestionCycleModal || assistantDansLaPage) return;
         renderSuggestionCycle(<SuggestionCycleDialog {...propsSuggestionCycle} isOpen detachee />);
-    }, [suggestionCycleModal, propsSuggestionCycle, renderSuggestionCycle]);
+    }, [suggestionCycleModal, assistantDansLaPage, propsSuggestionCycle, renderSuggestionCycle]);
 
     // Render capacity comparison into its detached popup window
     useEffect(() => {
@@ -2439,7 +2442,7 @@ function App() {
                 onOuvrirTrafic={() => { setSidebarVisible(true); setActiveTab('traffic'); }}
             />
             {/* Repli dans la page quand le navigateur bloque la fenêtre détachée. */}
-            <SuggestionCycleDialog {...propsSuggestionCycle} isOpen={suggestionCycleModal && suggestionCyclePopup.bloquee} />
+            <SuggestionCycleDialog {...propsSuggestionCycle} isOpen={suggestionCycleModal && (assistantDansLaPage || suggestionCyclePopup.bloquee)} />
             <SupportDialogs
                 model={{
                         aboutModal, actionData, activePFId, activePfReadOnly, conflictMatrix,
