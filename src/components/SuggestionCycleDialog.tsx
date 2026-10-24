@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import Modal from './Modal';
 import type { Groupe, Matrice } from '../types/projet';
 import {
@@ -48,6 +49,27 @@ export interface SuggestionCycleDialogProps {
 
 /** Titre de la fenêtre, partagé avec la fenêtre détachée. */
 export const titreSuggestionCycle = (planName: string) => `Assistant conception${planName ? ` — ${planName}` : ''}`;
+
+/** Identifiants des chapitres repliables de l'assistant. */
+type IdChapitre = 'phases' | 'cycle' | 'associes' | 'adaptatifs' | 'fermetures' | 'repos';
+
+/**
+ * Chapitre repliable : le titre et le résumé de ses valeurs restent visibles,
+ * le contenu ne s'affiche que déplié.
+ */
+const Chapitre = ({ titre, resume, ouvert, basculer, children }: {
+    titre: string; resume?: ReactNode; ouvert: boolean; basculer: () => void; children: ReactNode;
+}) => (
+    <section className={`sc-chapitre${ouvert ? ' ouvert' : ''}`} aria-label={titre}>
+        <button type="button" className="sc-chapitre-tete" aria-expanded={ouvert} onClick={basculer}
+            title={ouvert ? 'Réduire' : 'Déployer'}>
+            <span className="sc-chevron" aria-hidden="true">{ouvert ? '▾' : '▸'}</span>
+            <span className="sc-chapitre-titre">{titre}</span>
+            {resume && <span className="sc-chapitre-resume" title={typeof resume === 'string' ? resume : undefined}>{resume}</span>}
+        </button>
+        {ouvert && <div className="sc-chapitre-corps">{children}</div>}
+    </section>
+);
 
 /** Saisie en cours : le dégagement reste vide tant que la matrice ne dit rien. */
 interface Brouillon {
@@ -344,9 +366,30 @@ const SuggestionCycleDialog = ({
 
     const nomGroupe = (id: number) => groups.find(g => g.id === id)?.name || `GF${id}`;
 
+    // Chapitres repliés à l'ouverture (le titre et le résumé suffisent pour
+    // suivre), sauf le tableau des groupes déterminants, point de départ.
+    const [ouverts, setOuverts] = useState<Record<IdChapitre, boolean>>({
+        phases: true, cycle: false, associes: false, adaptatifs: false, fermetures: false, repos: false,
+    });
+    const basculer = (id: IdChapitre) => () => setOuverts(o => ({ ...o, [id]: !o[id] }));
+    const resumePhases = `${nbPhases} phases : ${brouillon.determinants.map(d => (d === null ? '—' : court(d))).join(', ')} · taux visé ${brouillon.tauxVise} %`;
+    const resumeCycle = resultat && calculable && resultat.cycleSuggere
+        ? `cycle proposé ${resultat.cycleSuggere} s (Webster ${fmt(resultat.websterExact ?? 0, 1)} s)${resultat.sature ? ' · saturé' : ''}`
+        : undefined;
+    const compte = (statut: 'auto' | 'main' | 'regle') => placements.filter(p => statutPlacement(p) === statut).length;
+    const resumeAssocies = [
+        compte('auto') ? `${compte('auto')} avec le cycle` : '',
+        compte('main') ? `${compte('main')} à la main` : '',
+        compte('regle') ? `${compte('regle')} déjà réglé${compte('regle') > 1 ? 's' : ''}` : '',
+    ].filter(Boolean).join(' · ');
+    const resumeAdaptatifs = `${avUtiles.length ? avUtiles.map(a => `AV${a.phase} ${a.deb}–${a.fin} s`).join(', ') : 'aucune zone'} · ${tauxAV} % · ${modeAV === 'iteratif' ? 'itératif' : 'prudent'}`;
+    const resumeFermetures = `${faUtiles.length ? faUtiles.map((f, k) => `FA${k + 1} ${court(f.groupe)} ${f.deb}–${f.fin} s → ${f.glissements.map(court).join(', ')}`).join(' ; ') : 'aucune'} · seuil ${seuilFA} %`;
+    const resumeRepos = reposBus.length ? reposBus.map(r => `${court(r.groupe)} à ${r.instant} s`).join(', ') : 'aucun groupe bus';
+
     const corps = (
         <>
             <div className="sc-defilement">
+            <Chapitre titre="Phases et groupes déterminants" resume={resumePhases} ouvert={ouverts.phases} basculer={basculer('phases')}>
             <p className="sc-intro">
                 Choisissez, dans l'ordre du cycle, le <b>groupe déterminant</b> de chaque phase : le courant le plus
                 chargé de la phase. Le dégagement vers la phase suivante est proposé par la matrice ; corrigez-le
@@ -423,6 +466,7 @@ const SuggestionCycleDialog = ({
                 <input type="number" min={50} max={99} value={brouillon.tauxVise} aria-label="Taux de saturation visé"
                     onChange={e => setBrouillon(b => ({ ...b, tauxVise: Math.max(50, Math.min(99, parseInt(e.target.value, 10) || TAUX_VISE_DEFAUT)) }))} /> %
             </label>
+            </Chapitre>
 
             {!complet && <p className="sc-attente">Choisissez un groupe déterminant pour chaque phase.</p>}
             {resultat && sansTrafic && <p className="sc-alerte">Aucun trafic pour ces groupes dans le jeu {trafficDatasetName || 'actif'} : renseignez l'onglet Trafic.</p>}
@@ -430,6 +474,7 @@ const SuggestionCycleDialog = ({
                 <p className="sc-attente">Précisez le dégagement après la phase {resultat.degagementsManquants.map(i => i + 1).join(', ')}.</p>}
 
             {resultat && calculable && (
+                <Chapitre titre="Durée de cycle" resume={resumeCycle} ouvert={ouverts.cycle} basculer={basculer('cycle')}>
                 <div className="sc-resultat" aria-label="Résultat">
                     <p>Y = <b>{fmt(resultat.Y)}</b> · temps perdu L = <b>{resultat.L} s</b></p>
                     {resultat.sature && <p className="sc-alerte">Y ≥ 0,9 : le carrefour est saturé ; aucun cycle ne suffira à écouler ce trafic.</p>}
@@ -450,11 +495,13 @@ const SuggestionCycleDialog = ({
                     <p className="sc-note">Cycle actuel du plan : {cycleLength} s.</p>
                     {preremplis.length > 0 && <p className="sc-note">Diagramme pré-rempli pour les groupes sans vert : {preremplis.map(id => `GF${id}`).join(', ')} (Ctrl+Z pour annuler).</p>}
                 </div>
+                </Chapitre>
             )}
 
             {placements.length > 0 && (
-                <div className="sc-associes" aria-label="Groupes associés">
-                    <h4>Groupes associés{resultat?.cycleSuggere ? ` — calés sur le cycle proposé de ${resultat.cycleSuggere} s` : ''}</h4>
+                <Chapitre titre="Groupes associés" resume={resumeAssocies} ouvert={ouverts.associes} basculer={basculer('associes')}>
+                <div className="sc-associes">
+                    {resultat?.cycleSuggere ? <p className="sc-note">Calés sur le cycle proposé de {resultat.cycleSuggere} s.</p> : null}
                     <table className="sc-table">
                         <thead><tr><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th><th>Placement</th></tr></thead>
                         <tbody>
@@ -478,11 +525,12 @@ const SuggestionCycleDialog = ({
                         « à vérifier » restent à placer à la main.
                     </p>
                 </div>
+                </Chapitre>
             )}
 
             {propositionAV && propositionAV.adaptatifs.length > 0 && (
-                <div className="sc-associes sc-adaptatifs" aria-label="Adaptatifs verticaux">
-                    <h4>Adaptatifs verticaux (proposition)</h4>
+                <Chapitre titre="Adaptatifs verticaux" resume={resumeAdaptatifs} ouvert={ouverts.adaptatifs} basculer={basculer('adaptatifs')}>
+                <div className="sc-associes sc-adaptatifs">
                     <label className="sc-nb" title="Une phase ne se contracte que lorsque sa demande est servie : le taux visé peut être plus haut que pour le cycle">
                         Taux de saturation visé pour les zones :
                         <input type="number" min={50} max={99} value={tauxAV} aria-label="Taux visé des adaptatifs"
@@ -532,8 +580,13 @@ const SuggestionCycleDialog = ({
                         « Appliquer le cycle » inscrit les zones dans les conditions de micro-régulation (AV1, AV2…, selon la phase),
                         en remplaçant celles d'un passage précédent.
                     </p>
+                </div>
+                </Chapitre>
+            )}
 
-                    <h4>Fermetures anticipées avec glissements (proposition)</h4>
+            {disposition && (
+                <Chapitre titre="Fermetures anticipées avec glissements" resume={resumeFermetures} ouvert={ouverts.fermetures} basculer={basculer('fermetures')}>
+                <div className="sc-associes sc-adaptatifs">
                     <label className="sc-nb" title="Groupes voitures dont la capacité utilisée, au cycle proposé, est sous ce seuil">
                         Groupes voitures sous
                         <input type="number" min={30} max={99} value={seuilFA} aria-label="Seuil de capacité des fermetures anticipées"
@@ -565,8 +618,13 @@ const SuggestionCycleDialog = ({
                         glissements en Action GF, en remplaçant celles d'un passage précédent. Une fermeture qui tombe dans une zone
                         d'adaptatif vertical ne joue que lorsque celui-ci n'est pas contracté.
                     </p>
+                </div>
+                </Chapitre>
+            )}
 
-                    <h4>Points de repos bus (proposition)</h4>
+            {disposition && (
+                <Chapitre titre="Points de repos bus" resume={resumeRepos} ouvert={ouverts.repos} basculer={basculer('repos')}>
+                <div className="sc-associes sc-adaptatifs">
                     {reposBus.length > 0 ? (
                         <table className="sc-table">
                             <thead><tr><th>Groupe bus</th>
@@ -593,7 +651,11 @@ const SuggestionCycleDialog = ({
                         code trajet : remplacez-le dans DAx, TMABx et Tx. Les repos d'un passage précédent sont remplacés ; les autres ne
                         sont pas touchés.
                     </p>
-                    {avInscrits !== null && (
+                </div>
+                </Chapitre>
+            )}
+
+            {avInscrits !== null && (
                         <p className="sc-note">
                             {avInscrits.length
                                 ? `Inscrits : ${avInscrits.join(', ')} (Ctrl+Z pour annuler). Adaptez les conditions à la détection réelle et vérifiez dans l'onglet Simulation.`
@@ -601,8 +663,6 @@ const SuggestionCycleDialog = ({
                             {avInscrits.length < avUtiles.length + faUtiles.length + reposBus.length ? ' La table est pleine (30 conditions) : certaines lignes n\'ont pas été inscrites.' : ''}
                         </p>
                     )}
-                </div>
-            )}
             </div>
             <div className="sc-pied">
             <label className="sc-nb" title="Une bulle par phase, au milieu du vert de son groupe déterminant">
