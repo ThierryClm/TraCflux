@@ -47,7 +47,7 @@ export interface SuggestionCycleDialogProps {
 }
 
 /** Titre de la fenêtre, partagé avec la fenêtre détachée. */
-export const titreSuggestionCycle = (planName: string) => `Suggérer une durée de cycle${planName ? ` — ${planName}` : ''}`;
+export const titreSuggestionCycle = (planName: string) => `Assistant conception${planName ? ` — ${planName}` : ''}`;
 
 /** Saisie en cours : le dégagement reste vide tant que la matrice ne dit rien. */
 interface Brouillon {
@@ -68,7 +68,7 @@ const estLigneAssistant = (row: ActionMicro) => estAdaptatifAssistant(row) || es
 const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
 /**
- * « Suggérer une durée de cycle… » (menu Diagramme). L'utilisateur choisit le
+ * « Assistant conception… » (menu Diagramme). L'utilisateur choisit le
  * groupe déterminant de chaque phase, dans l'ordre du cycle ; la fenêtre en
  * déduit Y, le temps perdu, les cycles minimal, de Webster et pour un taux de
  * saturation visé, et une répartition des verts par phase.

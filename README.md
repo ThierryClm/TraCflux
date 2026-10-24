@@ -56,7 +56,7 @@ La prise en compte des transports en commun est pensée comme une **orientation 
 
 ### Assistant de construction de diagramme
 
-TraCflux intègre un **assistant qui dégrossit un plan de feux en quelques minutes**, à partir des trafics. **Diagramme → Nouveau plan de feu…** crée un plan vierge associé à un jeu de trafic ; **Diagramme → Suggérer une durée de cycle…** :
+TraCflux intègre un **assistant qui dégrossit un plan de feux en quelques minutes**, à partir des trafics. **Diagramme → Nouveau plan de feu…** crée un plan vierge associé à un jeu de trafic ; **Diagramme → Assistant conception…** :
 
 - repère le **chemin critique** sur le diagramme : les phases et, dans chacune, le groupe déterminant — celui de plus forte capacité utilisée, une traversée piétonne pouvant l'être ;
 - calcule le **cycle minimal** et le **cycle de Webster** (*Guide des carrefours à feux* du CERTU), arrondi à la dizaine supérieure, et répartit les verts au prorata des demandes ;

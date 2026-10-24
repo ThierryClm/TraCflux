@@ -566,11 +566,11 @@ const MenuBar = ({
                 },
                 { type: 'separator' },
                 {
-                    label: 'Suggérer une durée de cycle...',
+                    label: 'Assistant conception...',
                     action: 'cycleSuggestion',
                     disabled: !traficRenseigne,
                     title: traficRenseigne
-                        ? 'Cycle de Webster à partir des groupes déterminants de chaque phase'
+                        ? 'Cycle de Webster, groupes associés, adaptatifs, fermetures anticipées et repos bus, à partir des groupes déterminants de chaque phase'
                         : 'Renseignez le trafic du plan de feu (onglet Trafic)'
                 },
                 {

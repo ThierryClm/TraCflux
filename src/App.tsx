@@ -2080,7 +2080,7 @@ function App() {
         return () => { if (!popup.closed) popup.cancelAnimationFrame(raf); };
     }, [showFloatingLegend, legendPopup.renderToPopup]);
 
-    // Assistant « Suggérer une durée de cycle », rendu dans sa fenêtre détachée.
+    // « Assistant conception », rendu dans sa fenêtre détachée.
     const propsSuggestionCycle = useMemo(() => ({
         onClose: () => setSuggestionCycleModal(false),
         planName: activePFName,

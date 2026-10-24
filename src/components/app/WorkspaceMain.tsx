@@ -463,7 +463,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                         ))}
                                     </div>
                                     {(() => {
-                                        // Groupes déterminants saisis dans « Suggérer une durée de cycle » :
+                                        // Groupes déterminants saisis dans « Assistant conception » :
                                         // une bulle par phase, au milieu du vert de son déterminant.
                                         const phasage = pfTabs.find(p => p.id === activePFId)?.phasageCycle;
                                         if (!phasage || phasage.determinants.length < 2) return null;
@@ -471,7 +471,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                             <button
                                                 className="modal-btn modal-btn-secondary phasage-depuis-determinants"
                                                 style={{ padding: '3px 10px', fontSize: '0.8em', marginTop: '8px', width: '100%' }}
-                                                title={tip("Une bulle par phase, placée au milieu du vert de son groupe déterminant (menu Diagramme → Suggérer une durée de cycle)")}
+                                                title={tip("Une bulle par phase, placée au milieu du vert de son groupe déterminant (menu Diagramme → Assistant conception)")}
                                                 onClick={() => {
                                                     const instants = instantsPhasageBulle(phasage.determinants, groups, cycleLength);
                                                     const times = [...instants, 0, 0, 0, 0, 0, 0].slice(0, 6);
