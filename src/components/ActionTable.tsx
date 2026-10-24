@@ -8,6 +8,7 @@ import { tokenizeMicroText } from '../utils/microVariables';
 import { DESCRIPTION_REPOS_DEFAUT, decouperDescription } from '../simulation/dureeRepos';
 import type { ActionMicro } from '../types/projet';
 import { ligneActionRemplie } from '../utils/pfHelpers';
+import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
 import './ActionTable.css';
 
 /** Champ modifiable d'une condition de micro-régulation. */
@@ -503,7 +504,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     }, [actionData]);
 
     // Shared table JSX builder (used in main view and portal)
-    const renderTableContent = () => (
+    const renderTableContent = () => (<ZoneVerrouSaisie section="conditions">
         <div className="action-table-scroll">
         <table className="action-table" style={{ '--col-desc-w': dispWidth('description') + 'px', '--col-micro-w': dispWidth('micro') + 'px', '--col-abrv-w': dispWidth('abrv') + 'px' } as CSSProperties}>
             <thead>
@@ -547,15 +548,15 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             </tbody>
         </table>
         </div>
-    );
+    </ZoneVerrouSaisie>);
 
-    const renderVariablesMicroFields = (fields: string[]) => (
+    const renderVariablesMicroFields = (fields: string[]) => (<ZoneVerrouSaisie section="variables">
         <div className="custom-fields-list">
             {fields.map((field, index) => (
                 <input key={index} type="text" maxLength={60} className="custom-field-input" value={field} onChange={(e) => updateMicroCustomField && updateMicroCustomField(index, e.target.value)} placeholder={`Variable ${index + 1}`} />
             ))}
         </div>
-    );
+    </ZoneVerrouSaisie>);
 
     // Render content into popup windows when open
     useEffect(() => {

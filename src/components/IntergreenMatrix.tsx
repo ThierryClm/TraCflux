@@ -12,6 +12,7 @@ import {
 } from '../utils/matrixDelayConflict';
 import './IntergreenMatrix.css';
 import './NumericInput.css';
+import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
 
 // Input component with local state for intermediate values during typing
 interface MatrixInputProps {
@@ -368,7 +369,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
     const size = conflictMatrix.length;
     const indices = Array.from({ length: size }, (_, i) => i + 1);
 
-    return (
+    return (<ZoneVerrouSaisie section="matrice">
         <div className={`matrix-container-inline${titreEnBandeau ? ' sans-entete' : ''}`}>
             {/* En fenêtre détachée, le bandeau porte déjà le nom, le plan de feu et le verrou : cet en-tête ne dirait rien de plus. */}
             {!titreEnBandeau && (
@@ -533,7 +534,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
                 </div>
             )}
         </div>
-    );
+    </ZoneVerrouSaisie>);
 };
 
 export default IntergreenMatrix;

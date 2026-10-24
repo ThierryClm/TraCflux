@@ -43,6 +43,8 @@ interface LayoutSetters {
     setShowImageGroupNames?: SetterBooleen;
     setShowImageArrows?: SetterBooleen;
     setDossierSections?: (sections: Record<string, boolean>) => void;
+    /** Verrouillage de la saisie : celui du projet, ou rien de verrouillé. */
+    setVerrouSaisie?: (prefs?: OptionsMiseEnPage['verrouSaisie']) => void;
 }
 
 /**
@@ -83,7 +85,8 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
         showFloatingRemarks: v.showFloatingRemarks,
         showImageGroupNumbers: v.showImageGroupNumbers,
         showImageGroupNames: v.showImageGroupNames,
-        showImageArrows: v.showImageArrows
+        showImageArrows: v.showImageArrows,
+        verrouSaisie: v.verrouSaisie
     },
     directoryNames: {
         open: v.directoryNames?.open ?? null,
@@ -143,6 +146,8 @@ export const appliquerMiseEnPage = (
         showImageGroupNames: s.setShowImageGroupNames,
         showImageArrows: s.setShowImageArrows
     };
+
+    s.setVerrouSaisie?.(data.layoutOptions && typeof data.layoutOptions === 'object' ? data.layoutOptions.verrouSaisie : undefined);
 
     if (data.layoutOptions && typeof data.layoutOptions === 'object') {
         const lo = data.layoutOptions;
