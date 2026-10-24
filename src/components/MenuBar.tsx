@@ -507,7 +507,9 @@ const MenuBar = ({
                         { label: 'Configuration', action: 'verrouSaisie:configuration', checked: verrou.configuration, keepSubmenuOpen: true },
                         { label: 'Matrice',       action: 'verrouSaisie:matrice',       checked: verrou.matrice,       keepSubmenuOpen: true },
                         { label: 'Trafic',        action: 'verrouSaisie:trafic',        checked: verrou.trafic,        keepSubmenuOpen: true },
-                        { label: 'Diagramme',     action: 'verrouSaisie:diagramme',     checked: verrou.diagramme,     keepSubmenuOpen: true }
+                        { label: 'Diagramme',     action: 'verrouSaisie:diagramme',     checked: verrou.diagramme,     keepSubmenuOpen: true },
+                        { label: 'Conditions de micro-régulation', action: 'verrouSaisie:conditions', checked: verrou.conditions, keepSubmenuOpen: true },
+                        { label: 'Variables micro', action: 'verrouSaisie:variables', checked: verrou.variables, keepSubmenuOpen: true }
                     ]
                 },
                 {

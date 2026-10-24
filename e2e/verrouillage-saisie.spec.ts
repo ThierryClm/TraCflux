@@ -36,8 +36,17 @@ test('verrouiller la configuration et le diagramme : champs en lecture seule, le
     await cycle.click();
     await page.keyboard.type('9');
     await expect(cycle).toHaveValue(avant);
-    // Préférence du poste, mémorisée dans le navigateur ; on décoche ensuite.
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tracflux.verrouSaisie') || '{}'))).toMatchObject({ configuration: true, diagramme: true, trafic: false });
+    // Conditions de micro-régulation et variables micro.
+    await cocher(page, 'Conditions de micro-régulation');
+    await cocher(page, 'Variables micro');
+    await expect(page.locator('.action-table select').first()).toBeDisabled();
+    await expect(page.locator('.action-table textarea').first()).toHaveAttribute('readonly');
+    await expect(page.locator('.custom-field-input').first()).toHaveAttribute('readonly');
+    // La matrice, non cochée, reste modifiable.
+    await expect(page.locator('.matrix-grid input').first()).not.toHaveAttribute('readonly');
+    await cocher(page, 'Conditions de micro-régulation');
+    await cocher(page, 'Variables micro');
+    await expect(page.locator('.action-table select').first()).toBeEnabled();
     await cocher(page, 'Configuration');
     await cocher(page, 'Diagramme');
     await expect(page.locator('.group-table input').first()).not.toHaveAttribute('readonly');

@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { useState } from 'react';
-import { ZoneVerrouSaisie, basculerVerrou, lirePrefsVerrou } from './verrouSaisie';
+import { ZoneVerrouSaisie, basculerVerrou, definirPrefsVerrou, lirePrefsVerrou, prefsVerrouAEnregistrer } from './verrouSaisie';
 
 const Section = () => {
     const [lignes, setLignes] = useState(1);
@@ -39,8 +39,17 @@ describe('verrouillage de la saisie par section', () => {
         expect(screen.getByLabelText('fige')).toBeDisabled();
     });
 
-    it('préférence du poste, mémorisée dans le navigateur', () => {
-        act(() => basculerVerrou('configuration'));
-        expect(JSON.parse(localStorage.getItem('tracflux.verrouSaisie')).configuration).toBe(true);
+    it('réglage du projet : seules les sections verrouillées sont enregistrées, relues à l\'ouverture', () => {
+        expect(prefsVerrouAEnregistrer()).toBeUndefined();
+        act(() => basculerVerrou('variables'));
+        act(() => basculerVerrou('conditions'));
+        expect(prefsVerrouAEnregistrer()).toEqual({ conditions: true, variables: true });
+        // Ouverture d'un autre projet : son verrouillage remplace le précédent.
+        act(() => definirPrefsVerrou({ matrice: true, inconnu: true, trafic: 'oui' }));
+        expect(lirePrefsVerrou()).toMatchObject({ matrice: true, trafic: false, conditions: false, variables: false });
+        // Nouveau projet : rien de verrouillé.
+        act(() => definirPrefsVerrou());
+        expect(prefsVerrouAEnregistrer()).toBeUndefined();
+        expect(localStorage.getItem('tracflux.verrouSaisie')).toBeNull();
     });
 });

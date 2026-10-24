@@ -183,6 +183,8 @@ export interface OptionsMiseEnPage {
     showImageGroupNames?: boolean;
     /** Image du carrefour : ajout de flèches au clic (« Ajouter un courant de circulation »). */
     showImageArrows?: boolean;
+    /** Sections dont la saisie est verrouillée (Mise en page → Verrouillage saisie). */
+    verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables', boolean>>;
 }
 
 /** Un projet enregistré, tel que getFullState le produit. */

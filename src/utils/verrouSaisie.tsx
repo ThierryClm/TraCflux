@@ -6,7 +6,8 @@
  * non modifiables : champs en lecture seule (pas de clavier), listes et cases
  * désactivées.
  *
- * Préférence du poste (localStorage), comme les infobulles. Elle vit dans un
+ * Réglage du projet : enregistré avec lui (layoutOptions.verrouSaisie),
+ * relu à son ouverture, remis à zéro pour un nouveau projet. Il vit dans un
  * petit magasin de module, et non dans un contexte React : les fenêtres
  * détachées sont rendues dans d'autres racines React, qu'un contexte
  * n'atteindrait pas.
@@ -14,28 +15,37 @@
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 
-export type SectionVerrou = 'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme';
+export type SectionVerrou = 'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables';
 export type PrefsVerrou = Record<SectionVerrou, boolean>;
 
-const CLE = 'tracflux.verrouSaisie';
-const AUCUN: PrefsVerrou = { proprietes: false, configuration: false, matrice: false, trafic: false, diagramme: false };
+export const SECTIONS_VERROU: SectionVerrou[] = ['proprietes', 'configuration', 'matrice', 'trafic', 'diagramme', 'conditions', 'variables'];
+const AUCUN: PrefsVerrou = { proprietes: false, configuration: false, matrice: false, trafic: false, diagramme: false, conditions: false, variables: false };
 
-const lire = (): PrefsVerrou => {
-    try {
-        const brut = localStorage.getItem(CLE);
-        return brut ? { ...AUCUN, ...JSON.parse(brut) } : AUCUN;
-    } catch { return AUCUN; }
-};
-
-let etat: PrefsVerrou = lire();
+let etat: PrefsVerrou = AUCUN;
 const abonnes = new Set<() => void>();
+const publier = (suivant: PrefsVerrou) => {
+    etat = suivant;
+    abonnes.forEach(f => f());
+};
 
 export const lirePrefsVerrou = (): PrefsVerrou => etat;
 
-export const basculerVerrou = (section: SectionVerrou) => {
-    etat = { ...etat, [section]: !etat[section] };
-    try { localStorage.setItem(CLE, JSON.stringify(etat)); } catch { /* navigation privée */ }
-    abonnes.forEach(f => f());
+export const basculerVerrou = (section: SectionVerrou) => publier({ ...etat, [section]: !etat[section] });
+
+/**
+ * Pose le verrouillage enregistré dans un projet (sections absentes ou
+ * valeurs illisibles : déverrouillées). Sans argument : tout déverrouillé.
+ */
+export const definirPrefsVerrou = (prefs?: Partial<Record<string, unknown>> | null) => {
+    const suivant = { ...AUCUN };
+    SECTIONS_VERROU.forEach(k => { suivant[k] = prefs?.[k] === true; });
+    if (SECTIONS_VERROU.some(k => suivant[k] !== etat[k])) publier(suivant);
+};
+
+/** Ce qu'on enregistre dans le projet : les seules sections verrouillées. */
+export const prefsVerrouAEnregistrer = (): Partial<PrefsVerrou> | undefined => {
+    const verrouillees = SECTIONS_VERROU.filter(k => etat[k]);
+    return verrouillees.length ? Object.fromEntries(verrouillees.map(k => [k, true])) : undefined;
 };
 
 const sAbonner = (f: () => void) => {
