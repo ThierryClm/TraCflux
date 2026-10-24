@@ -62,11 +62,35 @@ export const ouvrirMenu = async (page: Page, menu: string, item: Locator) => {
     }
 };
 
-/** Clique une entrée du menu Fichier. */
+/**
+ * Clique une entrée du menu Fichier. Sous charge (WebKit en CI), le menu peut
+ * se refermer entre son ouverture et le clic : on referme tout et on
+ * recommence, plutôt que d'attendre l'entrée jusqu'à la fin du test.
+ */
 export const menuFichier = async (page: Page, entree: string | RegExp) => {
     const item = page.locator('.menu-bar').getByText(entree).first();
+    for (let essai = 0; essai < 4; essai++) {
+        await ouvrirMenuFichier(page, item);
+        if (await item.click({ timeout: 5_000 }).then(() => true, () => false)) return;
+        await page.keyboard.press('Escape');
+        await page.mouse.click(800, 880);
+    }
     await ouvrirMenuFichier(page, item);
     await item.click();
+};
+
+/**
+ * Clique un bouton qui ferme sa propre fenêtre détachée (« Fermer »). La
+ * fenêtre peut disparaître avant que le clic soit tenu pour terminé
+ * (« Target page… has been closed », Firefox en CI) : c'est l'effet attendu,
+ * pas une erreur. On attend la fermeture.
+ */
+export const cliquerEtFermer = async (fenetre: Page, bouton: Locator) => {
+    const fermee = fenetre.isClosed() ? Promise.resolve() : fenetre.waitForEvent('close');
+    await bouton.click({ noWaitAfter: true }).catch((e: unknown) => {
+        if (!fenetre.isClosed()) throw e;
+    });
+    await fermee;
 };
 
 /** Entrées du menu Fichier grisées. */

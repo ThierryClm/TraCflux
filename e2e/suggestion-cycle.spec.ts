@@ -4,7 +4,7 @@
  * appliqué au plan, phasage enregistré avec lui.
  */
 import { expect, test, type Locator } from '@playwright/test';
-import { ouvrirExemple, ouvrirMenu } from './aide';
+import { cliquerEtFermer, ouvrirExemple, ouvrirMenu } from './aide';
 
 /** Chapitres de l'assistant, repliés à l'ouverture : on les déplie tous. */
 const toutDeplier = async (fenetre: Locator) => {
@@ -53,9 +53,7 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
 
     await fenetre.getByRole('button', { name: `Appliquer le cycle (${cycle} s)` }).click();
     await expect(page.locator('.cycle-input-label input').first()).toHaveValue(String(cycle));
-    const fermee = popup.waitForEvent('close');
-    await fenetre.getByRole('button', { name: 'Fermer' }).click();
-    await fermee;
+    await cliquerEtFermer(popup, fenetre.getByRole('button', { name: 'Fermer' }));
 
     // Le phasage est gardé avec le plan : on le retrouve à la réouverture.
     await ouvrirMenu(page, 'Diagramme', item);
