@@ -1,5 +1,5 @@
 /**
- * Parcours réels dans de vrais navigateurs (Chrome, Firefox, Safari/WebKit),
+ * Parcours réels dans de vrais navigateurs (Chrome, Edge, Firefox, Safari/WebKit, Brave),
  * sur la version compilée servie par `vite preview` : celle que reçoivent les
  * utilisateurs. Les tests unitaires (Vitest, src/) vérifient des morceaux de
  * code ; ceux-ci rejouent ce que fait l'utilisateur, y compris les cas de
@@ -8,7 +8,14 @@
  *   npm run e2e            tous les navigateurs (Chrome, Edge, Firefox, Safari)
  *   npm run e2e -- --project=firefox
  */
+import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
+
+// Brave n'est pas fourni par Playwright : on prend celui du poste, ou celui
+// que désigne BRAVE_PATH (la CI l'installe et le désigne ainsi).
+const BRAVE = process.env.BRAVE_PATH
+    || ['/usr/bin/brave-browser', '/opt/brave.com/brave/brave', '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+        'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe'].find(existsSync);
 
 // 4190 est un port réservé (ManageSieve) : Firefox et WebKit refusent d'y aller.
 const PORT = 4321;
@@ -39,6 +46,9 @@ export default defineConfig({
         { name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge', viewport: { width: 1600, height: 900 } } },
         { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1600, height: 900 } } },
         { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1600, height: 900 } } },
+        // Brave : moteur de Chrome, mais sans les fenêtres natives Ouvrir /
+        // Enregistrer, qu'il masque pour protéger la vie privée.
+        ...(BRAVE ? [{ name: 'brave', use: { ...devices['Desktop Chrome'], viewport: { width: 1600, height: 900 }, launchOptions: { executablePath: BRAVE } } }] : []),
     ],
     webServer: {
         command: `npm run build && npx vite preview --host 127.0.0.1 --port ${PORT} --strictPort`,

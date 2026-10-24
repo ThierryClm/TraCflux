@@ -1,6 +1,6 @@
 /**
  * Navigateurs sans fenêtres natives Ouvrir / Enregistrer de l'API d'accès
- * aux fichiers : Firefox, Safari, Chrome sur Android — et un cadre d'un autre
+ * aux fichiers : Firefox, Safari, Brave (qui les masque), Chrome sur Android — et un cadre d'un autre
  * site, où cadreTiers les a remplacées ou masquées.
  *
  * Sans elles, « Ouvrir un projet » renvoyait vers le cache du navigateur et

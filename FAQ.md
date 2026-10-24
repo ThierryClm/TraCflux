@@ -184,7 +184,7 @@ Oui. Une fois la page chargée, l'application fonctionne sans connexion. Vous po
 
 ### Où sont stockés mes projets ?
 
-Les projets actifs sont conservés dans le **localStorage** du navigateur (≈ 5 Mo disponibles) ; *Fichier → Restaurer un projet récent* les liste, et son bouton **i** rappelle qu'il s'agit des dernières versions enregistrées automatiquement **sur ce poste**. Pour un stockage durable, enregistrez le projet en `.json` via **Fichier → Sauvegarder** — sous Chrome et Edge, le fichier va sur votre disque ou dans un partage réseau de votre choix ; sous Firefox et Safari, il est téléchargé (voir [Quels navigateurs et systèmes sont supportés ?](#quels-navigateurs-et-systèmes-sont-supportés-)).
+Les projets actifs sont conservés dans le **localStorage** du navigateur (≈ 5 Mo disponibles) ; *Fichier → Restaurer un projet récent* les liste, et son bouton **i** rappelle qu'il s'agit des dernières versions enregistrées automatiquement **sur ce poste**. Pour un stockage durable, enregistrez le projet en `.json` via **Fichier → Sauvegarder** — sous Chrome et Edge, le fichier va sur votre disque ou dans un partage réseau de votre choix ; sous Firefox, Safari et Brave, il est téléchargé (voir [Quels navigateurs et systèmes sont supportés ?](#quels-navigateurs-et-systèmes-sont-supportés-)).
 
 ### Comment partager un projet avec un collègue ?
 
@@ -255,11 +255,13 @@ L'élaboration d'un diagramme de feux est une **discipline à part entière** : 
 
 ### Quels navigateurs et systèmes sont supportés ?
 
-**Chrome, Firefox, Edge, Safari** dans une version récente (2 ans max). L'application étant une page web, elle fonctionne sur **Windows, macOS et Linux** indifféremment, ainsi qu'en environnement Citrix ou bureau distant.
+**Chrome, Edge, Firefox, Safari et Brave** dans une version récente (2 ans max). L'application étant une page web, elle fonctionne sur **Windows, macOS et Linux** indifféremment, ainsi qu'en environnement Citrix ou bureau distant.
 
-Une différence pratique concerne les fichiers. **Chrome et Edge** ouvrent leurs propres fenêtres *Ouvrir* et *Enregistrer* : vous choisissez le dossier, et l'application retient les derniers dossiers utilisés. **Firefox et Safari** n'ont pas ces fenêtres : *Ouvrir un projet* passe par le sélecteur de fichier classique, et *Sauvegarder* **télécharge** le fichier `.json` sous le nom du projet. Il arrive alors dans le dossier des téléchargements, sauf si le navigateur est réglé pour demander où enregistrer — sous Firefox : *Paramètres → Général → Fichiers et applications → Toujours vous demander où enregistrer les fichiers*. Un second enregistrement sous le même nom peut être renommé par le navigateur, par exemple `Carrefour (1).json`.
+Une différence pratique concerne les fichiers. **Chrome et Edge** ouvrent leurs propres fenêtres *Ouvrir* et *Enregistrer* : vous choisissez le dossier, et l'application retient les derniers dossiers utilisés. **Firefox et Safari** n'ont pas ces fenêtres, et **Brave** les désactive pour protéger la vie privée : *Ouvrir un projet* passe par le sélecteur de fichier classique, et *Sauvegarder* **télécharge** le fichier `.json` sous le nom du projet. Il arrive alors dans le dossier des téléchargements, sauf si le navigateur est réglé pour demander où enregistrer — sous Firefox : *Paramètres → Général → Fichiers et applications → Toujours vous demander où enregistrer les fichiers* ; sous Brave : *Paramètres → Téléchargements → Toujours demander où enregistrer les fichiers*. Un second enregistrement sous le même nom peut être renommé par le navigateur, par exemple `Carrefour (1).json`.
 
-L'installation comme application (bouton *Installer* de la barre d'adresse) est proposée par Chrome et Edge.
+L'installation comme application (bouton *Installer* de la barre d'adresse) est proposée par Chrome, Edge et Brave.
+
+**Brave** fonctionne comme Chrome, dont il partage le moteur, à la différence des fichiers près. Ses boucliers (*Shields*) n'ont rien à bloquer : TraCflux ne charge ni publicité ni traceur.
 
 ### Puis-je l'utiliser sur un smartphone ou une tablette ?
 
