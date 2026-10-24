@@ -67,7 +67,7 @@ const NouveauPlanDialog = ({
                 <>
                     <p>
                         Aucune donnée de trafic n'est encore saisie. Renseignez les débits dans l'onglet <b>Trafic</b> :
-                        « Suggérer une durée de cycle » (menu Diagramme) s'en servira.
+                        l'« Assistant conception » (menu Diagramme) s'en servira.
                     </p>
                     <div className="modal-actions">
                         <button className="modal-btn modal-btn-secondary" onClick={onClose}>Plus tard</button>

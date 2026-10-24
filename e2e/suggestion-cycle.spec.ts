@@ -8,7 +8,7 @@ import { ouvrirExemple, ouvrirMenu } from './aide';
 
 test('le cycle de Webster calculé sur les groupes déterminants s\'applique au plan', async ({ page, context }) => {
     await ouvrirExemple(page);
-    const item = page.locator('.menu-bar').getByText('Suggérer une durée de cycle...', { exact: true });
+    const item = page.locator('.menu-bar').getByText('Assistant conception...', { exact: true });
     await ouvrirMenu(page, 'Diagramme', item);
     // Fenêtre détachée du navigateur, déplaçable sur un autre écran : la page
     // principale garde tout l'espace du diagramme.
