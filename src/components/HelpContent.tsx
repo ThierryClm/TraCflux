@@ -452,6 +452,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                 <ul>
                     <li><strong>Nouveau plan de feu :</strong> Crée un onglet « Nouveau PF » vierge, avec les mêmes groupes et la même matrice : verts (Déb, Fin), DA, conditions et variables micro vides. Une fenêtre propose ensuite le jeu de trafic du plan (s'il existe des données) : <em>Associer ce jeu</em> l'associe sans fermer la fenêtre (le bouton se grise), pour enchaîner sur <em>Suggérer le cycle…</em> ou <em>Fermer</em> ; <em>Associer et suggérer le cycle…</em> fait les deux d'un coup ; sans trafic, elle invite à le saisir dans l'onglet Trafic.</li>
                     <li><strong>Dupliquer :</strong> Crée un nouvel onglet PF avec une copie du diagramme actuel</li>
+                    <li><strong>Modification du diagramme :</strong> sous-menu qui regroupe les opérations qui remanient le diagramme : <em>Déplacer un groupe de feu</em>, <em>Glisser</em>, <em>Insérer</em>, <em>Réduire</em> et <em>Intégrer un bi-Carrefour</em> (ou <em>Rétablir en uni-carrefour</em>), détaillées ci-dessous.</li>
                     <li><strong>Glisser :</strong> Décale tous les groupes d'un nombre de secondes donné</li>
                     <li><strong>Insérer :</strong> Insère du temps dans le cycle à une position donnée</li>
                     <li><strong>Réduire :</strong> Réduit la plage de temps dans le cycle à une position donnée</li>

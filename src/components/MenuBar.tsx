@@ -535,10 +535,21 @@ const MenuBar = ({
                 },
                 { label: 'Dupliquer le diagramme actif', action: 'duplicate', disabled: !hasPermission('canDuplicate') },
                 { label: 'Supprimer le diagramme actif', action: 'deleteActiveDiagram', disabled: !hasPermission('canModifyDiagram') },
-                { label: 'Déplacer un groupe de feu...', action: 'moveGroup', disabled: !hasPermission('canModifyDiagram') },
-                biCarrefourSeparator
-                    ? { label: 'Rétablir en uni-carrefour', action: 'uniCarrefour', disabled: !hasPermission('canModifyDiagram') }
-                    : { label: 'Intégrer un bi-Carrefour...', action: 'biCarrefour', disabled: !hasPermission('canModifyDiagram') },
+                {
+                    // Opérations qui remanient la structure du diagramme, regroupées.
+                    label: 'Modification du diagramme',
+                    type: 'submenu',
+                    submenuId: 'modificationDiagramme',
+                    submenu: [
+                        { label: 'Déplacer un groupe de feu...', action: 'moveGroup', disabled: !hasPermission('canModifyDiagram') },
+                        { label: 'Glisser...', action: 'slide', disabled: !hasPermission('canModifyDiagram') },
+                        { label: 'Insérer...', action: 'insert', disabled: !hasPermission('canModifyDiagram') },
+                        { label: 'Réduire...', action: 'reduce', disabled: !hasPermission('canModifyDiagram') },
+                        biCarrefourSeparator
+                            ? { label: 'Rétablir en uni-carrefour', action: 'uniCarrefour', disabled: !hasPermission('canModifyDiagram') }
+                            : { label: 'Intégrer un bi-Carrefour...', action: 'biCarrefour', disabled: !hasPermission('canModifyDiagram') }
+                    ]
+                },
                 {
                     label: 'Matrice',
                     type: 'submenu',
@@ -553,10 +564,6 @@ const MenuBar = ({
                         }
                     ]
                 },
-                { type: 'separator' },
-                { label: 'Glisser...', action: 'slide', disabled: !hasPermission('canModifyDiagram') },
-                { label: 'Inserer...', action: 'insert', disabled: !hasPermission('canModifyDiagram') },
-                { label: 'Réduire...', action: 'reduce', disabled: !hasPermission('canModifyDiagram') },
                 { type: 'separator' },
                 {
                     label: 'Suggérer une durée de cycle...',
