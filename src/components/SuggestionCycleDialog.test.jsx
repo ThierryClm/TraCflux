@@ -14,7 +14,18 @@ const ouvrir = (props = {}) => {
     render(<SuggestionCycleDialog isOpen onClose={() => {}} planName="PF1" groups={groups} conflictMatrix={matrice}
         cycleLength={70} getTrafficData={id => ({ trafficVol: trafic[id] })} trafficDatasetName="HPM"
         phasageCycle={null} {...f} {...props} />);
+    if (!props.replie) toutDeplier();
     return f;
+};
+
+// Les chapitres sont repliés à l'ouverture : on les déplie tous (certains
+// n'apparaissent qu'une fois les phases saisies, d'où plusieurs passages).
+const toutDeplier = () => {
+    for (let i = 0; i < 4; i++) {
+        const replies = screen.queryAllByRole('button', { expanded: false });
+        if (!replies.length) return;
+        replies.forEach(b => fireEvent.click(b));
+    }
 };
 
 describe('suggestion de durée du cycle', () => {
@@ -30,6 +41,7 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByLabelText('Dégagement de la phase 2 vers la phase 3')).toHaveValue(6);
         expect(screen.getByLabelText('Dégagement de la phase 3 vers la phase 1')).toHaveValue(6);
         fireEvent.change(screen.getByLabelText('Dégagement de la phase 1 vers la phase 2'), { target: { value: '4' } });
+        toutDeplier();
         expect(screen.getByText(/temps perdu L =/).textContent).toContain('16 s');
         expect(screen.getByText(/Cycle optimal de Webster/).textContent).toMatch(/65,6 s.*cycle proposé de 70 s/);
         // Les groupes ont déjà un vert : le diagramme n'est pas touché.
@@ -115,7 +127,7 @@ describe('suggestion de durée du cycle', () => {
         m[0][5] = 4; m[1][5] = 6; m[2][5] = 7; m[5][0] = 8; m[5][1] = 6; m[5][2] = 6;
         const { updateGroupParams } = ouvrir({ groups: avecP6, conflictMatrix: m, cycleLength: 100,
             getTrafficData: id => ({ trafficVol: trafic[id] ?? 0 }), phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
-        expect(screen.getByText(/calés sur le cycle proposé de 70 s/)).toBeInTheDocument();
+        expect(screen.getByText(/calés sur le cycle proposé de 70 s/i)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
         // Sur 70 s, P6 doit fermer 8 s avant le retour de V1 (fin à 62 s), et non avec V4 à 64 s.
         expect(updateGroupParams).toHaveBeenCalledWith(6, { offset: 46, durations: { green: 16 } });
@@ -151,8 +163,8 @@ describe('suggestion de durée du cycle', () => {
         expect(remplacer({ action: 'Adaptatif vertical', abrv: 'AV2' })).toBe(true);
         expect(remplacer({ action: 'Adaptatif vertical', abrv: 'DA1' })).toBe(false);
         expect(remplacer({ action: 'Point de repos', abrv: 'AV1' })).toBe(false);
-        expect(within(bloc).getByText(/Inscrits : AV1, AV3, FA1, FA2/)).toBeInTheDocument();
-        expect(within(bloc).getByText('23 – 29 s (6 s)')).toBeInTheDocument();
+        expect(screen.getByText(/Inscrits : AV1, AV3, FA1, FA2/)).toBeInTheDocument();
+        expect(within(screen.getByLabelText('Fermetures anticipées avec glissements')).getByText('23 – 29 s (6 s)')).toBeInTheDocument();
     });
 
     it('adaptatifs verticaux : mode prudent, chaque zone calculée seule', () => {
@@ -184,7 +196,7 @@ describe('suggestion de durée du cycle', () => {
         const ajouterActions = vi.fn(lignes => lignes.length);
         const setVariableMicro = vi.fn();
         const { updateGroupParams } = ouvrir({ groups: places, ajouterActions, variablesMicro: ['TMAB1 = 12'], setVariableMicro, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
-        const bloc = screen.getByLabelText('Adaptatifs verticaux');
+        const bloc = screen.getByLabelText('Points de repos bus');
         expect(within(bloc).getByText('Attente quittée si TPPh_L3 + DAx > 4 + TMABx')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
         const [lignes, remplacer] = ajouterActions.mock.calls[0];
@@ -198,5 +210,27 @@ describe('suggestion de durée du cycle', () => {
         // Le repos écrit à la main (« attente bus maxi 10 secondes ») n'est pas remplacé.
         expect(remplacer({ action: 'Point de repos', description: 'attente bus maxi 10 secondes', abrv: 'Att bus' })).toBe(false);
         expect(remplacer({ action: 'Point de repos', description: 'attente bus théorique maxi 10 secondes', abrv: 'Att bus' })).toBe(true);
+    });
+
+    it('chapitres repliés à l\'ouverture : titre et résumé des valeurs, déployables un à un', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        ouvrir({ replie: true, groups: places, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        // Repliés : les champs ne sont pas affichés, les résumés si.
+        expect(screen.queryByLabelText('Nombre de phases')).toBeNull();
+        const phases = screen.getByRole('button', { name: /Phases et groupes déterminants/ });
+        expect(phases).toHaveAttribute('aria-expanded', 'false');
+        expect(phases).toHaveTextContent('3 phases : V1, B3, V4 · taux visé 85 %');
+        expect(screen.getByRole('button', { name: /Durée de cycle/ })).toHaveTextContent('cycle proposé 70 s');
+        expect(screen.getByRole('button', { name: /Adaptatifs verticaux/ })).toHaveTextContent('AV1 22–29 s');
+        expect(screen.getByRole('button', { name: /Fermetures anticipées/ })).toHaveTextContent('seuil 81 %');
+        // Déplier puis replier un chapitre.
+        fireEvent.click(phases);
+        expect(phases).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByLabelText('Nombre de phases')).toHaveValue('3');
+        fireEvent.click(phases);
+        expect(screen.queryByLabelText('Nombre de phases')).toBeNull();
+        // Le bouton Appliquer reste accessible, chapitres repliés.
+        expect(screen.getByRole('button', { name: /Appliquer le cycle/ })).toBeEnabled();
     });
 });

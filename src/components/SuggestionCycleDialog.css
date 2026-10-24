@@ -79,3 +79,15 @@
 }
 .modal-content.suggestion-cycle.sc-detachee .modal-body { flex: 1 1 auto; min-height: 0; }
 .suggestion-cycle .sc-sans-objet td { opacity: 0.6; }
+
+/* Chapitres repliables : titre et résumé des valeurs toujours visibles. */
+.suggestion-cycle .sc-chapitre { border: 1px solid var(--md-separator, #555); border-radius: 6px; margin: 6px 0; }
+.suggestion-cycle .sc-chapitre-tete {
+    display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 6px 10px;
+    background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.suggestion-cycle .sc-chapitre-tete:hover { background: var(--md-hover, rgba(255, 255, 255, 0.06)); }
+.suggestion-cycle .sc-chevron { flex: 0 0 auto; width: 1em; }
+.suggestion-cycle .sc-chapitre-titre { flex: 0 0 auto; font-weight: bold; }
+.suggestion-cycle .sc-chapitre-resume { flex: 1 1 auto; color: var(--md-muted, #aaa); font-size: 0.88em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggestion-cycle .sc-chapitre-corps { padding: 0 10px 8px; }

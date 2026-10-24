@@ -3,8 +3,18 @@
  * déterminants de chaque phase et du trafic du plan, cycle de Webster
  * appliqué au plan, phasage enregistré avec lui.
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { ouvrirExemple, ouvrirMenu } from './aide';
+
+/** Chapitres de l'assistant, repliés à l'ouverture : on les déplie tous. */
+const toutDeplier = async (fenetre: Locator) => {
+    for (let i = 0; i < 4; i++) {
+        const replies = fenetre.locator('.sc-chapitre-tete[aria-expanded="false"]');
+        const n = await replies.count();
+        if (!n) return;
+        for (let k = n - 1; k >= 0; k--) await replies.nth(k).click();
+    }
+};
 
 test('le cycle de Webster calculé sur les groupes déterminants s\'applique au plan', async ({ page, context }) => {
     await ouvrirExemple(page);
@@ -18,6 +28,10 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
     const fenetre = popup.locator('.suggestion-cycle.sc-detachee');
     await expect(fenetre).toBeVisible();
     await expect(page.locator('.modal-content.suggestion-cycle')).toHaveCount(0);
+    // Chapitres repliés à l'ouverture, avec leur résumé.
+    await expect(fenetre.locator('.sc-chapitre-tete').first()).toHaveAttribute('aria-expanded', 'false');
+    await expect(fenetre.locator('.sc-chapitre-tete').first()).toContainText(/\d phases :/);
+    await toutDeplier(fenetre);
 
     // Diagramme renseigné : le tableau arrive pré-rempli (chemin critique).
     await expect(fenetre.getByText(/Proposition lue sur le diagramme/)).toBeVisible();
@@ -29,6 +43,7 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
         const c = fenetre.getByLabel(champ);
         if (!(await c.inputValue())) await c.fill(valeur);
     }
+    await toutDeplier(fenetre);
     const webster = fenetre.getByText(/Cycle optimal de Webster/);
     await expect(webster).toContainText(/cycle proposé de \d+ s/);
     const cycle = Number(((await webster.textContent()) || '').match(/cycle proposé de (\d+) s/)?.[1]);
@@ -46,6 +61,7 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
     const rouverte = context.waitForEvent('page');
     await item.click();
     const popup2 = await rouverte;
+    await toutDeplier(popup2.locator('.suggestion-cycle'));
     await expect(popup2.locator('.suggestion-cycle').getByLabel('Groupe déterminant de la phase 2')).toHaveValue('8');
 });
 
@@ -70,5 +86,6 @@ test('Nouveau plan de feu : plan vierge, choix du jeu de trafic, puis suggestion
     const nouvelle = context.waitForEvent('page');
     await fenetre.getByRole('button', { name: 'Associer et suggérer le cycle…' }).click();
     const popup = await nouvelle;
+    await toutDeplier(popup.locator('.suggestion-cycle'));
     await expect(popup.locator('.suggestion-cycle')).toContainText('jeu HPS');
 });
