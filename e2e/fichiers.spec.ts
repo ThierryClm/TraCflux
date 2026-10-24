@@ -8,8 +8,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { menuFichier, ongletsPlans, projetExemple } from './aide';
 
-test('Firefox et Safari : Ouvrir lit un fichier du poste, Sauvegarder le télécharge', async ({ page, browserName }, testInfo) => {
-    test.skip(browserName === 'chromium', 'Chrome ouvre ses fenêtres natives, que Playwright ne pilote pas');
+/** Chrome et Edge ont les fenêtres natives ; Brave, du même moteur, les masque. */
+const fenetresNatives = (browserName: string, projet: string) => browserName === 'chromium' && projet !== 'brave';
+
+test('Firefox, Safari et Brave : Ouvrir lit un fichier du poste, Sauvegarder le télécharge', async ({ page, browserName }, testInfo) => {
+    test.skip(fenetresNatives(browserName, testInfo.project.name), 'Chrome ouvre ses fenêtres natives, que Playwright ne pilote pas');
     const fichier = testInfo.outputPath('Mon_carrefour.json');
     writeFileSync(fichier, JSON.stringify(projetExemple()));
 
@@ -31,8 +34,8 @@ test('Firefox et Safari : Ouvrir lit un fichier du poste, Sauvegarder le téléc
     expect(contenu.pfTabs).toHaveLength(5);
 });
 
-test('Chrome et Edge gardent leurs fenêtres natives Ouvrir / Enregistrer', async ({ page, browserName }) => {
-    test.skip(browserName !== 'chromium', 'propre à Chrome et Edge');
+test('Chrome et Edge gardent leurs fenêtres natives Ouvrir / Enregistrer', async ({ page, browserName }, testInfo) => {
+    test.skip(!fenetresNatives(browserName, testInfo.project.name), 'propre à Chrome et Edge');
     await page.goto('/');
     const natives = await page.evaluate(() => (['showOpenFilePicker', 'showSaveFilePicker'] as const)
         .map(nom => String((window as unknown as Record<string, unknown>)[nom]).includes('[native code]')));

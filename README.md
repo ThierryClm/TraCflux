@@ -131,7 +131,7 @@ Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèc
 - **Détachement de fenêtres** — à partager en visio ou à poser sur un second écran : matrice, formulaire, propriétés, données trafic, conflits, réserve de capacité, conditions et variables de micro-régulation, remarques, image du carrefour, et **miroir du diagramme en lecture seule**. Les fenêtres détachées suivent le projet : elles se rouvrent à sa réouverture, ce qui suppose d'avoir autorisé les fenêtres contextuelles pour le site — les navigateurs n'en ouvrent qu'une par action de l'utilisateur ([voir la FAQ](FAQ.md#à-la-réouverture-dun-projet-mes-fenêtres-détachées-ne-reviennent-pas-toutes-pourquoi))
 - Application installable (PWA), fonctionne hors ligne, avec bandeau « nouvelle version disponible »
 - Commentaires et remarques du diagramme : **Afficher**, **Masquer** ou **Automatique** (seulement pour les plans de feu qui en ont), réglage enregistré avec le projet
-- **Navigateurs** — Chrome et Edge ouvrent et enregistrent les projets dans le dossier de votre choix ; Firefox et Safari passent par le sélecteur de fichier classique pour ouvrir et par un téléchargement du `.json` pour enregistrer
+- **Navigateurs** — Chrome et Edge ouvrent et enregistrent les projets dans le dossier de votre choix ; Firefox, Safari et Brave passent par le sélecteur de fichier classique pour ouvrir et par un téléchargement du `.json` pour enregistrer
 - **Utilisable sur smartphone et tablette** — sur un écran étroit ou bas, la mise en page s'empile et la page défile latéralement pour dérouler tout le diagramme ; éprouvé sur le terrain pour consulter un plan, la saisie restant l'affaire d'un poste de travail ([voir la FAQ](FAQ.md#puis-je-lutiliser-sur-un-smartphone-ou-une-tablette))
 - Rapport de diagnostic pour signalement de bug (local, sans envoi réseau)
 
@@ -163,7 +163,7 @@ L'application s'ouvre à `http://localhost:3000`.
 | `npx vitest run` | Lancer les tests une seule fois |
 | `npm run test:coverage` | Les tests avec la mesure de couverture ; échoue sous les seuils fixés dans `vite.config.ts` |
 | `npm run test:ui` | Les mêmes tests dans l'interface graphique de Vitest |
-| `npm run e2e` | Parcours réels dans Chrome, Edge, Firefox et Safari (Playwright) sur la version compilée : ouvrir et sauvegarder, projet exemple, couleurs de la matrice, ajout de condition, fenêtre détachée, export PNG, dossier imprimé. Première fois : `npx playwright install --with-deps` |
+| `npm run e2e` | Parcours réels dans Chrome, Edge, Firefox, Safari et Brave (Playwright) sur la version compilée : ouvrir et sauvegarder, projet exemple, couleurs de la matrice, ajout de condition, fenêtre détachée, export PNG, dossier imprimé. Première fois : `npx playwright install --with-deps` ; Brave est pris s'il est installé (ou désigné par `BRAVE_PATH`) |
 | `npm run types` | Vérification des types TypeScript (`tsc --noEmit`) |
 | `npm run lint` | Analyse du code par Oxlint (`.oxlintrc.json`) : les erreurs bloquent l'intégration continue, les avertissements sont une dette à réduire |
 | `npm run preview:deploy` | Construit et publie la branche en cours sur une adresse de prévisualisation Surge ; refuse de s'exécuter sur `master` |

@@ -15,7 +15,7 @@ initPrivacyFriendlyAnalytics();
 // Dans un cadre d'un autre site, les fenêtres natives Ouvrir / Enregistrer
 // sont refusées : sélecteur de fichier classique pour Ouvrir, repli pour le reste.
 adapterSelecteursDansCadreTiers();
-// Sans ces fenêtres (Firefox, Safari, cadre tiers) : sélecteur classique pour
+// Sans ces fenêtres (Firefox, Safari, Brave, cadre tiers) : sélecteur classique pour
 // Ouvrir, téléchargement pour Enregistrer.
 adapterSelecteursSansAPI();
 

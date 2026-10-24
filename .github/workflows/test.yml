@@ -46,7 +46,7 @@ jobs:
       - name: Production build (smoke check)
         run: npm run build
 
-  # Parcours réels dans Chrome, Edge, Firefox et Safari (WebKit), sur la version
+  # Parcours réels dans Chrome, Edge, Firefox, Safari (WebKit) et Brave, sur la version
   # compilée : ouvrir et sauvegarder, projet exemple et restauration,
   # couleurs de la matrice, ajout de condition, dossier imprimé. Chaque
   # régression trouvée à l'usage y devient un cas (cf. e2e/).
@@ -67,6 +67,15 @@ jobs:
 
       - name: Navigateurs Playwright
         run: npx playwright install --with-deps chromium msedge firefox webkit
+
+      # Brave, depuis le dépôt officiel de Brave (Playwright ne le fournit pas).
+      - name: Navigateur Brave
+        run: |
+          sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main" | sudo tee /etc/apt/sources.list.d/brave-browser-release.list
+          sudo apt-get update
+          sudo apt-get install -y brave-browser
+          echo "BRAVE_PATH=$(command -v brave-browser)" >> "$GITHUB_ENV"
 
       - name: Parcours (Playwright)
         run: npm run e2e
