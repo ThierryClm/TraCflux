@@ -3,6 +3,7 @@ import NumericInput from './NumericInput';
 import EmptyState from './EmptyState';
 import type { Groupe, TypeGroupe } from '../types/projet';
 import './GroupTable.css';
+import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
 
 type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
     durations?: Partial<Groupe['durations']>;
@@ -40,7 +41,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
         updateGroupParams(id, { durations: { orange: parseInt(value) || 0 } });
     };
 
-    return (
+    return (<ZoneVerrouSaisie section="configuration">
         <div className="group-table-container">
             {/* En fenêtre détachée, le bandeau porte déjà ce titre. */}
             {!titreEnBandeau && (
@@ -174,7 +175,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
             </table>
             </div>
         </div>
-    );
+    </ZoneVerrouSaisie>);
 };
 
 export default GroupTable;

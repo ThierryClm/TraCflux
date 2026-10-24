@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import type { PermissionFlag } from '../hooks/useAuth';
 import type { ModeAffichage } from '../utils/modeAffichage';
+import { usePrefsVerrou } from '../utils/verrouSaisie';
 import './MenuBar.css';
 
 /** Une entrée de menu : action, case à cocher, séparateur, en-tête, sous-menu ou curseur. */
@@ -135,6 +136,7 @@ const MenuBar = ({
     traficRenseigne = false
 }: MenuBarProps) => {
     const [openMenu, setOpenMenu] = useState<string | null>(initialOpenMenu);
+    const verrou = usePrefsVerrou();
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     // Troisième niveau : un sous-menu ouvert à l'intérieur d'un sous-menu
     // (ex. Diagramme ▸ Options ▸ Style de flèche).
@@ -493,6 +495,19 @@ const MenuBar = ({
                         { label: 'Daltonien', action: 'themeDaltonian', themeId: 'daltonian', keepSubmenuOpen: true },
                         { label: 'Sépia', action: 'themeSepia', themeId: 'sepia', keepSubmenuOpen: true },
                         { label: 'Bleu nuit', action: 'themeBlueNight', themeId: 'blue-night', keepSubmenuOpen: true }
+                    ]
+                },
+                {
+                    // Utile surtout sur smartphone : toucher un champ ouvre le clavier.
+                    label: 'Verrouillage saisie...',
+                    type: 'submenu',
+                    submenuId: 'verrouSaisie',
+                    submenu: [
+                        { label: 'Propriétés',    action: 'verrouSaisie:proprietes',    checked: verrou.proprietes,    keepSubmenuOpen: true },
+                        { label: 'Configuration', action: 'verrouSaisie:configuration', checked: verrou.configuration, keepSubmenuOpen: true },
+                        { label: 'Matrice',       action: 'verrouSaisie:matrice',       checked: verrou.matrice,       keepSubmenuOpen: true },
+                        { label: 'Trafic',        action: 'verrouSaisie:trafic',        checked: verrou.trafic,        keepSubmenuOpen: true },
+                        { label: 'Diagramme',     action: 'verrouSaisie:diagramme',     checked: verrou.diagramme,     keepSubmenuOpen: true }
                     ]
                 },
                 {

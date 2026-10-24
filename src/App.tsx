@@ -82,6 +82,7 @@ import type { HoveredConflict } from './components/ConflictList';
 import type { VertUtileSurvole } from './components/TimelineDiagram';
 import SuggestionCycleDialog, { titreSuggestionCycle } from './components/SuggestionCycleDialog';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
+import { basculerVerrou } from './utils/verrouSaisie';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
 interface OptionsExportPng {
@@ -1457,6 +1458,11 @@ function App() {
                 localStorage.setItem('showWrapFlash', String(newVal));
                 break;
             }
+            case 'verrouSaisie:proprietes':    basculerVerrou('proprietes');    break;
+            case 'verrouSaisie:configuration': basculerVerrou('configuration'); break;
+            case 'verrouSaisie:matrice':       basculerVerrou('matrice');       break;
+            case 'verrouSaisie:trafic':        basculerVerrou('trafic');        break;
+            case 'verrouSaisie:diagramme':     basculerVerrou('diagramme');     break;
             case 'toggleTooltipsMain':    setTooltipPref('main');    break;
             case 'toggleTooltipsConfig':  setTooltipPref('config');  break;
             case 'toggleTooltipsDiagram': setTooltipPref('diagram'); break;
