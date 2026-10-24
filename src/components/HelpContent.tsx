@@ -231,8 +231,8 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                             <li><em>Cycle :</em> Mouvement cycliste (2 sens)</li>
                         </ul>
                     </li>
-                    <li><strong>Mini :</strong> Durée minimale du vert garantie (en secondes), utilisée par la micro-régulation.</li>
-                    <li><strong>Jaune :</strong> Durée du feu jaune/orange. <em>Pour les types Piéton et Cycliste, ce champ correspond au temps de dégagement (affiché dans le diagramme après le vert).</em></li>
+                    <li><strong>Mini :</strong> Durée minimale du vert garantie (en secondes), utilisée par la micro-régulation. L'ISR (6e partie, art. 110 C1) impose au moins 6 s.</li>
+                    <li><strong>Jaune :</strong> Durée du feu jaune/orange : 3 s en agglomération, 5 s hors agglomération ou pour un feu au jaune clignotant (ISR, 6e partie, art. 110 C1). <em>Pour les types Piéton et Cycliste, ce champ correspond au temps de dégagement (affiché dans le diagramme après le vert) : les feux piétons R12 n'ont pas de jaune, et le dégagement se calcule à 1 m/s pour un piéton.</em> L'infobulle de chaque case rappelle la règle selon le type du groupe.</li>
                 </ul>
             </section>
 
