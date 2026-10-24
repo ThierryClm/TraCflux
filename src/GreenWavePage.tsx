@@ -821,7 +821,11 @@ const GreenWavePage = () => {
 
     const handleMouseMove = (e: MouseEvent<SVGSVGElement>) => {
         if (!dragging) return;
-        const deltaX = e.clientX - dragStartX;
+        // Le diagramme peut être affiché réduit (écran de téléphone) : le
+        // déplacement à l'écran est ramené à l'échelle du dessin.
+        const svg = e.currentTarget;
+        const echelle = svg.viewBox.baseVal.width ? svg.getBoundingClientRect().width / svg.viewBox.baseVal.width : 1;
+        const deltaX = (e.clientX - dragStartX) / (echelle || 1);
         const deltaSeconds = deltaX / pixelsPerSecond;
         if (dragging === 'up') {
             setSpeedLineOffsetUp(initialOffset + deltaSeconds);
