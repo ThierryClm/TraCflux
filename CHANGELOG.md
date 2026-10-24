@@ -7,6 +7,42 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.7] — 2026-10-24
+
+### Ajouté
+
+- **Verrouillage de la saisie par section.** *Mise en page → Verrouillage saisie...* propose sept cases :
+  Propriétés, Configuration, Matrice, Trafic, Diagramme, Conditions de micro-régulation et Variables
+  micro. Une section cochée garde ses valeurs lisibles mais non modifiables (champs en lecture seule,
+  listes et cases désactivées), y compris dans les fenêtres détachées : sur smartphone, toucher un champ
+  pour faire défiler n'ouvre plus le clavier. Le réglage est enregistré avec le projet.
+- **Assistant conception : chapitres repliables.** La fenêtre est découpée en six chapitres (phases et
+  groupes déterminants, durée de cycle, groupes associés, adaptatifs verticaux, fermetures anticipées,
+  points de repos bus) ; chaque titre garde le résumé de ses valeurs. À l'ouverture, seul le tableau des
+  groupes déterminants est déployé.
+- **Formulaire : infobulles d'après l'ISR (6e partie).** La case *Jaune* d'un piéton rappelle qu'elle
+  porte le temps de dégagement (les feux R12 n'ont pas de jaune) ; celle d'un véhicule, la règle des
+  3 s ou 5 s ; la colonne *Mini*, le vert minimum de 6 s.
+- **Référencement de tracflux.com** : page de présentation (tracflux.com/presentation), plan du site et
+  fiche descriptive pour les moteurs de recherche.
+
+### Modifié
+
+- **Menu Diagramme** : « Suggérer une durée de cycle » devient **Assistant conception** (menu, titre de
+  la fenêtre, aide, README, FAQ) ; Déplacer un groupe de feu, Glisser, Insérer, Réduire et Intégrer un
+  bi-Carrefour sont regroupés sous **Modification du diagramme**.
+
+### Corrigé
+
+- **Thème clair** : les descriptions des conditions de micro-régulation, en gris très pâle, sont
+  désormais lisibles.
+- **Menu Diagramme** : « Inserer » prend son accent.
+
+### Interne
+
+- Lint : les 42 avertissements du module d'ouverture et d'enregistrement des fichiers sont levés
+  (130 → 88).
+
 ## [1.5.6] — 2026-10-23
 
 ### Ajouté
