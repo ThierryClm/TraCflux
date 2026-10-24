@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import type { PermissionFlag } from '../hooks/useAuth';
 import type { ModeAffichage } from '../utils/modeAffichage';
+import { usePrefsVerrou } from '../utils/verrouSaisie';
 import './MenuBar.css';
 
 /** Une entrée de menu : action, case à cocher, séparateur, en-tête, sous-menu ou curseur. */
@@ -135,6 +136,7 @@ const MenuBar = ({
     traficRenseigne = false
 }: MenuBarProps) => {
     const [openMenu, setOpenMenu] = useState<string | null>(initialOpenMenu);
+    const verrou = usePrefsVerrou();
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     // Troisième niveau : un sous-menu ouvert à l'intérieur d'un sous-menu
     // (ex. Diagramme ▸ Options ▸ Style de flèche).
@@ -496,6 +498,21 @@ const MenuBar = ({
                     ]
                 },
                 {
+                    // Utile surtout sur smartphone : toucher un champ ouvre le clavier.
+                    label: 'Verrouillage saisie...',
+                    type: 'submenu',
+                    submenuId: 'verrouSaisie',
+                    submenu: [
+                        { label: 'Propriétés',    action: 'verrouSaisie:proprietes',    checked: verrou.proprietes,    keepSubmenuOpen: true },
+                        { label: 'Configuration', action: 'verrouSaisie:configuration', checked: verrou.configuration, keepSubmenuOpen: true },
+                        { label: 'Matrice',       action: 'verrouSaisie:matrice',       checked: verrou.matrice,       keepSubmenuOpen: true },
+                        { label: 'Trafic',        action: 'verrouSaisie:trafic',        checked: verrou.trafic,        keepSubmenuOpen: true },
+                        { label: 'Diagramme',     action: 'verrouSaisie:diagramme',     checked: verrou.diagramme,     keepSubmenuOpen: true },
+                        { label: 'Conditions de micro-régulation', action: 'verrouSaisie:conditions', checked: verrou.conditions, keepSubmenuOpen: true },
+                        { label: 'Variables micro', action: 'verrouSaisie:variables', checked: verrou.variables, keepSubmenuOpen: true }
+                    ]
+                },
+                {
                     label: 'Infobulles',
                     type: 'submenu',
                     submenuId: 'tooltips',
@@ -535,10 +552,21 @@ const MenuBar = ({
                 },
                 { label: 'Dupliquer le diagramme actif', action: 'duplicate', disabled: !hasPermission('canDuplicate') },
                 { label: 'Supprimer le diagramme actif', action: 'deleteActiveDiagram', disabled: !hasPermission('canModifyDiagram') },
-                { label: 'Déplacer un groupe de feu...', action: 'moveGroup', disabled: !hasPermission('canModifyDiagram') },
-                biCarrefourSeparator
-                    ? { label: 'Rétablir en uni-carrefour', action: 'uniCarrefour', disabled: !hasPermission('canModifyDiagram') }
-                    : { label: 'Intégrer un bi-Carrefour...', action: 'biCarrefour', disabled: !hasPermission('canModifyDiagram') },
+                {
+                    // Opérations qui remanient la structure du diagramme, regroupées.
+                    label: 'Modification du diagramme',
+                    type: 'submenu',
+                    submenuId: 'modificationDiagramme',
+                    submenu: [
+                        { label: 'Déplacer un groupe de feu...', action: 'moveGroup', disabled: !hasPermission('canModifyDiagram') },
+                        { label: 'Glisser...', action: 'slide', disabled: !hasPermission('canModifyDiagram') },
+                        { label: 'Insérer...', action: 'insert', disabled: !hasPermission('canModifyDiagram') },
+                        { label: 'Réduire...', action: 'reduce', disabled: !hasPermission('canModifyDiagram') },
+                        biCarrefourSeparator
+                            ? { label: 'Rétablir en uni-carrefour', action: 'uniCarrefour', disabled: !hasPermission('canModifyDiagram') }
+                            : { label: 'Intégrer un bi-Carrefour...', action: 'biCarrefour', disabled: !hasPermission('canModifyDiagram') }
+                    ]
+                },
                 {
                     label: 'Matrice',
                     type: 'submenu',
@@ -554,16 +582,12 @@ const MenuBar = ({
                     ]
                 },
                 { type: 'separator' },
-                { label: 'Glisser...', action: 'slide', disabled: !hasPermission('canModifyDiagram') },
-                { label: 'Inserer...', action: 'insert', disabled: !hasPermission('canModifyDiagram') },
-                { label: 'Réduire...', action: 'reduce', disabled: !hasPermission('canModifyDiagram') },
-                { type: 'separator' },
                 {
-                    label: 'Suggérer une durée de cycle...',
+                    label: 'Assistant conception...',
                     action: 'cycleSuggestion',
                     disabled: !traficRenseigne,
                     title: traficRenseigne
-                        ? 'Cycle de Webster à partir des groupes déterminants de chaque phase'
+                        ? 'Cycle de Webster, groupes associés, adaptatifs, fermetures anticipées et repos bus, à partir des groupes déterminants de chaque phase'
                         : 'Renseignez le trafic du plan de feu (onglet Trafic)'
                 },
                 {

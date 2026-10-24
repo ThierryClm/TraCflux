@@ -82,6 +82,7 @@ import type { HoveredConflict } from './components/ConflictList';
 import type { VertUtileSurvole } from './components/TimelineDiagram';
 import SuggestionCycleDialog, { titreSuggestionCycle } from './components/SuggestionCycleDialog';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
+import { basculerVerrou, definirPrefsVerrou, prefsVerrouAEnregistrer, usePrefsVerrou } from './utils/verrouSaisie';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
 interface OptionsExportPng {
@@ -437,11 +438,14 @@ function App() {
     // changement compte comme une modification du projet.
     const { intersectionDisplay, setIntersectionDisplayOption } = useIntersectionDisplayOptions();
 
+    // Verrouillage de la saisie : enregistré avec le projet (cf. champsProjetRef).
+    const prefsVerrou = usePrefsVerrou();
+
     // Track whether project has been modified (for "Nouveau projet" menu)
     const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
         useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, intersectionDisplay,
             // Enregistrés dans le projet : les changer est une modification.
-            commentsMode, remarksMode, descriptionMode]);
+            commentsMode, remarksMode, descriptionMode, prefsVerrou]);
 
     // Passer d'un plan de feux à un autre n'est pas une modification du projet :
     // l'écran recharge les groupes, le cycle, la matrice et les actions du plan
@@ -943,6 +947,7 @@ function App() {
                 showImageGroupNumbers: intersectionDisplay.showGroupNumbers,
                 showImageGroupNames: intersectionDisplay.showGroupNames,
                 showImageArrows: intersectionDisplay.showArrows,
+                verrouSaisie: prefsVerrouAEnregistrer(),
                 directoryNames: {
                     open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
                     save: lastSaveDirectoryRef.current?.name || recentSaveDirs[0]?.name || null,
@@ -961,7 +966,8 @@ function App() {
             setShowFloatingRemarks, setDossierSections,
             setShowImageGroupNumbers: (v) => setIntersectionDisplayOption('showGroupNumbers', v),
             setShowImageGroupNames: (v) => setIntersectionDisplayOption('showGroupNames', v),
-            setShowImageArrows: (v) => setIntersectionDisplayOption('showArrows', v)
+            setShowImageArrows: (v) => setIntersectionDisplayOption('showArrows', v),
+            setVerrouSaisie: definirPrefsVerrou
         })
     };
 
@@ -1227,6 +1233,7 @@ function App() {
                     setShowFloatingDiagram(false);
                     setShowFloatingConflicts(false);
                     setShowFloatingDiagnostic(false);
+                    definirPrefsVerrou(); // rien de verrouillé dans un nouveau projet
                     // Active l'interface principale : on quitte l'écran d'accueil.
                     setHasActiveProject(true);
                     toast.success('Nouveau projet créé');
@@ -1457,6 +1464,13 @@ function App() {
                 localStorage.setItem('showWrapFlash', String(newVal));
                 break;
             }
+            case 'verrouSaisie:proprietes':    basculerVerrou('proprietes');    break;
+            case 'verrouSaisie:configuration': basculerVerrou('configuration'); break;
+            case 'verrouSaisie:matrice':       basculerVerrou('matrice');       break;
+            case 'verrouSaisie:trafic':        basculerVerrou('trafic');        break;
+            case 'verrouSaisie:diagramme':     basculerVerrou('diagramme');     break;
+            case 'verrouSaisie:conditions':    basculerVerrou('conditions');    break;
+            case 'verrouSaisie:variables':     basculerVerrou('variables');     break;
             case 'toggleTooltipsMain':    setTooltipPref('main');    break;
             case 'toggleTooltipsConfig':  setTooltipPref('config');  break;
             case 'toggleTooltipsDiagram': setTooltipPref('diagram'); break;
@@ -2080,7 +2094,7 @@ function App() {
         return () => { if (!popup.closed) popup.cancelAnimationFrame(raf); };
     }, [showFloatingLegend, legendPopup.renderToPopup]);
 
-    // Assistant « Suggérer une durée de cycle », rendu dans sa fenêtre détachée.
+    // « Assistant conception », rendu dans sa fenêtre détachée.
     const propsSuggestionCycle = useMemo(() => ({
         onClose: () => setSuggestionCycleModal(false),
         planName: activePFName,

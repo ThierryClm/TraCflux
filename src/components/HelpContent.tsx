@@ -183,6 +183,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Remarques du diagramme :</strong> Le menu <strong>Mise en page → Détachements</strong> permet d'ouvrir le champ Remarques du plan de feu actif dans une fenêtre séparée, déplaçable sur un second écran. Pratique lors d'une projection : le diagramme reste visible sur l'écran principal pendant que vous gardez vos notes sur un écran annexe pour commenter la présentation. L'option est grisée tant que la case <em>Remarques du diagramme</em> n'est pas cochée dans le menu Mise en page (impossible de détacher un champ masqué).</li>
                     <li><strong>Zoom indépendant dans chaque fenêtre détachée :</strong> Chaque popup (Formulaire, Matrice, Trafic, Conditions micro, Variables micro, Image, Remarques) accepte le zoom natif du navigateur sans affecter la fenêtre principale. Utilisez <strong>Ctrl + molette de la souris</strong> pour zoomer/dézoomer, ou <strong>Ctrl++</strong> / <strong>Ctrl+-</strong>, et <strong>Ctrl+0</strong> pour revenir à 100 %. Pratique pour optimiser la lecture sur un grand écran ou dans une fenêtre partagée en visio, sans modifier la mise en page de l'application principale. Selon le navigateur, le niveau de zoom peut être mémorisé d'une session à l'autre.</li>
                     <li><strong>Confirmation à la fermeture :</strong> Si le projet a été modifié sans être sauvegardé, le navigateur affiche une confirmation avant de fermer l'onglet ou la fenêtre.</li>
+                    <li><strong>Verrouillage de la saisie par section :</strong> Le menu <strong>Mise en page → Verrouillage saisie...</strong> propose sept cases : <em>Propriétés</em>, <em>Configuration</em>, <em>Matrice</em>, <em>Trafic</em>, <em>Diagramme</em>, <em>Conditions de micro-régulation</em> et <em>Variables micro</em>. Une section cochée garde ses valeurs lisibles mais non modifiables : ses champs passent en lecture seule, ses listes et cases sont désactivées, y compris dans les fenêtres détachées. Très utile sur smartphone ou tablette, où toucher un champ pour faire défiler ouvre le clavier ou une liste de choix. Le réglage est enregistré avec le projet et retrouvé à son ouverture ; un nouveau projet part sans verrou. Décochez pour saisir à nouveau.</li>
                     <li><strong>Désactivation des infobulles par section :</strong> Le menu <strong>Mise en page → Infobulles</strong> ouvre un sous-menu où chaque section de l'interface (<em>Page principale</em>, <em>Configuration</em>, <em>Diagramme</em>, <em>Matrice</em>, <em>Trafic</em>, <em>Conditions de micro-régulation</em>) peut être cochée individuellement. Décocher une section masque toutes ses infobulles — utile pour épurer l'interface une fois familiarisé avec l'outil. Préférence enregistrée au niveau de l'application (s'applique à tous les projets).</li>
                 </ul>
             </section>
@@ -230,8 +231,8 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                             <li><em>Cycle :</em> Mouvement cycliste (2 sens)</li>
                         </ul>
                     </li>
-                    <li><strong>Mini :</strong> Durée minimale du vert garantie (en secondes), utilisée par la micro-régulation.</li>
-                    <li><strong>Jaune :</strong> Durée du feu jaune/orange. <em>Pour les types Piéton et Cycliste, ce champ correspond au temps de dégagement (affiché dans le diagramme après le vert).</em></li>
+                    <li><strong>Mini :</strong> Durée minimale du vert garantie (en secondes), utilisée par la micro-régulation. L'ISR (6e partie, art. 110 C1) impose au moins 6 s.</li>
+                    <li><strong>Jaune :</strong> Durée du feu jaune/orange : 3 s en agglomération, 5 s hors agglomération ou pour un feu au jaune clignotant (ISR, 6e partie, art. 110 C1). <em>Pour les types Piéton et Cycliste, ce champ correspond au temps de dégagement (affiché dans le diagramme après le vert) : les feux piétons R12 n'ont pas de jaune, et le dégagement se calcule à 1 m/s pour un piéton.</em> L'infobulle de chaque case rappelle la règle selon le type du groupe.</li>
                 </ul>
             </section>
 
@@ -452,12 +453,13 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                 <ul>
                     <li><strong>Nouveau plan de feu :</strong> Crée un onglet « Nouveau PF » vierge, avec les mêmes groupes et la même matrice : verts (Déb, Fin), DA, conditions et variables micro vides. Une fenêtre propose ensuite le jeu de trafic du plan (s'il existe des données) : <em>Associer ce jeu</em> l'associe sans fermer la fenêtre (le bouton se grise), pour enchaîner sur <em>Suggérer le cycle…</em> ou <em>Fermer</em> ; <em>Associer et suggérer le cycle…</em> fait les deux d'un coup ; sans trafic, elle invite à le saisir dans l'onglet Trafic.</li>
                     <li><strong>Dupliquer :</strong> Crée un nouvel onglet PF avec une copie du diagramme actuel</li>
+                    <li><strong>Modification du diagramme :</strong> sous-menu qui regroupe les opérations qui remanient le diagramme : <em>Déplacer un groupe de feu</em>, <em>Glisser</em>, <em>Insérer</em>, <em>Réduire</em> et <em>Intégrer un bi-Carrefour</em> (ou <em>Rétablir en uni-carrefour</em>), détaillées ci-dessous.</li>
                     <li><strong>Glisser :</strong> Décale tous les groupes d'un nombre de secondes donné</li>
                     <li><strong>Insérer :</strong> Insère du temps dans le cycle à une position donnée</li>
                     <li><strong>Réduire :</strong> Réduit la plage de temps dans le cycle à une position donnée</li>
                     <li><strong>Déplacer un groupe :</strong> Déplace un groupe vers une nouvelle position. <em>Cette action synchronise automatiquement les données (diagramme, matrice, actions, données de trafic) dans tous les plans de feux.</em> La fenêtre reste ouverte après chaque déplacement pour enchaîner plusieurs opérations ; seuls la croix ou le bouton Annuler la ferment.</li>
                     <li><strong>Intégrer un bi-Carrefour :</strong> Permet de séparer visuellement le carrefour en deux zones en désignant un groupe de feu de séparation. Une ligne blanche horizontale et verticale apparaît dans la matrice des temps interverts (onglet Configuration et onglet Matrice), ainsi qu'une ligne blanche de séparation dans le diagramme du plan de feu. Le menu bascule ensuite en « Rétablir en uni-carrefour » pour supprimer la séparation. Cette option est sauvegardée avec le projet.</li>
-                    <li><strong>Suggérer une durée de cycle :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase (voir la section du même nom)</li>
+                    <li><strong>Assistant conception :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase, puis le placement des groupes associés, les adaptatifs verticaux, les fermetures anticipées et les points de repos bus (voir la section du même nom)</li>
                     <li><strong>Options :</strong> Affiche la légende visuelle des actions</li>
                 </ul>
             </section>
@@ -614,8 +616,8 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
             </section>
 
             <section className="help-section">
-                <h4>Suggérer une durée de cycle</h4>
-                <p>Le menu <strong>Diagramme → Suggérer une durée de cycle…</strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
+                <h4>Assistant conception</h4>
+                <p>Le menu <strong>Diagramme → Assistant conception…</strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
                 <ul>
                     <li><strong>Phasage :</strong> choisissez le nombre de phases (2 à 6), puis, dans l'ordre du cycle, le <strong>groupe déterminant</strong> de chaque phase : son courant le plus chargé.</li>
                     <li><strong>Chemin critique proposé :</strong> si le diagramme est déjà renseigné (et qu'aucun phasage n'est enregistré pour le plan), le tableau est pré-rempli : phases lues sur le diagramme, groupe à la plus forte capacité utilisée dans chaque phase (pour une phase de piétons, la traversée la plus défavorable) et dégagements effectifs entre phases. C'est une règle générale, pas une certitude : vérifiez et corrigez si besoin. Le bouton <em>Relire le diagramme</em> refait la détection.</li>
