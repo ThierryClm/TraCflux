@@ -366,9 +366,10 @@ const SuggestionCycleDialog = ({
 
     const nomGroupe = (id: number) => groups.find(g => g.id === id)?.name || `GF${id}`;
 
-    // Chapitres repliés à l'ouverture : le titre et le résumé suffisent pour suivre.
+    // Chapitres repliés à l'ouverture (le titre et le résumé suffisent pour
+    // suivre), sauf le tableau des groupes déterminants, point de départ.
     const [ouverts, setOuverts] = useState<Record<IdChapitre, boolean>>({
-        phases: false, cycle: false, associes: false, adaptatifs: false, fermetures: false, repos: false,
+        phases: true, cycle: false, associes: false, adaptatifs: false, fermetures: false, repos: false,
     });
     const basculer = (id: IdChapitre) => () => setOuverts(o => ({ ...o, [id]: !o[id] }));
     const resumePhases = `${nbPhases} phases : ${brouillon.determinants.map(d => (d === null ? '—' : court(d))).join(', ')} · taux visé ${brouillon.tauxVise} %`;

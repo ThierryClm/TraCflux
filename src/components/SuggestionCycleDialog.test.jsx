@@ -212,22 +212,25 @@ describe('suggestion de durée du cycle', () => {
         expect(remplacer({ action: 'Point de repos', description: 'attente bus théorique maxi 10 secondes', abrv: 'Att bus' })).toBe(true);
     });
 
-    it('chapitres repliés à l\'ouverture : titre et résumé des valeurs, déployables un à un', () => {
+    it('à l\'ouverture, seul le tableau des groupes déterminants est déployé ; les autres chapitres montrent leur résumé', () => {
         const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
         const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
         ouvrir({ replie: true, groups: places, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
-        // Repliés : les champs ne sont pas affichés, les résumés si.
-        expect(screen.queryByLabelText('Nombre de phases')).toBeNull();
         const phases = screen.getByRole('button', { name: /Phases et groupes déterminants/ });
-        expect(phases).toHaveAttribute('aria-expanded', 'false');
-        expect(phases).toHaveTextContent('3 phases : V1, B3, V4 · taux visé 85 %');
-        expect(screen.getByRole('button', { name: /Durée de cycle/ })).toHaveTextContent('cycle proposé 70 s');
-        expect(screen.getByRole('button', { name: /Adaptatifs verticaux/ })).toHaveTextContent('AV1 22–29 s');
-        expect(screen.getByRole('button', { name: /Fermetures anticipées/ })).toHaveTextContent('seuil 81 %');
-        // Déplier puis replier un chapitre.
-        fireEvent.click(phases);
         expect(phases).toHaveAttribute('aria-expanded', 'true');
         expect(screen.getByLabelText('Nombre de phases')).toHaveValue('3');
+        expect(phases).toHaveTextContent('3 phases : V1, B3, V4 · taux visé 85 %');
+        const cycle = screen.getByRole('button', { name: /Durée de cycle/ });
+        expect(cycle).toHaveAttribute('aria-expanded', 'false');
+        expect(cycle).toHaveTextContent('cycle proposé 70 s');
+        expect(screen.queryByText(/temps perdu L =/)).toBeNull();
+        expect(screen.getByRole('button', { name: /Adaptatifs verticaux/ })).toHaveTextContent('AV1 22–29 s');
+        expect(screen.getByRole('button', { name: /Fermetures anticipées/ })).toHaveTextContent('seuil 81 %');
+        // Déployer puis réduire un chapitre ; le tableau des déterminants se réduit aussi.
+        fireEvent.click(cycle);
+        expect(screen.getByText(/temps perdu L =/)).toBeInTheDocument();
+        fireEvent.click(cycle);
+        expect(screen.queryByText(/temps perdu L =/)).toBeNull();
         fireEvent.click(phases);
         expect(screen.queryByLabelText('Nombre de phases')).toBeNull();
         // Le bouton Appliquer reste accessible, chapitres repliés.

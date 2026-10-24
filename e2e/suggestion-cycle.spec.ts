@@ -28,9 +28,10 @@ test('le cycle de Webster calculé sur les groupes déterminants s\'applique au 
     const fenetre = popup.locator('.suggestion-cycle.sc-detachee');
     await expect(fenetre).toBeVisible();
     await expect(page.locator('.modal-content.suggestion-cycle')).toHaveCount(0);
-    // Chapitres repliés à l'ouverture, avec leur résumé.
-    await expect(fenetre.locator('.sc-chapitre-tete').first()).toHaveAttribute('aria-expanded', 'false');
+    // À l'ouverture : tableau des groupes déterminants déployé, les autres chapitres repliés.
+    await expect(fenetre.locator('.sc-chapitre-tete').first()).toHaveAttribute('aria-expanded', 'true');
     await expect(fenetre.locator('.sc-chapitre-tete').first()).toContainText(/\d phases :/);
+    await expect(fenetre.locator('.sc-chapitre-tete[aria-expanded="true"]')).toHaveCount(1);
     await toutDeplier(fenetre);
 
     // Diagramme renseigné : le tableau arrive pré-rempli (chemin critique).
