@@ -7,6 +7,7 @@ import type { PlanSuppressionJeu } from '../utils/trafficHelpers';
 import type { ActionMicro, Groupe } from '../types/projet';
 import type { SimulationResult } from '../simulation';
 import './TrafficTable.css';
+import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
 
 interface TrafficData {
     trafficVol?: number | string;
@@ -336,7 +337,7 @@ const TrafficTable = ({
         return 'capacity-black';
     };
 
-    return (
+    return (<ZoneVerrouSaisie section="trafic">
         <div className="traffic-table-container">
             <div className="traffic-header">
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -607,7 +608,7 @@ const TrafficTable = ({
             </table>
             </div>
         </div>
-    );
+    </ZoneVerrouSaisie>);
 };
 
 export default TrafficTable;

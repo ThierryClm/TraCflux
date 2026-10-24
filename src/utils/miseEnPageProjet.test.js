@@ -228,3 +228,17 @@ describe("affichageCommentairesRemarques — ouverture d'un projet", () => {
         }).commentsMode).toBe('afficher');
     });
 });
+
+describe('verrouillage de la saisie enregistré avec le projet', () => {
+    it('écrit les sections verrouillées, et les relit à l\'ouverture (rien si absent)', () => {
+        const lu = lireMiseEnPage({ ...etatCourant, verrouSaisie: { matrice: true, variables: true } });
+        expect(lu.layoutOptions.verrouSaisie).toEqual({ matrice: true, variables: true });
+        const setVerrouSaisie = vi.fn();
+        appliquerMiseEnPage({ layoutOptions: { verrouSaisie: { trafic: true } } }, { setVerrouSaisie });
+        expect(setVerrouSaisie).toHaveBeenLastCalledWith({ trafic: true });
+        appliquerMiseEnPage({ layoutOptions: {} }, { setVerrouSaisie });
+        expect(setVerrouSaisie).toHaveBeenLastCalledWith(undefined);
+        appliquerMiseEnPage({ groups: [] }, { setVerrouSaisie });
+        expect(setVerrouSaisie).toHaveBeenLastCalledWith(undefined);
+    });
+});

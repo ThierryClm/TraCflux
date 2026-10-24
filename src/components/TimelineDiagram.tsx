@@ -35,6 +35,7 @@ import type { TrafficConflict } from '../utils/conflictUtils';
 import type { ParametresGroupe } from '../hooks/useTrafficLight';
 import type { TimelineActionTooltip } from './timeline/timelineTypes';
 import './TimelineDiagram.css';
+import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
 
 /** Vert utile survolé dans le tableau de capacité, à reporter sur la barre du groupe. */
 export interface VertUtileSurvole {
@@ -569,7 +570,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
         getShiftedActionPosition
     };
 
-    return (<>
+    return (<ZoneVerrouSaisie section="diagramme">
         <div
             className={`timeline-container ${dragState ? 'dragging' : ''}${readOnly ? ' read-only' : ''}${scrollable ? ' scrollable' : ''}`}
             ref={containerRef}
@@ -858,7 +859,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
             dragState={dragState}
             microVariableNames={microVariableNames}
         />
-    </>);
+    </ZoneVerrouSaisie>);
 };
 
 export default TimelineDiagram;
