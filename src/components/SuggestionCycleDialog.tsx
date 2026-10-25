@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Modal from './Modal';
 import type { Groupe, Matrice } from '../types/projet';
@@ -27,11 +27,17 @@ export interface SuggestionCycleDialogProps {
     getTrafficData: (groupId: number) => { trafficVol?: number | string };
     trafficDatasetName: string;
     phasageCycle: PhasageCycle | null;
-    setPhasageCycle: (phasage: PhasageCycle) => void;
+    /** Phasage enregistré avec le plan ; null l'efface (chapitre invalidé). */
+    setPhasageCycle: (phasage: PhasageCycle | null) => void;
     setCycleLength: (cycle: number) => void;
     /** Phasage bulle du plan, rempli d'après les groupes déterminants (case à cocher). */
     setPhasageBulleCount: (count: number) => void;
     setPhasageBulleTimes: (times: number[]) => void;
+    /** Phasage bulle actuel : rétabli quand on invalide le chapitre des phases. */
+    phasageBulleCount?: number;
+    phasageBulleTimes?: number[];
+    /** Conditions du plan : celles de l'assistant déjà inscrites marquent leur chapitre comme validé à l'ouverture. */
+    actionData?: ActionMicro[];
     /** Pré-remplissage du diagramme pour les déterminants sans vert (Déb/Fin vides). */
     updateGroupParams: (id: number, params: { offset?: number; durations?: { green?: number }; da?: string }) => void;
     /** Flèches du plan du carrefour : dernière source pour placer les groupes associés. */
@@ -53,20 +59,40 @@ export const titreSuggestionCycle = (planName: string) => `Assistant conception$
 /** Identifiants des chapitres repliables de l'assistant. */
 type IdChapitre = 'phases' | 'cycle' | 'associes' | 'adaptatifs' | 'fermetures' | 'repos';
 
+/** Validation d'un chapitre : sa proposition est appliquée au diagramme tant qu'il est validé. */
+interface ValidationChapitre {
+    valide: boolean;
+    /** Raison pour laquelle on ne peut pas (encore) valider ; absente si c'est possible. */
+    motif?: string;
+    basculer: () => void;
+}
+
 /**
  * Chapitre repliable : le titre et le résumé de ses valeurs restent visibles,
- * le contenu ne s'affiche que déplié.
+ * le contenu ne s'affiche que déplié. Son bouton Valider applique la
+ * proposition au diagramme ; un second clic l'invalide et rétablit le plan.
  */
-const Chapitre = ({ titre, resume, ouvert, basculer, children }: {
-    titre: string; resume?: ReactNode; ouvert: boolean; basculer: () => void; children: ReactNode;
+const Chapitre = ({ titre, resume, ouvert, basculer, validation, children }: {
+    titre: string; resume?: ReactNode; ouvert: boolean; basculer: () => void; validation?: ValidationChapitre; children: ReactNode;
 }) => (
-    <section className={`sc-chapitre${ouvert ? ' ouvert' : ''}`} aria-label={titre}>
-        <button type="button" className="sc-chapitre-tete" aria-expanded={ouvert} onClick={basculer}
-            title={ouvert ? 'Réduire' : 'Déployer'}>
-            <span className="sc-chevron" aria-hidden="true">{ouvert ? '▾' : '▸'}</span>
-            <span className="sc-chapitre-titre">{titre}</span>
-            {resume && <span className="sc-chapitre-resume" title={typeof resume === 'string' ? resume : undefined}>{resume}</span>}
-        </button>
+    <section className={`sc-chapitre${ouvert ? ' ouvert' : ''}${validation?.valide ? ' valide' : ''}`} aria-label={titre}>
+        <div className="sc-chapitre-ligne">
+            <button type="button" className="sc-chapitre-tete" aria-expanded={ouvert} onClick={basculer}
+                title={ouvert ? 'Réduire' : 'Déployer'}>
+                <span className="sc-chevron" aria-hidden="true">{ouvert ? '▾' : '▸'}</span>
+                <span className="sc-chapitre-titre">{titre}</span>
+                {resume && <span className="sc-chapitre-resume" title={typeof resume === 'string' ? resume : undefined}>{resume}</span>}
+            </button>
+            {validation && (
+                <button type="button" className={`sc-valider${validation.valide ? ' actif' : ''}`} aria-pressed={validation.valide}
+                    disabled={!validation.valide && !!validation.motif} onClick={validation.basculer}
+                    title={validation.valide
+                        ? 'Invalider : le diagramme revient à son état d\'avant la validation'
+                        : validation.motif ?? 'Valider : la proposition s\'applique tout de suite au diagramme'}>
+                    {validation.valide ? '✓ Validé' : 'Valider'}
+                </button>
+            )}
+        </div>
         {ouvert && <div className="sc-chapitre-corps">{children}</div>}
     </section>
 );
@@ -85,7 +111,6 @@ const estFermetureAssistant = (row: ActionMicro) => row.action === 'Fermeture an
 /** Point de repos bus inscrit par l'assistant (description « attente bus théorique… »). */
 const estReposAssistant = (row: ActionMicro) => row.action === 'Point de repos'
     && String(row.description ?? '').trim().toLowerCase().startsWith(DESCRIPTION_REPOS_BUS);
-const estLigneAssistant = (row: ActionMicro) => estAdaptatifAssistant(row) || estFermetureAssistant(row) || estReposAssistant(row);
 
 const fmt = (v: number, d = 3) => v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
@@ -99,6 +124,7 @@ const SuggestionCycleDialog = ({
     isOpen, onClose, planName, groups, conflictMatrix, cycleLength, getTrafficData,
     trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
     setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, variablesMicro, setVariableMicro, readOnly = false, detachee = false,
+    phasageBulleCount, phasageBulleTimes, actionData,
 }: SuggestionCycleDialogProps) => {
     const [remplirBulle, setRemplirBulle] = useState(true);
     // Chemin critique lu sur le diagramme, quand il est renseigné : phases,
@@ -220,27 +246,6 @@ const SuggestionCycleDialog = ({
         return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' as const : 'main' as const;
     };
     const aPlacer = placements.filter(p => statutPlacement(p) === 'auto');
-    const appliquer = () => {
-        if (!resultat?.cycleSuggere) return;
-        if (resultat.cycleSuggere !== cycleLength) setCycleLength(resultat.cycleSuggere);
-        enregistrer();
-        aPlacer.forEach(p => updateGroupParams(p.id, { offset: p.debut, durations: { green: p.fin - p.debut } }));
-        // Enfin les adaptatifs verticaux proposés, qui remplacent ceux d'un
-        // passage précédent (AV1, AV2… inscrits par l'assistant).
-        if (ajouterActions && disposition) {
-            const lignes = [...avUtiles.map(conditionAdaptatif), ...faUtiles.map(conditionFermeture), ...reposBus.map(conditionRepos)];
-            const nb = ajouterActions(lignes, estLigneAssistant);
-            // DA du groupe bus : « Tx », x tenant la place du code trajet.
-            reposBus.forEach(r => updateGroupParams(r.groupe, { da: 'Tx' }));
-            // Variable micro TMABx, ajoutée dans la première case libre si le plan ne l'a pas.
-            if (reposBus.length && tmabX === null && setVariableMicro) {
-                const libre = (variablesMicro ?? []).findIndex(v => !v.trim());
-                setVariableMicro(libre >= 0 ? libre : (variablesMicro ?? []).length, VARIABLE_TMABX);
-            }
-            setAvInscrits(lignes.slice(0, nb).map(l => String(l.abrv)));
-        }
-    };
-
     // Adaptatifs verticaux proposés, un par phase, sur la disposition prévue :
     // diagramme actuel, déterminants proposés et groupes placés avec le cycle.
     const [modeAV, setModeAV] = useState<ModeAdaptatifs>('iteratif');
@@ -386,10 +391,168 @@ const SuggestionCycleDialog = ({
     const resumeFermetures = `${faUtiles.length ? faUtiles.map((f, k) => `FA${k + 1} ${court(f.groupe)} ${f.deb}–${f.fin} s → ${f.glissements.map(court).join(', ')}`).join(' ; ') : 'aucune'} · seuil ${seuilFA} %`;
     const resumeRepos = reposBus.length ? reposBus.map(r => `${court(r.groupe)} à ${r.instant} s`).join(', ') : 'aucun groupe bus';
 
+    // ── Validation chapitre par chapitre ────────────────────────────────────
+    // Valider un chapitre applique tout de suite sa proposition au diagramme ;
+    // l'invalider rétablit ce qu'il y avait avant. Tant qu'il est validé, une
+    // proposition qui change (taux, mode, groupes déterminants…) se réapplique.
+    // Les chapitres en aval de la durée de cycle sont calculés sur le cycle
+    // proposé : ils ne se valident qu'une fois ce cycle en place, et invalider
+    // le cycle les invalide d'abord.
+    const cycleEnPlace = resultat?.cycleSuggere != null && cycleLength === resultat.cycleSuggere;
+    const lignesChapitre = {
+        adaptatifs: avUtiles.map(conditionAdaptatif),
+        fermetures: faUtiles.map(conditionFermeture),
+        repos: reposBus.map(conditionRepos),
+    };
+    const lignesDe = { adaptatifs: estAdaptatifAssistant, fermetures: estFermetureAssistant, repos: estReposAssistant };
+    const signatures: Record<IdChapitre, string> = {
+        phases: complet ? JSON.stringify(brouillon) : '',
+        cycle: String(resultat?.cycleSuggere ?? ''),
+        associes: '',
+        adaptatifs: JSON.stringify(lignesChapitre.adaptatifs),
+        fermetures: JSON.stringify(lignesChapitre.fermetures),
+        repos: JSON.stringify(lignesChapitre.repos),
+    };
+    const AUCUN: Record<IdChapitre, boolean> = { phases: false, cycle: false, associes: false, adaptatifs: false, fermetures: false, repos: false };
+    const [valides, setValides] = useState<Record<IdChapitre, boolean>>(AUCUN);
+    // Ce que la validation a remplacé, pour le rétablir ; et la proposition appliquée.
+    const avant = useRef<{
+        phases?: { phasage: PhasageCycle | null; bulleCount?: number; bulleTimes?: number[] };
+        cycle?: number;
+        associes?: { id: number; offset: number; vert: number }[];
+        repos?: { da: { id: number; da: string }[]; tmab: number | null };
+    }>({});
+    const appliques = useRef<Partial<Record<IdChapitre, string>>>({});
+    const [tablePleine, setTablePleine] = useState(false);
+    // À l'ouverture : rien n'est à rétablir ; les conditions de l'assistant
+    // déjà dans la table marquent leur chapitre comme validé.
+    useEffect(() => {
+        if (!isOpen) return;
+        avant.current = {};
+        appliques.current = {};
+        setTablePleine(false);
+        const data = actionData ?? [];
+        setValides({ ...AUCUN, adaptatifs: data.some(estAdaptatifAssistant), fermetures: data.some(estFermetureAssistant), repos: data.some(estReposAssistant) });
+    }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const inscrire = (id: 'adaptatifs' | 'fermetures' | 'repos') => {
+        if (!ajouterActions) return 0;
+        const lignes = lignesChapitre[id];
+        const nb = ajouterActions(lignes, lignesDe[id]);
+        if (nb < lignes.length) setTablePleine(true);
+        return nb;
+    };
+    const appliquerChapitre = (id: IdChapitre) => {
+        if (readOnly) return;
+        const a = avant.current;
+        switch (id) {
+            case 'phases':
+                if (!complet) return;
+                a.phases ??= { phasage: phasageCycle, bulleCount: phasageBulleCount, bulleTimes: phasageBulleTimes };
+                enregistrer();
+                break;
+            case 'cycle':
+                if (!resultat?.cycleSuggere) return;
+                a.cycle ??= cycleLength;
+                if (resultat.cycleSuggere !== cycleLength) setCycleLength(resultat.cycleSuggere);
+                break;
+            case 'associes':
+                if (!aPlacer.length) return;
+                a.associes = [...(a.associes ?? []), ...aPlacer
+                    .filter(p => !a.associes?.some(x => x.id === p.id))
+                    .map(p => { const g = groups.find(gr => gr.id === p.id); return { id: p.id, offset: Number(g?.offset) || 0, vert: Number(g?.durations?.green) || 0 }; })];
+                aPlacer.forEach(p => updateGroupParams(p.id, { offset: p.debut, durations: { green: p.fin - p.debut } }));
+                break;
+            case 'repos':
+                a.repos ??= { da: reposBus.map(r => ({ id: r.groupe, da: String(groups.find(g => g.id === r.groupe)?.da ?? '') })), tmab: null };
+                inscrire('repos');
+                // DA du groupe bus : « Tx », x tenant la place du code trajet.
+                reposBus.forEach(r => updateGroupParams(r.groupe, { da: 'Tx' }));
+                // Variable micro TMABx, ajoutée dans la première case libre si le plan ne l'a pas.
+                if (reposBus.length && tmabX === null && setVariableMicro) {
+                    const libre = (variablesMicro ?? []).findIndex(v => !v.trim());
+                    const index = libre >= 0 ? libre : (variablesMicro ?? []).length;
+                    setVariableMicro(index, VARIABLE_TMABX);
+                    a.repos.tmab = index;
+                }
+                break;
+            default:
+                inscrire(id);
+        }
+        appliques.current[id] = signatures[id];
+        setValides(v => ({ ...v, [id]: true }));
+    };
+    const retirerChapitre = (id: IdChapitre) => {
+        if (readOnly) return;
+        const a = avant.current;
+        switch (id) {
+            case 'phases':
+                if (a.phases) {
+                    setPhasageCycle(a.phases.phasage);
+                    if (a.phases.bulleCount !== undefined) setPhasageBulleCount(a.phases.bulleCount);
+                    if (a.phases.bulleTimes) setPhasageBulleTimes(a.phases.bulleTimes);
+                }
+                break;
+            case 'cycle':
+                // Les chapitres calculés sur le cycle proposé partent avec lui.
+                (['repos', 'fermetures', 'adaptatifs', 'associes'] as const).forEach(aval => { if (valides[aval]) retirerChapitre(aval); });
+                if (a.cycle !== undefined) setCycleLength(a.cycle);
+                break;
+            case 'associes':
+                a.associes?.forEach(x => updateGroupParams(x.id, { offset: x.offset, durations: { green: x.vert } }));
+                break;
+            case 'repos':
+                ajouterActions?.([], estReposAssistant);
+                a.repos?.da.forEach(x => updateGroupParams(x.id, { da: x.da }));
+                if (a.repos?.tmab != null) setVariableMicro?.(a.repos.tmab, '');
+                break;
+            default:
+                ajouterActions?.([], lignesDe[id]);
+        }
+        delete a[id as keyof typeof a];
+        delete appliques.current[id];
+        setValides(v => ({ ...v, [id]: false }));
+    };
+    // Proposition changée d'un chapitre validé : elle se réapplique au diagramme.
+    useEffect(() => {
+        if (!isOpen || readOnly) return;
+        (['phases', 'cycle', 'adaptatifs', 'fermetures', 'repos'] as const).forEach(id => {
+            const applique = appliques.current[id];
+            if (valides[id] && applique !== undefined && signatures[id] && applique !== signatures[id]) appliquerChapitre(id);
+        });
+    }, [signatures.phases, signatures.cycle, signatures.adaptatifs, signatures.fermetures, signatures.repos]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const motifs: Record<IdChapitre, string | undefined> = {
+        phases: !complet ? 'Choisissez d\'abord un groupe déterminant pour chaque phase' : undefined,
+        cycle: !calculable || !resultat?.cycleSuggere ? 'Aucun cycle calculable pour l\'instant' : undefined,
+        associes: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !aPlacer.length ? 'Aucun groupe à placer avec le cycle' : undefined,
+        adaptatifs: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !avUtiles.length ? 'Aucune zone à inscrire' : undefined,
+        fermetures: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !faUtiles.length ? 'Aucune fermeture à inscrire' : undefined,
+        repos: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !reposBus.length ? 'Aucun groupe bus' : undefined,
+    };
+    const validation = (id: IdChapitre): ValidationChapitre | undefined => (readOnly ? undefined : {
+        valide: valides[id],
+        motif: motifs[id],
+        basculer: () => (valides[id] ? retirerChapitre(id) : appliquerChapitre(id)),
+    });
+
+    // « Appliquer le cycle » : valide d'un coup tous les chapitres qui ont
+    // quelque chose à appliquer, dans l'ordre (le cycle avant ce qui en dépend).
+    const appliquer = () => {
+        if (!resultat?.cycleSuggere) return;
+        appliquerChapitre('phases');
+        appliquerChapitre('cycle');
+        if (aPlacer.length) appliquerChapitre('associes');
+        if (ajouterActions && disposition) {
+            (['adaptatifs', 'fermetures', 'repos'] as const).forEach(id => { if (lignesChapitre[id].length) appliquerChapitre(id); });
+            setAvInscrits([...lignesChapitre.adaptatifs, ...lignesChapitre.fermetures, ...lignesChapitre.repos].map(l => String(l.abrv)));
+        }
+    };
+
     const corps = (
         <>
             <div className="sc-defilement">
-            <Chapitre titre="Phases et groupes déterminants" resume={resumePhases} ouvert={ouverts.phases} basculer={basculer('phases')}>
+            <Chapitre titre="Phases et groupes déterminants" resume={resumePhases} ouvert={ouverts.phases} basculer={basculer('phases')} validation={validation('phases')}>
             <p className="sc-intro">
                 Choisissez, dans l'ordre du cycle, le <b>groupe déterminant</b> de chaque phase : le courant le plus
                 chargé de la phase. Le dégagement vers la phase suivante est proposé par la matrice ; corrigez-le
@@ -474,7 +637,7 @@ const SuggestionCycleDialog = ({
                 <p className="sc-attente">Précisez le dégagement après la phase {resultat.degagementsManquants.map(i => i + 1).join(', ')}.</p>}
 
             {resultat && calculable && (
-                <Chapitre titre="Durée de cycle" resume={resumeCycle} ouvert={ouverts.cycle} basculer={basculer('cycle')}>
+                <Chapitre titre="Durée de cycle" resume={resumeCycle} ouvert={ouverts.cycle} basculer={basculer('cycle')} validation={validation('cycle')}>
                 <div className="sc-resultat" aria-label="Résultat">
                     <p>Y = <b>{fmt(resultat.Y)}</b> · temps perdu L = <b>{resultat.L} s</b></p>
                     {resultat.sature && <p className="sc-alerte">Y ≥ 0,9 : le carrefour est saturé ; aucun cycle ne suffira à écouler ce trafic.</p>}
@@ -499,7 +662,7 @@ const SuggestionCycleDialog = ({
             )}
 
             {placements.length > 0 && (
-                <Chapitre titre="Groupes associés" resume={resumeAssocies} ouvert={ouverts.associes} basculer={basculer('associes')}>
+                <Chapitre titre="Groupes associés" resume={resumeAssocies} ouvert={ouverts.associes} basculer={basculer('associes')} validation={validation('associes')}>
                 <div className="sc-associes">
                     {resultat?.cycleSuggere ? <p className="sc-note">Calés sur le cycle proposé de {resultat.cycleSuggere} s.</p> : null}
                     <table className="sc-table">
@@ -529,7 +692,7 @@ const SuggestionCycleDialog = ({
             )}
 
             {propositionAV && propositionAV.adaptatifs.length > 0 && (
-                <Chapitre titre="Adaptatifs verticaux" resume={resumeAdaptatifs} ouvert={ouverts.adaptatifs} basculer={basculer('adaptatifs')}>
+                <Chapitre titre="Adaptatifs verticaux" resume={resumeAdaptatifs} ouvert={ouverts.adaptatifs} basculer={basculer('adaptatifs')} validation={validation('adaptatifs')}>
                 <div className="sc-associes sc-adaptatifs">
                     <label className="sc-nb" title="Une phase ne se contracte que lorsque sa demande est servie : le taux visé peut être plus haut que pour le cycle">
                         Taux de saturation visé pour les zones :
@@ -585,7 +748,7 @@ const SuggestionCycleDialog = ({
             )}
 
             {disposition && (
-                <Chapitre titre="Fermetures anticipées avec glissements" resume={resumeFermetures} ouvert={ouverts.fermetures} basculer={basculer('fermetures')}>
+                <Chapitre titre="Fermetures anticipées avec glissements" resume={resumeFermetures} ouvert={ouverts.fermetures} basculer={basculer('fermetures')} validation={validation('fermetures')}>
                 <div className="sc-associes sc-adaptatifs">
                     <label className="sc-nb" title="Groupes voitures dont la capacité utilisée, au cycle proposé, est sous ce seuil">
                         Groupes voitures sous
@@ -623,7 +786,7 @@ const SuggestionCycleDialog = ({
             )}
 
             {disposition && (
-                <Chapitre titre="Points de repos bus" resume={resumeRepos} ouvert={ouverts.repos} basculer={basculer('repos')}>
+                <Chapitre titre="Points de repos bus" resume={resumeRepos} ouvert={ouverts.repos} basculer={basculer('repos')} validation={validation('repos')}>
                 <div className="sc-associes sc-adaptatifs">
                     {reposBus.length > 0 ? (
                         <table className="sc-table">
@@ -660,9 +823,9 @@ const SuggestionCycleDialog = ({
                             {avInscrits.length
                                 ? `Inscrits : ${avInscrits.join(', ')} (Ctrl+Z pour annuler). Adaptez les conditions à la détection réelle et vérifiez dans l'onglet Simulation.`
                                 : 'Aucune condition à inscrire.'}
-                            {avInscrits.length < avUtiles.length + faUtiles.length + reposBus.length ? ' La table est pleine (30 conditions) : certaines lignes n\'ont pas été inscrites.' : ''}
                         </p>
                     )}
+            {tablePleine && <p className="sc-alerte">La table est pleine (30 conditions) : certaines lignes n'ont pas été inscrites.</p>}
             </div>
             <div className="sc-pied">
             <label className="sc-nb" title="Une bulle par phase, au milieu du vert de son groupe déterminant">
@@ -672,7 +835,7 @@ const SuggestionCycleDialog = ({
 
             <div className="modal-actions">
                 <button className="modal-btn modal-btn-secondary" onClick={onClose}>Fermer</button>
-                <button className="modal-btn modal-btn-secondary" disabled={!complet || readOnly} onClick={enregistrer}
+                <button className="modal-btn modal-btn-secondary" disabled={!complet || readOnly} onClick={() => appliquerChapitre('phases')}
                     title="Garder ces groupes déterminants avec le plan de feu (ils servent aussi au phasage bulle)">
                     Enregistrer le phasage
                 </button>
