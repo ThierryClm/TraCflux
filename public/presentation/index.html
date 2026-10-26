@@ -45,6 +45,7 @@
       figure { margin: 24px 0; }
       figure img { width: 100%; height: auto; border-radius: 6px; border: 1px solid #333; }
       figcaption { margin-top: 6px; font-size: 0.9em; color: #9a9a9a; }
+      :focus-visible { outline: 3px solid #ffcf66; outline-offset: 4px; }
       ul { padding-left: 1.2em; }
       li { margin: 4px 0; }
       footer { margin-top: 56px; padding-bottom: 40px; border-top: 1px solid #333; font-size: 0.9em; color: #9a9a9a; }
@@ -72,6 +73,7 @@
   </head>
   <body>
     <header>
+      <nav aria-label="Navigation principale" style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:24px"><a href="../">Application</a><a href="../faq/">Questions fréquentes</a></nav>
       <img src="../logo.svg" alt="Logo TraCflux" width="88" height="88" />
       <h1>TraCflux</h1>
       <p class="accroche">
@@ -158,7 +160,8 @@
 
       <div class="actions" style="margin-top: 32px">
         <a class="bouton principal" href="../?example=carrefour">Essayer TraCflux</a>
-        <a class="bouton secondaire" href="https://github.com/ThierryClm/TraCflux/blob/master/FAQ.md">Questions fréquentes</a>
+        <a class="bouton secondaire" href="../faq/">Questions fréquentes</a>
+        <a class="bouton secondaire" href="details.html">Présentation détaillée et fonctionnalités</a>
       </div>
     </main>
 

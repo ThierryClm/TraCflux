@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Présentation détaillée — TraCflux</title>
+<meta name="description" content="Les réponses à vos questions sur TraCflux : premiers pas, fichiers, confidentialité, simulation et utilisation des plans de feux.">
+<link rel="canonical" href="https://tracflux.com/presentation/details.html"><link rel="icon" href="../icon.svg">
+<meta property="og:title" content="Présentation détaillée — TraCflux"><meta property="og:description" content="Retrouvez les réponses à vos questions sur TraCflux, librement et sans compte."><meta property="og:type" content="website"><meta property="og:url" content="https://tracflux.com/presentation/details.html"><meta property="og:image" content="https://tracflux.com/social-preview.png">
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#1e1e1e;color:#e6e6e6;font:17px/1.7 system-ui,sans-serif}header,main,footer{max-width:960px;margin:auto;padding:24px}nav{display:flex;gap:20px;flex-wrap:wrap;align-items:center}a{color:#71ddd5;text-underline-offset:3px}nav a{font-weight:600}header img{width:40px;height:40px}h1{font-size:clamp(2rem,6vw,3rem);line-height:1.2;color:#71ddd5}h2{margin-top:56px;padding-top:16px;border-top:1px solid #555}h3{margin-top:32px;line-height:1.4;color:#fff}h2,h3{scroll-margin-top:20px}p,li{overflow-wrap:anywhere}table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}th,td{padding:10px;border:1px solid #666;text-align:left}pre{overflow-x:auto;padding:16px;background:#292929}code{font-size:.9em}img{max-width:100%;height:auto}blockquote{border-left:3px solid #71ddd5;margin-left:0;padding-left:18px}.sommaire{background:#292929;border-radius:12px;padding:20px 28px}.sommaire ul{columns:2; padding-left:20px}footer{border-top:1px solid #555;margin-top:48px}:focus-visible{outline:3px solid #ffcf66;outline-offset:4px}.skip{position:absolute;left:-9999px}.skip:focus{left:16px;top:8px;background:#1e1e1e;padding:8px}@media(max-width:600px){header,main,footer{padding:20px}.sommaire ul{columns:1}}@media print{body{background:#fff;color:#000}a,h1,h3{color:#000}nav,.sommaire{display:none}}
+</style></head><body><a class="skip" href="#contenu">Aller au contenu</a>
+<header><nav aria-label="Navigation principale"><a href="../"><img src="../logo.svg" alt="TraCflux"></a><a href="../presentation/">Présentation</a><a href="../faq/">FAQ</a><a href="../?example=carrefour">Essayer TraCflux</a></nav></header>
+<main id="contenu"><p align="center">
+  <img src="../logo.svg" alt="Logo TraCflux" width="140" height="140">
+</p><h1 id="tracflux">TraCflux</h1><p>Documentation en accès libre, sans compte.</p><nav class="sommaire" aria-label="Sommaire"><ul><li><a href="#essayer-tracflux">Essayer TraCflux</a></li><li><a href="#pourquoi-tracflux">Pourquoi TraCflux</a></li><li><a href="#mode-présentation">Mode présentation</a></li><li><a href="#fonctionnalités-principales">Fonctionnalités principales</a></li><li><a href="#développement">Développement</a></li><li><a href="#commandes">Commandes</a></li><li><a href="#exemple">Exemple</a></li><li><a href="#architecture">Architecture</a></li><li><a href="#comptes-utilisateurs">Comptes utilisateurs</a></li><li><a href="#sécurité-et-limites-connues">Sécurité et limites connues</a></li><li><a href="#questions-fréquentes">Questions fréquentes</a></li><li><a href="#services--accompagnement">Services &amp; accompagnement</a></li><li><a href="#journal-des-versions">Journal des versions</a></li><li><a href="#contribuer">Contribuer</a></li><li><a href="#licence">Licence</a></li></ul></nav>
+<p>Solution open source pour la conception et l&#39;optimisation de plans de feux tricolores, destinée aux traficiens et ingénieurs de la circulation.</p>
+<h3 id="module-diagramme-de-feux">Module Diagramme de Feux</h3>
+<p><img src="../presentation/diagramme-de-feux.jpg" alt="Aperçu de l&#39;application : matrice des temps intervert à gauche, diagramme temporel d&#39;un carrefour à 13 groupes au centre, conditions de micro-régulation en bas"></p>
+<h3 id="module-onde-verte">Module Onde verte</h3>
+<p><img src="../presentation/onde-verte.jpg" alt="Aperçu du module Onde verte : diagramme espace-temps de 5 carrefours coordonnés sur un axe, avec bandes passantes en sens montant et descendant et tableau des données saisies"></p>
+<p>TraCflux s&#39;organise en <strong>deux modules complémentaires</strong> :</p>
+<ul>
+<li><strong>Diagramme de Feux</strong> <em>(module principal)</em> — conception et analyse des plans de feux d&#39;un carrefour : groupes, matrice intervert, diagramme temporel, micro-régulation, multiprogrammation (plans de feux multiples).</li>
+<li><strong>Onde verte</strong> <em>(module complémentaire)</em> — coordination espace-temps de plusieurs carrefours sur un axe routier, avec visualisation des bandes passantes. S&#39;appuie sur les projets de carrefours préalablement créés dans le module principal.</li>
+</ul>
+<p>Conçue pour être utilisée <strong>localement</strong>, sans serveur : les données de vos projets restent dans le navigateur (localStorage) et sur votre poste.</p>
+<h2 id="essayer-tracflux">Essayer TraCflux</h2>
+<p><strong><a href="https://tracflux.com/?example=carrefour">Ouvrir l&#39;application</a></strong> — un carrefour d&#39;exemple s&#39;ouvre directement, sans compte à créer et sans rien installer.</p>
+<p>Questions fréquentes : <a href="https://tracflux.com/faq/">tracflux.com/faq</a>, sans compte GitHub.</p>
+<p>Présentation de l&#39;outil, en une page : <a href="https://tracflux.com/presentation/">tracflux.com/presentation</a>.</p>
+<p>Pour l&#39;avoir sous la main : le bouton <strong>« Installer cette app »</strong> de la barre d&#39;adresse (Chrome ou Edge) en fait un raccourci sur le bureau, et l&#39;application fonctionne ensuite hors connexion.</p>
+<h2 id="pourquoi-tracflux">Pourquoi TraCflux</h2>
+<h3 id="un-outil-pérenne-sans-installation">Un outil pérenne, sans installation</h3>
+<p>TraCflux s&#39;exécute <strong>dans le navigateur</strong>. Ce choix engage directement sa <strong>longévité</strong> : aucune dépendance à une version de système d&#39;exploitation, aucune bibliothèque système à maintenir, aucun composant propriétaire. Il fonctionne sur n&#39;importe quel poste et n&#39;importe quel système — Windows, macOS, Linux — et continuera de le faire.</p>
+<p>Deux verrous en découlent, levés d&#39;un coup :</p>
+<ul>
+<li><strong>Déploiement</strong> — rien à installer, donc rien à faire valider par une DSI : on ouvre une page. L&#39;application est par ailleurs <strong>installable (PWA)</strong> et fonctionne <strong>hors ligne</strong>.</li>
+<li><strong>Confidentialité</strong> — tout s&#39;exécute <strong>en local, sans serveur</strong> : les données des projets ne quittent jamais le poste.</li>
+</ul>
+<p>L&#39;<strong>import des formats existants</strong> procède du même principe : un projet doit pouvoir <strong>survivre à l&#39;outil qui l&#39;a créé</strong>.</p>
+<h3 id="un-modèle-qui-combine-phases-et-groupes-de-feux">Un modèle qui combine phases et groupes de feux</h3>
+<p>Les outils historiques de conception de plans de feux reposent généralement sur une <strong>organisation par phases</strong> : les feux d&#39;une même phase s&#39;ouvrent et se ferment ensemble. C&#39;est simple et lisible pour l&#39;usager, mais cela contraint le concepteur sur l&#39;enchainement des groupes de feux.</p>
+<p>TraCflux repose sur un <strong>modèle qui combine gestion par phases et gestion par groupes de feux</strong>. Le phasage reste disponible — pour raisonner comme pour agir (escamotage de phase, phasage bulle) — mais <strong>chaque groupe de feux demeure indépendant</strong> : il n&#39;est pas verrouillé dans une phase, et conserve ses propres instants d&#39;ouverture et de fermeture.</p>
+<p>C&#39;est cette combinaison qui permet d&#39;exprimer directement les <strong>chevauchements partiels</strong>, la <strong>micro-régulation fine</strong> (escamotage, seconde lucarne, fermeture anticipée…), la <strong>coordination sur un axe</strong> et le <strong>diagnostic de capacité courant par courant</strong> — là où un modèle strictement par phases les rend malaisés, voire impossibles à décrire.</p>
+<h3 id="priorité-bus">Priorité bus</h3>
+<p>La prise en compte des transports en commun est pensée comme une <strong>orientation de fond</strong> de TraCflux : les variables et actions de micro-régulation propres à la priorité bus (délai d&#39;approche, temps maxi d&#39;attente bus, allongement de vert, escamotage de phase, point de repos…) sont intégrées au cœur de l&#39;outil. L&#39;objectif est de rendre une stratégie de priorité <strong>explicite, visualisable et vérifiable</strong> — sans boîte noire, hors ligne et interopérable — tout en laissant la décision d&#39;ingénierie à l&#39;utilisateur. TraCflux ne décide pas du niveau de priorité accordé : il en offre le langage et la lecture, en préservant les contraintes de sécurité et la cohérence du plan de feux.</p>
+<h3 id="assistant-de-construction-de-diagramme">Assistant de construction de diagramme</h3>
+<p>TraCflux intègre un <strong>assistant qui dégrossit un plan de feux en quelques minutes</strong>, à partir des trafics. <strong>Diagramme → Nouveau plan de feu…</strong> crée un plan vierge associé à un jeu de trafic ; <strong>Diagramme → Assistant conception…</strong> :</p>
+<ul>
+<li>repère le <strong>chemin critique</strong> sur le diagramme : les phases et, dans chacune, le groupe déterminant — celui de plus forte capacité utilisée, une traversée piétonne pouvant l&#39;être ;</li>
+<li>calcule le <strong>cycle minimal</strong> et le <strong>cycle de Webster</strong> (<em>Guide des carrefours à feux</em> du CERTU), arrondi à la dizaine supérieure, et répartit les verts au prorata des demandes ;</li>
+<li><strong>pré-remplit</strong> le diagramme et, si on le souhaite, le phasage bulle ;</li>
+<li><strong>déduit le placement des groupes associés</strong>, en affichant pour chacun la source de la déduction (matrice des temps interverts, nom du groupe, géométrie des flèches du plan) ;</li>
+<li><strong>applique le tout en un clic</strong> : la durée du cycle d&#39;abord, puis les groupes associés, les adaptatifs verticaux, les fermetures anticipées et les points de repos bus — annulable par Ctrl+Z ;</li>
+<li><strong>propose un adaptatif vertical par phase</strong>, qui finit avec le premier groupe de la phase à fermer (temps interverts préservés) et dimensionné pour porter chaque groupe jusqu&#39;au taux de saturation visé (90 % par défaut : une phase ne se contracte que lorsque sa demande est servie) sans passer sous les verts minimaux — en mode itératif (la contraction d&#39;une phase redonne de la capacité aux autres) ou prudent (chaque zone tient seule) — et l&#39;inscrit dans les conditions de micro-régulation (AV1, AV2…).</li>
+<li><strong>propose des fermetures anticipées avec glissements</strong> pour les groupes voitures peu chargés (sous 81 % de capacité utilisée) : environ les deux tiers de leur temps disponible en fin de vert, et en Action GF les groupes qui peuvent alors ouvrir plus tôt sans conflit intervert.</li>
+<li><strong>propose un point de repos par groupe bus</strong>, en fin de vert bus, à l&#39;instant où le plus de groupes sont au vert, avec sa condition de sortie (« Attente quittée si TPPh_Ln + DAx &gt; N + TMABx ») ; l&#39;indice x tient la place du code trajet, à remplacer.</li>
+</ul>
+<p>L&#39;assistant s&#39;ouvre dans une fenêtre détachée, que l&#39;on pose sur un autre écran : le diagramme garde toute la place et reste modifiable pendant qu&#39;on le consulte. Sur un carrefour en croix à trois phases avec couloir bus, l&#39;assistant pose un diagramme complet et sans conflit, prêt à être affiné.</p>
+<p><strong>Un assistant au service de l&#39;expertise.</strong> L&#39;utilisateur reste maître des données d&#39;entrée — trafics, verts minimaux, temps interverts — et des choix de conception : phasage, conditions de contraction des adaptatifs et autres fonctionnements conditionnels (seconde lucarne, escamotage, priorité bus), adaptation au site. Les déductions incertaines sont signalées « à vérifier » et laissées à sa main. L&#39;élaboration d&#39;un diagramme de feux est une <strong>discipline à part entière</strong>, qui demande une approche de traficien ou d&#39;expert et donne toute sa dimension à la performance recherchée : l&#39;assistant prend en charge le calcul et la mise en place, pour que le concepteur se concentre sur ce qui fait la qualité d&#39;un plan (<a href="../faq/#tracflux-peut-il-maider-%C3%A0-construire-un-diagramme-de-feux-">voir la FAQ</a>).</p>
+<h3 id="reprendre-les-études-diagfeux">Reprendre les études DiagFeux</h3>
+<blockquote>
+<p>⚠️ <strong>Fonctionnalité en objectif de développement.</strong> L&#39;importateur est construit à partir du schéma XML officiel et de la documentation de DiagFeux, et testé sur des jeux d&#39;essai construits pour cela. Il <strong>n&#39;a pas encore été confronté à un fichier <code>.dfe</code> réel</strong>. Si vous disposez d&#39;un projet DiagFeux (même anonymisé) que vous pouvez partager, <a href="https://github.com/ThierryClm/TraCflux/issues">ouvrez une issue</a> — cela accélérera directement la mise au point.</p>
+</blockquote>
+<p><strong>DiagFeux</strong>, le logiciel de conception de diagrammes de feux du CERTU (aujourd&#39;hui Cerema), <strong>n&#39;est plus maintenu</strong>. TraCflux permet d&#39;importer ses projets (<code>.dfe</code>) — groupes, décalages, verts, matrice d&#39;interverts, propriétés.</p>
+<p>Les bureaux d&#39;études et collectivités disposant d&#39;anciennes études DiagFeux peuvent ainsi <strong>les reprendre plutôt que de les ressaisir</strong> : <strong>Fichier → Importer → Projet DiagFeux (.dfe)</strong>.</p>
+<p>La méthode de calcul reste celle du <em>Guide des carrefours à feux</em> du CERTU (débit de saturation 1800 uvp/h par voie, méthode de Webster), commune aux deux outils.</p>
+<h2 id="mode-présentation">Mode présentation</h2>
+<p>L&#39;application est conçue pour s&#39;adapter aux contextes de <strong>présentation devant un auditoire</strong> — comités techniques, formations internes, validations devant un client ou échanges pédagogiques avec des élus.</p>
+<p>En réunion comme en visio, détachez la fenêtre <strong>Image du carrefour</strong> : c&#39;est elle seule que vous partagez ou posez sur un second écran. Pendant la simulation, les flèches changent de couleur (vert / orange / rouge) seconde par seconde, en suivant le cycle et l&#39;effet des actions de micro-régulation activées.</p>
+<p>L&#39;auditoire ne voit que l&#39;essentiel — le carrefour qui « vit » au rythme du cycle — pendant que vous gardez le contrôle complet sur votre écran de travail (diagramme, matrice, panneau de simulation, micro-régulation) et commentez en direct les actions que vous activez et leur effet sur la dynamique du carrefour.</p>
+<p>Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèche de la fenêtre partagée : la ligne du groupe s&#39;allume dans votre diagramme, ainsi que sa ligne dans le formulaire et dans les données trafic. Survolez une ligne de votre diagramme : c&#39;est la flèche correspondante qui s&#39;allume sous les yeux de l&#39;auditoire, entourée d&#39;un halo. « Ce groupe-là, c&#39;est cette flèche-là » se montre au lieu de se décrire.</p>
+<h2 id="fonctionnalités-principales">Fonctionnalités principales</h2>
+<h3 id="module-diagramme-de-feux">Module Diagramme de Feux</h3>
+<ul>
+<li>Définition des groupes de feux (VL, TC, Cycliste, Piéton) avec durées vert/orange/rouge</li>
+<li>Matrice d&#39;intervert avec détection automatique des conflits</li>
+<li>Diagramme temporel horizontal avec tête de lecture</li>
+<li><strong>Assistant de construction</strong> — nouveau plan de feu vierge, chemin critique, cycle de Webster arrondi à la dizaine supérieure, pré-remplissage du diagramme et du phasage bulle, placement des groupes associés avec la source de chaque déduction, le tout appliqué en un clic (<a href="#assistant-de-construction-de-diagramme">en savoir plus</a>)</li>
+<li><strong>Multiprogrammation</strong> — plans de feux multiples (PF) gérés par onglets : un même carrefour décliné en plusieurs programmes (pointe du matin, pointe du soir, heure creuse, nuit, événementiel…), chacun avec son cycle, ses durées de vert, ses offsets, sa matrice intervert et sa micro-régulation propres</li>
+<li>Table d&#39;actions de micro-régulation par plan (escamotage, ouverture/fermeture anticipée, etc.)</li>
+<li><strong>Mode simulation</strong> — les actions cochées se combinent et le diagramme se redessine sur le cycle recalculé, sans toucher au plan d&#39;origine : les actions qui chevauchent la fin du cycle sont prises en compte, le vert escamotable est barré d&#39;un bandeau hachuré, et survoler une action allume ses flèches dans l&#39;image du carrefour</li>
+<li><strong>Scénarios de micro-régulation</strong> — plusieurs combinaisons d&#39;actions par plan de feu, chacune nommée et enregistrée avec le projet. La simulation en montre le cycle recalculé, les conflits restants et l&#39;effet sur la capacité ; le dossier imprimé les compare dans un tableau par plan, puis détaille chaque scénario, actions retenues et écartées à l&#39;appui (<a href="../faq/#comment-construire-et-justifier-un-sc%C3%A9nario-de-micro-r%C3%A9gulation">voir la FAQ</a>)</li>
+<li>Fond de plan personnalisable (photo aérienne, plan CAO, schéma au trait) avec flèches d&#39;animation des groupes — optimisé automatiquement à l&#39;import (redimensionnement + WebP) pour alléger le projet</li>
+</ul>
+<h3 id="capacité-et-diagnostic">Capacité et diagnostic</h3>
+<ul>
+<li><strong>Réserve de capacité</strong> — panneau détachable : capacité offerte (uvp/h), degré de saturation, réserve, <strong>temps d&#39;attente moyen (Webster)</strong> et file d&#39;attente, courant par courant</li>
+<li>Synthèse « diagnostic carrefour » : courant dimensionnant et réserve globale</li>
+<li><strong>Comparateur de capacité</strong> entre plans de feux</li>
+<li>Méthode conforme au <em>Guide des carrefours à feux</em> (débit de saturation 1800 uvp/h par voie)</li>
+</ul>
+<h3 id="interopérabilité">Interopérabilité</h3>
+<ul>
+<li><strong>Import de projets DiagFeux (<code>.dfe</code>)</strong> <em>(en cours de développement)</em> — reprise des études réalisées avec le logiciel du CERTU/Cerema (voir <a href="#reprendre-les-%C3%A9tudes-diagfeux">Reprendre les études DiagFeux</a>)</li>
+<li>Import Excel / CSV, export JSON</li>
+<li>Export PDF et PNG du diagramme, dossier d&#39;impression complet, en A4 paysage ou portrait au choix ; l&#39;impression se fait dans un onglet à part, sans figer l&#39;application</li>
+</ul>
+<h3 id="module-onde-verte">Module Onde verte</h3>
+<ul>
+<li>Coordination de plusieurs carrefours sur un axe routier</li>
+<li>Visualisation espace-temps avec bandes passantes (sens montant et descendant)</li>
+<li>Réglage interactif des décalages, vitesses et plans de feux</li>
+<li>Synchronisation unidirectionnelle : rafraîchissement des données depuis les projets du module principal vers l&#39;onde verte</li>
+</ul>
+<h3 id="transverse">Transverse</h3>
+<ul>
+<li>Thèmes (sombre, clair, haut contraste, ambre, daltonien, sépia, bleu nuit)</li>
+<li><strong>Détachement de fenêtres</strong> — à partager en visio ou à poser sur un second écran : matrice, formulaire, propriétés, données trafic, conflits, réserve de capacité, conditions et variables de micro-régulation, remarques, image du carrefour, et <strong>miroir du diagramme en lecture seule</strong>. Les fenêtres détachées suivent le projet : elles se rouvrent à sa réouverture, ce qui suppose d&#39;avoir autorisé les fenêtres contextuelles pour le site — les navigateurs n&#39;en ouvrent qu&#39;une par action de l&#39;utilisateur (<a href="../faq/#%C3%A0-la-r%C3%A9ouverture-dun-projet-mes-fen%C3%AAtres-d%C3%A9tach%C3%A9es-ne-reviennent-pas-toutes-pourquoi">voir la FAQ</a>)</li>
+<li>Application installable (PWA), fonctionne hors ligne, avec bandeau « nouvelle version disponible »</li>
+<li>Commentaires et remarques du diagramme : <strong>Afficher</strong>, <strong>Masquer</strong> ou <strong>Automatique</strong> (seulement pour les plans de feu qui en ont), réglage enregistré avec le projet</li>
+<li><strong>Navigateurs</strong> — Chrome et Edge ouvrent et enregistrent les projets dans le dossier de votre choix ; Firefox, Safari et Brave passent par le sélecteur de fichier classique pour ouvrir et par un téléchargement du <code>.json</code> pour enregistrer</li>
+<li><strong>Utilisable sur smartphone et tablette</strong> — sur un écran étroit ou bas, la mise en page s&#39;empile et la page défile latéralement pour dérouler tout le diagramme ; éprouvé sur le terrain pour consulter un plan, la saisie restant l&#39;affaire d&#39;un poste de travail (<a href="../faq/#puis-je-lutiliser-sur-un-smartphone-ou-une-tablette">voir la FAQ</a>)</li>
+<li>Rapport de diagnostic pour signalement de bug (local, sans envoi réseau)</li>
+</ul>
+<h2 id="développement">Développement</h2>
+<p>Pour travailler sur le code. L&#39;usage courant ne demande rien de tout cela — voir <a href="#essayer-tracflux">Essayer TraCflux</a>.</p>
+<p>Prérequis : <a href="https://nodejs.org/">Node.js</a> 20.19 ou plus (22.12 ou plus pour la branche 22), exigé par Vite.</p>
+<pre><code class="language-bash">git clone https://github.com/ThierryClm/TraCflux.git
+cd TraCflux
+npm install
+npm run dev
+</code></pre>
+<p>L&#39;application s&#39;ouvre à <code>http://localhost:3000</code>.</p>
+<h2 id="commandes">Commandes</h2>
+<table>
+<thead>
+<tr>
+<th>Commande</th>
+<th>Effet</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>npm run dev</code></td>
+<td>Serveur de développement (rechargement à chaud)</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>Build de production dans <code>dist/</code></td>
+</tr>
+<tr>
+<td><code>npm run preview</code></td>
+<td>Aperçu local du build de production</td>
+</tr>
+<tr>
+<td><code>npm run serve</code></td>
+<td>Reconstruit <code>dist/</code>, s&#39;assure que le serveur d&#39;aperçu tourne, et <strong>vérifie qu&#39;il sert bien ce build</strong> — la commande à utiliser au quotidien (voir <a href="#d%C3%A9pannage">Dépannage</a>)</td>
+</tr>
+<tr>
+<td><code>npm run clean</code></td>
+<td>Nettoyage local : supprime <code>dist/</code> et arrête les processus <code>node.exe</code> (Windows — voir <a href="#d%C3%A9pannage">Dépannage</a>)</td>
+</tr>
+<tr>
+<td><code>npm test</code></td>
+<td>Lancer les tests (Vitest), en mode surveillance</td>
+</tr>
+<tr>
+<td><code>npx vitest run</code></td>
+<td>Lancer les tests une seule fois</td>
+</tr>
+<tr>
+<td><code>npm run test:coverage</code></td>
+<td>Les tests avec la mesure de couverture ; échoue sous les seuils fixés dans <code>vite.config.ts</code></td>
+</tr>
+<tr>
+<td><code>npm run test:ui</code></td>
+<td>Les mêmes tests dans l&#39;interface graphique de Vitest</td>
+</tr>
+<tr>
+<td><code>npm run e2e</code></td>
+<td>Parcours réels dans Chrome, Edge, Firefox, Safari et Brave (Playwright) sur la version compilée : ouvrir et sauvegarder, projet exemple, couleurs de la matrice, ajout de condition, fenêtre détachée, export PNG, dossier imprimé. Première fois : <code>npx playwright install --with-deps</code> ; Brave est pris s&#39;il est installé (ou désigné par <code>BRAVE_PATH</code>)</td>
+</tr>
+<tr>
+<td><code>npm run types</code></td>
+<td>Vérification des types TypeScript (<code>tsc --noEmit</code>)</td>
+</tr>
+<tr>
+<td><code>npm run lint</code></td>
+<td>Analyse du code par Oxlint (<code>.oxlintrc.json</code>) : les erreurs bloquent l&#39;intégration continue, les avertissements sont une dette à réduire</td>
+</tr>
+<tr>
+<td><code>npm run preview:deploy</code></td>
+<td>Construit et publie la branche en cours sur une adresse de prévisualisation Surge ; refuse de s&#39;exécuter sur <code>master</code></td>
+</tr>
+<tr>
+<td><code>npm run check</code></td>
+<td>Rapport de santé des dépendances : vulnérabilités et versions obsolètes, celles qui atteignent le navigateur étant séparées de celles confinées à la chaîne de compilation</td>
+</tr>
+<tr>
+<td><code>npm run release</code></td>
+<td>Incrémente la version, met à jour <code>src/version.ts</code> et <code>package.json</code>, crée le commit et le tag (voir <a href="https://github.com/ThierryClm/TraCflux/blob/master/VERSIONING.md">VERSIONING.md</a>)</td>
+</tr>
+</tbody></table>
+<p>Le projet passant parfois plusieurs semaines sans modification, <code>npm run check</code> est la commande à lancer en reprenant : de nouvelles alertes de sécurité peuvent être apparues sans qu&#39;une seule ligne de code ait bougé.</p>
+<p>Les quelques fichiers <code>.vbs</code> à la racine sont des lanceurs Windows personnels — un double-clic enchaîne <code>npm run build</code> puis <code>npm run preview</code>. Ils ne sont nécessaires ni à l&#39;usage de l&#39;application, ni pour développer.</p>
+<h3 id="dépannage">Dépannage</h3>
+<p>Le symptôme à connaître en développement : <strong>l&#39;application semble ignorer vos modifications</strong>. La PWA installée sur <code>localhost:4173</code> sert son cache tant qu&#39;un serveur ne lui présente pas un nouveau build, et elle le fait sans rien signaler.</p>
+<p><strong>Utilisez <code>npm run serve</code> plutôt que <code>npm run preview</code>.</strong> Il reconstruit <code>dist/</code>, démarre le serveur s&#39;il ne tourne pas, puis télécharge <code>/index.html</code> depuis ce serveur et le compare au fichier qui vient d&#39;être produit. Il ne dit « c&#39;est prêt » qu&#39;après cette vérification, et sort en erreur sinon — serveur arrêté, ou processus résiduel occupant le port sans rien servir. Un <code>npm run preview</code> ne vérifie rien et vous laisse devant une page muette.</p>
+<p>Rechargez ensuite la fenêtre par <strong>Ctrl+R</strong>, puis cliquez sur <strong>« Recharger »</strong> quand le bandeau apparaît. Laisser la fenêtre ouverte ne suffit pas : c&#39;est le rechargement qui déclenche la recherche de nouvelle version. En cas de doute, la date de build figure dans le rapport de diagnostic — c&#39;est le seul contrôle fiable.</p>
+<p>Si le cache reste malgré tout figé (thème ou contenu d&#39;une fenêtre détachée qui ne bouge plus) :</p>
+<ol>
+<li>Fermer toutes les fenêtres du navigateur ouvertes sur <code>localhost:4173</code></li>
+<li><code>edge://settings/cookies/detail?site=localhost%3A4173</code> → <strong>Supprimer</strong> — vide le service worker et le cache pour ce seul site</li>
+<li><code>npm run serve</code></li>
+</ol>
+<p><code>npm run clean</code> reste disponible, mais son <code>taskkill</code> arrête <strong>tous</strong> les processus <code>node.exe</code> de la machine, pas seulement ceux du projet : à éviter si un autre travail tourne en parallèle.</p>
+<p>Deux malentendus courants, que la configuration actuelle écarte. Les processus <code>node.exe</code> ne s&#39;accumulent plus après plusieurs aperçus : <code>strictPort</code> fait échouer franchement un second serveur au lieu de le replier silencieusement sur le port suivant. Et le bandeau « Nouvelle version disponible » à chaque rebuild n&#39;est pas un défaut, c&#39;est le mécanisme lui-même — chaque build produit un nouveau service worker. Pour l&#39;utilisateur final (PWA hébergée ou installée depuis une release), ce bandeau n&#39;apparaît qu&#39;après un vrai déploiement.</p>
+<h2 id="exemple">Exemple</h2>
+<p>Un projet d&#39;exemple est fourni dans le dossier <a href="https://github.com/ThierryClm/TraCflux/tree/master/examples/"><code>examples/</code></a>. Ouvrez l&#39;application, puis utilisez <strong>Fichier → Ouvrir un projet</strong> et sélectionnez <code>examples/Carrefour_exemple.json</code>.</p>
+<h2 id="architecture">Architecture</h2>
+<p>Application React + TypeScript (strict) + Vite, état centralisé dans <a href="https://github.com/ThierryClm/TraCflux/blob/master/src/hooks/useTrafficLight.ts"><code>src/hooks/useTrafficLight.ts</code></a>, découpé en sous-modules dans <a href="https://github.com/ThierryClm/TraCflux/tree/master/src/hooks/trafficLight/"><code>src/hooks/trafficLight/</code></a>. L&#39;intégration continue vérifie les types, le lint, les tests avec leur couverture et le build à chaque PR. Voir <a href="https://github.com/ThierryClm/TraCflux/blob/master/CLAUDE.md"><code>CLAUDE.md</code></a> pour les détails d&#39;implémentation (structures de données, rendu du timeline, détection de conflits).</p>
+<h2 id="comptes-utilisateurs">Comptes utilisateurs</h2>
+<p>L&#39;application embarque un système de comptes à 3 niveaux de permissions (lecture seule, modification partielle, modification totale), avec mots de passe hachés en SHA-256.</p>
+<p><strong>Il est désactivé par défaut</strong> : à l&#39;ouverture, on entre directement dans l&#39;application, sans écran de connexion. Il s&#39;adresse aux postes partagés et s&#39;active depuis <strong>À propos → Utilisateurs → Activer les comptes</strong>. Une fois activé, l&#39;application demande une connexion à chaque ouverture ; on peut le désactiver au même endroit, les comptes créés étant conservés.</p>
+<p><strong>Important — ce que ce système est, et n&#39;est pas :</strong></p>
+<ul>
+<li><strong>Ce que c&#39;est</strong> : une convention de travail pour organiser le partage d&#39;un poste entre plusieurs utilisateurs (par exemple un PC partagé en agence). Empêche les manipulations involontaires (un visiteur en mode lecture ne peut pas accidentellement écraser un projet).</li>
+<li><strong>Ce que ce n&#39;est pas</strong> : une protection cryptographiquement forte. L&#39;application étant 100 % côté navigateur, sans serveur, n&#39;importe qui ayant accès au poste peut techniquement contourner les comptes (DevTools, modification du code livré, etc.). Le code source étant publié sous licence AGPL v3, le mécanisme est de toute façon visible publiquement.</li>
+</ul>
+<p><strong>Sécurité réelle des fichiers projet</strong> : à assurer au niveau du système d&#39;exploitation et du réseau local — droits NTFS / ACL sur le partage réseau, comptes Windows / Active Directory, permissions de dossier sur le serveur de fichiers. C&#39;est ce niveau qui décide qui peut lire, écrire ou supprimer les <code>.json</code> exportés par l&#39;application.</p>
+<h2 id="sécurité-et-limites-connues">Sécurité et limites connues</h2>
+<h3 id="import-excel--fichiers-dorigine-externe">Import Excel — fichiers d&#39;origine externe</h3>
+<p>La bibliothèque utilisée pour lire les fichiers Excel (<code>xlsx</code> / SheetJS, version <code>0.18.5</code>) comporte deux vulnérabilités connues, sans correctif diffusé sur le registre npm officiel :</p>
+<ul>
+<li><strong>Prototype Pollution</strong> (<a href="https://github.com/advisories/GHSA-4r6h-8v6p-xvw6">GHSA-4r6h-8v6p-xvw6</a>) — CVSS 7.8</li>
+<li><strong>ReDoS</strong> (Regular Expression Denial of Service, <a href="https://github.com/advisories/GHSA-5pgg-2g8v-p4x9">GHSA-5pgg-2g8v-p4x9</a>) — CVSS 7.5</li>
+</ul>
+<p>Les versions corrigées existent uniquement sur <code>cdn.sheetjs.com</code> (SheetJS a retiré son édition communautaire du registre npm en 2023).</p>
+<p><strong>Recommandation utilisateur :</strong> n&#39;importer que des fichiers <code>.xls</code> / <code>.xlsx</code> d&#39;<strong>origine connue</strong> (feuilles produites par vous ou par des collègues identifiés). Un fichier malveillant ouvert via l&#39;import pourrait perturber l&#39;onglet du navigateur.</p>
+<p><strong>Note sur les macros :</strong> la lecture se fait via une bibliothèque JavaScript côté navigateur, qui n&#39;extrait que les <strong>valeurs des cellules</strong> et <strong>n&#39;exécute aucune macro (VBA)</strong>. Le risque d&#39;exécution de macro à l&#39;ouverture (propre à Excel bureautique) n&#39;existe pas ici. La vigilance porte donc sur l&#39;<strong>origine du fichier</strong> (contenu potentiellement malformé), indépendamment de la présence ou non de macros.</p>
+<p><strong>Évaluation du risque dans l&#39;usage prévu :</strong> faible. TraCflux est un outil <strong>local mono-utilisateur</strong> ; <code>xlsx</code> n&#39;est sollicité qu&#39;au moment où l&#39;utilisateur sélectionne manuellement un fichier (<a href="https://github.com/ThierryClm/TraCflux/blob/master/src/utils/excelImporter.js"><code>src/utils/excelImporter.js</code></a>). Aucun risque pour le système d&#39;exploitation, aucun risque pour les autres projets enregistrés. Seul vecteur résiduel : phishing ciblé.</p>
+<p><strong>Décision actuelle :</strong> statu quo tant que l&#39;usage reste local. Une migration vers <code>xlsx-js-style</code>, <code>exceljs</code> ou la version corrigée hors-npm de SheetJS sera envisagée si l&#39;app évolue vers un déploiement multi-utilisateurs.</p>
+<h2 id="questions-fréquentes">Questions fréquentes</h2>
+<p>Une <a href="../faq/">FAQ</a> répond aux questions courantes (confidentialité des données, formats d&#39;import/export, licence, partage de projets, etc.).</p>
+<h2 id="services--accompagnement">Services &amp; accompagnement</h2>
+<p>Un service d&#39;accompagnement à la conception de diagrammes de feux est <strong>envisagé pour une étape ultérieure</strong> du projet. L&#39;idée : proposer, pour les carrefours complexes, une aide tirant parti des capacités combinées de gestion par phase et par groupe de feux qu&#39;offre l&#39;outil.</p>
+<p>Deux modes de prestation sont pressentis — <strong>assistance technique à la carte</strong> ou <strong>prise en charge complète du projet</strong> à partir des données fournies par l&#39;utilisateur — mais <strong>cette offre n&#39;est pas encore opérationnelle</strong>.</p>
+<p><em>(Les modalités et coordonnées de contact seront précisées lorsque le service sera disponible.)</em></p>
+<h2 id="journal-des-versions">Journal des versions</h2>
+<p>Les évolutions notables sont consignées dans le <a href="https://github.com/ThierryClm/TraCflux/blob/master/CHANGELOG.md">CHANGELOG</a>. Le projet suit le <a href="https://github.com/ThierryClm/TraCflux/blob/master/VERSIONING.md">versionnage sémantique</a>.</p>
+<h2 id="contribuer">Contribuer</h2>
+<p>Les contributions sont les bienvenues. Pour un bug ou une suggestion, ouvrez une <a href="https://github.com/ThierryClm/TraCflux/issues">issue GitHub</a>. Pour proposer un patch, forkez puis ouvrez une pull request.</p>
+<p>Un rapport de diagnostic peut être généré depuis l&#39;app (<strong>À propos → Rapport de diagnostic</strong>) et joint à une issue pour faciliter le débogage.</p>
+<h2 id="licence">Licence</h2>
+<p>Ce projet est distribué sous licence <strong>GNU Affero General Public License v3.0 ou ultérieure</strong> (AGPL-3.0-or-later). Voir le fichier <a href="https://github.com/ThierryClm/TraCflux/blob/master/LICENSE"><code>LICENSE</code></a> pour le texte complet.</p>
+<p>En résumé :</p>
+<ul>
+<li>Vous pouvez utiliser, modifier et redistribuer le logiciel.</li>
+<li>Si vous distribuez une version modifiée (y compris en la rendant accessible sur un réseau), vous devez publier le code source correspondant sous la même licence.</li>
+<li>Aucune garantie n&#39;est fournie.</li>
+</ul>
+<p>© 2026 Thierry Colmon</p>
+</main>
+<footer><a href="../presentation/">Découvrir l’application</a> · <a href="../">Ouvrir TraCflux</a> · <a href="#contenu">Retour en haut</a></footer></body></html>
