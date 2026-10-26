@@ -1,3 +1,4 @@
+import { evaluerPrerequisAssistant } from './utils/prerequisAssistant';
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import type { ChangeEvent } from 'react';
 import { useBooleenMemorise, usePrefsInfobulles } from './hooks/usePreferencesEspaceTravail';
@@ -711,7 +712,12 @@ function App() {
     });
     // Redemander la fenêtre déjà ouverte la ramène au premier plan (ou retente
     // l'ouverture qu'un bloqueur avait refusée).
+    const prerequisAssistant = useMemo(() => evaluerPrerequisAssistant(groups, conflictMatrix), [groups, conflictMatrix]);
     const ouvrirSuggestionCycle = () => {
+        if (!prerequisAssistant.pret) {
+            toast.info(prerequisAssistant.message);
+            return;
+        }
         if (suggestionCycleModal) { if (!assistantDansLaPage) suggestionCyclePopup.retryOpen(); }
         else setSuggestionCycleModal(true);
     };
@@ -1474,6 +1480,7 @@ function App() {
             case 'verrouSaisie:diagramme':     basculerVerrou('diagramme');     break;
             case 'verrouSaisie:conditions':    basculerVerrou('conditions');    break;
             case 'verrouSaisie:variables':     basculerVerrou('variables');     break;
+            case 'toggleTooltipsMenu':    setTooltipPref('menu');    break;
             case 'toggleTooltipsMain':    setTooltipPref('main');    break;
             case 'toggleTooltipsConfig':  setTooltipPref('config');  break;
             case 'toggleTooltipsDiagram': setTooltipPref('diagram'); break;
@@ -2287,6 +2294,8 @@ function App() {
                     initialOpenMenu={!hasActiveProject ? 'fichier' : null}
                     pfCount={pfTabs.length}
                     traficRenseigne={traficRenseigne}
+                    assistantPret={prerequisAssistant.pret}
+                    assistantBlocage={prerequisAssistant.message}
                 />
             <WelcomeScreen
                 hasActiveProject={hasActiveProject}
