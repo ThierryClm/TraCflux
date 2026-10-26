@@ -1486,6 +1486,9 @@ function App() {
                 localStorage.setItem('showSaveReminder', String(newVal));
                 break;
             }
+            case 'faq':
+                window.open(new URL('faq/', window.location.href).href, '_blank', 'noopener,noreferrer');
+                break;
             case 'help':
                 setHelpModal(true);
                 break;

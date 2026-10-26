@@ -631,6 +631,7 @@ const MenuBar = ({
             label: 'A propos',
             items: [
                 { label: 'Aide', action: 'help' },
+                { label: 'Questions fréquentes (FAQ)', action: 'faq' },
                 { label: 'Rapport de diagnostic...', action: 'diagnosticReport' },
                 { label: 'À propos', action: 'credit' },
                 // Les comptes sont un dispositif pour poste partagé, éteint par

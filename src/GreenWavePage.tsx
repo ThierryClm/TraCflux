@@ -1093,6 +1093,9 @@ const GreenWavePage = () => {
             case 'about':
                 setShowAboutModal(true);
                 break;
+            case 'faq':
+                window.open(new URL('faq/', window.location.href).href, '_blank', 'noopener,noreferrer');
+                break;
             case 'help':
                 setShowHelpModal(true);
                 break;
