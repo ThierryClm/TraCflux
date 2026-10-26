@@ -149,3 +149,15 @@
         overflow-x: auto;
     }
 }
+/* Bouton Valider / Validé, à droite du titre de chaque chapitre. */
+.suggestion-cycle .sc-chapitre-ligne { display: flex; align-items: center; }
+.suggestion-cycle .sc-chapitre-ligne .sc-chapitre-tete { flex: 1 1 auto; min-width: 0; }
+.suggestion-cycle .sc-valider {
+    flex: 0 0 auto; margin: 0 8px; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; cursor: pointer;
+    border: 1px solid var(--md-separator, #666); background: transparent; color: inherit; white-space: nowrap;
+}
+.suggestion-cycle .sc-valider:hover:not(:disabled) { background: var(--md-hover, rgba(255, 255, 255, 0.08)); }
+.suggestion-cycle .sc-valider:disabled { opacity: 0.45; cursor: not-allowed; }
+.suggestion-cycle .sc-valider.actif { background: #2e7d32; border-color: #2e7d32; color: #fff; font-weight: bold; }
+.suggestion-cycle .sc-valider.actif:hover { background: #c62828; border-color: #c62828; }
+.suggestion-cycle .sc-chapitre.valide { border-color: #2e7d32; }

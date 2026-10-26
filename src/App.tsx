@@ -2106,12 +2106,12 @@ function App() {
         planName: activePFName,
         groups, conflictMatrix, cycleLength, getTrafficData,
         trafficDatasetName: activeTrafficDataset,
-        phasageCycle, setPhasageCycle, setCycleLength, setPhasageBulleCount, setPhasageBulleTimes,
+        phasageCycle, setPhasageCycle, setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, phasageBulleCount, phasageBulleTimes,
         updateGroupParams, intersectionArrows, ajouterActions, variablesMicro: microCustomFields, setVariableMicro: updateMicroCustomField,
-        readOnly: dossierReadOnly || activePfReadOnly,
+        actionData, readOnly: dossierReadOnly || activePfReadOnly,
     }), [activePFName, groups, conflictMatrix, cycleLength, getTrafficData, activeTrafficDataset, phasageCycle, setPhasageCycle,
-        setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows, ajouterActions,
-        microCustomFields, updateMicroCustomField, dossierReadOnly, activePfReadOnly]);
+        setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, phasageBulleCount, phasageBulleTimes, updateGroupParams, intersectionArrows, ajouterActions,
+        microCustomFields, updateMicroCustomField, actionData, dossierReadOnly, activePfReadOnly]);
     const renderSuggestionCycle = suggestionCyclePopup.renderToPopup;
     useEffect(() => {
         if (!suggestionCycleModal || assistantDansLaPage) return;

@@ -4,7 +4,7 @@
  * appliqué au plan, phasage enregistré avec lui.
  */
 import { expect, test, type Locator } from '@playwright/test';
-import { cliquerEtFermer, ouvrirExemple, ouvrirMenu } from './aide';
+import { cliquerEtFermer, ouvrirExemple, ouvrirMenu, projetExemple } from './aide';
 
 /** Chapitres de l'assistant, repliés à l'ouverture : on les déplie tous. */
 const toutDeplier = async (fenetre: Locator) => {
@@ -87,4 +87,40 @@ test('Nouveau plan de feu : plan vierge, choix du jeu de trafic, puis suggestion
     const popup = await nouvelle;
     await toutDeplier(popup.locator('.suggestion-cycle'));
     await expect(popup.locator('.suggestion-cycle')).toContainText('jeu HPS');
+});
+
+test('chaque chapitre se valide et s\'invalide, avec effet immédiat sur le plan', async ({ page, context }) => {
+    await ouvrirExemple(page);
+    const cycleDuPlan = page.locator('.cycle-input-label input').first();
+    const projet = projetExemple();
+    const cycleInitial = String(projet.pfTabs.find((pf: { id: number }) => pf.id === projet.activePFId)?.cycleLength ?? projet.cycleLength);
+    // Les onglets apparaissent avant la fin de la synchronisation du cycle.
+    await expect(cycleDuPlan).toHaveValue(cycleInitial);
+    const item = page.locator('.menu-bar').getByText('Assistant conception...', { exact: true });
+    await ouvrirMenu(page, 'Diagramme', item);
+    const nouvelle = context.waitForEvent('page');
+    await item.click();
+    const fenetre = (await nouvelle).locator('.suggestion-cycle.sc-detachee');
+    // Deux phases dont le cycle proposé diffère de celui du plan.
+    await fenetre.getByLabel('Nombre de phases').selectOption('2');
+    await fenetre.getByLabel('Groupe déterminant de la phase 1').selectOption('1');
+    await fenetre.getByLabel('Groupe déterminant de la phase 2').selectOption('8');
+    for (const [champ, valeur] of [['Dégagement de la phase 1 vers la phase 2', '6'], ['Dégagement de la phase 2 vers la phase 1', '6']] as const) {
+        const c = fenetre.getByLabel(champ);
+        if (!(await c.inputValue())) await c.fill(valeur);
+    }
+    const chapitreCycle = fenetre.getByRole('region', { name: 'Durée de cycle' });
+    const resume = (await chapitreCycle.locator('.sc-chapitre-resume').textContent()) || '';
+    const propose = resume.match(/cycle proposé (\d+) s/)?.[1];
+    expect(propose).toBeTruthy();
+    test.skip(propose === cycleInitial, 'le cycle proposé est déjà celui du plan');
+
+    const bouton = chapitreCycle.getByRole('button', { name: /Valider|Validé/ });
+    await bouton.click();
+    await expect(cycleDuPlan).toHaveValue(propose!);
+    await expect(bouton).toHaveText('✓ Validé');
+    // Invalidé : le plan retrouve son cycle.
+    await bouton.click();
+    await expect(cycleDuPlan).toHaveValue(cycleInitial);
+    await expect(bouton).toHaveText('Valider');
 });

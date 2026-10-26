@@ -121,9 +121,10 @@ export const useReglagesPlanActif = ({ pfTabs, setPfTabs, activePFId }: EntreesR
         () => pfTabs.find(pf => pf.id === activePFId)?.phasageCycle ?? null,
         [pfTabs, activePFId]);
 
-    const setPhasageCycle = useCallback((phasage: PhasageCycle) => {
+    // null efface le phasage du plan (chapitre de l'assistant invalidé).
+    const setPhasageCycle = useCallback((phasage: PhasageCycle | null) => {
         setPfTabs(prev => prev.map(pf =>
-            pf.id === activePFId ? { ...pf, phasageCycle: phasage } : pf
+            pf.id === activePFId ? { ...pf, phasageCycle: phasage ?? undefined } : pf
         ));
     }, [activePFId, setPfTabs]);
 
