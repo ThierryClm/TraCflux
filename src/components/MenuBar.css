@@ -238,3 +238,20 @@
     min-width: 40px;
     text-align: right;
 }
+
+/* Téléphone en portrait : les cinq menus ne tiennent pas sur une ligne de
+   390 px. Leurs libellés passaient sur deux ou trois lignes dans une barre
+   de 28 px (« Mise en page » débordait dessous), et la barre dépassait de
+   l'écran. La barre prend la hauteur de ses libellés, sur deux lignes au
+   plus, avec des marges réduites. */
+@media (max-width: 600px) {
+    .menu-bar {
+        height: auto;
+        min-height: 28px;
+    }
+
+    .menu-button {
+        padding: 2px 6px;
+        line-height: 1.15;
+    }
+}
