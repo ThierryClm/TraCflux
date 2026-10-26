@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import { useState } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import { inscrireActions, createEmptyActionData } from '../utils/pfHelpers';
 import SuggestionCycleDialog from './SuggestionCycleDialog';
 
 // TD « carrefour en croix avec couloir bus d'approche ».
@@ -147,7 +149,9 @@ describe('suggestion de durée du cycle', () => {
         expect(within(bloc).getByText(/58 s avec toutes les zones contractées/)).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Contraction de phase' })).toBeNull();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
-        const [lignes, remplacer] = ajouterActions.mock.calls[0];
+        // Une inscription par chapitre (adaptatifs, fermetures, repos), chacune remplaçant ses propres lignes.
+        const lignes = ajouterActions.mock.calls.flatMap(c => c[0]);
+        const remplacer = row => ajouterActions.mock.calls.some(c => c[1](row));
         expect(lignes.slice(0, 2)).toEqual([
             { gf: '1', action: 'Adaptatif vertical', deb: '22', fin: '29', abrv: 'AV1', description: 'Contraction théorique', micro: 'Contraction si absence de demande sur V1' },
             { gf: '4', action: 'Adaptatif vertical', deb: '59', fin: '64', abrv: 'AV3', description: 'Contraction théorique', micro: 'Contraction si absence de demande sur V4' },
@@ -199,7 +203,9 @@ describe('suggestion de durée du cycle', () => {
         const bloc = screen.getByLabelText('Points de repos bus');
         expect(within(bloc).getByText('Attente quittée si TPPh_L3 + DAx > 4 + TMABx')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
-        const [lignes, remplacer] = ajouterActions.mock.calls[0];
+        // Une inscription par chapitre (adaptatifs, fermetures, repos), chacune remplaçant ses propres lignes.
+        const lignes = ajouterActions.mock.calls.flatMap(c => c[0]);
+        const remplacer = row => ajouterActions.mock.calls.some(c => c[1](row));
         expect(lignes.at(-1)).toEqual({
             gf: '3', action: 'Point de repos', deb: '38', fin: '', abrv: 'Att bus',
             description: 'attente bus théorique maxi 10 secondes', micro: 'Attente quittée si TPPh_L3 + DAx > 4 + TMABx',
@@ -235,5 +241,85 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.queryByLabelText('Nombre de phases')).toBeNull();
         // Le bouton Appliquer reste accessible, chapitres repliés.
         expect(screen.getByRole('button', { name: /Appliquer le cycle/ })).toBeEnabled();
+    });
+});
+
+// Banc d'essai avec état : le cycle, les groupes et les conditions du plan
+// changent vraiment, comme dans l'application.
+const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+const Banc = ({ cycleInitial = 60 }) => {
+    const [cycle, setCycle] = useState(cycleInitial);
+    const [gr, setGr] = useState(groups.map(x => ({ ...x, offset: pose[x.id][0], durations: { ...x.durations, green: pose[x.id][1] } })));
+    const [data, setData] = useState(createEmptyActionData());
+    const [phasage, setPhasage] = useState({ determinants: [1, 3, 4], degagements: [4, 6, 6] });
+    const ajouterActions = (lignes, remplacer) => {
+        const r = inscrireActions(data, lignes, remplacer);
+        setData(prev => inscrireActions(prev, lignes, remplacer).data);
+        return r.nb;
+    };
+    const updateGroupParams = (id, p) => setGr(prev => prev.map(x => (x.id === id
+        ? { ...x, ...(p.offset !== undefined ? { offset: p.offset } : {}), ...(p.da !== undefined ? { da: p.da } : {}), durations: { ...x.durations, ...p.durations } }
+        : x)));
+    return (
+        <>
+            <output data-testid="cycle">{cycle}</output>
+            <output data-testid="conditions">{data.filter(l => l.abrv).map(l => l.abrv).join(',')}</output>
+            <SuggestionCycleDialog isOpen onClose={() => {}} planName="PF1" groups={gr} conflictMatrix={matrice}
+                cycleLength={cycle} getTrafficData={id => ({ trafficVol: trafic[id] })} trafficDatasetName="HPM"
+                phasageCycle={phasage} setPhasageCycle={setPhasage} setCycleLength={setCycle}
+                setPhasageBulleCount={() => {}} setPhasageBulleTimes={() => {}} updateGroupParams={updateGroupParams}
+                ajouterActions={ajouterActions} actionData={data} variablesMicro={['TMABx = 10']} setVariableMicro={() => {}} />
+        </>
+    );
+};
+const valider = titre => within(screen.getByLabelText(titre)).getByRole('button', { name: /Valider|Validé/ });
+
+describe('validation chapitre par chapitre', () => {
+    it('valider applique au diagramme, invalider rétablit ; le cycle entraîne les chapitres qui en dépendent', () => {
+        render(<Banc />);
+        toutDeplier();
+        // Cycle de 60 s : les adaptatifs, calculés sur 70 s, attendent le cycle.
+        expect(valider('Adaptatifs verticaux')).toBeDisabled();
+        expect(valider('Adaptatifs verticaux')).toHaveAttribute('title', 'Validez d\'abord la durée de cycle');
+        fireEvent.click(valider('Durée de cycle'));
+        expect(screen.getByTestId('cycle')).toHaveTextContent('70');
+        expect(valider('Durée de cycle')).toHaveTextContent('✓ Validé');
+        fireEvent.click(valider('Adaptatifs verticaux'));
+        fireEvent.click(valider('Fermetures anticipées avec glissements'));
+        expect(screen.getByTestId('conditions')).toHaveTextContent('AV1,AV3,FA1,FA2');
+        // Invalider les fermetures : seules leurs lignes partent.
+        fireEvent.click(valider('Fermetures anticipées avec glissements'));
+        expect(screen.getByTestId('conditions').textContent).toBe('AV1,AV3');
+        // Invalider le cycle : les adaptatifs partent avec lui, le cycle revient à 60 s.
+        fireEvent.click(valider('Durée de cycle'));
+        expect(screen.getByTestId('conditions').textContent).toBe('');
+        expect(screen.getByTestId('cycle')).toHaveTextContent('60');
+        expect(valider('Adaptatifs verticaux')).toHaveTextContent('Valider');
+    });
+
+    it('un chapitre validé suit sa proposition en temps réel', () => {
+        render(<Banc cycleInitial={70} />);
+        toutDeplier();
+        fireEvent.click(valider('Adaptatifs verticaux'));
+        const bloc = screen.getByLabelText('Adaptatifs verticaux');
+        expect(within(bloc).getByText('22 – 29 s')).toBeInTheDocument();
+        // Mode prudent : la zone change, la condition inscrite la suit.
+        fireEvent.change(within(bloc).getByLabelText('Mode de calcul des adaptatifs'), { target: { value: 'prudent' } });
+        expect(within(bloc).getByText('25 – 29 s')).toBeInTheDocument();
+        expect(screen.getByTestId('conditions').textContent).toBe('AV1,AV3');
+    });
+
+    it('les conditions de l\'assistant déjà inscrites marquent leur chapitre comme validé', () => {
+        const data = createEmptyActionData();
+        data[0] = { ...data[0], gf: '1', action: 'Adaptatif vertical', deb: '22', fin: '29', abrv: 'AV1' };
+        const places = groups.map(x => ({ ...x, offset: pose[x.id][0], durations: { ...x.durations, green: pose[x.id][1] } }));
+        const ajouterActions = vi.fn(() => 0);
+        ouvrir({ groups: places, actionData: data, ajouterActions, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        expect(valider('Adaptatifs verticaux')).toHaveTextContent('✓ Validé');
+        expect(valider('Fermetures anticipées avec glissements')).toHaveTextContent('Valider');
+        fireEvent.click(valider('Adaptatifs verticaux'));
+        const [lignes, remplacer] = ajouterActions.mock.calls[0];
+        expect(lignes).toEqual([]);
+        expect(remplacer(data[0])).toBe(true);
     });
 });

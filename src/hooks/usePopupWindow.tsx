@@ -598,6 +598,13 @@ const usePopupWindow = ({
                 // vide, sinon les feuilles de style s'y recopient à chaque passage.
                 popup.document.head.replaceChildren();
 
+                // Sur un téléphone, la fenêtre devient un onglet : sans cette
+                // balise, il s'affiche en largeur d'ordinateur, minuscule.
+                const viewport = popup.document.createElement('meta');
+                viewport.name = 'viewport';
+                viewport.content = 'width=device-width, initial-scale=1';
+                popup.document.head.appendChild(viewport);
+
                 // Set title
                 popup.document.title = title;
 

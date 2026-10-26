@@ -232,3 +232,28 @@ td.matrix-hovered-col {
 /* Infobulle de survol d'une case de matrice : utilise desormais les
    memes classes (.action-hover-tooltip*) que les infobulles d'actions
    du diagramme pour un visuel uniforme (cf. TimelineDiagram.css). */
+
+/* Téléphone en portrait : la matrice (13 groupes, noms compris) faisait
+   près de 490 px dans un panneau de 360 px, et ne se lisait qu'en la faisant
+   défiler. Cellules sans marge et noms abrégés (nom complet en infobulle) :
+   elle tient dans la largeur jusqu'à une quinzaine de groupes ; au-delà, elle
+   défile comme avant. */
+@media (max-width: 600px) {
+    .matrix-container-inline,
+    .matrix-scroll {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .matrix-grid th {
+        padding: 2px 0;
+    }
+
+    .matrix-grid .row-name,
+    .matrix-grid .col-name-header {
+        min-width: 0 !important;
+        max-width: 66px !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
