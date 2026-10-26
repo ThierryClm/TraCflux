@@ -4,7 +4,7 @@
  * appliqué au plan, phasage enregistré avec lui.
  */
 import { expect, test, type Locator } from '@playwright/test';
-import { cliquerEtFermer, ouvrirExemple, ouvrirMenu } from './aide';
+import { cliquerEtFermer, ouvrirExemple, ouvrirMenu, projetExemple } from './aide';
 
 /** Chapitres de l'assistant, repliés à l'ouverture : on les déplie tous. */
 const toutDeplier = async (fenetre: Locator) => {
@@ -92,7 +92,10 @@ test('Nouveau plan de feu : plan vierge, choix du jeu de trafic, puis suggestion
 test('chaque chapitre se valide et s\'invalide, avec effet immédiat sur le plan', async ({ page, context }) => {
     await ouvrirExemple(page);
     const cycleDuPlan = page.locator('.cycle-input-label input').first();
-    const cycleInitial = await cycleDuPlan.inputValue();
+    const projet = projetExemple();
+    const cycleInitial = String(projet.pfTabs.find((pf: { id: number }) => pf.id === projet.activePFId)?.cycleLength ?? projet.cycleLength);
+    // Les onglets apparaissent avant la fin de la synchronisation du cycle.
+    await expect(cycleDuPlan).toHaveValue(cycleInitial);
     const item = page.locator('.menu-bar').getByText('Assistant conception...', { exact: true });
     await ouvrirMenu(page, 'Diagramme', item);
     const nouvelle = context.waitForEvent('page');
