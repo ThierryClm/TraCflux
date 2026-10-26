@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
 /** Sections des infobulles réglables dans Mise en page → Infobulles. */
-export type PrefsInfobulles = Record<'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>;
+export type PrefsInfobulles = Record<'menu' | 'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>;
 
 /**
  * Interrupteur mémorisé sous la clé `cle` : relu au démarrage, réenregistré à
@@ -26,19 +26,19 @@ export const useBooleenMemorise = (cle: string, defaut: boolean): [boolean, Disp
     return [valeur, setValeur];
 };
 
-/** Préférences « Infobulles... » : 6 sections, toutes cochées par défaut. */
+/** Préférences « Infobulles... » : 7 sections, toutes cochées par défaut. */
 export const usePrefsInfobulles = () => {
-    // Preferences "Infobulles..." (Mise en page). 6 sections, toutes
+    // Preferences "Infobulles..." (Mise en page). 7 sections, toutes
     // cochees par defaut. Persiste au niveau de l'application (localStorage).
     const [tooltipPrefs, setTooltipPrefsState] = useState<PrefsInfobulles>(() => {
         try {
             const raw = localStorage.getItem('tracflux.tooltips');
-            const def = { main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
+            const def = { menu: true, main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
             if (!raw) return def;
             const parsed = JSON.parse(raw);
             return { ...def, ...parsed };
         } catch {
-            return { main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
+            return { menu: true, main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
         }
     });
     const setTooltipPref = useCallback((key: keyof PrefsInfobulles) => {

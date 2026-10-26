@@ -5,6 +5,7 @@ import type { PermissionFlag } from '../hooks/useAuth';
 import type { ModeAffichage } from '../utils/modeAffichage';
 import { usePrefsVerrou } from '../utils/verrouSaisie';
 import './MenuBar.css';
+import { INFOBULLE_ASSISTANT } from '../utils/prerequisAssistant';
 
 /** Une entrée de menu : action, case à cocher, séparateur, en-tête, sous-menu ou curseur. */
 interface ElementMenu {
@@ -75,7 +76,7 @@ export interface OptionsMenuBar {
     hasIntersectionImage?: boolean;
     hasMultiplePf?: boolean;
     matricesLocked?: boolean;
-    tooltipPrefs?: Partial<Record<'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>>;
+    tooltipPrefs?: Partial<Record<'menu' | 'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>>;
     toastPrefs?: Partial<Record<'success' | 'error' | 'info', boolean>>;
     openPropertiesOnNewProject?: boolean;
     showWrapFlash?: boolean;
@@ -113,6 +114,8 @@ export interface MenuBarProps {
     pfCount?: number;
     /** Le plan affiché a du trafic : la suggestion de durée du cycle est possible. */
     traficRenseigne?: boolean;
+    assistantPret?: boolean;
+    assistantBlocage?: string;
 }
 
 const MenuBar = ({
@@ -133,8 +136,11 @@ const MenuBar = ({
     initialOpenMenu = null,
     accountsEnabled = false,
     pfCount = 0,
-    traficRenseigne = false
+    traficRenseigne = false,
+    assistantPret = false,
+    assistantBlocage = ''
 }: MenuBarProps) => {
+    const tip = (texte: string | undefined) => layoutOptions.tooltipPrefs?.menu !== false ? texte : undefined;
     const [openMenu, setOpenMenu] = useState<string | null>(initialOpenMenu);
     const verrou = usePrefsVerrou();
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
@@ -517,6 +523,7 @@ const MenuBar = ({
                     type: 'submenu',
                     submenuId: 'tooltips',
                     submenu: [
+                        { label: 'Menu', action: 'toggleTooltipsMenu', checked: layoutOptions.tooltipPrefs?.menu !== false, keepSubmenuOpen: true },
                         { label: 'Page principale',                 action: 'toggleTooltipsMain',    checked: !!layoutOptions.tooltipPrefs?.main,    keepSubmenuOpen: true },
                         { label: 'Configuration',                   action: 'toggleTooltipsConfig',  checked: !!layoutOptions.tooltipPrefs?.config,  keepSubmenuOpen: true },
                         { label: 'Diagramme',                       action: 'toggleTooltipsDiagram', checked: !!layoutOptions.tooltipPrefs?.diagram, keepSubmenuOpen: true },
@@ -585,10 +592,8 @@ const MenuBar = ({
                 {
                     label: 'Assistant conception...',
                     action: 'cycleSuggestion',
-                    disabled: !traficRenseigne,
-                    title: traficRenseigne
-                        ? 'Cycle de Webster, groupes associés, adaptatifs, fermetures anticipées et repos bus, à partir des groupes déterminants de chaque phase'
-                        : 'Renseignez le trafic du plan de feu (onglet Trafic)'
+                    disabled: !traficRenseigne || !assistantPret,
+                    title: [INFOBULLE_ASSISTANT, assistantBlocage, !traficRenseigne ? 'Renseignez le trafic du plan de feu (onglet Trafic).' : ''].filter(Boolean).join('\n\n')
                 },
                 {
                     label: 'Comparer la capacité des plans de feu...',
@@ -753,7 +758,7 @@ const MenuBar = ({
                 className={`menu-item ${subItem.checked ? 'checked' : ''} ${subItem.disabled ? 'disabled' : ''}`}
                 onClick={() => !subItem.disabled && handleItemClick(subItem.action, subItem.keepSubmenuOpen)}
                 disabled={subItem.disabled}
-                title={subItem.title}
+                title={tip(subItem.title)}
             >
                 {subItem.checked !== undefined && subItem.checked && <span className="checkmark" style={{ color: '#2ecc71' }}>✓</span>}
                 {subItem.label}
@@ -817,7 +822,7 @@ const MenuBar = ({
                 onClick={() => !item.disabled && handleItemClick(item.action)}
                 onMouseEnter={() => setOpenSubmenu(null)}
                 disabled={item.disabled}
-                title={item.title}
+                title={tip(item.title)}
             >
                 {item.label}
             </button>
@@ -830,7 +835,7 @@ const MenuBar = ({
                 type="button"
                 className="menu-bar-logo-btn"
                 onClick={() => handleItemClick('credit')}
-                title="À propos de TraCflux"
+                title={tip("À propos de TraCflux")}
                 aria-label="À propos"
             >
                 <img src="./logo.svg" className="menu-bar-logo" alt="TraCflux" />
@@ -865,7 +870,7 @@ const MenuBar = ({
                             // toute barre de menus.
                         }}
                         disabled={menu.disabled}
-                        title={menu.disabled && !hasActiveProject ? 'Aucun projet ouvert' : ''}
+                        title={tip(menu.disabled && !hasActiveProject ? 'Aucun projet ouvert' : undefined)}
                     >
                         {menu.label}
                     </button>

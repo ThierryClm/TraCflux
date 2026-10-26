@@ -44,3 +44,12 @@ describe('préférences des infobulles', () => {
         expect(renderHook(() => usePrefsInfobulles()).result.current.tooltipPrefs.main).toBe(true);
     });
 });
+
+ it('ajoute Menu aux anciennes préférences sans réactiver les sections décochées', () => {
+    localStorage.setItem('tracflux.tooltips', JSON.stringify({ main: false, matrix: false }));
+    const { result } = renderHook(() => usePrefsInfobulles());
+    expect(result.current.tooltipPrefs.menu).toBe(true);
+    expect(result.current.tooltipPrefs.main).toBe(false);
+    act(() => result.current.setTooltipPref('menu'));
+    expect(renderHook(() => usePrefsInfobulles()).result.current.tooltipPrefs.menu).toBe(false);
+ });
