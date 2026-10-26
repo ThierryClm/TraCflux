@@ -4,7 +4,7 @@
 
 # TraCflux
 
-Solution open source pour la conception et l'optimisation de plans de feux tricolores, destinée aux traficiens et ingénieurs de la circulation.
+Solution open source pour la conception et l'optimisation de plans de feux tricolores, pour les traficiens, étudiants, bureaux d’études et collectivités.
 
 ### Module Diagramme de Feux
 
@@ -24,6 +24,8 @@ Conçue pour être utilisée **localement**, sans serveur : les données de vos 
 ## Essayer TraCflux
 
 **[Ouvrir l'application](https://tracflux.com/?example=carrefour)** — un carrefour d'exemple s'ouvre directement, sans compte à créer et sans rien installer.
+
+Questions fréquentes : [tracflux.com/faq](https://tracflux.com/faq/), sans compte GitHub.
 
 Présentation de l'outil, en une page : [tracflux.com/presentation](https://tracflux.com/presentation/).
 
