@@ -165,7 +165,8 @@ const GreenWaveMenuBar = ({
             label: 'À propos',
             items: [
                 { label: 'À propos', action: 'about' },
-                { label: 'Aide en ligne', action: 'help' }
+                { label: 'Aide en ligne', action: 'help' },
+                { label: 'Questions fréquentes (FAQ)', action: 'faq' }
             ]
         }
     };
