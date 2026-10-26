@@ -418,7 +418,8 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
                             <tr key={fromIdx} className={hoveredGroupId === fromIdx + 1 ? 'matrix-hovered-row' : ''}>
                                 <td className={`row-header${separatorIdx >= 0 && fromIdx === separatorIdx ? ' matrix-bi-sep-bottom' : ''}`}>{fromIdx + 1}</td>
                                 {showGroupNames && (
-                                    <td className={`row-name${separatorIdx >= 0 && fromIdx === separatorIdx ? ' matrix-bi-sep-bottom' : ''}`}>
+                                    <td className={`row-name${separatorIdx >= 0 && fromIdx === separatorIdx ? ' matrix-bi-sep-bottom' : ''}`}
+                                        title={groups?.[fromIdx]?.name}>
                                         {groups && groups[fromIdx] ? groups[fromIdx].name : '-'}
                                     </td>
                                 )}
