@@ -27,9 +27,9 @@ for (const cas of ['matrice vide', '10 groupes sur 13', '11 groupes sur 13'] as 
 
 test('les infobulles des menus se désactivent indépendamment et restent mémorisées', async ({ page }) => {
     await ouvrirExemple(page);
-    const miseEnPage = page.locator('.menu-bar').getByText('Mise en page', { exact: true });
-    await miseEnPage.click();
-    await page.locator('.menu-item.has-submenu').filter({ hasText: /^Infobulles/ }).hover();
+    const infobulles = page.locator('.menu-item.has-submenu').filter({ hasText: /^Infobulles/ });
+    await ouvrirMenu(page, 'Mise en page', infobulles);
+    await infobulles.hover();
     const menu = page.getByRole('button', { name: /^(?:✓\s*)?Menu$/ });
     await expect(menu).toHaveClass(/checked/);
     await menu.click();
@@ -41,8 +41,8 @@ test('les infobulles des menus se désactivent indépendamment et restent mémor
     await ouvrirExemple(page);
     await ouvrirMenu(page, 'Diagramme', assistant);
     await expect(assistant).not.toHaveAttribute('title');
-    await miseEnPage.click();
-    await page.locator('.menu-item.has-submenu').filter({ hasText: /^Infobulles/ }).hover();
+    await ouvrirMenu(page, 'Mise en page', infobulles);
+    await infobulles.hover();
     await menu.click();
     await ouvrirMenu(page, 'Diagramme', assistant);
     await expect(assistant).toHaveAttribute('title', /carrefours simples/);
