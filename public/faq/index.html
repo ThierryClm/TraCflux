@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Questions fréquentes — TraCflux</title>
+<meta name="description" content="Les réponses à vos questions sur TraCflux : premiers pas, fichiers, confidentialité, simulation et utilisation des plans de feux.">
+<link rel="canonical" href="https://tracflux.com/faq/"><link rel="icon" href="../icon.svg">
+<meta property="og:title" content="Questions fréquentes — TraCflux"><meta property="og:description" content="Retrouvez les réponses à vos questions sur TraCflux, librement et sans compte."><meta property="og:type" content="website"><meta property="og:url" content="https://tracflux.com/faq/"><meta property="og:image" content="https://tracflux.com/social-preview.png">
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#1e1e1e;color:#e6e6e6;font:17px/1.7 system-ui,sans-serif}header,main,footer{max-width:960px;margin:auto;padding:24px}nav{display:flex;gap:20px;flex-wrap:wrap;align-items:center}a{color:#71ddd5;text-underline-offset:3px}nav a{font-weight:600}header img{width:40px;height:40px}h1{font-size:clamp(2rem,6vw,3rem);line-height:1.2;color:#71ddd5}h2{margin-top:56px;padding-top:16px;border-top:1px solid #555}h3{margin-top:32px;line-height:1.4;color:#fff}h2,h3{scroll-margin-top:20px}p,li{overflow-wrap:anywhere}table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}th,td{padding:10px;border:1px solid #666;text-align:left}pre{overflow-x:auto;padding:16px;background:#292929}code{font-size:.9em}img{max-width:100%;height:auto}blockquote{border-left:3px solid #71ddd5;margin-left:0;padding-left:18px}.sommaire{background:#292929;border-radius:12px;padding:20px 28px}.sommaire ul{columns:2; padding-left:20px}footer{border-top:1px solid #555;margin-top:48px}:focus-visible{outline:3px solid #ffcf66;outline-offset:4px}.skip{position:absolute;left:-9999px}.skip:focus{left:16px;top:8px;background:#1e1e1e;padding:8px}@media(max-width:600px){header,main,footer{padding:20px}.sommaire ul{columns:1}}@media print{body{background:#fff;color:#000}a,h1,h3{color:#000}nav,.sommaire{display:none}}
+</style></head><body><a class="skip" href="#contenu">Aller au contenu</a>
+<header><nav aria-label="Navigation principale"><a href="../"><img src="../logo.svg" alt="TraCflux"></a><a href="../presentation/">Présentation</a><a href="../faq/">FAQ</a><a href="../?example=carrefour">Essayer TraCflux</a></nav></header>
+<main id="contenu"><h1 id="questions-fréquentes">Questions fréquentes</h1><p>Documentation en accès libre, sans compte.</p><nav class="sommaire" aria-label="Sommaire"><ul><li><a href="#à-propos-du-projet">À propos du projet</a></li><li><a href="#données-et-confidentialité">Données et confidentialité</a></li><li><a href="#utilisation-pratique">Utilisation pratique</a></li><li><a href="#accessibilité">Accessibilité</a></li><li><a href="#comptes-et-sécurité">Comptes et sécurité</a></li><li><a href="#licence-et-conditions-dutilisation">Licence et conditions d&#39;utilisation</a></li><li><a href="#bugs-et-contributions">Bugs et contributions</a></li></ul></nav>
+<p>Cette FAQ répond aux questions courantes sur <strong>TraCflux</strong>. Si la réponse à votre question ne s&#39;y trouve pas, ouvrez une <a href="https://github.com/ThierryClm/TraCflux/issues">issue GitHub</a>.</p>
+<hr>
+<h2 id="à-propos-du-projet">À propos du projet</h2>
+<h3 id="pourquoi-une-application-web-plutôt-quun-logiciel-à-installer-"><span id="pourquoi-une-application-web-plutôt-quun-logiciel-à-installer"></span>Pourquoi une application web plutôt qu&#39;un logiciel à installer ?</h3>
+<p>Pour trois raisons, dans cet ordre.</p>
+<p><strong>La pérennité.</strong> Un outil qui s&#39;exécute dans le navigateur ne dépend ni d&#39;une version de système d&#39;exploitation, ni d&#39;une bibliothèque système, ni d&#39;un composant tiers sous licence. Il fonctionne sur Windows, macOS et Linux, et continuera de le faire. C&#39;est une garantie que l&#39;on doit à ses données autant qu&#39;à soi-même : <strong>un plan de feux doit pouvoir survivre à l&#39;outil qui l&#39;a créé</strong> — c&#39;est aussi ce qui motive l&#39;import des formats existants.</p>
+<p><strong>Le déploiement.</strong> Rien à installer, donc rien à faire valider par une direction informatique : on ouvre une page. Dans une collectivité ou un bureau d&#39;études, ce seul point fait souvent la différence entre un outil qu&#39;on essaie et un outil qu&#39;on renonce à essayer. L&#39;application est par ailleurs <strong>installable (PWA)</strong> et fonctionne <strong>hors ligne</strong>.</p>
+<p><strong>La confidentialité.</strong> Tout s&#39;exécute <strong>en local</strong>, sans serveur : les données de vos projets ne quittent jamais votre poste — voir <a href="#mes-donn%C3%A9es-sont-elles-envoy%C3%A9es-sur-internet-">Mes données sont-elles envoyées sur internet ?</a>.</p>
+<h3 id="je-voudrais-améliorer-le-fonctionnement-des-carrefours-à-feu-sur-mon-territoire-mais-le-sujet-mest-totalement-étranger-cette-application-va-t-elle-maider-à-traiter-mon-problème-"><span id="je-voudrais-améliorer-le-fonctionnement-des-carrefours-à-feu-sur-mon-territoire-mais-le-sujet-mest-totalement-étranger-cette-application-va-t-elle-maider-à-traiter-mon-problème"></span>Je voudrais améliorer le fonctionnement des carrefours à feu sur mon territoire, mais le sujet m&#39;est totalement étranger. Cette application va-t-elle m&#39;aider à traiter mon problème ?</h3>
+<p>Cette application est un <strong>facilitateur de conception</strong>, pas une boîte à outils clé en main. Elle rend visibles les interactions entre les contraintes de sécurité, la réglementation et le phasage d&#39;un carrefour à feux, mais elle suppose une lecture initiée du sujet (cycles, temps interverts, types d&#39;usagers, conflits).</p>
+<p>Si ces notions vous sont étrangères, le chemin le plus pratique passe par votre bureau d&#39;études ou votre traficien : invitez-le à utiliser l&#39;outil. Il pourra concevoir vos plans de feux et vous restituer des diagrammes lisibles (exportables en PDF), supports clairs pour vos comités, vos décisions d&#39;investissement ou vos échanges avec un exploitant.</p>
+<p>Dans tous les cas, l&#39;application donne à voir ce qui se passe « sous le capot » d&#39;un carrefour à feux et facilite la compréhension des choix de réglage avec votre interlocuteur technique.</p>
+<h3 id="comment-optimiser-la-collaboration-avec-mes-partenaires-autour-de-loutil-"><span id="comment-optimiser-la-collaboration-avec-mes-partenaires-autour-de-loutil"></span>Comment optimiser la collaboration avec mes partenaires autour de l&#39;outil ?</h3>
+<p>Le principal levier est l&#39;<strong>interopérabilité</strong>. Encouragez l&#39;ensemble de vos partenaires — bureau d&#39;études, exploitant, équipementier, services techniques d&#39;autres collectivités — à adopter l&#39;application. Vous disposerez alors d&#39;un <strong>format d&#39;échange unique</strong> (<code>.json</code>) et d&#39;un <strong>langage visuel partagé</strong> (le diagramme), indépendants des outils propriétaires de chacun.</p>
+<p>Concrètement, cette interopérabilité permet de :</p>
+<ul>
+<li><strong>échanger des projets</strong> <code>.json</code> plutôt que des livrables figés — chaque partenaire les ouvre, les modifie ou les commente depuis son poste, sans dépendre d&#39;une suite logicielle particulière ;</li>
+<li><strong>itérer rapidement</strong> sur les variantes de phasage ou de cycle, en vérifiant en direct l&#39;absence de conflits ;</li>
+<li><strong>préparer les arbitrages</strong> avant les comités techniques : les diagrammes deviennent des supports de décision plutôt que des livrables intermédiaires ;</li>
+<li><strong>garantir la continuité</strong> de l&#39;information entre acteurs et tout au long de la vie du projet (conception, validation, exploitation, mise à jour).</li>
+</ul>
+<p>L&#39;application étant gratuite et libre, son adoption par vos partenaires n&#39;a aucune barrière économique ou contractuelle.</p>
+<h3 id="jutilise-déjà-un-autre-outil-qui-ne-me-satisfait-pas-pleinement-mais-je-ne-souhaite-pas-ressaisir-lintégralité-de-mes-plans-de-feux-comment-migrer-mes-données-existantes-"><span id="jutilise-déjà-un-autre-outil-qui-ne-me-satisfait-pas-pleinement-mais-je-ne-souhaite-pas-ressaisir-lintégralité-de-mes-plans-de-feux-comment-migrer-mes-données-existantes"></span>J&#39;utilise déjà un autre outil qui ne me satisfait pas pleinement, mais je ne souhaite pas ressaisir l&#39;intégralité de mes plans de feux. Comment migrer mes données existantes ?</h3>
+<p><strong>Si votre outil est DiagFeux, une piste existe, mais elle n&#39;est pas encore aboutie :</strong> TraCflux propose un import des projets <strong><code>.dfe</code></strong>, encore à l&#39;état d&#39;ébauche. Il n&#39;a jamais été éprouvé sur un fichier réel : le plan importé est une base de reprise à vérifier, pas une conversion fidèle. Détails et moyen de faire avancer ce point : <a href="#puis-je-r%C3%A9cup%C3%A9rer-mes-anciennes-%C3%A9tudes-diagfeux-">Puis-je récupérer mes anciennes études DiagFeux ?</a>.</p>
+<p>Pour les autres outils, l&#39;import natif reste aujourd&#39;hui limité (Excel partiel, HTM, JSON pour le format propre à l&#39;application). L&#39;<strong>interopérabilité</strong> avec d&#39;autres systèmes de programmation de contrôleurs de carrefour — propriétaires ou ouverts — est un axe d&#39;évolution majeur de l&#39;outil.</p>
+<p>L&#39;application étant <strong>libre et open source</strong>, l&#39;ajout d&#39;un parseur pour un format donné reste tout à fait envisageable :</p>
+<ul>
+<li><strong>Faites remonter le besoin :</strong> ouvrez une <a href="https://github.com/ThierryClm/TraCflux/issues">issue GitHub</a> en précisant l&#39;outil source, le format de sortie et un exemple de fichier (anonymisé si nécessaire). Plus le besoin est partagé, plus l&#39;effort de développement peut être priorisé.</li>
+<li><strong>Contribuez ou faites contribuer :</strong> un développeur tiers peut proposer un parseur via une <em>pull request</em>. Le format <code>.json</code> natif sert de structure cible.</li>
+</ul>
+<p><strong>En pratique, en attendant qu&#39;un parseur existe :</strong> l&#39;approche pragmatique consiste à démarrer par <strong>un ou deux carrefours pilotes</strong> que vous ressaisissez intégralement. Cela vous permet de valider concrètement l&#39;apport de l&#39;outil sur votre activité avant d&#39;engager une migration plus large. Une fois la valeur ajoutée confirmée, vous pouvez soit demander le développement d&#39;un parseur (issue GitHub avec un échantillon de votre format), soit organiser la ressaisie progressive du parc.</p>
+<h3 id="puis-je-récupérer-mes-anciennes-études-diagfeux-"><span id="puis-je-récupérer-mes-anciennes-études-diagfeux"></span>Puis-je récupérer mes anciennes études DiagFeux ?</h3>
+<p><strong>Probablement — mais la fonction n&#39;est pas encore finalisée, et nous ne pouvons rien vous garantir aujourd&#39;hui.</strong></p>
+<p>L&#39;entrée existe : <strong>Fichier → Importer → Projet DiagFeux (.dfe)</strong>. Elle porte la mention <em>(ébauche)</em> dans le menu, et l&#39;application vous prévient avant de convertir. Ce n&#39;est pas une précaution de style.</p>
+<p><strong>Ce qui est acquis.</strong> L&#39;importateur est écrit, et il lit le format : il a été construit à partir du <strong>schéma XML officiel</strong> publié avec le code source de DiagFeux, et de la documentation du logiciel. La logique de conversion — phasage vers groupes indépendants, reconstitution de la matrice des interverts — est en place et couverte par des tests.</p>
+<p><strong>Ce qui manque, et c&#39;est l&#39;essentiel.</strong> Cet importateur <strong>n&#39;a jamais rencontré un fichier <code>.dfe</code> réel</strong>. Il a été développé contre une spécification, pas contre des données. Or une spécification décrit ce qui est permis, pas ce que les fichiers contiennent vraiment : versions successives du logiciel, champs laissés vides, conventions propres à chaque bureau d&#39;études. Tant que cette confrontation n&#39;a pas eu lieu, le résultat doit être tenu pour une <strong>base de reprise à vérifier</strong>, et non pour une conversion fidèle.</p>
+<p><strong>Vous pouvez débloquer cette étape.</strong> Si vous disposez d&#39;un projet DiagFeux, même anonymisé, que vous pouvez partager, <a href="https://github.com/ThierryClm/TraCflux/issues">ouvrez une issue</a> : un seul fichier réel fait passer cette fonction de l&#39;ébauche à l&#39;outil. C&#39;est aujourd&#39;hui le seul point de blocage.</p>
+<p><strong>Ce que l&#39;importateur sait lire</strong>, d&#39;après le schéma :</p>
+<ul>
+<li>les <strong>groupes de feux</strong> (lignes de feux), avec la distinction véhicules / piétons ;</li>
+<li>leurs <strong>décalages</strong> et <strong>durées de vert</strong>, déduits de la séquence de phases (et des décalages d&#39;ouverture / fermeture) ;</li>
+<li>la <strong>matrice des temps d&#39;intervert</strong> — reconstituée selon la règle de DiagFeux : <em>rouge de dégagement + temps de jaune</em> ;</li>
+<li>le <strong>cycle</strong> ;</li>
+<li>les <strong>propriétés</strong> du carrefour : commune, identifiant, contrôleur (fabricant et type), situation en ou hors agglomération, auteur de l&#39;étude, dates et commentaires.</li>
+</ul>
+<p>Le <strong>phasage</strong> de DiagFeux est converti vers le modèle de TraCflux, où <strong>chaque groupe reste indépendant</strong> — une conversion toujours possible, le second modèle étant un surensemble du premier. Le plan importé <strong>respecte par construction tous les interverts</strong> : il arrive donc sans conflit.</p>
+<p><strong>Ce qui n&#39;est pas repris :</strong> la <strong>géométrie</strong> (branches, voies, îlots, passages piétons, fond de plan DXF). TraCflux n&#39;utilise pas de modèle géométrique : il s&#39;appuie sur une <strong>image de fond</strong> (photo aérienne, plan CAO ou schéma) sur laquelle vous positionnez les flèches des groupes. Les <strong>matrices de trafic</strong> origine-destination ne sont pas encore agrégées automatiquement.</p>
+<p>À l&#39;import, TraCflux affiche la liste de ce qui a été converti ou approximé.</p>
+<p><strong>Les trois objectifs de finalisation</strong>, par ordre d&#39;importance :</p>
+<ol>
+<li><strong>La validation sur fichiers réels</strong> — la seule qui conditionne les autres, et qui ne dépend que de la mise à disposition d&#39;un <code>.dfe</code>.</li>
+<li><strong>Les matrices de trafic origine-destination</strong>, lues mais pas encore agrégées vers les données de trafic de TraCflux.</li>
+<li><strong>L&#39;export vers DiagFeux</strong>, dans l&#39;autre sens, qui n&#39;est pas commencé. L&#39;import vise à prolonger l&#39;usage d&#39;un patrimoine existant, pas à maintenir un aller-retour entre deux outils dont l&#39;un n&#39;est plus maintenu.</li>
+</ol>
+<h3 id="quest-ce-que-diagfeux-et-pourquoi-tracflux-limporte-t-il-"><span id="quest-ce-que-diagfeux-et-pourquoi-tracflux-limporte-t-il"></span>Qu&#39;est-ce que DiagFeux, et pourquoi TraCflux l&#39;importe-t-il ?</h3>
+<p><strong>DiagFeux</strong> est le logiciel de conception du diagramme des feux d&#39;un carrefour développé par le <strong>CERTU</strong> (Centre d&#39;études sur les réseaux, les transports et l&#39;urbanisme), aujourd&#39;hui intégré au <strong>Cerema</strong>. Actif dans les années 2000, il s&#39;appuyait sur la méthode du <em>Guide des carrefours à feux</em> du CERTU — la référence méthodologique française.</p>
+<p>Il <strong>n&#39;est plus maintenu</strong>. Initialement commercial, son code a été publié sous licence <strong>GPL</strong> sur <a href="https://github.com/CEREMA/territoires-ville.DiagFeux">GitHub</a> en 2019, à titre d&#39;archivage. Le Cerema ne distribue plus les programmes d&#39;installation.</p>
+<p>Or de nombreux bureaux d&#39;études et collectivités <strong>possèdent encore des études réalisées avec DiagFeux</strong>. L&#39;objectif de l&#39;import est simple : <strong>prolonger l&#39;utilité de ce patrimoine</strong> plutôt que de le condamner à la ressaisie. En ce sens, TraCflux se veut une <strong>suite logique de DiagFeux</strong> — même méthode de calcul (débit de saturation de 1800 uvp/h par voie, méthode de Webster), mais un modèle par groupes plus fin, et des capacités nouvelles (micro-régulation, onde verte, diagnostic de capacité, présentation multi-écrans).</p>
+<p>L&#39;importateur a été écrit <strong>à partir du format public</strong> (schéma XML du dépôt libre) et de la documentation du logiciel — aucun code de DiagFeux n&#39;a été repris.</p>
+<h3 id="puis-je-importer-mes-carrefours-depuis-un-fichier-excel-"><span id="puis-je-importer-mes-carrefours-depuis-un-fichier-excel"></span>Puis-je importer mes carrefours depuis un fichier Excel ?</h3>
+<p><strong>Pas directement, dans la plupart des cas.</strong> L&#39;import Excel intégré à TraCflux est conçu pour <strong>une structure de fichier précise</strong> — celle utilisée historiquement par l&#39;auteur pour ses propres projets. Il n&#39;est pas exploitable tel quel sur des fichiers Excel issus d&#39;autres pratiques, chaque organisation ayant ses propres conventions de feuilles, de colonnes et de nommage.</p>
+<p>Un <strong>import sur mesure reste possible</strong>, à condition de réaliser un <strong>développement spécifique</strong> fondé sur la connaissance exacte de la structure du fichier source. Cette piste devient pertinente lors d&#39;un <strong>basculement de parc</strong> vers TraCflux, lorsque le volume de projets à reprendre rend la ressaisie manuelle peu réaliste.</p>
+<p>Si vous êtes dans cette situation, le canal recommandé est le dépôt GitHub du projet : ouvrez une <a href="https://github.com/ThierryClm/TraCflux/issues">issue</a> décrivant le besoin (volume de projets concernés, exemple de fichier anonymisé, format de vos feuilles) afin qu&#39;un développement <em>open source</em> puisse être discuté ou contribué. Le format <code>.json</code> natif de TraCflux sert de structure cible — la valeur ajoutée d&#39;un parseur consiste uniquement à bien lire votre format Excel source.</p>
+<h3 id="limport-excel-est-il-sûr-"><span id="limport-excel-est-il-sûr"></span>L&#39;import Excel est-il sûr ?</h3>
+<p><strong>N&#39;importer que des fichiers <code>.xlsx</code> d&#39;origine connue</strong> (vos propres feuilles, ou celles de collègues identifiés). La bibliothèque utilisée pour lire les fichiers Excel (<code>xlsx</code> / SheetJS) contient deux vulnérabilités connues — <em>prototype pollution</em> et <em>déni de service par expression régulière</em> — sans correctif diffusé sur le registre npm officiel. Un fichier <code>.xlsx</code> malveillant, ouvert via l&#39;import, pourrait perturber l&#39;onglet du navigateur.</p>
+<p>Dans l&#39;usage normal de TraCflux (outil local, mono-utilisateur, fichiers produits par vous), le risque est faible : il faudrait qu&#39;un attaquant vous transmette spécifiquement un fichier piégé (phishing). Aucun risque pour le système d&#39;exploitation ni pour les autres projets enregistrés. La situation est documentée et acceptée en l&#39;état tant que l&#39;usage reste local — voir le <a href="../presentation/details.html#s%C3%A9curit%C3%A9-et-limites-connues">README</a> pour le détail.</p>
+<p><strong>À propos des macros :</strong> TraCflux lit un fichier Excel via une bibliothèque <strong>JavaScript, côté navigateur</strong> — il ne récupère que les <strong>valeurs des cellules</strong> et <strong>n&#39;exécute aucune macro (VBA)</strong>. Le risque classique des documents Office (une macro malveillante qui s&#39;exécute à l&#39;ouverture dans Excel bureautique) <strong>n&#39;existe donc pas</strong> dans TraCflux. Attention toutefois : la vigilance ci-dessus ne porte <strong>pas</strong> sur la présence de macros mais sur l&#39;<strong>origine du fichier</strong> — un fichier sans macro peut lui aussi être délibérément malformé pour exploiter la bibliothèque de lecture. Formats acceptés : <code>.xls</code> et <code>.xlsx</code>.</p>
+<h3 id="à-qui-sadresse-cet-outil-"><span id="à-qui-sadresse-cet-outil"></span>À qui s&#39;adresse cet outil ?</h3>
+<p>Aux <strong>traficiens, ingénieurs trafic, bureaux d&#39;études et techniciens de collectivité</strong> qui conçoivent ou analysent des plans de feux tricolores. Aussi utile aux étudiants en génie urbain ou exploitation routière qui apprennent à dimensionner des diagrammes de feux.</p>
+<h3 id="lapplication-est-elle-adaptée-à-mon-niveau-dexpertise-"><span id="lapplication-est-elle-adaptée-à-mon-niveau-dexpertise"></span>L&#39;application est-elle adaptée à mon niveau d&#39;expertise ?</h3>
+<p>Elle s&#39;adresse à deux profils, qui y trouvent des bénéfices différents :</p>
+<ul>
+<li><p><strong>Praticien expérimenté en régulation</strong> — l&#39;application joue le rôle d&#39;<strong>outil de vérification et d&#39;aide à l&#39;analyse</strong> : la détection automatique des conflits, l&#39;écart visuel des matrices entre plans de feux, l&#39;identification des recouvrements et asymétries vous évitent des erreurs qu&#39;aucun œil ne tient durablement sur un parc de plusieurs dizaines de carrefours. Vous gardez la main sur les choix de conception ; l&#39;application sécurise leur cohérence.</p>
+</li>
+<li><p><strong>Profil moins aguerri ou usage ponctuel</strong> — l&#39;application joue le rôle de <strong>support guidé</strong> : la matrice et les champs sont documentés par infobulles, le diagramme rend visibles les enchaînements, et un projet exemple permet d&#39;explorer un cas concret avant de saisir le vôtre. Vous progressez en construisant, sans avoir besoin de maîtriser toute la terminologie d&#39;emblée.</p>
+</li>
+</ul>
+<p>Dans les deux cas, la plus-value est la même : <strong>rendre visible ce qu&#39;un raisonnement mental ne tient plus à grande échelle</strong> — conflits, écarts entre PF, ruptures de symétrie. C&#39;est précisément là où l&#39;erreur se loge le plus souvent.</p>
+<h3 id="de-quels-modules-est-composée-lapplication-"><span id="de-quels-modules-est-composée-lapplication"></span>De quels modules est composée l&#39;application ?</h3>
+<p>L&#39;application est une <strong>solution organisée en deux modules complémentaires</strong> :</p>
+<ul>
+<li><strong>Diagramme de Feux</strong> <em>(module principal)</em> — fenêtre par défaut au lancement. Vous y concevez et analysez les plans de feux d&#39;un carrefour : groupes, matrice intervert, diagramme temporel, micro-régulation, plans multiples, simulation, etc. Ce module fonctionne <strong>en autonomie</strong>.</li>
+<li><strong>Onde verte</strong> <em>(module complémentaire)</em> — fenêtre dédiée, accessible depuis le menu <strong>Onde verte</strong> du module principal. Permet de coordonner plusieurs carrefours sur un axe routier (visualisation espace-temps, bandes passantes, ondes vertes montante/descendante). Ce module <strong>s&#39;appuie obligatoirement</strong> sur des projets de carrefours préalablement créés et sauvegardés dans le module principal — il ne peut pas être utilisé seul.</li>
+</ul>
+<p>Les deux modules partagent les mêmes données (stockage local, thèmes, paramètres) et bénéficient du même format <code>.json</code> portable. Vous pouvez ouvrir plusieurs fenêtres en parallèle pour comparer ou jongler entre projets.</p>
+<h3 id="que-peut-on-faire-avec-"><span id="que-peut-on-faire-avec"></span>Que peut-on faire avec ?</h3>
+<p>Définir des groupes de feux (VL, TC, Cycliste, Piéton), construire la matrice intervert, visualiser le diagramme temporel de chaque plan de feux, détecter automatiquement les conflits, simuler des actions (escamotage, ouverture anticipée, point de repos…), gérer plusieurs plans de feux par carrefour, calculer une onde verte, exporter en PDF/PNG/Excel.</p>
+<h3 id="quels-sont-les-pièges-classiques-que-lapplication-aide-à-éviter-"><span id="quels-sont-les-pièges-classiques-que-lapplication-aide-à-éviter"></span>Quels sont les pièges classiques que l&#39;application aide à éviter ?</h3>
+<p>Quelques situations que l&#39;application <strong>détecte ou rend visible immédiatement</strong>, et qui passent souvent inaperçues à la lecture ou au calcul manuel :</p>
+<ul>
+<li><strong>Intervert insuffisant masqué par un offset</strong> — un délai de dégagement requis dans la matrice se retrouve plus court dans le diagramme à cause d&#39;un offset ajusté ailleurs. La case bascule en fond rouge ; l&#39;infobulle au survol donne la valeur réelle vs la valeur requise.</li>
+<li><strong>Matrice asymétrique non détectée</strong> — une valeur posée pour GF<em>x</em> → GF<em>y</em> sans contrepartie GF<em>y</em> → GF<em>x</em> (ou inversement). La case manquante est signalée en fond orange, et la liste des paires asymétriques s&#39;affiche sous la matrice.</li>
+<li><strong>Écart involontaire entre un PF et le plan de référence</strong> — en passant de PF1 à un autre plan, une valeur de matrice modifiée par mégarde se voit aussitôt (texte rouge ou vert selon le sens de la variation, infobulle qui précise « Augmentée / Réduite de X s vs PF de base »).</li>
+<li><strong>Recouvrement de verts</strong> entre deux groupes conflictuels — impossible à voir d&#39;un coup d&#39;œil sur un diagramme dense ; l&#39;application le repère et le décrit (« Conflit : les verts de GF<em>x</em> et GF<em>y</em> se recouvrent »).</li>
+<li><strong>Conflit de seconde lucarne</strong> avec le vert principal d&#39;un autre groupe — la liste apparaît automatiquement sous la matrice.</li>
+</ul>
+<p>Ces vérifications ne remplacent pas le jugement du concepteur — elles libèrent du temps de raisonnement en éliminant les erreurs mécaniques, pour se concentrer sur les choix qui méritent réflexion.</p>
+<h3 id="quelles-sont-ses-limites-actuelles-"><span id="quelles-sont-ses-limites-actuelles"></span>Quelles sont ses limites actuelles ?</h3>
+<p>L&#39;application est conçue pour la <strong>conception et l&#39;optimisation</strong> de plans de feux, pas pour piloter des installations réelles. Elle ne fait pas de simulation microscopique de trafic (type AIMSUN, VISSIM), ne se connecte pas à des contrôleurs sur le terrain, et ne gère qu&#39;une coordination simple (onde verte) — pas de réseau multi-carrefours complet.</p>
+<p>Son <a href="#tracflux-peut-il-maider-%C3%A0-construire-un-diagramme-de-feux-">assistant de construction</a> dégrossit un plan de feux à partir des trafics — cycle, verts, placement des groupes ; les données d&#39;entrée et les choix de phasage restent ceux de l&#39;utilisateur (<a href="#quelles-sont-les-limites-de-lassistant-de-construction-">voir ses limites</a>).</p>
+<h3 id="proposez-vous-un-accompagnement-pour-les-carrefours-complexes-"><span id="proposez-vous-un-accompagnement-pour-les-carrefours-complexes"></span>Proposez-vous un accompagnement pour les carrefours complexes ?</h3>
+<p>Un service d&#39;accompagnement est <strong>envisagé pour une étape ultérieure</strong> du projet, mais <strong>n&#39;est pas encore opérationnel</strong>. L&#39;idée : proposer, pour les carrefours complexes, une aide à la conception du diagramme tirant parti des capacités combinées de gestion par phase et par groupe de feux qu&#39;offre l&#39;outil. Deux modes de prestation sont pressentis — <strong>assistance technique à la carte</strong> ou <strong>prise en charge complète du projet</strong> à partir des données fournies par l&#39;utilisateur — dont les modalités et le contact seront précisés lorsque le service sera disponible. Voir la section <a href="../presentation/details.html#services--accompagnement">Services &amp; accompagnement</a> du README.</p>
+<h3 id="quelles-fonctionnalités-sont-envisageables-à-terme-"><span id="quelles-fonctionnalités-sont-envisageables-à-terme"></span>Quelles fonctionnalités sont envisageables à terme ?</h3>
+<p>Plusieurs options apparaissent grisées dans le menu Fichier — elles correspondent à des pistes d&#39;évolution non encore opérationnelles :</p>
+<ul>
+<li><strong>Interopérabilité</strong> — échange de données de programmation de carrefours à feux avec d&#39;autres systèmes du marché, propriétaires ou ouverts. C&#39;est un axe d&#39;ouverture important de l&#39;outil : permettre la reprise et la restitution de plans de feux sans ressaisie, en s&#39;intégrant à l&#39;écosystème existant des traficiens. Le potentiel est significatif et constitue une direction d&#39;évolution privilégiée.</li>
+<li><strong>Import Excel</strong> dépend du modèle de fichier Excel (mises en page variables d&#39;un éditeur à l&#39;autre, structures de feuilles différentes selon les agences) — non généralisé dans cette version. L&#39;export Excel reste opérationnel.</li>
+</ul>
+<p>Ces fonctionnalités seront travaillées si le besoin est confirmé par plusieurs utilisateurs.</p>
+<h3 id="est-ce-vraiment-gratuit-"><span id="est-ce-vraiment-gratuit"></span>Est-ce vraiment gratuit ?</h3>
+<p>Oui, totalement. Le code est publié sous licence libre <a href="https://github.com/ThierryClm/TraCflux/blob/master/LICENSE">GNU AGPL v3</a> — vous pouvez l&#39;utiliser, le modifier et le redistribuer sans frais ni condition d&#39;usage personnel ou professionnel.</p>
+<hr>
+<h2 id="données-et-confidentialité">Données et confidentialité</h2>
+<h3 id="mes-données-sont-elles-envoyées-sur-internet-"><span id="mes-données-sont-elles-envoyées-sur-internet"></span>Mes données sont-elles envoyées sur internet ?</h3>
+<p><strong>Non, jamais.</strong> L&#39;application fonctionne intégralement dans votre navigateur, sans serveur. Aucune donnée de projet ne quitte votre poste — pas même un fichier de log d&#39;erreur (le rapport de diagnostic est téléchargé en local, jamais transmis).</p>
+<h3 id="puis-je-lutiliser-sans-connexion-internet-"><span id="puis-je-lutiliser-sans-connexion-internet"></span>Puis-je l&#39;utiliser sans connexion internet ?</h3>
+<p>Oui. Une fois la page chargée, l&#39;application fonctionne sans connexion. Vous pouvez la télécharger localement (zip livré dans les Releases) et l&#39;utiliser indéfiniment hors-ligne.</p>
+<h3 id="où-sont-stockés-mes-projets-"><span id="où-sont-stockés-mes-projets"></span>Où sont stockés mes projets ?</h3>
+<p>Les projets actifs sont conservés dans le <strong>localStorage</strong> du navigateur (≈ 5 Mo disponibles) ; <em>Fichier → Restaurer un projet récent</em> les liste, et son bouton <strong>i</strong> rappelle qu&#39;il s&#39;agit des dernières versions enregistrées automatiquement <strong>sur ce poste</strong>. Pour un stockage durable, enregistrez le projet en <code>.json</code> via <strong>Fichier → Sauvegarder</strong> — sous Chrome et Edge, le fichier va sur votre disque ou dans un partage réseau de votre choix ; sous Firefox, Safari et Brave, il est téléchargé (voir <a href="#quels-navigateurs-et-syst%C3%A8mes-sont-support%C3%A9s-">Quels navigateurs et systèmes sont supportés ?</a>).</p>
+<h3 id="comment-partager-un-projet-avec-un-collègue-"><span id="comment-partager-un-projet-avec-un-collègue"></span>Comment partager un projet avec un collègue ?</h3>
+<p>Exportez le projet en <code>.json</code> et transmettez le fichier (mail, partage réseau, clé USB). Votre collègue ouvre l&#39;application puis charge le fichier via <strong>Fichier → Ouvrir un projet</strong>. Aucun compte ni service distant n&#39;est nécessaire.</p>
+<hr>
+<h2 id="utilisation-pratique">Utilisation pratique</h2>
+<h3 id="je-débute-sur-le-sujet-et-le-nombre-de-paramètres-à-saisir-mimpressionne--comment-être-guidé-pendant-la-saisie-"><span id="je-débute-sur-le-sujet-et-le-nombre-de-paramètres-à-saisir-mimpressionne--comment-être-guidé-pendant-la-saisie"></span>Je débute sur le sujet et le nombre de paramètres à saisir m&#39;impressionne — comment être guidé pendant la saisie ?</h3>
+<p>Chaque champ du formulaire, de la matrice et du tableau des conditions de micro-régulation est documenté par une <strong>infobulle</strong> qui s&#39;affiche au survol et explique ce qu&#39;il attend (signification, format, ordre de grandeur typique). Cela vous permet de vous familiariser progressivement avec l&#39;outil, sans devoir tout retenir d&#39;emblée.</p>
+<p>Une fois à l&#39;aise avec une partie de l&#39;interface, vous pouvez <strong>désactiver les infobulles section par section</strong> (Page principale, Configuration, Diagramme, Matrice, Trafic, Conditions de micro-régulation) depuis le menu <strong>Mise en page → Infobulles...</strong> : l&#39;interface s&#39;épure à mesure que votre maîtrise progresse. Préférence enregistrée au niveau de l&#39;application.</p>
+<p>En complément, l&#39;écran d&#39;accueil propose <strong>« Découvrir avec un projet exemple »</strong> : un carrefour déjà renseigné, librement modifiable et non enregistrable — idéal pour comprendre concrètement à quoi servent les différents champs sans risque d&#39;abîmer votre propre travail.</p>
+<h3 id="comment-découvrir-lapplication-sans-saisir-un-projet-de-zéro-"><span id="comment-découvrir-lapplication-sans-saisir-un-projet-de-zéro"></span>Comment découvrir l&#39;application sans saisir un projet de zéro ?</h3>
+<p>Deux projets exemple anonymisés sont fournis. Au lancement, sur l&#39;écran d&#39;accueil, cliquez sur <strong>« Découvrir avec un projet exemple »</strong> (module Diagramme) ou <strong>« Découvrir avec une onde verte exemple »</strong> (module Onde verte) : l&#39;exemple s&#39;ouvre dans une <strong>nouvelle fenêtre</strong>, sans toucher à un éventuel travail en cours. Il est librement modifiable pour explorer, mais <strong>non enregistrable</strong> — pour démarrer votre propre projet, faites <strong>Fichier → Nouveau projet</strong>.</p>
+<p>Vous pouvez aussi télécharger les fichiers directement pour les ouvrir via <strong>Fichier → Ouvrir</strong> : <a href="../Carrefour_Exemple.json">Carrefour_Exemple.json</a> (carrefour) et <a href="../Onde%20verte_Exemple.json">Onde verte_Exemple.json</a> (onde verte).</p>
+<h3 id="par-où-commencer-sur-un-nouveau-carrefour-"><span id="par-où-commencer-sur-un-nouveau-carrefour"></span>Par où commencer sur un nouveau carrefour ?</h3>
+<p>L&#39;application est structurée pour suivre une démarche progressive — voici une séquence qui fonctionne bien :</p>
+<ol>
+<li><strong>Décrire les groupes de feux</strong> dans le formulaire (onglet <em>Configuration</em>) : nom, type (véhicules, piéton, cycle, anticipation…), durée de vert minimale. Vous posez ainsi ce qui circule dans le carrefour.</li>
+<li><strong>Renseigner la matrice des temps interverts</strong> : les temps de dégagement requis entre groupes conflictuels. Une matrice non symétrique ou des cases manquantes sont signalées (fond orange).</li>
+<li><strong>Construire le PF1</strong>, le plan de feux de référence (fonctionnement nominal en heure creuse, par exemple) : ajustez offsets et durées de vert dans le diagramme — l&#39;<a href="#tracflux-peut-il-maider-%C3%A0-construire-un-diagramme-de-feux-">assistant de construction</a> peut en proposer une première version à partir des trafics. L&#39;application contrôle en temps réel que les interverts sont respectés (fond rouge en cas de conflit).</li>
+<li><strong>Vérifier les conflits restants</strong> : la liste sous la matrice indique les paires en violation. Au survol d&#39;une case rouge, une infobulle décrit le problème (recouvrement de verts ou délai insuffisant).</li>
+<li><strong>Décliner les autres PF</strong> (HPM, HPS, HC, HN, variantes priorité bus…) à partir de PF1 : les différences sont colorées (rouge = augmenté, vert = réduit) et explicitées par infobulle au survol — ce qui rend immédiatement visible ce qui change d&#39;un plan à l&#39;autre.</li>
+<li><strong>Affiner</strong> : conditions de micro-régulation, données trafic, onde verte si plusieurs carrefours sont coordonnés.</li>
+</ol>
+<p>Vous pouvez à tout moment ouvrir le <strong>projet exemple</strong> depuis l&#39;écran d&#39;accueil pour comparer avec un carrefour déjà entièrement renseigné.</p>
+<h3 id="tracflux-peut-il-maider-à-construire-un-diagramme-de-feux-"><span id="tracflux-peut-il-maider-à-construire-un-diagramme-de-feux"></span>TraCflux peut-il m&#39;aider à construire un diagramme de feux ?</h3>
+<p>Oui : c&#39;est le rôle de l&#39;<strong>assistant de construction</strong>, un module conçu pour <strong>dégrossir rapidement un plan de feux</strong> à partir des trafics. En quelques minutes, il pose une base cohérente et chiffrée — chemin critique, durée de cycle, répartition des verts, placement des groupes — que l&#39;on affine ensuite plutôt que de partir d&#39;une page blanche.</p>
+<p>Le menu <strong>Diagramme → Nouveau plan de feu…</strong> crée un plan vierge (verts, débuts et fins vides, sans micro-régulation) et vous invite à lui associer un jeu de trafic — ou à en saisir un dans l&#39;onglet <em>Trafic</em>. <strong>Diagramme → Assistant conception…</strong> ouvre ensuite l&#39;assistant, dans une fenêtre détachée que l&#39;on peut poser sur un autre écran, le diagramme restant sous les yeux :</p>
+<ol>
+<li><strong>Chemin critique</strong> — sur un diagramme déjà ébauché, l&#39;assistant reconnaît les phases (groupes dont les verts se recouvrent) et retient dans chacune le groupe déterminant : celui de plus forte capacité utilisée, ou la traversée piétonne la plus défavorable lorsqu&#39;une phase piétonne est déterminante. Sur un plan vierge, vous désignez les groupes déterminants (2 à 6 phases), et la matrice propose aussitôt les dégagements entre phases.</li>
+<li><strong>Durée de cycle</strong> — cycle minimal, cycle de Webster selon le <em>Guide des carrefours à feux</em> (valeur exacte affichée) et cycle proposé, arrondi à la dizaine supérieure ; les verts sont répartis au prorata des demandes, sans descendre sous les verts minimaux.</li>
+<li><strong>Pré-remplissage</strong> — les groupes déterminants sans vert sont placés dans le diagramme au fil de la saisie, et le phasage bulle peut être construit dans la foulée.</li>
+<li><strong>Groupes associés</strong> — l&#39;assistant déduit la phase et les instants de début et de fin des autres groupes, et indique pour chacun <strong>d&#39;où vient la déduction</strong> : la matrice des temps interverts, le nom du groupe (même voie que le déterminant) ou la géométrie des flèches du plan du carrefour.</li>
+<li><strong>Application</strong> — <em>Appliquer le cycle</em> règle la durée du cycle, puis inscrit les groupes associés dans le diagramme, et les adaptatifs verticaux décrits ci-dessous dans les conditions. Tout s&#39;annule par Ctrl+Z.</li>
+<li><strong>Adaptatifs verticaux</strong> — l&#39;assistant propose, pour chaque phase, une zone d&#39;adaptatif vertical qui finit avec le premier groupe de la phase à fermer, pour préserver les temps interverts, aussi longue que le permettent le taux de saturation visé (90 % par défaut : une phase ne se contracte que lorsque sa demande est servie) et les verts minimaux ; il indique ce qui limite chaque zone. En mode <em>itératif</em>, la contraction d&#39;une phase redonne de la capacité aux autres (jusqu&#39;à 3 passages) ; en mode <em>prudent</em>, chaque zone tient seule, quelle que soit la combinaison contractée. <em>Appliquer le cycle</em> les inscrit dans les conditions de micro-régulation (AV1, AV2…, « Contraction théorique »), en remplaçant celles d&#39;un passage précédent, prêtes à être vérifiées en simulation.</li>
+<li><strong>Fermetures anticipées avec glissements</strong> — pour les groupes voitures peu chargés (sous 81 % de capacité utilisée, seuil réglable), l&#39;assistant propose une fermeture anticipée d&#39;environ les deux tiers du temps disponible (vert moins V.utile), en fin de vert, et y attache en Action GF les groupes antagonistes qui peuvent alors ouvrir plus tôt sans conflit intervert. Sans groupe à faire glisser, rien n&#39;est proposé. <em>Appliquer le cycle</em> les inscrit à la suite des adaptatifs (FA1, FA2…).</li>
+<li><strong>Points de repos bus</strong> — pour chaque groupe bus, un point de repos dans les 5 dernières secondes du vert bus, à l&#39;instant où le plus de groupes sont au vert, avec sa condition de sortie « Attente quittée si TPPh_Ln + DAx &gt; N + TMABx » (N : temps passé dans la phase bus au repos, moins 1). L&#39;assistant écrit « Tx » dans la colonne DA du groupe bus et ajoute « TMABx = 10 » aux variables micro ; l&#39;indice x tient la place du code trajet, à remplacer.</li>
+</ol>
+<p>Sur le carrefour du TD « croix avec couloir bus d&#39;approche », l&#39;assistant produit en un clic un diagramme complet, <strong>sans aucun conflit</strong> avec la matrice. Les groupes sans vert n&#39;étant pas comptés dans les conflits, un plan en cours de construction n&#39;est pas couvert d&#39;alertes.</p>
+<p>Ce qu&#39;il apporte surtout : <strong>la rigueur et le temps</strong>. Les calculs fastidieux et les vérifications mécaniques sont faits, chaque proposition est justifiée, et l&#39;on peut consacrer son énergie aux vrais choix de conception.</p>
+<h3 id="quelles-sont-les-limites-de-lassistant-de-construction-"><span id="quelles-sont-les-limites-de-lassistant-de-construction"></span>Quelles sont les limites de l&#39;assistant de construction ?</h3>
+<p>L&#39;assistant est un <strong>excellent point de départ</strong>, pas une conception clé en main. Il est d&#39;autant plus utile qu&#39;on sait ce qu&#39;il fait et ce qu&#39;il laisse à l&#39;utilisateur :</p>
+<ul>
+<li><strong>Vous restez maître des données d&#39;entrée.</strong> Trafics, coefficients, verts minimaux et temps interverts sont les vôtres : la qualité de la proposition suit celle des données.</li>
+<li><strong>Ses déductions sont transparentes.</strong> Chaque placement affiche sa source ; une déduction incertaine (nom ambigu, matrice muette) est signalée « à vérifier » et laissée à votre main plutôt que posée d&#39;office.</li>
+<li><strong>Le cycle de Webster est un repère reconnu</strong>, qui minimise le retard moyen des véhicules. Il ne tient pas compte, à lui seul, de l&#39;attente des piétons, de la coordination avec les carrefours voisins ou d&#39;une priorité accordée aux transports en commun.</li>
+<li><strong>Le phasage reste votre choix</strong> : nombre et ordre des phases, traitement des tourne-à-gauche, place des piétons et des cycles.</li>
+<li><strong>Les fonctionnements conditionnels</strong> — l&#39;assistant dimensionne les zones d&#39;adaptatif vertical, mais la condition de contraction (détection, demande, priorité bus) reste à rédiger ; seconde lucarne et escamotage se construisent ensuite sur la base posée.</li>
+<li><strong>La connaissance du site</strong> — géométrie fine, visibilité, comportement des usagers, objectifs de la collectivité — reste celle du concepteur.</li>
+</ul>
+<p>L&#39;élaboration d&#39;un diagramme de feux est une <strong>discipline à part entière</strong> : arbitrer entre sécurité, capacité, temps d&#39;attente, lisibilité pour l&#39;usager et stratégie de déplacement demande une approche de <strong>traficien ou d&#39;expert</strong>, qui donne toute sa dimension à la performance recherchée. L&#39;assistant est pensé pour servir cette expertise : il dégrossit le sujet avec méthode, pour que le concepteur se concentre sur ce qui fait la qualité d&#39;un plan de feux.</p>
+<h3 id="quels-navigateurs-et-systèmes-sont-supportés-"><span id="quels-navigateurs-et-systèmes-sont-supportés"></span>Quels navigateurs et systèmes sont supportés ?</h3>
+<p><strong>Chrome, Edge, Firefox, Safari et Brave</strong> dans une version récente (2 ans max). L&#39;application étant une page web, elle fonctionne sur <strong>Windows, macOS et Linux</strong> indifféremment, ainsi qu&#39;en environnement Citrix ou bureau distant.</p>
+<p>Une différence pratique concerne les fichiers. <strong>Chrome et Edge</strong> ouvrent leurs propres fenêtres <em>Ouvrir</em> et <em>Enregistrer</em> : vous choisissez le dossier, et l&#39;application retient les derniers dossiers utilisés. <strong>Firefox et Safari</strong> n&#39;ont pas ces fenêtres, et <strong>Brave</strong> les désactive pour protéger la vie privée : <em>Ouvrir un projet</em> passe par le sélecteur de fichier classique, et <em>Sauvegarder</em> <strong>télécharge</strong> le fichier <code>.json</code> sous le nom du projet. Il arrive alors dans le dossier des téléchargements, sauf si le navigateur est réglé pour demander où enregistrer — sous Firefox : <em>Paramètres → Général → Fichiers et applications → Toujours vous demander où enregistrer les fichiers</em> ; sous Brave : <em>Paramètres → Téléchargements → Toujours demander où enregistrer les fichiers</em>. Un second enregistrement sous le même nom peut être renommé par le navigateur, par exemple <code>Carrefour (1).json</code>.</p>
+<p>L&#39;installation comme application (bouton <em>Installer</em> de la barre d&#39;adresse) est proposée par Chrome, Edge et Brave.</p>
+<p><strong>Brave</strong> fonctionne comme Chrome, dont il partage le moteur, à la différence des fichiers près. Ses boucliers (<em>Shields</em>) n&#39;ont rien à bloquer : TraCflux ne charge ni publicité ni traceur.</p>
+<h3 id="puis-je-lutiliser-sur-un-smartphone-ou-une-tablette-"><span id="puis-je-lutiliser-sur-un-smartphone-ou-une-tablette"></span>Puis-je l&#39;utiliser sur un smartphone ou une tablette ?</h3>
+<p><strong>Oui, et sans rien installer</strong> : il suffit d&#39;ouvrir <a href="https://tracflux.com">tracflux.com</a> dans le navigateur de l&#39;appareil. L&#39;application s&#39;y adapte — sur un écran étroit, ou bas comme l&#39;est un téléphone tenu en paysage, le panneau des paramètres cesse d&#39;être posé à côté du diagramme et vient <strong>au-dessus</strong> de lui. Tout s&#39;atteint alors par le défilement vertical ; le diagramme, plus large que l&#39;écran, se déroule en faisant <strong>défiler la page latéralement</strong>, colonne des noms comprise, et se voit en entier en dézoomant. Le tableau des conditions de micro-régulation défile de la même façon.</p>
+<p><strong>Éprouvé sur le terrain.</strong> La consultation d&#39;un projet depuis un téléphone fonctionne : les défilements horizontal et vertical répondent, les plans de feux se parcourent, les tableaux se lisent.</p>
+<p><strong>À quoi cela sert.</strong> Consulter un plan de feux sur le terrain, au pied du carrefour, en vérifiant un décalage ou une durée de vert. Montrer un phasage à un interlocuteur sans sortir d&#39;ordinateur. Rouvrir un projet reçu par courriel pour en prendre connaissance avant une réunion.</p>
+<p><strong>Ce qu&#39;il faut savoir.</strong> L&#39;écran reste petit, et l&#39;application a été pensée pour un poste de travail : la saisie y est <strong>plus laborieuse</strong> qu&#39;au clavier et à la souris, et le confort décroît avec le nombre de groupes de feux. Concevoir un carrefour de trente-deux groupes sur un téléphone reste possible, mais peu raisonnable. Les fenêtres détachées, enfin, n&#39;ont pas d&#39;objet sur un appareil qui n&#39;affiche qu&#39;une fenêtre à la fois.</p>
+<p><strong>Le meilleur compromis est la tablette</strong>, en orientation paysage : la largeur y suffit souvent à conserver la disposition en deux colonnes du poste de travail.</p>
+<p>Comme sur ordinateur, l&#39;application peut être <strong>installée</strong> depuis le navigateur (menu du navigateur → <em>Ajouter à l&#39;écran d&#39;accueil</em>) : elle s&#39;ouvre alors comme une application, et fonctionne hors connexion.</p>
+<h3 id="comment-lapplication-se-met-elle-à-jour-"><span id="comment-lapplication-se-met-elle-à-jour"></span>Comment l&#39;application se met-elle à jour ?</h3>
+<p>Aucune action n&#39;est requise de votre part. L&#39;application est conçue comme une <strong>PWA</strong> (Progressive Web App) : elle se met à jour automatiquement à la prochaine ouverture après chaque nouvelle publication.</p>
+<p>Concrètement :</p>
+<ul>
+<li>Une nouvelle version est détectée en arrière-plan, sans interruption ni notification.</li>
+<li>Elle est téléchargée pendant que vous continuez à travailler.</li>
+<li>À la prochaine ouverture (ou au prochain rafraîchissement), la nouvelle version est activée silencieusement.</li>
+</ul>
+<p>Vous n&#39;avez <strong>ni à réinstaller</strong>, <strong>ni à vider de cache</strong>, <strong>ni à cliquer sur un bouton « Mettre à jour »</strong>. C&#39;est l&#39;un des avantages du format PWA par rapport à un logiciel classique : la maintenance est entièrement transparente.</p>
+<h3 id="puis-je-utiliser-lapplication-en-présentation-devant-un-auditoire-"><span id="puis-je-utiliser-lapplication-en-présentation-devant-un-auditoire"></span>Puis-je utiliser l&#39;application en présentation devant un auditoire ?</h3>
+<p>Oui, l&#39;application est conçue pour s&#39;adapter à ce contexte. Détachez la fenêtre <strong>Image du carrefour</strong> depuis le menu <strong>Mise en page → Détachements</strong>. En visio, c&#39;est cette seule fenêtre que vous partagez ; en présentiel, glissez-la sur un second écran.</p>
+<p>Pendant la simulation, cette popup s&#39;anime en synchronisation avec votre fenêtre de travail : les flèches changent de couleur (vert / orange / rouge) seconde par seconde, en suivant le cycle du plan de feu courant et l&#39;effet des actions de micro-régulation activées à la demande.</p>
+<p><strong>Le résultat pour l&#39;auditoire</strong> : un visuel épuré et lisible, focalisé sur l&#39;essentiel — le carrefour qui « vit » au rythme du cycle.</p>
+<p><strong>Pour vous, présentateur</strong> : vous gardez sur votre écran de travail le contrôle complet (diagramme, matrice, panneau de simulation, tableau d&#39;actions), ce qui vous permet de commenter en direct les actions de micro-régulation que vous activez (escamotage, ouverture anticipée, seconde lucarne, etc.) et d&#39;observer immédiatement leur effet sur la dynamique du carrefour projetée à l&#39;écran.</p>
+<p>C&#39;est particulièrement adapté aux comités techniques, formations internes, validations devant un client ou aux échanges pédagogiques avec des élus.</p>
+<h3 id="comment-adapter-laffichage-à-mon-écran-portable-plusieurs-écrans-"><span id="comment-adapter-laffichage-à-mon-écran-portable-plusieurs-écrans"></span>Comment adapter l&#39;affichage à mon écran (portable, plusieurs écrans) ?</h3>
+<p>Tout passe par le menu <strong>Mise en page</strong>, selon votre contexte :</p>
+<ul>
+<li><strong>Sur un petit écran ou en mobilité</strong> (ordinateur portable, sur le terrain, dans le train) : donnez le maximum de place au diagramme. Masquez le panneau de configuration (case <em>Affichage des paramètres</em> ou bouton Paramètre), masquez Commentaires / Remarques / Description des conditions micro — ou réglez Commentaires et Remarques sur <strong>Automatique</strong>, qui n&#39;affiche leur colonne que pour les plans de feu qui en ont —, masquez le nom des groupes dans le formulaire, ajustez la <strong>Dilatation du diagramme (Zoom)</strong> — ou Ctrl + molette — et désactivez les <strong>Infobulles</strong> une fois à l&#39;aise. L&#39;interface se concentre alors sur l&#39;essentiel.</li>
+<li><strong>Sur un poste à plusieurs écrans</strong> : utilisez le <strong>Détachement</strong> pour envoyer des fenêtres (matrice intervert, formulaire, données trafic, conditions micro, image du carrefour, remarques) sur un second écran, tout en gardant le diagramme en plein sur l&#39;écran principal. Chaque fenêtre détachée se zoome indépendamment (Ctrl + molette), et chaque projet retrouve sa configuration de détachements à l&#39;ouverture.</li>
+</ul>
+<p>Une fenêtre détachée n&#39;est pas une copie figée posée de côté : <strong>elle reste solidaire du reste de l&#39;application, dans les deux sens</strong>. Survolez une flèche sur le plan du carrefour envoyé au second écran, et la ligne du groupe s&#39;allume dans le diagramme resté sur l&#39;écran principal, en même temps que sa ligne dans le formulaire et dans les données trafic. Survolez une ligne du diagramme, et ce sont les flèches du second écran qui s&#39;allument. C&#39;est ce qui fait du second écran un prolongement de votre plan de travail plutôt qu&#39;un rangement.</p>
+<p>Le détail de chaque option est documenté dans l&#39;aide en ligne (menu <strong>Aide</strong>, section <em>Mise en page de l&#39;interface et optimisation de l&#39;écran</em>), et le jeu des mises en évidence dans la section <em>Survol et mise en relation</em>.</p>
+<h3 id="à-la-réouverture-dun-projet-mes-fenêtres-détachées-ne-reviennent-pas-toutes-pourquoi-"><span id="à-la-réouverture-dun-projet-mes-fenêtres-détachées-ne-reviennent-pas-toutes-pourquoi"></span>À la réouverture d&#39;un projet, mes fenêtres détachées ne reviennent pas toutes. Pourquoi ?</h3>
+<p>Parce que votre navigateur n&#39;autorise <strong>qu&#39;une seule fenêtre par action de votre part</strong>. C&#39;est une protection universelle contre les sites qui ouvrent des fenêtres en rafale, et elle ne distingue pas les bonnes des mauvaises : à l&#39;ouverture d&#39;un projet qui en mémorise cinq, la première s&#39;ouvre et les quatre autres sont refusées.</p>
+<p>TraCflux vous le signale par un message, mais une seule fois par session — il est facile de le manquer.</p>
+<p><strong>L&#39;autorisation se donne une fois pour toutes</strong>, et pour un seul site :</p>
+<ol>
+<li>Cliquez sur l&#39;icône à gauche de l&#39;adresse, dans la barre du navigateur — un cadenas, ou un curseur, selon la version</li>
+<li>Repérez la ligne <strong>« Pop-ups et redirections »</strong> et mettez-la sur <em>Autoriser</em></li>
+<li>Rechargez la page</li>
+</ol>
+<p>Les fenêtres mémorisées se rouvriront alors toutes ensemble. Sur Chrome et Edge, une icône de fenêtre barrée apparaît aussi à droite de la barre d&#39;adresse au moment du blocage : elle propose directement « Toujours autoriser les fenêtres contextuelles de ce site ».</p>
+<p>Un point à connaître en attendant de l&#39;avoir fait : lorsqu&#39;une fenêtre est refusée, l&#39;application considère qu&#39;elle n&#39;est pas détachée. Si vous enregistrez dans la foulée, c&#39;est cette disposition amputée qui est retenue. Donnez l&#39;autorisation avant de composer votre espace de travail.</p>
+<h3 id="quels-formats-dimportexport-sont-supportés-"><span id="quels-formats-dimportexport-sont-supportés"></span>Quels formats d&#39;import/export sont supportés ?</h3>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Import</th>
+<th>Export</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JSON (format natif)</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>DiagFeux <code>.dfe</code></strong> (CERTU/Cerema)</td>
+<td>ébauche, à vérifier</td>
+<td>(envisagé)</td>
+</tr>
+<tr>
+<td>Excel <code>.xlsx</code></td>
+<td>(envisageable selon modèle)</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>CSV</td>
+<td>✓</td>
+<td>—</td>
+</tr>
+<tr>
+<td>HTM</td>
+<td>✓</td>
+<td>—</td>
+</tr>
+<tr>
+<td>PDF (impression dossier)</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>PNG (capture diagramme)</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+</tbody></table>
+<p>L&#39;import DiagFeux reprend le plan de feux logique, pas la géométrie — voir <a href="#puis-je-r%C3%A9cup%C3%A9rer-mes-anciennes-%C3%A9tudes-diagfeux-">Puis-je récupérer mes anciennes études DiagFeux ?</a>.</p>
+<h3 id="quels-formats-dimage-puis-je-utiliser-comme-fond-de-plan-"><span id="quels-formats-dimage-puis-je-utiliser-comme-fond-de-plan"></span>Quels formats d&#39;image puis-je utiliser comme fond de plan ?</h3>
+<p>Le fond de plan du carrefour (« Image du carrefour ») accepte tous les formats image courants que votre navigateur sait afficher :</p>
+<ul>
+<li><strong>JPEG</strong> (<code>.jpg</code>, <code>.jpeg</code>) — adapté aux <strong>photos aériennes</strong> issues de Géoportail, Google Maps, du cadastre, de l&#39;IGN, de drones ou de captures de logiciels SIG/CAO.</li>
+<li><strong>PNG</strong> (<code>.png</code>) — adapté aux <strong>plans au trait</strong> et <strong>schémas</strong> avec aplats nets, fond blanc ou transparent.</li>
+<li><strong>SVG</strong> (<code>.svg</code>) — vectoriel, idéal pour des <strong>schémas exportés depuis AutoCAD, Illustrator</strong> ou tout outil produisant du vectoriel. Reste net à tout niveau de zoom.</li>
+<li><strong>WebP, GIF, BMP, AVIF</strong> — également acceptés.</li>
+</ul>
+<p>Les formats spécialisés <strong>TIFF / GeoTIFF</strong> (<code>.tif</code>), <strong>HEIC</strong> (photos iPhone) et formats propriétaires SIG ne sont pas pris en charge directement (les navigateurs ne les affichent pas nativement). Convertissez-les en JPEG ou PNG via votre visionneuse d&#39;images, votre SIG ou un outil en ligne.</p>
+<p>L&#39;image chargée est <strong>embarquée en base64 dans le fichier <code>.json</code> du projet</strong> : elle voyage avec le projet. Pour limiter son poids, l&#39;application <strong>l&#39;optimise automatiquement à l&#39;import</strong> (redimensionnement + ré-encodage WebP), sans dégrader la lisibilité du fond de plan — un message confirme le gain obtenu. Les images <strong>SVG</strong> (vectorielles) sont conservées telles quelles. L&#39;optimisation a lieu une seule fois, à l&#39;import (pas de re-compression à la réouverture). L&#39;image source sur votre disque n&#39;est jamais modifiée.</p>
+<h3 id="tracflux-gère-t-il-la-multiprogrammation-"><span id="tracflux-gère-t-il-la-multiprogrammation"></span>TraCflux gère-t-il la multiprogrammation ?</h3>
+<p>Oui. Chaque carrefour peut porter plusieurs plans de feux (onglets PF), et <strong>chaque PF est un programme complet et indépendant</strong> : cycle, durées de vert, offsets, matrice intervert et micro-régulation lui sont propres. Vous déclinez ainsi les programmes habituels d&#39;un carrefour au sein d&#39;un même projet — pointe du matin (HPM), pointe du soir (HPS), heure creuse (HC), nuit (HN), variante priorité bus, événementiel…</p>
+<p>Le <strong>PF1 sert de plan de référence</strong> : sur les autres PF, tout écart de la matrice intervert est coloré (rouge = augmenté, vert = réduit) et explicité au survol, ce qui rend immédiatement visibles les différences d&#39;un programme à l&#39;autre.</p>
+<p>À noter : TraCflux <strong>conçoit et analyse</strong> la multiprogrammation ; le <strong>basculement réel</strong> entre programmes (calendrier horaire, sélection sur trafic) reste assuré par le <strong>contrôleur sur le terrain</strong>.</p>
+<h3 id="y-a-t-il-une-limite-au-nombre-de-groupes-ou-de-plans-de-feux-"><span id="y-a-t-il-une-limite-au-nombre-de-groupes-ou-de-plans-de-feux"></span>Y a-t-il une limite au nombre de groupes ou de plans de feux ?</h3>
+<p>Pas de limite stricte. L&#39;application a été testée avec une trentaine de groupes et plusieurs plans de feux par projet. Les performances restent fluides ; pour des intersections très complexes, surveillez l&#39;usage du localStorage (un avertissement apparaît dans le rapport de diagnostic au-delà de 4 Mo).</p>
+<h3 id="à-quoi-sert-le-mode-simulation-"><span id="à-quoi-sert-le-mode-simulation"></span>À quoi sert le mode simulation ?</h3>
+<p>À <strong>tester l&#39;effet d&#39;actions</strong> (escamotage, ouverture anticipée, point de repos, adaptatif vertical…) sur un cycle existant <strong>sans modifier le projet original</strong>. Vous cochez les actions que vous voulez activer, le diagramme se redessine en montrant le cycle simulé, et vous pouvez visualiser conflits et décalages. Décocher les cases revient instantanément à l&#39;état initial.</p>
+<p>Les actions <strong>se combinent</strong> : chacune s&#39;applique au cycle déjà transformé par les précédentes — un point de repos décale la suite pour tous les groupes, un adaptatif partiel seulement pour les groupes de sa plage. Une action dont la zone chevauche la fin du cycle (de 102 à 8 s sur un cycle de 120 s, par exemple) est prise en compte de part et d&#39;autre. Le vert escamotable est barré d&#39;un <strong>bandeau hachuré</strong> sur sa moitié basse, le vert restant visible au-dessus ; l&#39;escamotage coché le fait disparaître. Survoler une action dans la liste allume ses flèches dans l&#39;image du carrefour.</p>
+<p>Six familles d&#39;actions ne sont pas rejouées, parce qu&#39;elles n&#39;agissent pas sur le déroulé du cycle : début et fin de bande passante, priorité piétons, signal d&#39;aide à la conduite, synchro BTS, flèche d&#39;anticipation. Elles n&#39;apparaissent donc pas dans la liste du panneau.</p>
+<p>La combinaison que vous retenez, une fois nommée, devient un <strong>scénario</strong> enregistré avec le plan de feu — voir la question suivante.</p>
+<h3 id="comment-construire-et-justifier-un-scénario-de-micro-régulation-"><span id="comment-construire-et-justifier-un-scénario-de-micro-régulation"></span>Comment construire et justifier un scénario de micro-régulation ?</h3>
+<p>Un <strong>scénario</strong> est une combinaison d&#39;actions de micro-régulation retenue sur un plan de feu, et le nom qu&#39;on lui donne : « escamotage bus phase 1 », « priorité bus seule », « priorité bus + ouverture anticipée ». Un plan de feu peut en porter <strong>plusieurs</strong>, ce qui permet de comparer les variantes entre elles. C&#39;est l&#39;unité de travail quand il s&#39;agit de proposer une évolution et de la défendre devant un maître d&#39;ouvrage.</p>
+<p>La démarche tient en six temps.</p>
+<ol>
+<li><p><strong>Saisir les actions</strong> dans le tableau des conditions de micro-régulation du plan concerné. À ce stade, elles sont décrites mais inactives : le diagramme ne change pas.</p>
+</li>
+<li><p><strong>Ouvrir l&#39;onglet Simulation</strong>, puis <strong>cocher une seule action</strong>. C&#39;est la précaution qui fait gagner du temps : l&#39;effet d&#39;un escamotage seul se lit d&#39;un coup d&#39;œil, celui de quatre actions combinées se discute pendant une heure. Le diagramme passe en lecture seule et se redessine.</p>
+</li>
+<li><p><strong>Lire le cycle simulé</strong>, affiché en tête du diagramme avec son écart au cycle nominal — <code>122 s (−15 s)</code>. C&#39;est souvent le premier argument : ce que l&#39;action rend comme temps, et à qui.</p>
+</li>
+<li><p><strong>Vérifier les conflits</strong>. Le panneau les liste sous les actions. Un escamotage coché prend en charge le dégagement du couple de groupes qu&#39;il nomme : ce conflit-là disparaît de la liste, ce qui est normal. Les autres sont à traiter.</p>
+</li>
+<li><p><strong>Mesurer l&#39;effet sur la capacité</strong>. Le tableau des données de trafic, sous le panneau de simulation, suit les actions cochées : les groupes dont une action supprime le vert — escamotage de phase, fermeture anticipée, adaptatif vertical — n&#39;affichent plus de capacité, puisqu&#39;elle n&#39;aurait plus de sens. Le jeu de trafic affiché (heure de pointe du matin, du soir…) se choisit dans ce tableau. Pour comparer plusieurs programmes entre eux plutôt que plusieurs scénarios, le menu <em>Diagramme → Comparer la capacité des plans de feu</em> met les plans côte à côte, à trafic égal si vous le demandez.</p>
+</li>
+<li><p><strong>Enregistrer le scénario</strong> depuis la liste <em>Scénario</em>, en tête du panneau, sous un nom parlant. Le nom et les actions cochées sont <strong>enregistrés avec le plan de feu</strong> : vous les retrouvez à la réouverture du projet. Recommencez pour chaque variante : la liste les propose toutes, précédées de <em>Tout coché</em> et <em>Tout décoché</em>. Cocher ou décocher une action ne modifie pas le scénario enregistré — un ● orange signale l&#39;écart, et <em>Enregistrer…</em> le met à jour.</p>
+</li>
+</ol>
+<p><strong>Le livrable.</strong> <em>Fichier → Imprimer le projet...</em> propose une case <strong>Scénarios</strong>, qui liste les scénarios enregistrés de chaque plan de feu, à cocher un par un. Pour chaque plan, un <strong>tableau comparatif</strong> met les scénarios cochés côte à côte, le plan nominal en première ligne : actions, cycle simulé, conflits, courant dimensionnant, degré de saturation et réserve. Suit chaque scénario : son diagramme recalculé, titré de son nom et de son cycle simulé, accompagné au choix de la liste des actions — chacune avec sa coche, celles écartées restant visibles en gris —, de la liste des conflits, des données de trafic et de la réserve de capacité. De quoi montrer ce qui a été retenu, ce qui a été écarté, et ce que cela change.</p>
+<p>Seule la <strong>version enregistrée</strong> d&#39;un scénario s&#39;imprime : enregistrez vos modifications avant d&#39;imprimer. L&#39;impression se prépare dans un onglet à part, qui se ferme ensuite : l&#39;application reste utilisable pendant que la boîte d&#39;impression est ouverte.</p>
+<hr>
+<h2 id="accessibilité">Accessibilité</h2>
+<h3 id="puis-je-utiliser-lapplication-si-jai-un-handicap-"><span id="puis-je-utiliser-lapplication-si-jai-un-handicap"></span>Puis-je utiliser l&#39;application si j&#39;ai un handicap ?</h3>
+<p>Cela dépend du besoin, et voici une réponse franche plutôt qu&#39;une déclaration d&#39;intention.</p>
+<p><strong>Ce qui fonctionne bien.</strong> L&#39;agrandissement de l&#39;affichage : parce que TraCflux est une application web, le zoom du navigateur agrandit l&#39;interface entière, textes et champs compris. La sensibilité aux couleurs et la fatigue visuelle : sept thèmes sont proposés, dont un mode daltonien, un mode haut contraste et deux palettes chaudes. La navigation au clavier est visible : l&#39;élément actif est toujours entouré d&#39;un contour net.</p>
+<p><strong>Ce qui fonctionne partiellement.</strong> Le pilotage au clavier : les commandes principales ont des raccourcis, mais le diagramme lui-même se manipule à la souris.</p>
+<p><strong>Ce qui ne fonctionne pas.</strong> Les lecteurs d&#39;écran ne sont pas supportés, et les animations ne peuvent pas être désactivées. Les détails sont donnés plus bas.</p>
+<h3 id="jai-besoin-de-grossir-laffichage-que-puis-je-faire-"><span id="jai-besoin-de-grossir-laffichage-que-puis-je-faire"></span>J&#39;ai besoin de grossir l&#39;affichage, que puis-je faire ?</h3>
+<p>Quatre leviers, du plus général au plus ciblé.</p>
+<ul>
+<li><strong>Le zoom du navigateur</strong> — <code>Ctrl + molette</code>, ou <code>Ctrl +</code> et <code>Ctrl -</code>. Il agrandit toute l&#39;interface : diagramme, tableaux, formulaires, menus. C&#39;est le levier le plus efficace, et il vient du navigateur, pas de l&#39;application. Dans une fenêtre détachée, il s&#39;applique indépendamment de la fenêtre principale.</li>
+<li><strong>La dilatation du diagramme</strong> (menu <strong>Mise en page</strong>) — à ne pas confondre avec le précédent : elle étire l&#39;échelle des temps pour espacer les phases, sans changer la taille des textes.</li>
+<li><strong>Le détachement</strong> (menu <strong>Mise en page → Détachements</strong>) — envoyez la matrice, le tableau de trafic ou l&#39;image du carrefour dans une fenêtre séparée, que vous pouvez agrandir en plein écran ou poser sur un second écran.</li>
+<li><strong>Le masquage</strong> — commentaires, remarques, noms de groupes, panneau de configuration et infobulles se désactivent individuellement. Moins d&#39;éléments à l&#39;écran, plus de place pour ce qui compte.</li>
+</ul>
+<p>Voir aussi <em>Comment adapter l&#39;affichage à mon écran</em>, dans la section précédente.</p>
+<h3 id="les-couleurs-sont-difficiles-à-distinguer-pour-moi">Les couleurs sont difficiles à distinguer pour moi</h3>
+<p>L&#39;application propose <strong>sept thèmes</strong>, dans le menu <strong>Mise en page → Options de contraste</strong> :</p>
+<table>
+<thead>
+<tr>
+<th>Thème</th>
+<th>Ce qu&#39;il vise</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Blanc sur fond noir</strong> (défaut)</td>
+<td>Texte clair sur fond sombre</td>
+</tr>
+<tr>
+<td><strong>Noir sur fond blanc</strong></td>
+<td>Texte sombre sur fond blanc</td>
+</tr>
+<tr>
+<td><strong>Haut contraste</strong></td>
+<td>Lisibilité maximale : couleurs vives sur fond bleu profond, contours de focus jaune vif</td>
+</tr>
+<tr>
+<td><strong>Contraste ambre</strong></td>
+<td>Ambre sur anthracite, chaleureux et reposant</td>
+</tr>
+<tr>
+<td><strong>Daltonien</strong></td>
+<td>Palette construite sur l&#39;axe bleu / orange, sans opposition rouge-vert</td>
+</tr>
+<tr>
+<td><strong>Sépia</strong></td>
+<td>Tons chauds, pensé pour les longues sessions</td>
+</tr>
+<tr>
+<td><strong>Bleu nuit</strong></td>
+<td>Palette Solarized, bleu-vert profond</td>
+</tr>
+</tbody></table>
+<p>Le thème est mémorisé et s&#39;applique aussi aux fenêtres détachées.</p>
+<p><strong>Une limite à connaître si vous êtes daltonien.</strong> Le thème adapte l&#39;interface — panneaux, boutons, mise en évidence des conflits. Mais certains codes couleur relèvent du métier lui-même et restent sur l&#39;axe rouge / vert : les états de feu du diagramme, et le degré de saturation du tableau de capacité. Pour un feu tricolore, le rouge et le vert <em>sont</em> le sujet, pas une décoration. Dans ces deux cas, l&#39;information reste disponible autrement — en toutes lettres dans les tableaux, et par la position dans le diagramme.</p>
+<h3 id="puis-je-travailler-au-clavier-"><span id="puis-je-travailler-au-clavier"></span>Puis-je travailler au clavier ?</h3>
+<p>En partie.</p>
+<p><strong>Ce qui marche.</strong> L&#39;élément actif au clavier est toujours signalé par un contour visible de 2 pixels, décliné selon le thème — turquoise en sombre, bleu en clair, jaune vif en haut contraste et en ambre. La navigation par <code>Tab</code> parcourt les champs, les boutons et les menus. Les commandes courantes ont des raccourcis : <code>Ctrl+Z</code> et <code>Ctrl+Y</code> pour annuler et rétablir, <code>Ctrl+N</code>, <code>Ctrl+O</code> et <code>Ctrl+S</code> pour les projets, <code>Alt+A</code> et <code>Alt+E</code> pour poser un aiguillage ou un escamotage sur un groupe, les flèches directionnelles pour déplacer une flèche sur l&#39;image du carrefour.</p>
+<p><strong>Ce qui ne marche pas.</strong> Le calage du diagramme — déplacer le début ou la fin d&#39;un vert — se fait au glisser-déposer à la souris, sans équivalent clavier. Les valeurs restent modifiables au clavier dans le tableau des paramètres, ce qui permet de contourner, mais plus lentement.</p>
+<h3 id="lapplication-fonctionne-t-elle-avec-un-lecteur-décran-"><span id="lapplication-fonctionne-t-elle-avec-un-lecteur-décran"></span>L&#39;application fonctionne-t-elle avec un lecteur d&#39;écran ?</h3>
+<p>Non, et il vaut mieux le dire clairement que de laisser espérer.</p>
+<p>L&#39;application n&#39;a pas été conçue ni testée pour les lecteurs d&#39;écran, et son balisage d&#39;accessibilité est insuffisant pour un usage réel. S&#39;y ajoute une difficulté de fond : l&#39;objet central de l&#39;outil est un diagramme temporel, une information spatiale dont la restitution vocale demanderait une conception spécifique, et non un simple ajout d&#39;étiquettes.</p>
+<p>Dans le même esprit, les animations du mode simulation ne peuvent pas être désactivées : la préférence système de réduction des animations n&#39;est pas prise en compte.</p>
+<p>Ces deux points sont des manques identifiés, pas des choix. Si vous êtes concerné et souhaitez en discuter, les retours sont bienvenus (voir <em>Comment signaler un bug ou demander une fonctionnalité</em>).</p>
+<hr>
+<h2 id="comptes-et-sécurité">Comptes et sécurité</h2>
+<h3 id="faut-il-créer-un-compte-pour-utiliser-lapplication-"><span id="faut-il-créer-un-compte-pour-utiliser-lapplication"></span>Faut-il créer un compte pour utiliser l&#39;application ?</h3>
+<p>Non, c&#39;est optionnel. Par défaut, l&#39;application s&#39;ouvre sans login. Le système de comptes intégré (3 niveaux : lecture, partiel, total) sert uniquement à organiser le partage d&#39;un poste entre plusieurs utilisateurs.</p>
+<h3 id="comment-protéger-réellement-mes-fichiers-projet-"><span id="comment-protéger-réellement-mes-fichiers-projet"></span>Comment protéger réellement mes fichiers projet ?</h3>
+<p>Les comptes intégrés sont une <strong>convention de travail</strong>, pas une protection cryptographique (voir <a href="https://github.com/ThierryClm/TraCflux/blob/master/SECURITY.md">SECURITY.md</a>). Pour une vraie protection, utilisez les <strong>droits du système d&#39;exploitation</strong> : ACL Windows / NTFS, comptes Active Directory, permissions sur les partages réseau ou serveurs de fichiers. C&#39;est ce niveau qui décide qui peut lire, écrire ou supprimer les <code>.json</code>.</p>
+<hr>
+<h2 id="licence-et-conditions-dutilisation">Licence et conditions d&#39;utilisation</h2>
+<h3 id="pourquoi-cette-licence-agpl-v3-"><span id="pourquoi-cette-licence-agpl-v3"></span>Pourquoi cette licence AGPL v3 ?</h3>
+<p>Pour garantir que <strong>toute amélioration apportée au code reste accessible à tous</strong>. Si quelqu&#39;un fork ou héberge une version modifiée, il est tenu de publier son code source sous la même licence. Cela protège l&#39;écosystème de la communauté traficiens contre les enclosures privatives.</p>
+<h3 id="puis-je-lutiliser-dans-ma-collectivité-ou-mon-entreprise-"><span id="puis-je-lutiliser-dans-ma-collectivité-ou-mon-entreprise"></span>Puis-je l&#39;utiliser dans ma collectivité ou mon entreprise ?</h3>
+<p>Oui, sans condition. La licence AGPL v3 autorise tout usage interne, public ou privé, gratuit ou facturé. Vous pouvez installer l&#39;application sur autant de postes que nécessaire, sans déclaration à faire.</p>
+<h3 id="puis-je-modifier-le-code-pour-mes-besoins-"><span id="puis-je-modifier-le-code-pour-mes-besoins"></span>Puis-je modifier le code pour mes besoins ?</h3>
+<p>Oui. Vous pouvez adapter le code à vos besoins internes sans rien publier. La seule contrainte AGPL est que <strong>si vous distribuez votre version modifiée</strong> (à des tiers, ou en l&#39;hébergeant en SaaS pour des utilisateurs externes), vous devez publier le code source de cette version sous AGPL v3 elle aussi.</p>
+<h3 id="puis-je-facturer-du-conseil-basé-sur-cet-outil-"><span id="puis-je-facturer-du-conseil-basé-sur-cet-outil"></span>Puis-je facturer du conseil basé sur cet outil ?</h3>
+<p>Oui, sans aucune restriction. La licence AGPL couvre le <strong>logiciel</strong>, pas les <strong>services</strong> que vous bâtissez autour : formation, paramétrage, audit de carrefour, accompagnement à la migration… restent libres et facturables comme bon vous semble.</p>
+<hr>
+<h2 id="bugs-et-contributions">Bugs et contributions</h2>
+<h3 id="comment-signaler-un-bug-ou-demander-une-fonctionnalité-"><span id="comment-signaler-un-bug-ou-demander-une-fonctionnalité"></span>Comment signaler un bug ou demander une fonctionnalité ?</h3>
+<p>Ouvrez une <a href="https://github.com/ThierryClm/TraCflux/issues">issue GitHub</a>. Pour un bug, joignez le <strong>rapport de diagnostic</strong> (menu <strong>À propos → Rapport de diagnostic</strong>) qui contient le contexte technique nécessaire — sans aucune donnée envoyée sur le réseau, c&#39;est vous qui le copiez ou le téléchargez.</p>
+<h3 id="comment-contribuer-au-code-"><span id="comment-contribuer-au-code"></span>Comment contribuer au code ?</h3>
+<p>Voir <a href="https://github.com/ThierryClm/TraCflux/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a>. En résumé : forkez le repo, créez une branche, codez, ajoutez des tests, ouvrez une pull request. Toute contribution est acceptée sous la licence AGPL v3 du projet.</p>
+</main>
+<footer><a href="../presentation/">Découvrir l’application</a> · <a href="../">Ouvrir TraCflux</a> · <a href="#contenu">Retour en haut</a></footer></body></html>
