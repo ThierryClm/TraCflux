@@ -4,6 +4,7 @@ import EmptyState from './EmptyState';
 import type { Groupe, TypeGroupe } from '../types/projet';
 import './GroupTable.css';
 import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { FAMILLES_SIGNAUX_ISR, libelleSignalIsr } from '../utils/signauxIsr';
 
 type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
     durations?: Partial<Groupe['durations']>;
@@ -24,6 +25,7 @@ interface GroupTableProps {
 // art. 110 C1). Les feux piétons R12 n'ont pas de jaune : pour un piéton (et
 // un cycle géré par R12m), la colonne Jaune porte le temps de dégagement,
 // dessiné en rouge après le vert.
+const INFOBULLE_SIGNAL = "Signal lumineux de circulation du groupe (ISR, livre 1, 6e partie, art. 109-3)";
 const INFOBULLE_MINI = "Durée minimale du vert : 6 s au moins (ISR, 6e partie, art. 110 C1)";
 const INFOBULLE_JAUNE_ENTETE = "Véhicules : jaune fixe de 3 s (agglomération) ou 5 s (hors agglomération, feu au jaune clignotant). "
     + "Piétons : temps de dégagement, les feux piétons n'ayant pas de jaune (ISR, 6e partie, art. 110 C1)";
@@ -93,6 +95,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                         <th>GF</th>
                         {showGroupNames && <th>Nom</th>}
                         <th>Type</th>
+                        <th title={tip(INFOBULLE_SIGNAL)}>Signal</th>
                         <th>Courant</th>
                         <th title={tip(INFOBULLE_MINI)}>Mini</th>
                         <th title={tip(INFOBULLE_JAUNE_ENTETE)}>Jaune</th>
@@ -129,6 +132,27 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                         <option value="CY">CY</option>
                                         <option value="FL">FL</option>
                                         <option value="PP">PP</option>
+                                    </select>
+                                </td>
+                                {/* Signal ISR */}
+                                <td>
+                                    <select
+                                        value={g.signal || ''}
+                                        onChange={(e) => updateGroupParams(g.id, { signal: e.target.value })}
+                                        className="input-signal"
+                                        aria-label={`Signal du groupe ${g.id}`}
+                                        title={tip(libelleSignalIsr(g.signal) ?? INFOBULLE_SIGNAL)}
+                                    >
+                                        <option value=""></option>
+                                        {/* Un ancien code hors liste reste affiché plutôt que d'être effacé. */}
+                                        {g.signal && !libelleSignalIsr(g.signal) && <option value={g.signal}>{g.signal}</option>}
+                                        {FAMILLES_SIGNAUX_ISR.map(f => (
+                                            <optgroup key={f.famille} label={f.famille}>
+                                                {f.signaux.map(s => (
+                                                    <option key={s.code} value={s.code} title={s.libelle}>{s.code}</option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
                                     </select>
                                 </td>
                                 {/* Courant */}

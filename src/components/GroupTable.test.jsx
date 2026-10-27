@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import GroupTable from './GroupTable';
 
@@ -19,5 +19,35 @@ describe('formulaire : infobulles des colonnes Mini et Jaune (ISR, 6e partie)', 
     it('infobulles coupées : aucun title', () => {
         render(<GroupTable groups={groups} updateGroupParams={vi.fn()} cycleLength={70} tooltipsEnabled={false} />);
         expect(document.querySelector('.input-yellow').getAttribute('title')).toBeNull();
+    });
+});
+
+describe('formulaire : colonne Signal (ISR, 6e partie)', () => {
+    it('placée juste après Type, elle propose les signaux par famille', () => {
+        render(<GroupTable groups={groups} updateGroupParams={vi.fn()} cycleLength={70} />);
+        const entetes = [...document.querySelectorAll('.group-table th')].map(th => th.textContent);
+        expect(entetes.indexOf('Signal')).toBe(entetes.indexOf('Type') + 1);
+        const liste = screen.getByLabelText('Signal du groupe 1');
+        const codes = [...liste.querySelectorAll('option')].map(o => o.value);
+        for (const code of ['', 'R11v', 'R11j', 'R12', 'R12m', 'R13b', 'R14tg', 'R16dtd', 'R17', 'R18td', 'R19', 'R22v', 'R24', 'R25']) {
+            expect(codes).toContain(code);
+        }
+        expect(liste.querySelector('optgroup[label="R14 · Tricolores directionnels"]')).not.toBeNull();
+    });
+
+    it('le choix est enregistré et sa désignation apparaît en infobulle', () => {
+        const update = vi.fn();
+        const { rerender } = render(<GroupTable groups={groups} updateGroupParams={update} cycleLength={70} />);
+        fireEvent.change(screen.getByLabelText('Signal du groupe 2'), { target: { value: 'R12' } });
+        expect(update).toHaveBeenCalledWith(2, { signal: 'R12' });
+        rerender(<GroupTable groups={[{ ...groups[0], signal: 'R14tg' }]} updateGroupParams={update} cycleLength={70} />);
+        const liste = screen.getByLabelText('Signal du groupe 1');
+        expect(liste.value).toBe('R14tg');
+        expect(liste.getAttribute('title')).toBe('Signal tricolore directionnel, tourne-à-gauche');
+    });
+
+    it('un code hors liste reste affiché', () => {
+        render(<GroupTable groups={[{ ...groups[0], signal: 'R13tj' }]} updateGroupParams={vi.fn()} cycleLength={70} />);
+        expect(screen.getByLabelText('Signal du groupe 1').value).toBe('R13tj');
     });
 });

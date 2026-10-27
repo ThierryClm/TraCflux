@@ -17,6 +17,12 @@ describe('lecture d\'un projet', () => {
         expect(migrerGroupes([{ greenDuration: 15 }])[0]).toMatchObject({ id: 1, durations: { green: 15 } });
     });
 
+    it('signal ISR du groupe conservé au rechargement, absent s\'il n\'a pas été choisi', () => {
+        const [avec, sans] = migrerGroupes([{ id: 1, signal: 'R14tg' }, { id: 2 }]);
+        expect(avec.signal).toBe('R14tg');
+        expect(sans).not.toHaveProperty('signal');
+    });
+
     it('matrice du cache : redimensionnée, valeurs hors bornes effacées', () => {
         const data = {
             groups: [{ id: 1, type: 'VL' }, { id: 2, type: 'P' }],
