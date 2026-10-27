@@ -450,13 +450,15 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
             : action.plage2
     }));
 
-    // Get all "Synchro BTS" actions
-    // Repère de synchronisation sans case individuelle. L'option de compensation
-    // BTS restitue le temps contracté en amont ; la flèche garde son instant.
+    // La bande d'attente remplace les flèches et l'abréviation de chaque BTS
+    // effectivement compensée. Les autres synchros restent visibles.
+    const synchrosCompensees = new Set(simulationResult?.restPoints
+        .filter(repos => repos.source === 'Synchro BTS')
+        .map(repos => repos.actionId) ?? []);
     // If plage1 is not set, default to 1 (first group)
     // If plage2 is not set, default to groups.length (total number of groups)
     const synchroBtsActions = actionData.filter(action => {
-        if (action.action !== 'Synchro BTS') return false;
+        if (action.action !== 'Synchro BTS' || synchrosCompensees.has(action.id)) return false;
         if (action.deb === '' || action.deb === undefined) return false;
         return true;
     }).map(action => ({

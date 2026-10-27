@@ -68,6 +68,10 @@ const SimulationPanel = ({
     onEnregistrerScenario = rien,
     onSupprimerScenario = rien
 }: SimulationPanelProps) => {
+    const contientSynchroBts = actionData.some(action =>
+        action.action === 'Synchro BTS' && action.deb !== '' && action.deb != null &&
+        Number.isFinite(Number(action.deb)) && Number(action.deb) >= 0 && Number(action.deb) <= cycleLength);
+
     // Les actions retenues par la simulation (liste partagée, cf. en-tête).
     const activeActions = actionsSimulables(actionData);
 
@@ -253,15 +257,10 @@ const SimulationPanel = ({
                 </span>
             </div>
 
-            <label className="simulation-bts-option">
+            {contientSynchroBts && <label className="simulation-bts-option">
                 <input type="checkbox" checked={compenserBts} onChange={e => onCompenserBts(e.target.checked)} />
                 Compenser les contractions à la synchro BTS
-            </label>
-            {simulationResult.restPoints.filter(r => r.source === 'Synchro BTS').map(r => (
-                <p key={r.actionId} className="simulation-bts-info">
-                    Attente BTS : {r.duration} s — {simulatedCycleLength === cycleLength ? 'cycle maintenu à' : 'cycle simulé de'} {simulatedCycleLength} s
-                </p>
-            ))}
+            </label>}
 
             {/* Le scénario choisi, puis la liste : les scénarios fixes Tout
                 coché et Tout décoché, ceux du plan, Nouveau scénario. La liste
