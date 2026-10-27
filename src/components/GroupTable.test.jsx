@@ -51,3 +51,47 @@ describe('formulaire : colonne Signal (ISR, 6e partie)', () => {
         expect(screen.getByLabelText('Signal du groupe 1').value).toBe('R13tj');
     });
 });
+
+describe('formulaire : signal et courant proposés selon le type', () => {
+    const vierge = (id, extra = {}) => ({ ...groupe(id, `G${id}`, ''), ...extra });
+    const choisir = (groupes, id, type) => {
+        const update = vi.fn();
+        const { container, unmount } = render(<GroupTable groups={groupes} updateGroupParams={update} cycleLength={70} />);
+        fireEvent.change(container.querySelectorAll('.input-type')[groupes.findIndex(g => g.id === id)], { target: { value: type } });
+        unmount();
+        return update.mock.calls[0][1];
+    };
+
+    it.each([
+        ['V', 'R11v', 'TD'],
+        ['P', 'R12', 'Piéton'],
+        ['CY', 'R13c', 'Cycle'],
+        ['B', 'R13b', 'TD']
+    ])('type %s : signal %s et courant %s dans des champs vides', (type, signal, courant) => {
+        expect(choisir([vierge(1)], 1, type)).toEqual({ type, signal, courant });
+    });
+
+    it('un signal ou un courant choisis à la main sont conservés', () => {
+        expect(choisir([vierge(1, { signal: 'R14tg', courant: 'TàG' })], 1, 'V')).toEqual({ type: 'V' });
+    });
+
+    it('les valeurs proposées pour l\'ancien type suivent le nouveau', () => {
+        expect(choisir([vierge(1, { type: 'V', signal: 'R11v', courant: 'TD' })], 1, 'P'))
+            .toEqual({ type: 'P', signal: 'R12', courant: 'Piéton' });
+        expect(choisir([vierge(1, { type: 'P', signal: 'R12', courant: 'Piéton' })], 1, 'B'))
+            .toEqual({ type: 'B', signal: 'R13b', courant: 'TD' });
+    });
+
+    it('FL et PP : rien n\'est proposé', () => {
+        expect(choisir([vierge(1)], 1, 'FL')).toEqual({ type: 'FL' });
+    });
+});
+
+describe('formulaire : infobulles de la liste Signal', () => {
+    it('masquées dans la liste quand les infobulles Configuration sont coupées', () => {
+        render(<GroupTable groups={groups} updateGroupParams={vi.fn()} cycleLength={70} tooltipsEnabled={false} />);
+        const liste = screen.getByLabelText('Signal du groupe 1');
+        expect(liste.getAttribute('title')).toBeNull();
+        expect(liste.querySelector('option[value="R14tg"]').getAttribute('title')).toBeNull();
+    });
+});

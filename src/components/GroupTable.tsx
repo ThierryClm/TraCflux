@@ -41,11 +41,28 @@ const infobulleJaune = (type: string | undefined): string => {
     return "Jaune fixe : 3 s en agglomération, 5 s hors agglomération ou pour un feu au jaune clignotant (ISR, 6e partie, art. 110 C1)";
 };
 
+/** Signal et courant proposés au choix du type, quand ces champs sont libres. */
+const PREREMPLISSAGE: Partial<Record<string, { signal: string; courant: string }>> = {
+    V: { signal: 'R11v', courant: 'TD' },
+    P: { signal: 'R12', courant: 'Piéton' },
+    CY: { signal: 'R13c', courant: 'Cycle' },
+    B: { signal: 'R13b', courant: 'TD' }
+};
+
 const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }: GroupTableProps) => {
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
     const handleTypeChange = (id: number, value: TypeGroupe) => {
+        const groupe = groups.find(g => g.id === id);
         const updates: GroupUpdates = { type: value };
+        const avant = PREREMPLISSAGE[groupe?.type ?? ''];
+        const apres = PREREMPLISSAGE[value];
+        // Un champ vide, ou resté à la valeur proposée pour l'ancien type, prend
+        // celle du nouveau ; un choix fait à la main est conservé.
+        const libre = (actuel: string | undefined, propose: string | undefined) => !actuel || actuel === propose;
+        if (apres && libre(groupe?.signal, avant?.signal)) updates.signal = apres.signal;
+        if (apres && libre(groupe?.courant, avant?.courant)) updates.courant = apres.courant;
+        // Piétons et cycles : flèche imposée, comme auparavant.
         if (value === 'P') {
             updates.courant = 'Piéton';
         } else if (value === 'CY') {
@@ -149,7 +166,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                         {FAMILLES_SIGNAUX_ISR.map(f => (
                                             <optgroup key={f.famille} label={f.famille}>
                                                 {f.signaux.map(s => (
-                                                    <option key={s.code} value={s.code} title={s.libelle}>{s.code}</option>
+                                                    <option key={s.code} value={s.code} title={tip(s.libelle)}>{s.code}</option>
                                                 ))}
                                             </optgroup>
                                         ))}

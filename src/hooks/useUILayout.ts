@@ -12,6 +12,9 @@ interface EvenementAnnulable {
  * - Zone diagramme (hauteur, redimensionnement vertical)
  * - Onglet actif et zoom du diagramme
  */
+/** Largeur du panneau à l'onglet Configuration : tout le formulaire, Signal compris. */
+export const LARGEUR_CONFIGURATION = 490;
+
 const useUILayout = () => {
     const [pixelsPerSecond, setPixelsPerSecond] = useState(10);
     const [activeTab, setActiveTab] = useState<OngletInterface>('config');
@@ -19,7 +22,7 @@ const useUILayout = () => {
     // Sidebar
     const [sidebarWidth, setSidebarWidth] = useState(() => {
         const saved = localStorage.getItem('sidebar_width');
-        return saved ? parseInt(saved) : 450;
+        return saved ? parseInt(saved) : LARGEUR_CONFIGURATION;
     });
     const [isResizing, setIsResizing] = useState(false);
     const splitViewRef = useRef<HTMLDivElement | null>(null);

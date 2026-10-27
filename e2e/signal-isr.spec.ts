@@ -19,3 +19,21 @@ test('choisir le signal ISR d\'un groupe dans le formulaire', async ({ page }) =
     await expect(page.getByLabel('Signal du groupe 4', { exact: true })).toHaveValue('');
     await expect(signal).toHaveValue('R14tg');
 });
+
+test('le type propose signal et courant, et le formulaire tient en entier dans le panneau', async ({ page }) => {
+    await ouvrirExemple(page);
+    const table = page.locator('.group-table').first();
+    const largeurs = await table.evaluate(t => [t.getBoundingClientRect().width, t.closest('.group-table-container')!.clientWidth]);
+    expect(largeurs[0]).toBeLessThanOrEqual(largeurs[1]);
+    // Groupe 3 : V, courant TD_TàG saisi, signal vide → B propose R13b et garde TD_TàG.
+    const ligne = table.locator('tbody tr').nth(2);
+    await ligne.locator('.input-type').selectOption('B');
+    await expect(ligne.locator('.input-signal')).toHaveValue('R13b');
+    await expect(ligne.locator('.input-courant')).toHaveValue('TD_TàG');
+    // Groupe 1 : V vide de signal → P propose R12 et impose Piéton.
+    const premiere = table.locator('tbody tr').first();
+    await premiere.locator('.input-type').selectOption('P');
+    await expect(premiere.locator('.input-signal')).toHaveValue('R12');
+    await expect(premiere.locator('.input-courant')).toHaveValue('Piéton');
+    await page.locator('.group-table-container').first().screenshot({ path: test.info().outputPath('formulaire-elargi.png') });
+});

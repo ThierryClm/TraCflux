@@ -219,7 +219,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                             <li><em>PP :</em> Priorité piéton</li>
                         </ul>
                     </li>
-                    <li><strong>Signal :</strong> Signal lumineux de circulation du groupe, choisi dans la liste de l'ISR (livre 1, 6e partie, art. 109-3), rangée par famille : tricolores circulaires R11v / R11j, piétons R12 / R12m / R12pps, modaux R13, directionnels R14, anticipation R15 / R16, transports en commun R17 / R18, cycles R19, contrôle d'accès R22 / R23, arrêt R24 / R25. Au survol, l'infobulle donne la désignation complète. Facultatif ; repris dans le Formulaire du dossier imprimé.</li>
+                    <li><strong>Signal :</strong> Signal lumineux de circulation du groupe, choisi dans la liste de l'ISR (livre 1, 6e partie, art. 109-3), rangée par famille : tricolores circulaires R11v / R11j, piétons R12 / R12m / R12pps, modaux R13, directionnels R14, anticipation R15 / R16, transports en commun R17 / R18, cycles R19, contrôle d'accès R22 / R23, arrêt R24 / R25. Au survol, l'infobulle donne la désignation complète (masquée avec les infobulles Configuration). Au choix du type, le signal et le courant sont proposés s'ils sont vides : V → R11v et TD, P → R12 et Piéton, CY → R13c et Cycle, B → R13b et TD ; un choix fait à la main est conservé. Facultatif ; repris dans le Formulaire du dossier imprimé.</li>
                     <li><strong>Courant :</strong> Mouvement de trafic associé au groupe.
                         <ul>
                             <li><em>TD :</em> Tout droit</li>

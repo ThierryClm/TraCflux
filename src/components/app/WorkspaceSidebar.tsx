@@ -11,6 +11,7 @@ import type { PlanSuppressionJeu } from '../../utils/trafficHelpers';
 import type { SimulationResult } from '../../simulation';
 import type { ConflictInfo, HoveredConflict } from '../ConflictList';
 import type { ProjectProperties } from '../PropertiesPanel';
+import { LARGEUR_CONFIGURATION } from '../../hooks/useUILayout';
 
 type ActiveTab = 'properties' | 'config' | 'matrix' | 'traffic';
 type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
@@ -331,7 +332,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                     className={`tab-btn ${activeTab === 'config' ? 'active' : ''}`}
                                     onClick={() => {
                                         setActiveTab('config');
-                                        setSidebarWidth(450);
+                                        setSidebarWidth(LARGEUR_CONFIGURATION);
                                     }}
                                 >
                                     Configuration
