@@ -30,14 +30,19 @@ For each change:
 1. Work on an isolated `feature/*`, `fix/*` or `chore/*` branch, preferably in
    a dedicated Git worktree.
 2. Run the type check, tests and production build.
-3. Deploy the branch with `npm run preview:deploy`. The script refuses to run
-   on `master` or `main` and publishes a stable URL derived from the branch
-   name, such as `https://tracflux-feature-example.surge.sh`.
+3. Open the pull request. The « Aperçu de la PR » workflow
+   (`.github/workflows/preview.yml`) runs `npm run preview:deploy` and posts
+   the stable URL derived from the branch name, such as
+   `https://tracflux-feature-example.surge.sh`, as a PR comment updated on
+   every push. Locally, `npm run preview:deploy` does the same; the script
+   refuses to run on `master` or `main`.
 4. Send that URL to the user and wait for explicit validation.
-5. Only after validation, merge the pull request into `master`.
+5. Only after validation, merge the pull request into `master`. Required
+   checks are `test` and `parcours` (e2e); branches no longer need to be up
+   to date with `master` before merging, and auto-merge is enabled.
 
 The deployment command expects `SURGE_LOGIN` and `SURGE_TOKEN` in the runtime
-environment. Never write those values to the repository, command line, logs or
+environment (GitHub Actions secrets of the same names for the workflow). Never write those values to the repository, command line, logs or
 conversation. Set `TRACFLUX_PREVIEW_DOMAIN` only when a custom preview domain
 is needed.
 
