@@ -1,3 +1,4 @@
+import { groupeEnConflit } from './timeline/conflitsVisibles';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 import CustomTooltip from './CustomTooltip';
@@ -598,6 +599,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
             />
             <div className="timeline-layout">
                 <TimelineSidebar
+                    conflictGroupIds={new Set(groups.filter(group => groupeEnConflit(group, groups, activeConflicts, selectedEscamotageGroup)).map(group => group.id))}
                     biCarrefourSeparator={biCarrefourSeparator}
                     cycleLength={cycleLength}
                     effectiveCycleLength={effectiveCycleLength}
