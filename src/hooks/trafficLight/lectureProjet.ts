@@ -37,6 +37,7 @@ export const migrerGroupes = (groupes: GroupeEnregistre[]): Groupe[] => groupes.
             id,
             name: g.name || `Groupe ${id}`,
             type: g.type || 'VL',
+            ...(g.signal ? { signal: g.signal } : {}),
             courant: g.courant || '',
             minGreen: g.minGreen !== undefined && !isNaN(g.minGreen) ? g.minGreen : 6,
             durations: dureesValides,

@@ -617,6 +617,7 @@ function PrintPreviewModal({
                                                         <th>GF</th>
                                                         <th>Nom</th>
                                                         <th>Type</th>
+                                                        <th>Signal</th>
                                                         <th>Courant</th>
                                                         <th>Mini</th>
                                                         <th>Jaune</th>
@@ -628,6 +629,7 @@ function PrintPreviewModal({
                                                             <td>{g.id}</td>
                                                             <td>{g.name || ''}</td>
                                                             <td>{g.type || 'VL'}</td>
+                                                            <td>{g.signal || ''}</td>
                                                             <td>{g.courant || ''}</td>
                                                             <td>{g.minGreen || 0}</td>
                                                             <td>{g.durations?.orange || 0}</td>

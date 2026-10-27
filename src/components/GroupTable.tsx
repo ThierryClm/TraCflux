@@ -4,6 +4,7 @@ import EmptyState from './EmptyState';
 import type { Groupe, TypeGroupe } from '../types/projet';
 import './GroupTable.css';
 import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { famillesPourType, libelleSignalIsr, signalAdmis, typeFormulaire } from '../utils/signauxIsr';
 
 type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
     durations?: Partial<Groupe['durations']>;
@@ -24,6 +25,7 @@ interface GroupTableProps {
 // art. 110 C1). Les feux piétons R12 n'ont pas de jaune : pour un piéton (et
 // un cycle géré par R12m), la colonne Jaune porte le temps de dégagement,
 // dessiné en rouge après le vert.
+const INFOBULLE_SIGNAL = "Signal lumineux de circulation du groupe (ISR, livre 1, 6e partie, art. 109-3)";
 const INFOBULLE_MINI = "Durée minimale du vert : 6 s au moins (ISR, 6e partie, art. 110 C1)";
 const INFOBULLE_JAUNE_ENTETE = "Véhicules : jaune fixe de 3 s (agglomération) ou 5 s (hors agglomération, feu au jaune clignotant). "
     + "Piétons : temps de dégagement, les feux piétons n'ayant pas de jaune (ISR, 6e partie, art. 110 C1)";
@@ -39,11 +41,31 @@ const infobulleJaune = (type: string | undefined): string => {
     return "Jaune fixe : 3 s en agglomération, 5 s hors agglomération ou pour un feu au jaune clignotant (ISR, 6e partie, art. 110 C1)";
 };
 
+/** Signal et courant proposés au choix du type, quand ces champs sont libres. */
+const PREREMPLISSAGE: Partial<Record<string, { signal: string; courant?: string }>> = {
+    V: { signal: 'R11v', courant: 'TD' },
+    P: { signal: 'R12', courant: 'Piéton' },
+    CY: { signal: 'R13c', courant: 'Cycle' },
+    B: { signal: 'R13b', courant: 'TD' },
+    FL: { signal: 'A13b' },
+    PP: { signal: 'A13b' }
+};
+
 const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }: GroupTableProps) => {
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
     const handleTypeChange = (id: number, value: TypeGroupe) => {
+        const groupe = groups.find(g => g.id === id);
         const updates: GroupUpdates = { type: value };
+        const avant = PREREMPLISSAGE[typeFormulaire(groupe?.type)];
+        const apres = PREREMPLISSAGE[value];
+        // Un champ vide, ou resté à la valeur proposée pour l'ancien type, prend
+        // celle du nouveau ; un choix fait à la main est conservé. Un signal
+        // absent de la liste du nouveau type est remplacé.
+        const libre = (actuel: string | undefined, propose: string | undefined) => !actuel || actuel === propose;
+        if (apres && (libre(groupe?.signal, avant?.signal) || !signalAdmis(value, groupe?.signal))) updates.signal = apres.signal;
+        if (apres?.courant && libre(groupe?.courant, avant?.courant)) updates.courant = apres.courant;
+        // Piétons et cycles : flèche imposée, comme auparavant.
         if (value === 'P') {
             updates.courant = 'Piéton';
         } else if (value === 'CY') {
@@ -93,6 +115,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                         <th>GF</th>
                         {showGroupNames && <th>Nom</th>}
                         <th>Type</th>
+                        <th title={tip(INFOBULLE_SIGNAL)}>Signal</th>
                         <th>Courant</th>
                         <th title={tip(INFOBULLE_MINI)}>Mini</th>
                         <th title={tip(INFOBULLE_JAUNE_ENTETE)}>Jaune</th>
@@ -129,6 +152,27 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                         <option value="CY">CY</option>
                                         <option value="FL">FL</option>
                                         <option value="PP">PP</option>
+                                    </select>
+                                </td>
+                                {/* Signal ISR */}
+                                <td>
+                                    <select
+                                        value={g.signal || ''}
+                                        onChange={(e) => updateGroupParams(g.id, { signal: e.target.value })}
+                                        className="input-signal"
+                                        aria-label={`Signal du groupe ${g.id}`}
+                                        title={tip(libelleSignalIsr(g.signal) ?? INFOBULLE_SIGNAL)}
+                                    >
+                                        <option value=""></option>
+                                        {/* Un code hors de la liste du type reste affiché plutôt que d'être effacé. */}
+                                        {g.signal && !signalAdmis(g.type, g.signal) && <option value={g.signal}>{g.signal}</option>}
+                                        {famillesPourType(g.type).map(f => (
+                                            <optgroup key={f.famille} label={f.famille}>
+                                                {f.signaux.map(s => (
+                                                    <option key={s.code} value={s.code} title={tip(s.libelle)}>{s.code}</option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
                                     </select>
                                 </td>
                                 {/* Courant */}

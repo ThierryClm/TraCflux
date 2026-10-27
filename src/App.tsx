@@ -2031,7 +2031,7 @@ function App() {
                 />
             </div>
         );
-    }, [showFloatingForm, groups, cycleLength, showGroupNamesForm, hoveredArrowGroupId, formPopup.renderToPopup, updateGroupParams]);
+    }, [showFloatingForm, groups, cycleLength, showGroupNamesForm, hoveredArrowGroupId, formPopup.renderToPopup, updateGroupParams, tooltipPrefs.config]);
 
     // Render properties into popup window
     useEffect(() => {

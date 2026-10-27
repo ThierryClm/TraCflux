@@ -37,6 +37,8 @@ export interface Groupe {
     id: number;
     name: string;
     type: TypeGroupe;
+    /** Signal de l'ISR, livre 1, 6e partie (R11v, R12, R14tg…). */
+    signal?: string;
     courant?: string;
     minGreen: number;
     durations: Durees;

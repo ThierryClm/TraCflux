@@ -13,9 +13,9 @@ describe('useUILayout', () => {
         const { result } = renderHook(() => useUILayout());
         expect(result.current.pixelsPerSecond).toBe(10);
         expect(result.current.activeTab).toBe('config');
-        expect(result.current.sidebarWidth).toBe(450);
+        expect(result.current.sidebarWidth).toBe(490);
         expect(result.current.sidebarVisible).toBe(true);
-        expect(localStorage.getItem('sidebar_width')).toBe('450');
+        expect(localStorage.getItem('sidebar_width')).toBe('490');
         expect(localStorage.getItem('sidebar_visible')).toBe('true');
         act(() => result.current.setSidebarVisible(false));
         expect(localStorage.getItem('sidebar_visible')).toBe('false');

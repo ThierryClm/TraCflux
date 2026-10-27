@@ -19,7 +19,7 @@ const useFloatingForm = (groupCount: number, activePFName = '') => {
         isOpen: showFloatingForm,
         onClose: () => setShowFloatingForm(false),
         title: popupTitle,
-        width: 470,
+        width: 510,
         height: Math.min(520, 110 + groupCount * 32)
     });
 
