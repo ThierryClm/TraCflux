@@ -98,7 +98,7 @@ const TimelineGridBackground = ({
                     }}
                     title={tip(`${restPoint.source === 'Synchro BTS' ? 'Attente BTS' : 'Point de repos'} — ${restPoint.duration}s à t=${restPoint.originalDeb}s`)}
                 >
-                    <span className="rest-point-label">{restPoint.source === 'Synchro BTS' ? 'Attente BTS' : 'Repos'}</span>
+                    <span className="rest-point-label" style={restPoint.source === 'Synchro BTS' ? { top: `${rulerHeight + 4}px` } : undefined}>{restPoint.source === 'Synchro BTS' ? 'Attente BTS' : 'Repos'}</span>
                 </div>
             ))}
 
