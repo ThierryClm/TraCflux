@@ -35,5 +35,10 @@ test('le type propose signal et courant, et le formulaire tient en entier dans l
     await premiere.locator('.input-type').selectOption('P');
     await expect(premiere.locator('.input-signal')).toHaveValue('R12');
     await expect(premiere.locator('.input-courant')).toHaveValue('Piéton');
+    // La liste se limite aux signaux du type ; PP propose le panneau A13b.
+    await expect(premiere.locator('.input-signal option')).toHaveText(['', 'R12', 'R12m', 'R12pps']);
+    await premiere.locator('.input-type').selectOption('PP');
+    await expect(premiere.locator('.input-signal')).toHaveValue('A13b');
+    await expect(premiere.locator('.input-signal option')).toHaveText(['', 'A13b']);
     await page.locator('.group-table-container').first().screenshot({ path: test.info().outputPath('formulaire-elargi.png') });
 });

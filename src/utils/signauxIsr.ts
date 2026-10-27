@@ -1,6 +1,7 @@
 /**
  * Signaux lumineux de circulation de l'ISR, livre 1, 6e partie (art. 109-3),
- * proposés dans la colonne « Signal » du formulaire des groupes.
+ * proposés dans la colonne « Signal » du formulaire des groupes, avec le
+ * panneau A13b lumineux qu'elle prévoit devant un passage piéton (art. 110-2).
  * Désignations reprises du texte consolidé du 4/09/2025.
  */
 export interface SignalIsr {
@@ -94,8 +95,41 @@ export const FAMILLES_SIGNAUX_ISR: FamilleSignauxIsr[] = [
             { code: 'R24', libelle: "Signal d'arrêt, rouge clignotant" },
             { code: 'R25', libelle: "Signal d'arrêt pour piétons" }
         ]
+    },
+    {
+        famille: 'A13b · Passage pour piétons',
+        signaux: [
+            { code: 'A13b', libelle: 'Panneau A13b lumineux, passage pour piétons, clignotant pendant le vert et le dégagement piétons (art. 110-2)' }
+        ]
     }
 ];
+
+/** Le type du groupe ramené aux valeurs du formulaire (anciens VL, TC, Piéton, Cycliste). */
+const TYPE_FORMULAIRE: Record<string, string> = { VL: 'V', TC: 'B', Piéton: 'P', Cycliste: 'CY' };
+export const typeFormulaire = (type: string | undefined): string => TYPE_FORMULAIRE[type ?? ''] ?? type ?? '';
+
+/** Signaux proposés pour chaque type ; sans type, toute la liste. */
+const SIGNAUX_PAR_TYPE: Record<string, string[]> = {
+    V: ['R11v', 'R11j', 'R14d', 'R14tg', 'R14td', 'R14dtg', 'R14dtd', 'R16d', 'R16tg', 'R16td', 'R16dtg', 'R16dtd', 'R22v', 'R22j'],
+    B: ['R13b', 'R13bj', 'R15b', 'R17', 'R18tg', 'R18td'],
+    CY: ['R12m', 'R13c', 'R19'],
+    P: ['R12', 'R12m', 'R12pps'],
+    FL: ['A13b'],
+    PP: ['A13b']
+};
+
+/** Familles de la liste, réduites aux signaux admis pour ce type de groupe. */
+export const famillesPourType = (type: string | undefined): FamilleSignauxIsr[] => {
+    const admis = SIGNAUX_PAR_TYPE[typeFormulaire(type)];
+    if (!admis) return FAMILLES_SIGNAUX_ISR;
+    return FAMILLES_SIGNAUX_ISR
+        .map(f => ({ ...f, signaux: f.signaux.filter(s => admis.includes(s.code)) }))
+        .filter(f => f.signaux.length > 0);
+};
+
+/** Le signal figure-t-il dans la liste proposée pour ce type ? */
+export const signalAdmis = (type: string | undefined, code: string | undefined): boolean =>
+    !!code && famillesPourType(type).some(f => f.signaux.some(s => s.code === code));
 
 const LIBELLES = new Map(FAMILLES_SIGNAUX_ISR.flatMap(f => f.signaux.map(s => [s.code, s.libelle] as const)));
 

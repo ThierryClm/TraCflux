@@ -4,7 +4,7 @@ import EmptyState from './EmptyState';
 import type { Groupe, TypeGroupe } from '../types/projet';
 import './GroupTable.css';
 import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
-import { FAMILLES_SIGNAUX_ISR, libelleSignalIsr } from '../utils/signauxIsr';
+import { famillesPourType, libelleSignalIsr, signalAdmis, typeFormulaire } from '../utils/signauxIsr';
 
 type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
     durations?: Partial<Groupe['durations']>;
@@ -42,11 +42,13 @@ const infobulleJaune = (type: string | undefined): string => {
 };
 
 /** Signal et courant proposés au choix du type, quand ces champs sont libres. */
-const PREREMPLISSAGE: Partial<Record<string, { signal: string; courant: string }>> = {
+const PREREMPLISSAGE: Partial<Record<string, { signal: string; courant?: string }>> = {
     V: { signal: 'R11v', courant: 'TD' },
     P: { signal: 'R12', courant: 'Piéton' },
     CY: { signal: 'R13c', courant: 'Cycle' },
-    B: { signal: 'R13b', courant: 'TD' }
+    B: { signal: 'R13b', courant: 'TD' },
+    FL: { signal: 'A13b' },
+    PP: { signal: 'A13b' }
 };
 
 const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = true, onDetach, hoveredGroupId, tooltipsEnabled = true, titreEnBandeau = false }: GroupTableProps) => {
@@ -55,13 +57,14 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
     const handleTypeChange = (id: number, value: TypeGroupe) => {
         const groupe = groups.find(g => g.id === id);
         const updates: GroupUpdates = { type: value };
-        const avant = PREREMPLISSAGE[groupe?.type ?? ''];
+        const avant = PREREMPLISSAGE[typeFormulaire(groupe?.type)];
         const apres = PREREMPLISSAGE[value];
         // Un champ vide, ou resté à la valeur proposée pour l'ancien type, prend
-        // celle du nouveau ; un choix fait à la main est conservé.
+        // celle du nouveau ; un choix fait à la main est conservé. Un signal
+        // absent de la liste du nouveau type est remplacé.
         const libre = (actuel: string | undefined, propose: string | undefined) => !actuel || actuel === propose;
-        if (apres && libre(groupe?.signal, avant?.signal)) updates.signal = apres.signal;
-        if (apres && libre(groupe?.courant, avant?.courant)) updates.courant = apres.courant;
+        if (apres && (libre(groupe?.signal, avant?.signal) || !signalAdmis(value, groupe?.signal))) updates.signal = apres.signal;
+        if (apres?.courant && libre(groupe?.courant, avant?.courant)) updates.courant = apres.courant;
         // Piétons et cycles : flèche imposée, comme auparavant.
         if (value === 'P') {
             updates.courant = 'Piéton';
@@ -161,9 +164,9 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                         title={tip(libelleSignalIsr(g.signal) ?? INFOBULLE_SIGNAL)}
                                     >
                                         <option value=""></option>
-                                        {/* Un ancien code hors liste reste affiché plutôt que d'être effacé. */}
-                                        {g.signal && !libelleSignalIsr(g.signal) && <option value={g.signal}>{g.signal}</option>}
-                                        {FAMILLES_SIGNAUX_ISR.map(f => (
+                                        {/* Un code hors de la liste du type reste affiché plutôt que d'être effacé. */}
+                                        {g.signal && !signalAdmis(g.type, g.signal) && <option value={g.signal}>{g.signal}</option>}
+                                        {famillesPourType(g.type).map(f => (
                                             <optgroup key={f.famille} label={f.famille}>
                                                 {f.signaux.map(s => (
                                                     <option key={s.code} value={s.code} title={tip(s.libelle)}>{s.code}</option>
