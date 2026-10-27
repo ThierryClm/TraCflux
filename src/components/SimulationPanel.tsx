@@ -15,6 +15,8 @@ interface HoveredConflict {
 }
 
 interface SimulationPanelProps {
+    compenserBts?: boolean;
+    onCompenserBts?: (value: boolean) => void;
     actionData: ActionMicro[];
     selectedActions: number[];
     onToggle: (actionId: number) => void;
@@ -47,6 +49,8 @@ type Dialogue =
 const rien = () => {};
 
 const SimulationPanel = ({
+    compenserBts = false,
+    onCompenserBts = rien,
     actionData,
     selectedActions,
     onToggle,
@@ -76,9 +80,10 @@ const SimulationPanel = ({
             actionData,
             selectedActions,
             cycleLength,
-            conflictMatrix
+            conflictMatrix,
+            compenserBts
         );
-    }, [groups, actionData, selectedActions, cycleLength, conflictMatrix]);
+    }, [groups, actionData, selectedActions, cycleLength, conflictMatrix, compenserBts]);
 
     const { simulatedCycleLength, conflicts: rawConflicts, removedPeriods, contractions } = simulationResult;
 
@@ -247,6 +252,16 @@ const SimulationPanel = ({
                     {selectedCount}/{activeActions.length} actions
                 </span>
             </div>
+
+            <label className="simulation-bts-option">
+                <input type="checkbox" checked={compenserBts} onChange={e => onCompenserBts(e.target.checked)} />
+                Compenser les contractions à la synchro BTS
+            </label>
+            {simulationResult.restPoints.filter(r => r.source === 'Synchro BTS').map(r => (
+                <p key={r.actionId} className="simulation-bts-info">
+                    Attente BTS : {r.duration} s — {simulatedCycleLength === cycleLength ? 'cycle maintenu à' : 'cycle simulé de'} {simulatedCycleLength} s
+                </p>
+            ))}
 
             {/* Le scénario choisi, puis la liste : les scénarios fixes Tout
                 coché et Tout décoché, ceux du plan, Nouveau scénario. La liste

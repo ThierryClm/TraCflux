@@ -44,6 +44,8 @@ interface WorkspaceSidebarModel {
     simulationEnabled: boolean;
     actionData: ActionMicro[];
     simulationSelectedActions: number[];
+    compenserBts: boolean;
+    setCompenserBts: (value: boolean) => void;
     toggleSimulationAction: (id: number) => void;
     cycleLength: number;
     conflictMatrix: Matrice;
@@ -135,7 +137,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         tip,
         simulationEnabled,
         actionData,
-        simulationSelectedActions,
+        simulationSelectedActions, compenserBts, setCompenserBts,
         toggleSimulationAction,
         cycleLength,
         conflictMatrix,
@@ -264,6 +266,8 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                     ) : simulationEnabled ? (
                         <>
                             <SimulationPanel
+                                compenserBts={compenserBts}
+                                onCompenserBts={setCompenserBts}
                                 actionData={actionData}
                                 selectedActions={simulationSelectedActions}
                                 onToggle={toggleSimulationAction}

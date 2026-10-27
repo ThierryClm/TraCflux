@@ -602,3 +602,14 @@
     opacity: 0.45;
     cursor: default;
 }
+
+.simulation-bts-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 8px 0;
+}
+.simulation-bts-info {
+    margin: 4px 0 8px;
+    font-size: 0.85em;
+}

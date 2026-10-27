@@ -403,7 +403,7 @@ function App() {
         isPlayingSimulation, setIsPlayingSimulation,
         simulationCurrentTime, setSimulationCurrentTime,
         hoveredDiagramTime, setHoveredDiagramTime,
-        simulationSpeed, cycleSimulationSpeed
+        simulationSpeed, cycleSimulationSpeed, compenserBts, setCompenserBts
     } = useSimulationUI();
     const [hoveredArrowGroupId, setHoveredArrowGroupId] = useState<number | null>(null);
     // Action survolée dans le panneau de simulation : ses flèches (groupe et
@@ -661,9 +661,10 @@ function App() {
             actionData,
             simulationSelectedActions,
             cycleLength,
-            conflictMatrix
+            conflictMatrix,
+            compenserBts
         );
-    }, [simulationEnabled, groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix]);
+    }, [simulationEnabled, groups, actionData, simulationSelectedActions, cycleLength, conflictMatrix, compenserBts]);
 
     // Quand la simulation change (case cochée ou décochée, scénario, durée de
     // repos), le curseur reste au même instant du cycle d'origine
@@ -2324,7 +2325,7 @@ function App() {
                     model={{
                         sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
-                        tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction,
+                        tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction, compenserBts, setCompenserBts,
                         cycleLength, conflictMatrix, setMatrixValue, hoveredActionId,
                         setHoveredActionId, setSurvolActionSimulation, setHoveredConflict, simulationName, simulationScenarios, choisirScenarioSimulation,
                         creerScenarioSimulation, enregistrerScenarioSimulation, supprimerScenarioSimulation, activeTrafficDataset,

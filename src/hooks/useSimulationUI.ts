@@ -9,6 +9,7 @@ export type VitesseSimulation = (typeof VITESSES_SIMULATION)[number];
  * Gère les états UI de la simulation (lecture, temps courant, survol du diagramme).
  */
 const useSimulationUI = () => {
+    const [compenserBts, setCompenserBts] = useState(false);
     const [isPlayingSimulation, setIsPlayingSimulation] = useState(false);
     const [simulationCurrentTime, setSimulationCurrentTime] = useState(0);
     const [hoveredDiagramTime, setHoveredDiagramTime] = useState<number | null>(null);
@@ -26,6 +27,7 @@ const useSimulationUI = () => {
     }, []);
 
     return {
+        compenserBts, setCompenserBts,
         isPlayingSimulation, setIsPlayingSimulation,
         simulationCurrentTime, setSimulationCurrentTime,
         hoveredDiagramTime, setHoveredDiagramTime,

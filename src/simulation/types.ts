@@ -35,6 +35,7 @@ export interface Contraction {
 }
 
 export interface SimulationRestPoint {
+    source?: 'Synchro BTS';
     deb: number;
     originalDeb: number;
     duration: number;

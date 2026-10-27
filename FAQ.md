@@ -373,7 +373,11 @@ Pas de limite stricte. L'application a été testée avec une trentaine de group
 
 Les actions **se combinent** : chacune s'applique au cycle déjà transformé par les précédentes — un point de repos décale la suite pour tous les groupes, un adaptatif partiel seulement pour les groupes de sa plage. Une action dont la zone chevauche la fin du cycle (de 102 à 8 s sur un cycle de 120 s, par exemple) est prise en compte de part et d'autre. Le vert escamotable est barré d'un **bandeau hachuré** sur sa moitié basse, le vert restant visible au-dessus ; l'escamotage coché le fait disparaître. Survoler une action dans la liste allume ses flèches dans l'image du carrefour.
 
-Six familles d'actions ne sont pas rejouées, parce qu'elles n'agissent pas sur le déroulé du cycle : début et fin de bande passante, priorité piétons, signal d'aide à la conduite, synchro BTS, flèche d'anticipation. Elles n'apparaissent donc pas dans la liste du panneau.
+Les débuts et fins de bande passante, priorités piétons, signaux d'aide à la conduite, synchros BTS, instants Co et flèches d'anticipation n'ont pas de case individuelle dans le panneau.
+
+L'option **Compenser les contractions à la synchro BTS**, décochée par défaut, restitue à la prochaine synchro le temps réellement retiré par les adaptatifs verticaux sans plage et les escamotages de phase. Une contraction de 8 s sur un cycle de 90 s produit ainsi une **attente BTS de 8 s**, matérialisée sur le diagramme, et retrouve un cycle de 90 s. Plusieurs contractions se cumulent sans double comptage ; chaque synchro compense les réductions depuis la précédente, ou depuis le début du cycle pour la première. Une contraction située après la dernière synchro reste sans compensation. Les repos explicites conservent leur propre durée.
+
+Cette option aide à préserver les rendez-vous de synchronisation entre carrefours pour une **coordination ou une onde verte** ; elle ne calcule pas leurs décalages ni leurs bandes passantes. C'est un réglage de simulation de la session, indépendant des cases enregistrées dans les scénarios ; il repart décoché à la réouverture de l'application.
 
 La combinaison que vous retenez, une fois nommée, devient un **scénario** enregistré avec le plan de feu — voir la question suivante.
 

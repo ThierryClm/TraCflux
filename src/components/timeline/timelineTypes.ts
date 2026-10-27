@@ -8,6 +8,7 @@ export interface TimelineSimulatedGroup {
 }
 
 export interface TimelineRestPoint {
+    source?: 'Synchro BTS';
     deb: number;
     duration: number;
     originalDeb: number;
