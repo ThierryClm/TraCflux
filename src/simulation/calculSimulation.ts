@@ -1,3 +1,4 @@
+import { compenserAuxSynchrosBts } from './operations/synchroBts';
 import type { ActionMicro, Groupe, Matrice } from '../types/projet';
 import type { EtatSimulation, SimulationResult } from './types';
 import { calculateSimulatedConflicts } from './conflits';
@@ -23,7 +24,8 @@ export const calculateSimulatedDiagram = (
     actionData: ActionMicro[],
     selectedActionIds: number[],
     cycleLength: number,
-    conflictMatrix: Matrice
+    conflictMatrix: Matrice,
+    compenserBts = false
 ): SimulationResult => {
     const etat: EtatSimulation = {
         actionData,
@@ -58,6 +60,7 @@ export const calculateSimulatedDiagram = (
     appliquerAdaptatifsVerticaux(etat);    // 4.
     appliquerEscamotagesDePhase(etat);     // 5. en dernier, pour ne pas cumuler avec les effets existants
     placerZonesDeRepos(etat);
+    if (compenserBts) compenserAuxSynchrosBts(etat);
 
     const { simulatedGroups, simulatedCycleLength, timeShifts, removedPeriods, contractions, restPoints, journal } = etat;
     return {

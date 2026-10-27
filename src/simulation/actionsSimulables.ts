@@ -3,8 +3,9 @@ import type { ActionMicro } from '../types/projet';
 /**
  * Les actions que la simulation sait rejouer.
  *
- * Sept familles n'ont aucun effet sur le déroulé d'un cycle — elles annotent le
- * diagramme ou concernent un autre système — et la simulation les écarte.
+ * Ces familles n'ont pas de case individuelle : elles annotent le diagramme
+ * ou concernent un autre système. Les BTS participent toutefois à la
+ * compensation lorsque l'option globale dédiée est activée.
  * Cette liste était enfermée dans le composant ; le dossier imprimé en aurait
  * tenu une copie, et les deux listes auraient fini par diverger comme l'ont
  * fait, ici même, le tableau de trafic imprimé et celui de l'écran. Elle est

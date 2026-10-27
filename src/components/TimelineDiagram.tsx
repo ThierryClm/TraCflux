@@ -451,8 +451,8 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
     }));
 
     // Get all "Synchro BTS" actions
-    // Repère de synchronisation : hors simulation (cf. ACTIONS_HORS_SIMULATION),
-    // il n'a rien à cocher et reste affiché en mode simulation comme ailleurs.
+    // Repère de synchronisation sans case individuelle. L'option de compensation
+    // BTS restitue le temps contracté en amont ; la flèche garde son instant.
     // If plage1 is not set, default to 1 (first group)
     // If plage2 is not set, default to groups.length (total number of groups)
     const synchroBtsActions = actionData.filter(action => {
@@ -470,8 +470,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
     }));
 
     // Get all "Instant Co" actions
-    // Repère de synchronisation : hors simulation (cf. ACTIONS_HORS_SIMULATION),
-    // il n'a rien à cocher et reste affiché en mode simulation comme ailleurs.
+    // Repère de synchronisation hors simulation, sans case individuelle.
     // If plage1 is not set, default to 1 (first group)
     // If plage2 is not set, default to groups.length (total number of groups)
     const instantCoActions = actionData.filter(action => {
