@@ -1,3 +1,4 @@
+import { groupeEnConflit } from './conflitsVisibles';
 import React from 'react';
 import CustomTooltip from '../CustomTooltip';
 import { entier } from '../../utils/entier';
@@ -37,22 +38,7 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
     const { groups, pixelsPerSecond, cycleLength, effectiveCycleLength, hoveredActionId, setHoveredActionId, dragState, handleActionDragStart, getShiftedActionPosition } = ctx;
 
     const groupActions = getActionsForGroup(group.id);
-    // Filter out conflicts that are managed by a SELECTED Escamotage action
-    const isConflict = activeConflicts && activeConflicts.some(c => {
-        if (c.from !== group.id && c.to !== group.id) return false;
-        // Check if this conflict is inhibited by a selected Escamotage action
-        const isInhibitedByEscamotage = selectedEscamotageGroup.some(action => {
-            const sourceGfId = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-            const targetGfId = entier(action.actGf1?.toString().replace(/[Gg]/g, '').trim()) || 0;
-            return (sourceGfId === c.from && targetGfId === c.to) ||
-                   (sourceGfId === c.to && targetGfId === c.from);
-        });
-        if (isInhibitedByEscamotage) return false;
-        // Check if first group has a phaseFlag (aiguillage/escamotage)
-        const fromGrp = groups.find(g => g.id === c.from);
-        if (fromGrp?.phaseFlag) return false;
-        return true;
-    });
+    const isConflict = groupeEnConflit(group, groups, activeConflicts, selectedEscamotageGroup);
     const orangeDuration = group.durations.orange || 3;
 
     // Get simulated group data if in simulation mode
