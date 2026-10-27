@@ -14,6 +14,7 @@ const groupNameBackground = (type: TypeGroupe) => {
 };
 
 interface TimelineSidebarProps {
+    conflictGroupIds?: Set<number>;
     biCarrefourSeparator?: number | null;
     cycleLength: number;
     effectiveCycleLength: number;
@@ -36,6 +37,7 @@ interface TimelineSidebarProps {
 }
 
 const TimelineSidebar = ({
+    conflictGroupIds,
     biCarrefourSeparator,
     cycleLength,
     effectiveCycleLength,
@@ -92,7 +94,7 @@ const TimelineSidebar = ({
             return (
                 <div
                     key={group.id}
-                    className="row-label-container"
+                    className={`row-label-container${conflictGroupIds?.has(group.id) ? ' row-conflict-fixed' : ''}`}
                     style={rowStyle}
                     tabIndex={0}
                     onClick={() => onGroupClick(group)}
