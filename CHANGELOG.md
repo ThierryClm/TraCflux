@@ -7,6 +7,58 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.8] — 2026-10-28
+
+### Ajouté
+
+- **Capacité des plans de feu et scénarios** (menu *Diagramme → Capacité des plans de feu…*, ex-comparateur
+  de capacité). Une liste déroulante propose les plans de feu à cocher et, en retrait sous chacun, ses
+  scénarios enregistrés : un plan s'évalue à ses valeurs nominales, un scénario sur le diagramme simulé de
+  ses actions. On y aligne les programmes de la journée, plusieurs versions d'un diagramme ou un plan et
+  ses variantes de micro-régulation. Un plan dont le jeu de trafic est vide est grisé ; la colonne V.Utile
+  devient facultative ; la fenêtre s'ajuste au tableau. Le tableau peut s'ajouter au **dossier imprimé**.
+  Les réglages sont enregistrés avec le projet.
+- **Simulation : compensation des contractions à la synchro BTS.** Option, décochée par défaut et proposée
+  seulement si le plan a une synchro BTS valide : le temps retiré par les adaptatifs verticaux sans plage et
+  les escamotages de phase est restitué à la prochaine synchro, sous forme d'attente, pour préserver la
+  coordination. Les repères de la synchro compensée laissent place à la bande d'attente.
+- **Formulaire : colonne Signal** (ISR, livre 1, 6e partie), juste après Type. La liste se limite aux
+  signaux du type choisi (V : R11, R14, R16, R22 ; B : R13b, R13bj, R15b, R17, R18 ; CY : R12m, R13c,
+  R19 ; P : R12 ; FL et PP : A13b), et le choix du type propose le signal et le courant (V → R11v et TD,
+  P → R12 et Piéton, CY → R13c et Cycle, B → R13b et TD, FL et PP → A13b). Le panneau Configuration est
+  élargi pour la loger.
+- **Aide en ligne dans une fenêtre détachée**, non modale et déplaçable sur un autre écran ; l'application
+  reste utilisable pendant qu'elle est ouverte.
+- **Assistant conception** : chaque chapitre se valide ou s'invalide, avec effet immédiat sur le plan ;
+  l'assistant reste grisé tant que la matrice, le formulaire ou le trafic ne sont pas assez renseignés.
+- **Accès à la FAQ** sous Aide, dans le menu À propos ; FAQ et présentation détaillée lisibles sur
+  tracflux.com.
+
+### Modifié
+
+- **FAQ recentrée sur les questions-réponses** : le détail des démarches (premier carrefour, assistant,
+  simulation, scénarios, mise en page) passe dans l'aide en ligne, qui gagne une section *Démarche
+  conseillée sur un nouveau carrefour*.
+- **Diagramme** : le repère rouge d'un conflit, épaissi, reste visible dans la colonne fixe pendant le
+  défilement horizontal.
+- **Bandeau « Nouvelle version disponible »** : infobulle « Par sécurité, enregistrer le projet avant de
+  recharger » ; la FAQ sur les mises à jour décrit enfin ce bandeau.
+- **Carrefour exemple** : plan dessiné à la place du croquis au trait.
+
+### Corrigé
+
+- **Simulation** : la plage d'un escamotage suit le vert déplacé par un adaptatif, un escamotage de phase
+  ou un point de repos coché ; les infobulles des actions donnent leurs secondes simulées.
+- **Impression** : le tableau des conditions de micro-régulation garde les largeurs de colonnes réglées dans
+  le projet.
+- **Téléphone** : matrice entière en portrait, assistant conception sur tout l'écran, diagramme d'onde verte
+  ramené à la largeur de l'écran.
+
+### Interne
+
+- Dépendances de développement mises à jour (DOMPurify, undici, fast-uri, serialize-javascript).
+- Navigateur Brave ajouté aux parcours de test ; parcours des fenêtres détachées fiabilisés.
+
 ## [1.5.7] — 2026-10-24
 
 ### Ajouté
