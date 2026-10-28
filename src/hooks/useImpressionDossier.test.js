@@ -29,12 +29,21 @@ describe('mise en page du dossier imprimé', () => {
         expect(relu.result.current.dossierPortrait).toBe(true);
     });
 
-    it('tableau des conditions absent : largeur reconstruite à partir des colonnes réglables', () => {
+    it('colonnes imprimées : largeurs réglées dans le projet, sans dépendre du tableau affiché', () => {
         const { result } = renderHook(() => useMiseEnPageImpression({
             ...entrees, actionColWidths: { description: 200, micro: 500, abrv: 40 }
         }));
-        expect(result.current.largeurConditionsImpression).toBe(343 + 200 + 500 + 40);
+        const colonnes = result.current.colonnesConditionsImpression;
+        expect(colonnes).toEqual([38, 223, 209, 45, 39, 49, 503, 26, 26, 26, 26, 26, 26]);
+        expect(result.current.largeurConditionsImpression).toBe(colonnes.reduce((a, b) => a + b, 0));
         expect(result.current.microPrintStyle).toBeNull();
+    });
+
+    it('colonnes imprimées : réglages absents ou hors bornes ramenés à ceux de l’écran', () => {
+        const { result } = renderHook(() => useMiseEnPageImpression({
+            ...entrees, actionColWidths: { micro: 9999 }
+        }));
+        expect(result.current.colonnesConditionsImpression.slice(2, 7)).toEqual([169, 45, 39, 47, 703]);
     });
 });
 

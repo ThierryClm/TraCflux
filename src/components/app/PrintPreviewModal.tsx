@@ -65,6 +65,7 @@ interface PrintPreviewModalProps {
         dossierPrintWidth: number;
         descriptionPrintStyle: CSSProperties | null;
         largeurConditionsImpression: number;
+        colonnesConditionsImpression: number[];
         microPrintStyle: CSSProperties | null;
         printPreviewPageRef: RefObject<HTMLDivElement | null>;
         /** Imprime l'aperçu affiché dans un onglet indépendant. */
@@ -144,6 +145,7 @@ function PrintPreviewModal({
         dossierPrintWidth,
         descriptionPrintStyle,
         largeurConditionsImpression,
+        colonnesConditionsImpression,
         microPrintStyle,
         printPreviewPageRef,
         imprimerApercu,
@@ -310,7 +312,9 @@ function PrintPreviewModal({
                                         {actionData.filter(row => row.gf || row.action || row.description || row.deb !== '' || row.fin !== '').length > 0 && (
                                             <div className="print-actions-section">
                                                 <h4>Conditions de micro-régulation</h4>
-                                                <table className="print-actions-table" style={{ width: `${largeurConditionsImpression}px` }}>
+                                                <table className="print-actions-table" style={{ width: `${largeurConditionsImpression}px`, tableLayout: 'fixed' }}>
+                                                    {/* Largeurs de l'écran, colonne par colonne : cf. colonnesConditionsImpression. */}
+                                                    <colgroup>{colonnesConditionsImpression.map((l, i) => <col key={i} style={{ width: `${l}px` }} />)}</colgroup>
                                                     <thead>
                                                         <tr>
                                                             <th>GF</th>
@@ -884,7 +888,9 @@ function PrintPreviewModal({
                                                     et le contenu démarrait plus ou moins haut d'un plan de
                                                     feu à l'autre. */}
                                                 <div style={zoomConditions !== 1 ? { zoom: zoomConditions.toFixed(3) } : undefined}>
-                                                <table className="print-actions-table" style={{ width: `${largeurConditionsImpression}px` }}>
+                                                <table className="print-actions-table" style={{ width: `${largeurConditionsImpression}px`, tableLayout: 'fixed' }}>
+                                                    {/* Largeurs de l'écran, colonne par colonne : cf. colonnesConditionsImpression. */}
+                                                    <colgroup>{colonnesConditionsImpression.map((l, i) => <col key={i} style={{ width: `${l}px` }} />)}</colgroup>
                                                     <thead>
                                                         <tr>
                                                             <th>GF</th>

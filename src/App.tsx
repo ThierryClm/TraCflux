@@ -733,7 +733,8 @@ function App() {
     // largeurs relevées sur le tableau des conditions (cf. hooks/useImpressionDossier).
     const {
         dossierPortrait, setDossierPortrait, dossierPrintWidth,
-        microPrintStyle, descriptionPrintStyle, mesurerColonnesImpression, largeurConditionsImpression
+        microPrintStyle, descriptionPrintStyle, mesurerColonnesImpression, largeurConditionsImpression,
+        colonnesConditionsImpression
     } = useMiseEnPageImpression({ actionColWidths, activeTab, simulationEnabled, phasageBulleEnabled });
 
     // Saisie du phasage bulle : brouillon, validé au clic sur OK.
@@ -2560,6 +2561,7 @@ function App() {
                     dossierPrintWidth,
                     descriptionPrintStyle,
                     largeurConditionsImpression,
+                    colonnesConditionsImpression,
                     microPrintStyle,
                     printPreviewPageRef,
                     imprimerApercu,
