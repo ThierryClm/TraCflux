@@ -375,3 +375,15 @@ body.sepia-mode .cc-scenario-nom { color: #00796b; }
     color: #444;
     margin-top: 6px;
 }
+
+/* Noms de plan et de scénario : à la ligne plutôt que d'élargir la colonne,
+   pour que la fenêtre tienne plus de plans côte à côte. */
+.cc-table th.cc-pf-header {
+    white-space: normal;
+    min-width: 7em;
+}
+
+.cc-scenario-nom {
+    max-width: 14em;
+    margin: 0 auto;
+}

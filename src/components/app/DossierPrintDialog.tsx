@@ -286,10 +286,10 @@ function DossierPrintDialog({
                             {/* Comparateur de capacité : le tableau tel que réglé dans sa
                                 fenêtre — plans, scénarios, jeu de trafic et V.Utile —, en fin
                                 de dossier. */}
-                            <label title={tip("Le tableau du comparateur de capacité, avec les plans de feu, scénarios, jeu de trafic et colonnes choisis dans sa fenêtre (menu Diagramme → Comparer la capacité des plans de feu).")}>
+                            <label title={tip("Le tableau du comparateur de capacité, avec les plans de feu, scénarios, jeu de trafic et colonnes choisis dans sa fenêtre (menu Diagramme → Capacité des plans de feu).")}>
                                 <input type="checkbox" checked={dossierSections.comparateurCapacite || false}
                                     onChange={e => { const v = e.target.checked; setDossierSections(s => ({ ...s, comparateurCapacite: v })); }} />
-                                Comparateur de capacité
+                                Capacité des plans de feu et scénarios
                             </label>
                         </div>
                         <div className="modal-footer">

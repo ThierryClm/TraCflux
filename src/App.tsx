@@ -618,7 +618,7 @@ function App() {
         geometryKey: 'capacityComparison',
         isOpen: capacityCompareModal,
         onClose: () => setCapacityCompareModal(false),
-        title: 'Comparer la capacité des plans de feu',
+        title: 'Capacité des plans de feu et scénarios',
         width: 920,
         height: 620,
         contentSize: capacityCompareModal ? tailleComparateur : null

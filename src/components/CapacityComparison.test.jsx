@@ -42,7 +42,7 @@ describe('CapacityComparison', () => {
     it('liste déroulante : plans à cocher, scénarios en retrait, plan sans trafic grisé', () => {
         const setScenarios = vi.fn();
         rendre({ setSelectedScenarios: setScenarios });
-        fireEvent.click(screen.getByRole('button', { name: /colonne/ }));
+        fireEvent.click(screen.getByRole('button', { name: /plans? de feu comparés?/ }));
         expect(screen.getByLabelText('HPM')).not.toBeDisabled();
         expect(screen.getByLabelText('Nuit')).toBeDisabled();
         expect(screen.getByLabelText('Avec AV').closest('label')).toHaveClass('cc-scenario-checkbox');

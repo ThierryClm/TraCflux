@@ -596,7 +596,7 @@ const MenuBar = ({
                     title: [INFOBULLE_ASSISTANT, assistantBlocage, !traficRenseigne ? 'Renseignez le trafic du plan de feu (onglet Trafic).' : ''].filter(Boolean).join('\n\n')
                 },
                 {
-                    label: 'Comparer la capacité des plans de feu...',
+                    label: 'Capacité des plans de feu...',
                     action: 'compareCapacity',
                     disabled: pfCount < 2,
                     title: pfCount < 2 ? 'Nécessite au moins 2 plans de feu' : 'Tableau comparatif du vert utile et de la capacité utilisée'

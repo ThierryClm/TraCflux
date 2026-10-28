@@ -99,16 +99,25 @@ const CapacityComparison = ({
         const style = window.getComputedStyle(racine);
         const premier = racine.children[0].getBoundingClientRect();
         const dernier = racine.children[racine.children.length - 1].getBoundingClientRect();
-        const hauteur = (dernier.bottom - premier.top)
+        // La zone du tableau se comprime à la hauteur de la fenêtre (elle
+        // défile) : sa part cachée s'ajoute, sans quoi la fenêtre ne
+        // grandissait jamais quand on ajoutait des plans ou des scénarios.
+        const zone = racine.querySelector<HTMLElement>('[data-fit-scroll]');
+        const cacheV = zone ? Math.max(0, zone.scrollHeight - zone.clientHeight) : 0;
+        const hauteur = (dernier.bottom - premier.top) + cacheV
             + (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
         // La largeur ne se lit pas non plus sur le conteneur : il occupe la
         // fenêtre, et rendrait toujours la largeur courante. C'est le plus
         // large de ses blocs qui commande — le tableau, le plus souvent.
         const largeur = Math.max(...Array.from(racine.children, el => el.scrollWidth))
             + (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+        // Marge de l'épaisseur d'une barre de défilement : sans elle, l'en-tête
+        // d'un scénario (trois lignes) ou une barre horizontale suffisait à
+        // faire apparaître un ascenseur vertical.
+        const MARGE = 16;
         if (hauteur > 0) onContentSize({
-            width: Math.ceil(largeur),
-            height: Math.ceil(hauteur)
+            width: Math.ceil(largeur) + MARGE,
+            height: Math.ceil(hauteur) + MARGE
         });
     });
 
@@ -150,7 +159,10 @@ const CapacityComparison = ({
         doc.addEventListener('mousedown', fermer);
         return () => doc.removeEventListener('mousedown', fermer);
     }, [listeOuverte]);
-    const nbCoches = colonnes.length;
+    const nbPlans = colonnes.filter(c => !c.scenario).length;
+    const nbScenarios = colonnes.length - nbPlans;
+    const libelleListe = `${nbPlans} plan${nbPlans > 1 ? 's' : ''} de feu comparé${nbPlans > 1 ? 's' : ''}`
+        + (nbScenarios ? ` + ${nbScenarios} scénario${nbScenarios > 1 ? 's' : ''}` : '');
 
     const handleExport = async () => {
         if (!tableRef.current) return;
@@ -192,7 +204,7 @@ const CapacityComparison = ({
                     <span className="cc-controls-label">Plans de feu et scénarios à comparer :</span>
                     <button type="button" className="cc-pf-liste-bouton" aria-expanded={listeOuverte}
                         onClick={() => setListeOuverte(o => !o)}>
-                        {nbCoches} colonne{nbCoches > 1 ? 's' : ''} comparée{nbCoches > 1 ? 's' : ''} ▾
+                        {libelleListe} ▾
                     </button>
                     {listeOuverte && (
                         <div className="cc-pf-liste" role="group" aria-label="Plans de feu et scénarios à comparer">
