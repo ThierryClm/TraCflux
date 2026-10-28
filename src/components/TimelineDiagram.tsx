@@ -219,7 +219,9 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
     const {
         effectiveCycleLength,
         getShiftedActionPosition,
-        getSimulatedGroup
+        getSimulatedGroup,
+        projeterInstant,
+        secondesAffichees
     } = createTimelineSimulation({
         groups,
         cycleLength,
@@ -569,7 +571,9 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
         setHoveredActionId,
         dragState,
         handleActionDragStart,
-        getShiftedActionPosition
+        getShiftedActionPosition,
+        getSimulatedGroup,
+        projeterInstant
     };
 
     return (<ZoneVerrouSaisie section="diagramme">
@@ -861,6 +865,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
             cycleLength={cycleLength}
             dragState={dragState}
             microVariableNames={microVariableNames}
+            secondesAffichees={secondesAffichees}
         />
     </ZoneVerrouSaisie>);
 };

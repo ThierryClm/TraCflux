@@ -329,10 +329,13 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                     if (sourceGfId === 0 || targetGfId !== group.id) return;
                     const sourceGroup = groups.find(g => g.id === sourceGfId);
                     if (!sourceGroup) return;
+                    // Vert du groupe source tel que la simulation l'a placé : la
+                    // plage suit les repos, adaptatifs et escamotages de phase cochés.
+                    const sourceSim = getSimulatedGroup(sourceGfId);
                     const intergreenSourceToTarget = Number(conflictMatrix[sourceGfId - 1]?.[targetGfId - 1] || 0);
                     const intergreenTargetToSource = Number(conflictMatrix[targetGfId - 1]?.[sourceGfId - 1] || 0);
-                    const sourceStart = sourceGroup.offset % currentCycleLen;
-                    const sourceEndRaw = sourceStart + sourceGroup.durations.green;
+                    const sourceStart = (sourceSim ? sourceSim.simulatedOffset : sourceGroup.offset) % currentCycleLen;
+                    const sourceEndRaw = sourceStart + (sourceSim ? sourceSim.simulatedGreen : sourceGroup.durations.green);
                     const sourceEnd = sourceEndRaw === currentCycleLen ? currentCycleLen : (sourceEndRaw % currentCycleLen);
                     // Début : vert source − interverts cible→source ; fin : fin de vert source + interverts source→cible
                     const cutStart = ((sourceStart - intergreenTargetToSource) % currentCycleLen + currentCycleLen) % currentCycleLen;
