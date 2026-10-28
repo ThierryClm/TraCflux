@@ -3,6 +3,18 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 import { setSwUpdatePending, setSwRegisteredUrl } from '../utils/swStatus';
 import './ReloadPrompt.css';
 
+const INFOBULLE_RECHARGER = 'Par sécurité, enregistrer le projet avant de recharger';
+
+// Le bandeau vit hors de l'application (main.tsx) : il lit directement la
+// préférence « Infobulles → Page principale » enregistrée sur le poste.
+const infobullesPagePrincipale = (): boolean => {
+    try {
+        return JSON.parse(localStorage.getItem('tracflux.tooltips') || '{}').main !== false;
+    } catch {
+        return true;
+    }
+};
+
 /**
  * Bandeau discret proposant de recharger quand une nouvelle version de
  * l'application a été mise en cache par le service worker (registerType:
@@ -74,6 +86,7 @@ const ReloadPrompt = () => {
             <button
                 className="reload-prompt-btn"
                 onClick={handleReload}
+                title={infobullesPagePrincipale() ? INFOBULLE_RECHARGER : undefined}
             >
                 Recharger
             </button>

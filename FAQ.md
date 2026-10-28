@@ -252,15 +252,7 @@ Comme sur ordinateur, l'application peut être **installée** depuis le navigate
 
 ### Comment l'application se met-elle à jour ?
 
-Aucune action n'est requise de votre part. L'application est conçue comme une **PWA** (Progressive Web App) : elle se met à jour automatiquement à la prochaine ouverture après chaque nouvelle publication.
-
-Concrètement :
-
-- Une nouvelle version est détectée en arrière-plan, sans interruption ni notification.
-- Elle est téléchargée pendant que vous continuez à travailler.
-- À la prochaine ouverture (ou au prochain rafraîchissement), la nouvelle version est activée silencieusement.
-
-Vous n'avez **ni à réinstaller**, **ni à vider de cache**, **ni à cliquer sur un bouton « Mettre à jour »**. C'est l'un des avantages du format PWA par rapport à un logiciel classique : la maintenance est entièrement transparente.
+Sans réinstallation ni cache à vider : l'application est une **PWA** (Progressive Web App). Une nouvelle version est téléchargée en arrière-plan pendant que vous travaillez, puis un bandeau **« Nouvelle version disponible »** propose de recharger. Rien ne se recharge sans votre accord : cliquez sur **Recharger** quand vous êtes prêt — par sécurité, après avoir enregistré votre projet — ou fermez le bandeau pour plus tard.
 
 ### Puis-je utiliser l'application en présentation devant un auditoire ?
 
