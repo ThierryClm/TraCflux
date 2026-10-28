@@ -92,4 +92,15 @@ describe('ReloadPrompt', () => {
         expect(container).toBeEmptyDOMElement();
         expect(screen.queryByText('Recharger')).toBeNull();
     });
+
+    it('infobulle du bouton : enregistrer le projet avant de recharger, sauf infobulles coupées', () => {
+        const { unmount } = render(<ReloadPrompt />);
+        expect(screen.getByRole('button', { name: 'Recharger' }).getAttribute('title'))
+            .toBe('Par sécurité, enregistrer le projet avant de recharger');
+        unmount();
+        localStorage.setItem('tracflux.tooltips', JSON.stringify({ main: false }));
+        render(<ReloadPrompt />);
+        expect(screen.getByRole('button', { name: 'Recharger' }).getAttribute('title')).toBeNull();
+        localStorage.removeItem('tracflux.tooltips');
+    });
 });
