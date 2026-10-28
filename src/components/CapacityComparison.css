@@ -239,3 +239,139 @@ body.light-mode .cc-table thead th,
 body.sepia-mode .cc-table thead th { background: #e8e8e8; color: #333; }
 body.light-mode .cc-dataset-select select,
 body.sepia-mode .cc-dataset-select select { background: #fff; color: #222; }
+
+/* Liste déroulante des plans de feu et de leurs scénarios */
+.cc-pf-select {
+    position: relative;
+}
+
+.cc-pf-liste-bouton {
+    background: #2a2a2a;
+    color: #eee;
+    border: 1px solid #4ecdc4;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.9em;
+    cursor: pointer;
+    min-width: 200px;
+    text-align: left;
+}
+
+.cc-pf-liste {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 30;
+    margin-top: 4px;
+    min-width: 260px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 6px 10px;
+    background: #2a2a2a;
+    border: 1px solid #555;
+    border-radius: 4px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.cc-pf-groupe {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px 0;
+}
+
+.cc-pf-groupe + .cc-pf-groupe {
+    border-top: 1px solid #3a3a3a;
+}
+
+/* Les scénarios, en retrait sous leur plan */
+.cc-scenario-checkbox {
+    margin-left: 22px;
+    color: #bbb;
+}
+
+/* Plan sans données de trafic : grisé, ses scénarios aussi */
+.cc-indisponible .cc-pf-checkbox {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.cc-option-vutile {
+    align-self: flex-end;
+    margin-bottom: 6px;
+}
+
+.cc-scenario-nom {
+    display: block;
+    font-weight: normal;
+    font-style: italic;
+    color: #4ecdc4;
+}
+
+body.light-mode .cc-pf-liste-bouton,
+body.sepia-mode .cc-pf-liste-bouton,
+body.light-mode .cc-pf-liste,
+body.sepia-mode .cc-pf-liste { background: #fff; color: #222; }
+body.light-mode .cc-scenario-checkbox,
+body.sepia-mode .cc-scenario-checkbox { color: #444; }
+body.light-mode .cc-scenario-nom,
+body.sepia-mode .cc-scenario-nom { color: #00796b; }
+
+/* Le comparateur au dossier imprimé : mêmes colonnes que la fenêtre, sur
+   fond blanc, sans en-têtes collants. */
+.print-dossier-comparateur {
+    color: #000;
+}
+
+.print-dossier-comparateur .cc-table {
+    font-size: 0.75rem;
+    break-inside: auto;
+}
+
+.print-dossier-comparateur .cc-table th,
+.print-dossier-comparateur .cc-table td {
+    border: 1px solid #999;
+    padding: 3px 6px;
+    background: #fff;
+    color: #000;
+    position: static;
+}
+
+.print-dossier-comparateur .cc-table thead th,
+.print-dossier-comparateur .cc-col-trafic-single,
+.print-dossier-comparateur .cc-trafic-spacer {
+    background: #eee;
+}
+
+.print-dossier-comparateur .cc-table th.cc-corner {
+    position: relative;
+    background:
+        linear-gradient(to top right,
+            transparent calc(50% - 0.7px),
+            #999 calc(50% - 0.7px),
+            #999 calc(50% + 0.7px),
+            transparent calc(50% + 0.7px)),
+        #eee;
+}
+
+.print-dossier-comparateur .cc-corner-pf { color: #00796b; }
+.print-dossier-comparateur .cc-corner-gf { color: #000; }
+.print-dossier-comparateur .cc-col-group { background: #f6f6f6; }
+.print-dossier-comparateur .cc-pf-header { color: #00796b; }
+.print-dossier-comparateur .cc-pf-dataset { color: #555; }
+.print-dossier-comparateur .cc-scenario-nom { color: #00796b; }
+.print-dossier-comparateur .cc-trafic,
+.print-dossier-comparateur .cc-vutile { color: #333; }
+.print-dossier-comparateur .cc-table td.capacity-green,
+.print-dossier-comparateur .capacity-green { color: #2e7d32; }
+.print-dossier-comparateur .cc-table td.capacity-orange,
+.print-dossier-comparateur .capacity-orange { color: #e08a00; }
+.print-dossier-comparateur .cc-table td.capacity-red,
+.print-dossier-comparateur .capacity-red { color: #c62828; }
+.print-dossier-comparateur .cc-table td.capacity-black,
+.print-dossier-comparateur .capacity-black { color: #000; background-color: #ff6b6b; }
+.print-dossier-comparateur .cc-note-portee {
+    font-size: 0.75rem;
+    color: #444;
+    margin-top: 6px;
+}

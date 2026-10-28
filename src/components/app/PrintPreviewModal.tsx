@@ -8,12 +8,15 @@ import PhasageBulle from '../PhasageBulle';
 import { APP_NAME, APP_VERSION } from '../../version';
 import { scenariosAImprimer, planImprime } from '../../simulation';
 import ScenariosDuPlanImprimes from './ImpressionScenarios';
+import TableauComparaisonCapacite from '../TableauComparaisonCapacite';
+import { cellulesComparaison, colonnesComparaison, groupesComparables } from '../../utils/comparaisonCapacite';
+import '../CapacityComparison.css';
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
 import { ARROW_SIZE, BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
 import { matriceDeReference } from '../../utils/matrixComparison';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
+import type { ActionMicro, Groupe, JeuTrafic, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
 import type { ProjectProperties } from '../PropertiesPanel';
 
 type PrintType = 'matrix' | 'form' | 'diagram' | 'dossier';
@@ -50,6 +53,13 @@ interface PrintPreviewModalProps {
         activeTrafficDataset: string;
         trafficDatasets: Record<string, Record<number, TrafficData>>;
         trafficDatasetNames: string[];
+    };
+    /** Réglages du comparateur de capacité, imprimé tel que dans sa fenêtre. */
+    comparateur: {
+        pfIds: number[] | null;
+        scenarios: string[];
+        choixJeu: string;
+        afficherVUtile: boolean;
     };
     image: {
         intersectionImage: string | null;
@@ -105,6 +115,7 @@ function PrintPreviewModal({
     print,
     actions,
     preferences,
+    comparateur,
 }: PrintPreviewModalProps) {
     const printPreviewModal = isOpen;
     const setPrintPreviewModal = (visible: boolean) => { if (!visible) onClose(); };
@@ -1114,6 +1125,35 @@ function PrintPreviewModal({
                                         </Fragment>
                                             );
                                         })}
+
+                                        {/* Comparateur de capacité, en fin de dossier, tel que réglé dans sa fenêtre. */}
+                                        {dossierSections.comparateurCapacite && (() => {
+                                            const donnees = { trafficDatasets: trafficDatasets as Record<string, JeuTrafic>, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames };
+                                            const colonnes = colonnesComparaison(pfTabs, comparateur, donnees,
+                                                { activePFId, groups, cycleLength, actionData }, conflictMatrix);
+                                            const groupes = groupesComparables(groups);
+                                            if (colonnes.length === 0 || groupes.length === 0) return null;
+                                            // Largeur naturelle estimée : colonne des groupes, puis 50 px par
+                                            // sous-colonne. Réduite au besoin pour tenir dans la feuille : le
+                                            // moindre débordement ferait réduire au navigateur tout le dossier.
+                                            const jeuUnique = colonnes.every(c => c.jeu === colonnes[0].jeu);
+                                            const sousColonnes = colonnes.length * ((comparateur.afficherVUtile ? 2 : 1) + (jeuUnique ? 0 : 1)) + (jeuUnique ? 1 : 0);
+                                            const zoomComparateur = Math.min(1, dossierUsableWidth / (200 + sousColonnes * 50));
+                                            return (
+                                                <div className="print-dossier-section print-dossier-comparateur">
+                                                    <h3>Capacité des plans de feu et des scénarios</h3>
+                                                    <div style={zoomComparateur < 1 ? { zoom: zoomComparateur.toFixed(3) } : undefined}>
+                                                        <TableauComparaisonCapacite colonnes={colonnes}
+                                                            cellules={cellulesComparaison(colonnes, groupes, donnees)}
+                                                            groupes={groupes} afficherVUtile={comparateur.afficherVUtile} />
+                                                    </div>
+                                                    <p className="cc-note-portee">
+                                                        Plans de feu : valeurs nominales, hors micro-régulation. Scénarios : diagramme simulé de leurs actions.
+                                                        Capacité utilisée : <span className="capacity-green">&lt; 76 %</span> · <span className="capacity-orange">≤ 85 %</span> · <span className="capacity-red">≤ 100 %</span> · <span className="capacity-black">&gt; 100 %</span>
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
 
                                         {/* Le pied de page est géré par @page margin boxes (injecté dynamiquement) */}
                                     </div>

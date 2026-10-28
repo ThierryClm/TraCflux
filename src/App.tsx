@@ -200,6 +200,10 @@ function App() {
         setCapacityCompareSelection,
         capacityCompareDataset,
         setCapacityCompareDataset,
+        capacityCompareScenarios,
+        setCapacityCompareScenarios,
+        capacityCompareVUtile,
+        setCapacityCompareVUtile,
         dependencyGap,
         setDependencyGap,
         biCarrefourSeparator,
@@ -446,7 +450,7 @@ function App() {
 
     // Track whether project has been modified (for "Nouveau projet" menu)
     const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
-        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, intersectionDisplay,
+        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, intersectionDisplay,
             // Enregistrés dans le projet : les changer est une modification.
             commentsMode, remarksMode, descriptionMode, prefsVerrou]);
 
@@ -2145,10 +2149,18 @@ function App() {
                 setSelectedPfIds={setCapacityCompareSelection}
                 datasetChoice={capacityCompareDataset}
                 setDatasetChoice={setCapacityCompareDataset}
+                selectedScenarios={capacityCompareScenarios}
+                setSelectedScenarios={setCapacityCompareScenarios}
+                afficherVUtile={capacityCompareVUtile}
+                setAfficherVUtile={setCapacityCompareVUtile}
+                activePFId={activePFId}
+                cycleLength={cycleLength}
+                actionData={actionData}
+                conflictMatrix={conflictMatrix}
                 onContentSize={noterTailleComparateur}
             />
         );
-    }, [capacityCompareModal, pfTabs, groups, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames, capacityCompareSelection, setCapacityCompareSelection, capacityCompareDataset, setCapacityCompareDataset, noterTailleComparateur, capacityComparisonPopup.renderToPopup]);
+    }, [capacityCompareModal, pfTabs, groups, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames, capacityCompareSelection, setCapacityCompareSelection, capacityCompareDataset, setCapacityCompareDataset, capacityCompareScenarios, setCapacityCompareScenarios, capacityCompareVUtile, setCapacityCompareVUtile, activePFId, cycleLength, actionData, conflictMatrix, noterTailleComparateur, capacityComparisonPopup.renderToPopup]);
 
     // Render read-only diagram mirror into its detached popup (présentation).
     // Reflète le diagramme du PF actif en direct (offsets, verts, simulation)
@@ -2553,6 +2565,7 @@ function App() {
                 project={{ projectName, intersectionName, projectProperties, groups, conflictMatrix, cycleLength }}
                 plans={{ pfTabs, activePFId, pfTrafficDatasetMap }}
                 traffic={{ activeTrafficDataset, trafficDatasets, trafficDatasetNames }}
+                comparateur={{ pfIds: capacityCompareSelection, scenarios: capacityCompareScenarios, choixJeu: capacityCompareDataset || '__per_pf__', afficherVUtile: capacityCompareVUtile }}
                 image={{ intersectionImage, intersectionArrows, imageBrightness, imageContrast, imageNaturalDims }}
                 print={{
                     printType,

@@ -213,6 +213,10 @@ export interface Projet {
     externalLinks?: LienExterne[];
     capacityCompareSelection?: number[] | null;
     capacityCompareDataset?: string;
+    /** Scénarios cochés dans le comparateur de capacité (« idPF:titre »). */
+    capacityCompareScenarios?: string[];
+    /** Colonne V.Utile affichée dans le comparateur (vrai par défaut). */
+    capacityCompareVUtile?: boolean;
     projectProperties?: Record<string, unknown>;
     /** Cases cochées de la boîte « Imprimer le projet ». */
     dossierSections?: Record<string, boolean>;
