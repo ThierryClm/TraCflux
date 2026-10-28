@@ -95,11 +95,14 @@ export const indexerAide = (racine: Element, exclure: string): IndexAide => {
     const index: IndexAide = { texte: '', noeuds: [], offsets: [], chapitres: [], sections: [], rubriques: [] };
     let chapitre = -1;
     let section = -1;
+    // nodeType plutôt qu'instanceof : dans la fenêtre détachée de l'aide, les
+    // nœuds appartiennent à une autre fenêtre, dont Element n'est pas le nôtre.
+    const estElement = (n: Node): n is Element => n.nodeType === Node.ELEMENT_NODE;
     const walker = racine.ownerDocument.createTreeWalker(racine, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
-        acceptNode: (n) => (n instanceof Element && n.matches(exclure) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+        acceptNode: (n) => (estElement(n) && n.matches(exclure) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
     });
     for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-        if (n instanceof Element) {
+        if (estElement(n)) {
             if (n.tagName === 'H3') {
                 index.rubriques.push(rubrique(n));
                 chapitre = index.rubriques.length - 1;

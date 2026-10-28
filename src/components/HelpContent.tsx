@@ -28,6 +28,10 @@ interface ChapitreAide {
 const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
     const helpContentRef = useRef<HTMLDivElement>(null);
     const [helpToc, setHelpToc] = useState<ChapitreAide[]>([]);
+    // L'aide peut vivre dans une fenêtre détachée : ses ancres se cherchent
+    // dans le document qui l'affiche, pas dans celui de l'application.
+    const aller = (id: string, behavior: ScrollBehavior = 'auto') =>
+        (helpContentRef.current?.ownerDocument ?? document).getElementById(id)?.scrollIntoView({ behavior, block: 'start' });
 
     // Build the help TOC by scanning h3 (chapters) and h4 (sections) and assigning ids
     useEffect(() => {
@@ -56,8 +60,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
     useEffect(() => {
         if (!initialAnchor) return;
         const t = setTimeout(() => {
-            const el = document.getElementById(initialAnchor);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            aller(initialAnchor, 'smooth');
         }, 300);
         return () => clearTimeout(t);
     }, [initialAnchor]);
@@ -72,7 +75,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                         <div key={chapter.id} style={{ marginBottom: '8px' }}>
                             <a
                                 href={`#${chapter.id}`}
-                                onClick={(e) => { e.preventDefault(); document.getElementById(chapter.id)?.scrollIntoView({ behavior: 'auto', block: 'start' }); }}
+                                onClick={(e) => { e.preventDefault(); aller(chapter.id); }}
                                 style={{ color: '#4ecdc4', fontWeight: 'bold', textDecoration: 'none' }}
                             >
                                 {chapter.title}
@@ -83,7 +86,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                                         <li key={s.id} style={{ margin: '2px 0' }}>
                                             <a
                                                 href={`#${s.id}`}
-                                                onClick={(e) => { e.preventDefault(); document.getElementById(s.id)?.scrollIntoView({ behavior: 'auto', block: 'start' }); }}
+                                                onClick={(e) => { e.preventDefault(); aller(s.id); }}
                                                 style={{ color: '#ccc', textDecoration: 'none' }}
                                                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.color = '#ccc'; }}
@@ -126,6 +129,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     </li>
                     <li><strong>Indicateur Valider/Validé :</strong> Cliquez sur "Valider" (quand aucun conflit) pour marquer l'onglet PF en vert. Cliquez à nouveau pour annuler la validation.</li>
                     <li><strong>Séparateur ajustable :</strong> La position du séparateur entre le diagramme et les conditions de micro-régulation est sauvegardée avec le projet.</li>
+                    <li><strong>Fenêtre de l'aide :</strong> L'aide s'ouvre dans sa propre fenêtre, non modale, comme les fenêtres détachées : on la déplace sur un autre écran et on continue à travailler dans l'application pendant qu'elle reste ouverte. Sa position est retenue d'une ouverture à l'autre ; la redemander la ramène au premier plan. Sur un téléphone, ou si le navigateur bloque les fenêtres, elle s'affiche dans la page.</li>
                     <li><strong>Rechercher dans l'aide :</strong> Saisissez un mot dans le champ en haut de cette fenêtre. Toutes ses occurrences sont surlignées, la courante en orange ; ▲ et ▼ (ou Entrée et Maj+Entrée) passent de l'une à l'autre, et le bouton <em>Chapitres</em> déroule la liste des sections qui contiennent le mot, avec leur nombre d'occurrences. La recherche ignore majuscules et accents : « ecran » trouve « écran ».</li>
                 </ul>
             </section>
@@ -1117,7 +1121,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
             {/* Bouton flottant "retour au sommaire" */}
             <button
                 className="help-back-to-top"
-                onClick={() => document.getElementById('help-sommaire')?.scrollIntoView({ behavior: 'auto', block: 'start' })}
+                onClick={() => aller('help-sommaire')}
                 title="Retour au sommaire"
                 aria-label="Retour au sommaire de l'aide"
             >

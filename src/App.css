@@ -4681,3 +4681,15 @@ body.print-portrait .dossier-phasage-centered .dossier-phasage-content {
         min-width: 0 !important;
     }
 }
+
+/* Aide en ligne dans sa fenêtre détachée : le cadre de la fenêtre d'aide
+   (palette du thème, corps qui défile) occupe toute la fenêtre. */
+.modal-content.aide-detachee {
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}

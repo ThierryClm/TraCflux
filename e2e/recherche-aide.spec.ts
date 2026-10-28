@@ -6,12 +6,16 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { ouvrirMenu } from './aide';
 
-const ouvrirAide = async (page: Page) => {
+/** Ouvre l'aide, qui s'affiche dans sa fenêtre détachée, et rend cette fenêtre. */
+const ouvrirAide = async (page: Page): Promise<Page> => {
     await page.goto('/');
     const item = page.locator('.menu-bar').getByText('Aide', { exact: true });
     await ouvrirMenu(page, 'A propos', item);
+    const nouvelle = page.context().waitForEvent('page');
     await item.click();
-    await expect(page.getByRole('searchbox', { name: "Rechercher dans l'aide" })).toBeVisible({ timeout: 15_000 });
+    const aide = await nouvelle;
+    await expect(aide.getByRole('searchbox', { name: "Rechercher dans l'aide" })).toBeVisible({ timeout: 15_000 });
+    return aide;
 };
 
 /** Surlignages posés, et position de l'occurrence courante dans la fenêtre d'aide. */
@@ -32,8 +36,8 @@ const etat = (page: Page) => page.evaluate(() => {
     };
 });
 
-test("chercher un mot dans l'aide : surlignage, suivant / précédent, chapitres", async ({ page }) => {
-    await ouvrirAide(page);
+test("chercher un mot dans l'aide : surlignage, suivant / précédent, chapitres", async ({ page: appli }) => {
+    const page = await ouvrirAide(appli);
     const champ = page.getByRole('searchbox', { name: "Rechercher dans l'aide" });
     // Le curseur attend dans le champ dès l'ouverture : on tape directement.
     await expect(champ).toBeFocused();
@@ -82,4 +86,21 @@ test("chercher un mot dans l'aide : surlignage, suivant / précédent, chapitres
     await champ.press('Escape');
     await expect(champ).toHaveValue('');
     expect((await etat(page)).tous).toBe(0);
+});
+
+test("l'aide est une fenêtre détachée : l'application reste utilisable, la rouvrir ne la double pas", async ({ page }) => {
+    const aide = await ouvrirAide(page);
+    await expect(aide).toHaveTitle(/Aide - TraCflux/);
+    // Pas de modale qui recouvre l'application.
+    await expect(page.locator('.modal-overlay')).toHaveCount(0);
+    // Le sommaire mène à sa section, dans la fenêtre de l'aide.
+    await aide.locator('#help-sommaire').getByText('Démarche conseillée sur un nouveau carrefour', { exact: true }).click();
+    await expect(aide.locator('#help-demarche')).toBeInViewport();
+    // Redemander l'aide la ramène, sans ouvrir une seconde fenêtre.
+    const pages = page.context().pages().length;
+    const item = page.locator('.menu-bar').getByText('Aide', { exact: true });
+    await ouvrirMenu(page, 'A propos', item);
+    await item.click();
+    await expect.poll(() => page.context().pages().length).toBe(pages);
+    await aide.close();
 });
