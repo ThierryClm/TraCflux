@@ -259,7 +259,7 @@ s'exécutent, contre 664 à la version 1.4.0.*
   coche, celles écartées restant visibles en gris —, de la liste des conflits, des données de trafic
   et de la réserve de capacité. De quoi montrer sur une même page ce qui a été retenu, ce qui a été
   écarté, et ce que cela change. La démarche complète est décrite dans la
-  [FAQ](FAQ.md#comment-construire-et-justifier-un-scénario-de-micro-régulation).
+  [FAQ](FAQ.md#peut-on-construire-et-justifier-un-scénario-de-micro-régulation).
 
 ## [1.4.0] — 2026-09-22
 
