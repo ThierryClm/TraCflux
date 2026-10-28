@@ -33,6 +33,7 @@ import ExternalLinksModal from './components/ExternalLinksModal';
 import PropertiesPanel from './components/PropertiesPanel';
 import { calculateSimulatedDiagram, sectionsScenariosInitiales } from './simulation';
 import usePopupWindow from './hooks/usePopupWindow';
+import useAideDetachee from './hooks/useAideDetachee';
 import useFloatingLegend from './hooks/useFloatingLegend';
 import useFloatingMatrix from './hooks/useFloatingMatrix';
 import useDarkMode from './hooks/useDarkMode';
@@ -486,7 +487,7 @@ function App() {
         if (!target) return;
         const anchorId = target === 'ondeVerte' ? 'help-onde-verte' : null;
         setHelpAnchor(anchorId);
-        setHelpModal(true);
+        ouvrirAide();
     }, []);
 
     // Save reminder: when isDirty becomes true, start a 10-minute inactivity timer.
@@ -913,6 +914,8 @@ function App() {
         greenWaveViewer, setGreenWaveViewer,
         draggedTabIndex, setDraggedTabIndex
     } = useDialogState();
+    // Aide en ligne : fenêtre détachée, non modale, repli dans la page si besoin.
+    const { ouvrirAide, aideEnModale } = useAideDetachee(helpModal, setHelpModal, helpAnchor);
 
     // Les cases à cocher du dossier appartiennent au projet : on branche leur
     // lecture et leur écriture sur la sérialisation, plutôt que d'en faire une
@@ -1498,7 +1501,7 @@ function App() {
                 window.open(new URL('faq/', window.location.href).href, '_blank', 'noopener,noreferrer');
                 break;
             case 'help':
-                setHelpModal(true);
+                ouvrirAide();
                 break;
             case 'newPF': {
                 const newId = nouveauPF();
@@ -2460,7 +2463,7 @@ function App() {
                 model={{
                         aboutModal, actionData, activePFId, activePfReadOnly, conflictMatrix,
                         cycleLength, diagnosticIncludeProject, diagnosticMaskNames, diagnosticModal, diagnosticRefresh,
-                        dossierReadOnly, groups, helpAnchor, helpModal, imageNaturalDims,
+                        dossierReadOnly, groups, helpAnchor, helpModal: aideEnModale, imageNaturalDims,
                         intersectionImage, intersectionName, matricesLocked, microVariablesModal, optionsModal,
                         pfTabs, projectName, setAboutModal, setDiagnosticIncludeProject, setDiagnosticMaskNames,
                         setDiagnosticModal, setDiagnosticRefresh, setHelpModal, setMicroVariablesModal, setOptionsModal,

@@ -12,21 +12,26 @@ const SURLIGNAGE_COURANT = 'aide-recherche-courante';
 
 // API CSS Custom Highlight : surligne des plages sans toucher au DOM que React
 // gère. Absente de jsdom et des navigateurs anciens, où seule la sélection
-// marque l'occurrence courante.
+// marque l'occurrence courante. Registre et constructeur sont ceux de la
+// fenêtre qui affiche l'aide : l'application, ou la fenêtre détachée.
 type RegistreSurlignages = Map<string, unknown>;
-const registre = (): RegistreSurlignages | null =>
-    (typeof CSS !== 'undefined' && (CSS as unknown as { highlights?: RegistreSurlignages }).highlights) || null;
-const Surlignage = (globalThis as unknown as { Highlight?: new (...plages: Range[]) => unknown }).Highlight;
+type FenetreAide = Window & {
+    CSS?: { highlights?: RegistreSurlignages };
+    Highlight?: new (...plages: Range[]) => unknown;
+};
+const fenetreDe = (el: Element | null | undefined): FenetreAide =>
+    (el?.ownerDocument.defaultView ?? window) as FenetreAide;
+const registre = (f: FenetreAide): RegistreSurlignages | null => f.CSS?.highlights ?? null;
 
 const plage = (o: OccurrenceAide): Range => {
-    const r = document.createRange();
+    const r = (o.debut.noeud.ownerDocument ?? document).createRange();
     r.setStart(o.debut.noeud, o.debut.offset);
     r.setEnd(o.fin.noeud, o.fin.offset);
     return r;
 };
 
-const effacerSurlignages = () => {
-    const reg = registre();
+const effacerSurlignages = (f: FenetreAide) => {
+    const reg = registre(f);
     reg?.delete(SURLIGNAGE);
     reg?.delete(SURLIGNAGE_COURANT);
 };
@@ -34,7 +39,7 @@ const effacerSurlignages = () => {
 /** Ancêtre qui défile : le corps de la fenêtre d'aide. */
 const conteneurDefilant = (el: Element | null): HTMLElement | null => {
     for (let e = el?.parentElement ?? null; e; e = e.parentElement) {
-        const { overflowY } = getComputedStyle(e);
+        const { overflowY } = (e.ownerDocument.defaultView ?? window).getComputedStyle(e);
         if ((overflowY === 'auto' || overflowY === 'scroll') && e.scrollHeight > e.clientHeight) return e;
     }
     return null;
@@ -91,22 +96,26 @@ const RechercheAide = ({ racine }: RechercheAideProps) => {
 
     // Surligne toutes les occurrences, la courante d'une autre couleur, et l'amène à l'écran.
     useEffect(() => {
-        if (occurrences.length === 0) { effacerSurlignages(); return; }
+        const f = fenetreDe(barre.current);
+        if (occurrences.length === 0) { effacerSurlignages(f); return; }
         const plages = occurrences.map(plage);
         const actuelle = plages[Math.min(courante, plages.length - 1)];
-        const reg = registre();
-        if (reg && Surlignage) {
-            reg.set(SURLIGNAGE, new Surlignage(...plages));
-            reg.set(SURLIGNAGE_COURANT, new Surlignage(actuelle));
+        const reg = registre(f);
+        if (reg && f.Highlight) {
+            reg.set(SURLIGNAGE, new f.Highlight(...plages));
+            reg.set(SURLIGNAGE_COURANT, new f.Highlight(actuelle));
         } else {
-            const selection = window.getSelection();
+            const selection = f.getSelection();
             selection?.removeAllRanges();
             selection?.addRange(actuelle);
         }
         amenerEnVue(actuelle, barre.current);
     }, [occurrences, courante]);
 
-    useEffect(() => effacerSurlignages, []);
+    useEffect(() => {
+        const f = fenetreDe(barre.current);
+        return () => effacerSurlignages(f);
+    }, []);
 
     // À l'ouverture de l'aide, le curseur attend dans le champ, sans
     // faire défiler (l'aide peut s'ouvrir sur un chapitre précis).
@@ -121,8 +130,9 @@ const RechercheAide = ({ racine }: RechercheAideProps) => {
                 champ.current?.select();
             }
         };
-        window.addEventListener('keydown', surTouche);
-        return () => window.removeEventListener('keydown', surTouche);
+        const f = fenetreDe(barre.current);
+        f.addEventListener('keydown', surTouche);
+        return () => f.removeEventListener('keydown', surTouche);
     }, []);
 
     const total = occurrences.length;
