@@ -91,6 +91,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     // défaut) et jeu de trafic choisi ('__per_pf__' = jeu associé à chaque PF).
     const [capacityCompareSelection, setCapacityCompareSelection] = useState<number[] | null>(null);
     const [capacityCompareDataset, setCapacityCompareDataset] = useState('__per_pf__');
+    // Scénarios cochés dans le comparateur (« idPF:titre ») et affichage du V.Utile.
+    const [capacityCompareScenarios, setCapacityCompareScenarios] = useState<string[]>([]);
+    const [capacityCompareVUtile, setCapacityCompareVUtile] = useState(true);
     const [projectProperties, setProjectProperties] = useState<ProprietesProjet>(() => {
         try {
             const saved = safeLocalStorage.getItem('trafficProjectProperties');
@@ -355,6 +358,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             // comparateur, verrou des matrices et largeurs de colonnes.
             setCapacityCompareSelection(Array.isArray(data.capacityCompareSelection) ? data.capacityCompareSelection : null);
             setCapacityCompareDataset(data.capacityCompareDataset || '__per_pf__');
+            setCapacityCompareScenarios(Array.isArray(data.capacityCompareScenarios) ? data.capacityCompareScenarios : []);
+            setCapacityCompareVUtile(data.capacityCompareVUtile !== false);
             setMatricesLocked(data.matricesLocked === true);
             setActionColWidths(largeursColonnesBornees(data.actionColWidths));
             setExternalLinks(data.externalLinks && Array.isArray(data.externalLinks) ? data.externalLinks : []);
@@ -493,6 +498,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             // Sélection du comparateur de capacité (null/absent = tous par défaut)
             setCapacityCompareSelection(Array.isArray(state.capacityCompareSelection) ? state.capacityCompareSelection : null);
             setCapacityCompareDataset(state.capacityCompareDataset || '__per_pf__');
+            setCapacityCompareScenarios(Array.isArray(state.capacityCompareScenarios) ? state.capacityCompareScenarios : []);
+            setCapacityCompareVUtile(state.capacityCompareVUtile !== false);
 
             // Load intersection image and arrows
             if (state.intersectionImage !== undefined) {
@@ -637,6 +644,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         externalLinks,
         capacityCompareSelection,
         capacityCompareDataset,
+        capacityCompareScenarios,
+        capacityCompareVUtile,
         projectProperties,
         // Champs de projet portés par d'autres modules (cf. champsProjetRef).
         ...champsProjetRef?.current?.lire?.()
@@ -1162,7 +1171,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
                 clearTimeout(autoSaveTimerRef.current);
             }
         };
-    }, [groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, intersectionName, projectProperties, capacityCompareSelection, capacityCompareDataset, customTrafficDatasetNames, pfTrafficDatasetMap, externalLinks, matricesLocked, actionColWidths]);
+    }, [groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, intersectionName, projectProperties, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, customTrafficDatasetNames, pfTrafficDatasetMap, externalLinks, matricesLocked, actionColWidths]);
 
     const {
         updateTrafficData, getTrafficData, copyTrafficDataset, addCustomTrafficDataset,
@@ -1505,6 +1514,10 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         setCapacityCompareSelection,
         capacityCompareDataset,
         setCapacityCompareDataset,
+        capacityCompareScenarios,
+        setCapacityCompareScenarios,
+        capacityCompareVUtile,
+        setCapacityCompareVUtile,
         conflictMatrix,
         setMatrixValue: setMatrixValueWithHistory,
         conflicts,

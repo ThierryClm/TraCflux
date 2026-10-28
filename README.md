@@ -111,7 +111,7 @@ Le survol fait le lien pendant que vous commentez. Posez la souris sur une flèc
 
 - **Réserve de capacité** — panneau détachable : capacité offerte (uvp/h), degré de saturation, réserve, **temps d'attente moyen (Webster)** et file d'attente, courant par courant
 - Synthèse « diagnostic carrefour » : courant dimensionnant et réserve globale
-- **Comparateur de capacité** entre plans de feux
+- **Capacité des plans de feu et scénarios** — plans de la journée, versions de diagramme et scénarios de micro-régulation côte à côte, à l'écran et au dossier imprimé
 - Méthode conforme au *Guide des carrefours à feux* (débit de saturation 1800 uvp/h par voie)
 
 ### Interopérabilité

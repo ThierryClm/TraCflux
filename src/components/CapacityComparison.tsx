@@ -1,25 +1,29 @@
-import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
-import { calculateVUtile, calculateCapacity, getCapacityColorClass } from '../utils/capacityCalc';
+import { useState, useMemo, useRef, useLayoutEffect, useEffect } from 'react';
 import { toast } from '../utils/toast';
-import type { Groupe, JeuTrafic, PlanDeFeu } from '../types/projet';
+import TableauComparaisonCapacite from './TableauComparaisonCapacite';
+import {
+    PAR_PLAN, cleScenarioComparaison, colonnesComparaison, cellulesComparaison, groupesComparables,
+    jeuRenseigne, planComparable
+} from '../utils/comparaisonCapacite';
+import { scenariosDuPlan } from '../simulation/scenarios';
+import type { ActionMicro, Groupe, JeuTrafic, Matrice, PlanDeFeu } from '../types/projet';
 import './CapacityComparison.css';
 
 /**
- * Tableau comparatif de la capacité utilisée entre plusieurs plans de feu.
+ * Tableau comparatif de la capacité utilisée entre plans de feu et scénarios.
  *
- * - L'utilisateur coche les PF à comparer (tous cochés par défaut).
- * - Il choisit le jeu de données trafic appliqué :
- *     • « Jeu associé à chaque PF » (défaut) : chaque PF utilise son dataset
- *       (pfTrafficDatasetMap), à défaut le dataset actif ;
- *     • un jeu unique : le même trafic appliqué à TOUS les PF cochés, pour
- *       isoler l'effet du plan à trafic égal.
- * - Orientation : groupes VL en lignes, PF en colonnes (V.Utile + Cap.U).
- * - Ligne de synthèse : groupe dimensionnant (Cap.U max) par PF.
+ * - Une liste déroulante propose les plans de feu à cocher et, en retrait sous
+ *   chacun, ses scénarios enregistrés. Un plan dont le jeu de trafic est vide
+ *   est grisé, ses scénarios aussi.
+ * - Le jeu de trafic : « Jeu associé à chaque PF », ou un jeu unique appliqué
+ *   à tous, pour isoler l'effet du plan à trafic égal (tous les plans sont
+ *   alors comparables).
+ * - Groupes VL en lignes ; par colonne : Trafic, V.Utile (facultatif), Cap.U.
  *
- * Valeurs nominales de chaque PF (vert/cycle propres), sans actions de
- * simulation : c'est le sens d'une comparaison entre programmes.
+ * Un plan s'évalue à ses valeurs nominales (vert et cycle propres, sans
+ * micro-régulation) ; un scénario, sur le diagramme simulé de ses actions.
  */
-const PER_PF = '__per_pf__';
+const PER_PF = PAR_PLAN;
 
 interface ContentSize {
     width: number;
@@ -35,16 +39,17 @@ interface CapacityComparisonProps {
     trafficDatasetNames?: string[];
     selectedPfIds?: number[] | null;
     setSelectedPfIds?: (ids: number[]) => void;
+    selectedScenarios?: string[];
+    setSelectedScenarios?: (cles: string[]) => void;
+    afficherVUtile?: boolean;
+    setAfficherVUtile?: (afficher: boolean) => void;
     datasetChoice?: string;
     setDatasetChoice?: (choice: string) => void;
+    activePFId?: number;
+    cycleLength?: number;
+    actionData?: ActionMicro[];
+    conflictMatrix?: Matrice;
     onContentSize?: ((size: ContentSize) => void) | null;
-}
-
-interface CapacityCell {
-    trafficVol: number | string;
-    vUtile: number | null;
-    capacity: ReturnType<typeof calculateCapacity>;
-    greenTime: number;
 }
 
 const CapacityComparison = ({
@@ -58,8 +63,16 @@ const CapacityComparison = ({
     // selectedPfIds null/absent = tous les PF cochés par défaut.
     selectedPfIds = null,
     setSelectedPfIds = () => {},
+    selectedScenarios = [],
+    setSelectedScenarios = () => {},
+    afficherVUtile = true,
+    setAfficherVUtile = () => {},
     datasetChoice = PER_PF,
     setDatasetChoice = () => {},
+    activePFId = 0,
+    cycleLength = 0,
+    actionData = [],
+    conflictMatrix = [],
     /* Appelée après chaque mise en page avec la taille NATURELLE du contenu.
        La fenêtre détachée s'y ajuste : elle était figée à 920 × 620 quel que
        soit le nombre de plans comparés, laissant la moitié de sa hauteur vide
@@ -86,16 +99,25 @@ const CapacityComparison = ({
         const style = window.getComputedStyle(racine);
         const premier = racine.children[0].getBoundingClientRect();
         const dernier = racine.children[racine.children.length - 1].getBoundingClientRect();
-        const hauteur = (dernier.bottom - premier.top)
+        // La zone du tableau se comprime à la hauteur de la fenêtre (elle
+        // défile) : sa part cachée s'ajoute, sans quoi la fenêtre ne
+        // grandissait jamais quand on ajoutait des plans ou des scénarios.
+        const zone = racine.querySelector<HTMLElement>('[data-fit-scroll]');
+        const cacheV = zone ? Math.max(0, zone.scrollHeight - zone.clientHeight) : 0;
+        const hauteur = (dernier.bottom - premier.top) + cacheV
             + (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
         // La largeur ne se lit pas non plus sur le conteneur : il occupe la
         // fenêtre, et rendrait toujours la largeur courante. C'est le plus
         // large de ses blocs qui commande — le tableau, le plus souvent.
         const largeur = Math.max(...Array.from(racine.children, el => el.scrollWidth))
             + (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+        // Marge de l'épaisseur d'une barre de défilement : sans elle, l'en-tête
+        // d'un scénario (trois lignes) ou une barre horizontale suffisait à
+        // faire apparaître un ascenseur vertical.
+        const MARGE = 16;
         if (hauteur > 0) onContentSize({
-            width: Math.ceil(largeur),
-            height: Math.ceil(hauteur)
+            width: Math.ceil(largeur) + MARGE,
+            height: Math.ceil(hauteur) + MARGE
         });
     });
 
@@ -103,85 +125,44 @@ const CapacityComparison = ({
     // Repli « tous cochés » quand aucune sélection n'est enregistrée.
     const effectiveSelectedIds = Array.isArray(selectedPfIds) ? selectedPfIds : allPfIds;
     const effectiveDatasetChoice = datasetChoice || PER_PF;
+    const trafic = useMemo(() => ({ trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames }),
+        [trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames]);
 
-    const vlGroups = useMemo(
-        () => groups.filter(g => g.type === 'VL' || g.type === 'V'),
-        [groups]
-    );
-
-    const selectedPfs = useMemo(
-        () => pfTabs.filter(pf => effectiveSelectedIds.includes(pf.id)),
-        [pfTabs, effectiveSelectedIds]
-    );
+    const vlGroups = useMemo(() => groupesComparables(groups), [groups]);
 
     const togglePf = (id: number) => {
         const base = Array.isArray(selectedPfIds) ? selectedPfIds : allPfIds;
         setSelectedPfIds(base.includes(id) ? base.filter(x => x !== id) : [...base, id]);
     };
+    const toggleScenario = (cle: string) =>
+        setSelectedScenarios(selectedScenarios.includes(cle) ? selectedScenarios.filter(x => x !== cle) : [...selectedScenarios, cle]);
 
-    // Jeu de trafic effectif pour un PF donné selon le mode choisi.
-    // En mode « par PF », on réplique la résolution de l'onglet Trafic :
-    // mapping explicite, sinon dataset au nom du PF s'il existe, sinon actif.
-    const datasetNameForPf = (pf: PlanDeFeu) =>
-        effectiveDatasetChoice === PER_PF
-            ? (pfTrafficDatasetMap[pf.id] || (trafficDatasetNames.includes(pf.name) ? pf.name : activeTrafficDataset))
-            : effectiveDatasetChoice;
+    const colonnes = useMemo(() => colonnesComparaison(
+        pfTabs,
+        { pfIds: selectedPfIds, scenarios: selectedScenarios, choixJeu: effectiveDatasetChoice },
+        trafic,
+        { activePFId, groups, cycleLength, actionData },
+        conflictMatrix
+    ), [pfTabs, selectedPfIds, selectedScenarios, effectiveDatasetChoice, trafic, activePFId, groups, cycleLength, actionData, conflictMatrix]);
+    const cellules = useMemo(() => cellulesComparaison(colonnes, vlGroups, trafic), [colonnes, vlGroups, trafic]);
 
-    const trafficVolFor = (pf: PlanDeFeu, groupId: number): number | string => {
-        const ds = datasetNameForPf(pf);
-        return trafficDatasets?.[ds]?.[groupId]?.trafficVol ?? 0;
-    };
-
-    const greenFor = (pf: PlanDeFeu, group: Groupe): number => {
-        const d = pf.diagram?.find(x => x.groupId === group.id);
-        const g = (d && d.greenDuration !== undefined && d.greenDuration !== null)
-            ? d.greenDuration
-            : group.durations?.green;
-        return g;
-    };
-
-    // Pré-calcul de toutes les cellules : cells[pfId][groupId] = { vUtile, capacity }
-    const cells = useMemo(() => {
-        const out: Record<number, Record<number, CapacityCell>> = {};
-        selectedPfs.forEach(pf => {
-            const cycle = pf.cycleLength;
-            out[pf.id] = {};
-            vlGroups.forEach(group => {
-                const trafficVol = trafficVolFor(pf, group.id);
-                const greenTime = greenFor(pf, group);
-                // Les helpers reproduisent les coercitions numériques historiques
-                // du composant JS ; les suffixes non numériques restent donc NaN.
-                const vUtile = calculateVUtile(
-                    trafficVol as number,
-                    group.laneCoef ?? 0,
-                    cycle ?? 0
-                );
-                const capacity = calculateCapacity(greenTime, vUtile ?? 0);
-                out[pf.id][group.id] = { trafficVol, vUtile, capacity, greenTime };
-            });
-        });
-        return out;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedPfs, vlGroups, effectiveDatasetChoice, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset]);
-
-    const datasetLabelForPf = (pf: PlanDeFeu) => datasetNameForPf(pf) || '—';
-
-    // Un jeu de données est « vide » si aucun groupe n'a de trafic > 0.
-    const datasetHasData = (name: string) => {
-        const ds = trafficDatasets?.[name];
-        if (!ds) return false;
-        return Object.values(ds).some(v => Number(v.trafficVol) > 0);
-    };
-
-    // Si tous les PF cochés utilisent le MÊME jeu de trafic, le trafic est
-    // identique d'un PF à l'autre → une seule colonne Trafic au début suffit
-    // (évite la répétition). Sinon, une colonne Trafic par PF (valeurs réelles).
-    const effectiveDatasets = selectedPfs.map(datasetNameForPf);
-    const uniformDataset = selectedPfs.length > 0
-        && effectiveDatasets.every(d => d === effectiveDatasets[0]);
-    const uniformDatasetName = uniformDataset ? (effectiveDatasets[0] || '—') : null;
-    // Trafic d'un groupe en mode uniforme (pris sur le 1er PF coché).
-    const uniformTrafficFor = (groupId: number) => cells[selectedPfs[0]?.id]?.[groupId]?.trafficVol;
+    // Liste déroulante des plans et scénarios : se ferme au clic en dehors
+    // (dans le document qui l'affiche, fenêtre détachée comprise).
+    const [listeOuverte, setListeOuverte] = useState(false);
+    const listeRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!listeOuverte) return;
+        const doc = listeRef.current?.ownerDocument ?? document;
+        const fermer = (e: MouseEvent) => {
+            if (listeRef.current && !listeRef.current.contains(e.target as Node)) setListeOuverte(false);
+        };
+        doc.addEventListener('mousedown', fermer);
+        return () => doc.removeEventListener('mousedown', fermer);
+    }, [listeOuverte]);
+    const nbPlans = colonnes.filter(c => !c.scenario).length;
+    const nbScenarios = colonnes.length - nbPlans;
+    const libelleListe = `${nbPlans} plan${nbPlans > 1 ? 's' : ''} de feu comparé${nbPlans > 1 ? 's' : ''}`
+        + (nbScenarios ? ` + ${nbScenarios} scénario${nbScenarios > 1 ? 's' : ''}` : '');
 
     const handleExport = async () => {
         if (!tableRef.current) return;
@@ -219,27 +200,48 @@ const CapacityComparison = ({
         <div className="capacity-comparison" ref={racineRef}>
             {/* Sélection des PF */}
             <div className="cc-controls">
-                <div className="cc-pf-select">
-                    <span className="cc-controls-label">Plans de feu à comparer :</span>
-                    <div className="cc-pf-checkboxes">
-                        {pfTabs.map(pf => (
-                            <label key={pf.id} className="cc-pf-checkbox">
-                                <input
-                                    type="checkbox"
-                                    checked={effectiveSelectedIds.includes(pf.id)}
-                                    onChange={() => togglePf(pf.id)}
-                                />
-                                <span>{pf.name}</span>
-                            </label>
-                        ))}
-                    </div>
+                <div className="cc-pf-select" ref={listeRef}>
+                    <span className="cc-controls-label">Plans de feu et scénarios à comparer :</span>
+                    <button type="button" className="cc-pf-liste-bouton" aria-expanded={listeOuverte}
+                        onClick={() => setListeOuverte(o => !o)}>
+                        {libelleListe} ▾
+                    </button>
+                    {listeOuverte && (
+                        <div className="cc-pf-liste" role="group" aria-label="Plans de feu et scénarios à comparer">
+                            {pfTabs.map(pf => {
+                                const comparable = planComparable(pf, effectiveDatasetChoice, trafic);
+                                const titre = comparable ? undefined : 'Aucune donnée de trafic pour ce plan de feu';
+                                return (
+                                    <div key={pf.id} className={`cc-pf-groupe${comparable ? '' : ' cc-indisponible'}`} title={titre}>
+                                        <label className="cc-pf-checkbox">
+                                            <input type="checkbox" disabled={!comparable}
+                                                checked={comparable && effectiveSelectedIds.includes(pf.id)}
+                                                onChange={() => togglePf(pf.id)} />
+                                            <span>{pf.name}</span>
+                                        </label>
+                                        {scenariosDuPlan(pf).map(sc => {
+                                            const cle = cleScenarioComparaison(pf.id, sc.nom);
+                                            return (
+                                                <label key={cle} className="cc-pf-checkbox cc-scenario-checkbox">
+                                                    <input type="checkbox" disabled={!comparable}
+                                                        checked={comparable && selectedScenarios.includes(cle)}
+                                                        onChange={() => toggleScenario(cle)} />
+                                                    <span>{sc.nom}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
                 <div className="cc-dataset-select">
                     <span className="cc-controls-label">Jeu de données trafic :</span>
                     <select value={effectiveDatasetChoice} onChange={(e) => setDatasetChoice(e.target.value)}>
                         <option value={PER_PF}>Jeu associé à chaque PF</option>
                         {trafficDatasetNames.map(name => {
-                            const has = datasetHasData(name);
+                            const has = jeuRenseigne(name, trafic);
                             return (
                                 <option key={name} value={name} disabled={!has}>
                                     {name}{has ? '' : ' (aucune donnée)'}
@@ -248,11 +250,15 @@ const CapacityComparison = ({
                         })}
                     </select>
                 </div>
+                <label className="cc-pf-checkbox cc-option-vutile">
+                    <input type="checkbox" checked={afficherVUtile} onChange={(e) => setAfficherVUtile(e.target.checked)} />
+                    <span>Afficher le V.Utile</span>
+                </label>
                 <div className="cc-export">
                     <button
                         className="cc-export-btn"
                         onClick={handleExport}
-                        disabled={exporting || selectedPfs.length === 0 || vlGroups.length === 0}
+                        disabled={exporting || colonnes.length === 0 || vlGroups.length === 0}
                         title="Exporter le tableau en image PNG (téléchargée et copiée dans le presse-papiers) pour l'intégrer dans un document"
                     >
                         {exporting ? 'Export…' : 'Exporter (PNG)'}
@@ -260,89 +266,23 @@ const CapacityComparison = ({
                 </div>
             </div>
 
-            {selectedPfs.length === 0 ? (
-                <p className="cc-empty">Cochez au moins un plan de feu pour afficher la comparaison.</p>
+            {colonnes.length === 0 ? (
+                <p className="cc-empty">Cochez au moins un plan de feu ou un scénario disposant de données de trafic.</p>
             ) : vlGroups.length === 0 ? (
                 <p className="cc-empty">Aucun groupe VL à comparer dans ce projet.</p>
             ) : (
                 /* data-fit-scroll : repère lu par usePopupWindow, qui
                    agrandit la fenêtre du débordement réellement mesuré. */
                 <div className="cc-table-scroll" data-fit-scroll>
-                    <table className="cc-table" ref={tableRef}>
-                        <thead>
-                            <tr>
-                                <th rowSpan={2} className="cc-col-group cc-corner">
-                                    <span className="cc-corner-pf">Plan de feu</span>
-                                    <span className="cc-corner-gf">Groupe de feu</span>
-                                </th>
-                                {uniformDataset && <th className="cc-trafic-spacer" aria-hidden="true"></th>}
-                                {selectedPfs.map(pf => (
-                                    <th key={pf.id} colSpan={uniformDataset ? 2 : 3} className="cc-pf-header">
-                                        {pf.name}
-                                        <span className="cc-pf-dataset" title="Jeu de trafic appliqué">
-                                            {uniformDataset
-                                                ? `cycle ${pf.cycleLength}s`
-                                                : `${datasetLabelForPf(pf)} · cycle ${pf.cycleLength}s`}
-                                        </span>
-                                    </th>
-                                ))}
-                            </tr>
-                            <tr className="cc-subheader">
-                                {uniformDataset && (
-                                    <th className="cc-col-trafic-single" title="Trafic (véh/h)">
-                                        Trafic<span className="cc-pf-dataset">{uniformDatasetName}</span>
-                                    </th>
-                                )}
-                                {selectedPfs.map(pf => (
-                                    <React.Fragment key={pf.id}>
-                                        {!uniformDataset && <th title="Trafic (véh/h)">Trafic</th>}
-                                        <th title="Vert utile">V.Utile</th>
-                                        <th title="Capacité utilisée">Cap.U</th>
-                                    </React.Fragment>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {vlGroups.map(group => (
-                                <tr key={group.id}>
-                                    <td className="cc-col-group">
-                                        G{group.id}{group.name ? ` — ${group.name}` : ''}
-                                    </td>
-                                    {uniformDataset && (
-                                        <td className="cc-trafic">
-                                            {uniformTrafficFor(group.id) ? uniformTrafficFor(group.id) : '-'}
-                                        </td>
-                                    )}
-                                    {selectedPfs.map(pf => {
-                                        const cell = cells[pf.id]?.[group.id];
-                                        const cap = cell?.capacity;
-                                        return (
-                                            <React.Fragment key={pf.id}>
-                                                {!uniformDataset && (
-                                                    <td className="cc-trafic">
-                                                        {cell?.trafficVol ? cell.trafficVol : '-'}
-                                                    </td>
-                                                )}
-                                                <td className="cc-vutile">
-                                                    {cell?.vUtile ? `${Math.round(cell.vUtile)}''` : '-'}
-                                                </td>
-                                                <td className={`cc-capacity ${getCapacityColorClass(cap?.value)}`}>
-                                                    {cap?.display || '-'}
-                                                </td>
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <TableauComparaisonCapacite colonnes={colonnes} cellules={cellules} groupes={vlGroups}
+                        afficherVUtile={afficherVUtile} tableRef={tableRef} />
                 </div>
             )}
 
             <div className="cc-note">
                 <p className="cc-note-portee">
-                    Valeurs nominales de chaque plan de feu — vert et cycle propres —, hors actions
-                    de micro-régulation.
+                    Plans de feu : valeurs nominales — vert et cycle propres —, hors actions de
+                    micro-régulation. Scénarios : diagramme simulé de leurs actions.
                 </p>
                 <p className="cc-note-couleurs">
                     Code couleur : <span className="capacity-green">&lt; 76 %</span> ·
