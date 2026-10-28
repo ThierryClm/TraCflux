@@ -1,4 +1,5 @@
 import { compenserAuxSynchrosBts } from './operations/synchroBts';
+import { projeter } from './journal';
 import type { ActionMicro, Groupe, Matrice } from '../types/projet';
 import type { EtatSimulation, SimulationResult } from './types';
 import { calculateSimulatedConflicts } from './conflits';
@@ -8,6 +9,20 @@ import { appliquerOuverturesAnticipees } from './operations/ouvertureAnticipee';
 import { appliquerFermeturesAnticipees } from './operations/fermetureAnticipee';
 import { appliquerAdaptatifsVerticaux } from './operations/adaptatifVertical';
 import { appliquerEscamotagesDePhase } from './operations/escamotageDePhase';
+
+/**
+ * Les plages d'escamotage (greenCuts) sont saisies dans le temps du plan
+ * d'origine : on les reporte dans le temps simulé, pour qu'elles suivent le
+ * vert de leur groupe quand un repos, un adaptatif ou un escamotage de phase
+ * le déplace. Une plage entièrement retirée par une contraction disparaît.
+ */
+const recalerCoupesDeVert = ({ simulatedGroups, journal }: EtatSimulation): void => {
+    for (const g of simulatedGroups) {
+        g.greenCuts = g.greenCuts
+            .map(c => ({ ...c, deb: projeter(journal, c.deb, g.id), fin: projeter(journal, c.fin, g.id) }))
+            .filter(c => c.deb !== c.fin);
+    }
+};
 
 /**
  * Calculate the simulated diagram based on selected actions
@@ -61,6 +76,7 @@ export const calculateSimulatedDiagram = (
     appliquerEscamotagesDePhase(etat);     // 5. en dernier, pour ne pas cumuler avec les effets existants
     placerZonesDeRepos(etat);
     if (compenserBts) compenserAuxSynchrosBts(etat);
+    recalerCoupesDeVert(etat);
 
     const { simulatedGroups, simulatedCycleLength, timeShifts, removedPeriods, contractions, restPoints, journal } = etat;
     return {
