@@ -1,5 +1,6 @@
-import type { Groupe } from '../../types/projet';
+import type { ActionMicro, Groupe } from '../../types/projet';
 import type { SimulatedGroup, SimulationResult } from '../../simulation';
+import { projeter } from '../../simulation/journal';
 
 /** Identifiant de groupe, numérique ou tel que lu dans un champ de saisie. */
 export type GroupId = number | string;
@@ -226,12 +227,49 @@ export const createTimelineSimulation = ({ groups, cycleLength, simulationResult
         return { deb: shiftedDeb, fin: shiftedFin, hidden };
     };
 
+    /**
+     * Instant du plan d'origine reporté dans le temps simulé, tel que le voit
+     * la ligne du groupe groupId (repos, adaptatifs, escamotages de phase).
+     */
+    const projeterInstant = (instant: number, groupId: number | null): number =>
+        simulationResult ? projeter(simulationResult.journal, instant, groupId) : instant;
+
+    /**
+     * Secondes d'une action telle qu'elle est dessinée sur le diagramme simulé,
+     * pour son infobulle : les mêmes recalages que son dessin. null hors
+     * simulation, ou pour une action dessinée à l'instant saisi.
+     */
+    const secondesAffichees = (action: ActionMicro): { deb: number; fin: number } | null => {
+        if (!simulationResult || action.deb === '' || action.deb == null) return null;
+        const type = action.action;
+        if (type === 'Synchro BTS' || type === 'Instant Co' || type === 'Instant CO') return null;
+        const numero = (v: unknown) => parseInt(String(v ?? '').replace(/[^0-9-]/g, ''), 10);
+        const deb = numero(action.deb);
+        const fin = action.fin === '' || action.fin == null ? deb : numero(action.fin);
+        if (isNaN(deb) || isNaN(fin)) return null;
+        const gf = numero(action.gf);
+        const groupe = isNaN(gf) ? null : gf;
+        if (type === 'Escamotage') {
+            const cible = numero(action.actGf1);
+            const ligne = isNaN(cible) ? groupe : cible;
+            return { deb: projeterInstant(deb, ligne), fin: projeterInstant(fin, ligne) };
+        }
+        const p1 = numero(action.plage1);
+        const p2 = numero(action.plage2);
+        const plage = !isNaN(p1) && !isNaN(p2) ? { plage1: p1, plage2: p2 } : null;
+        const pleineLargeur = type === 'Adaptatif vertical' || type === 'Escamotage de phase' || type === 'Point de repos';
+        const p = getShiftedActionPosition(deb, fin, pleineLargeur ? null : groupe, type, plage, pleineLargeur ? action.id : null);
+        return { deb: Math.round(p.deb), fin: Math.round(p.fin) };
+    };
+
     return {
         effectiveCycleLength,
         getGroupEndShift,
         getGroupShift,
         getShiftedActionPosition,
-        getSimulatedGroup
+        getSimulatedGroup,
+        projeterInstant,
+        secondesAffichees
     };
 };
 

@@ -2,6 +2,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { ActionPlage, GroupId, SectionGroupes, ShiftedActionPosition } from '../timelineSimulation';
 import type { ActionTimeField, TimelineDragState } from '../useTimelineDrag';
 import type { ActionMicro, Groupe } from '../../../types/projet';
+import type { SimulatedGroup } from '../../../simulation';
 
 /**
  * Socle commun des incrustations du diagramme : géométrie des lignes, survol,
@@ -22,6 +23,10 @@ export interface ContexteIncrustations {
     dragState: TimelineDragState | null;
     handleActionDragStart: (event: ReactMouseEvent, actionId: number, field: ActionTimeField, currentValue: string | number) => void;
     getShiftedActionPosition: (deb: number, fin: number, groupId?: GroupId | null, actionType?: string | null, actionPlage?: ActionPlage | null, actionId?: number | null, section?: SectionGroupes | null) => ShiftedActionPosition;
+    /** Groupe tel que la simulation l'a placé ; null hors simulation. */
+    getSimulatedGroup: (groupId: number) => SimulatedGroup | null;
+    /** Instant d'origine reporté dans le temps simulé pour une ligne (inchangé hors simulation). */
+    projeterInstant: (instant: number, groupId: number | null) => number;
 }
 
 /** Action dont la plage de groupes (plage1, plage2) a été complétée. */

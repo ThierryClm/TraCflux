@@ -11,7 +11,10 @@ interface IncrustationEscamotageGroupeProps {
 
 /** Escamotages de groupe : zone hachurée et flèches vers le groupe cible. */
 const IncrustationEscamotageGroupe = ({ ctx, conflictMatrix, escamotageGroupActions }: IncrustationEscamotageGroupeProps) => {
-    const { groups, pixelsPerSecond, cycleLength, RULER_HEIGHT, ROW_HEIGHT, ROW_TOTAL_HEIGHT, svgHeight, totalWidth, hoveredActionId, setHoveredActionId } = ctx;
+    const { groups, pixelsPerSecond, effectiveCycleLength, RULER_HEIGHT, ROW_HEIGHT, ROW_TOTAL_HEIGHT, svgHeight, totalWidth, hoveredActionId, setHoveredActionId, getSimulatedGroup, projeterInstant } = ctx;
+    // En simulation, tout se lit dans le temps simulé : le vert du groupe source
+    // tel que placé par la simulation, et la plage saisie reportée comme lui.
+    const cycleLength = effectiveCycleLength;
 
     return (
         <>
@@ -36,8 +39,9 @@ const IncrustationEscamotageGroupe = ({ ctx, conflictMatrix, escamotageGroupActi
                 if (sourceGroupIndex === -1) return null;
 
                 // Source group times
-                const sourceStart = sourceGroup.offset % cycleLength;
-                const sourceEndRaw = sourceStart + sourceGroup.durations.green;
+                const sourceSim = getSimulatedGroup(sourceGfId);
+                const sourceStart = (sourceSim ? sourceSim.simulatedOffset : sourceGroup.offset) % cycleLength;
+                const sourceEndRaw = sourceStart + (sourceSim ? sourceSim.simulatedGreen : sourceGroup.durations.green);
                 // If end equals cycle, keep it at cycle instead of wrapping to 0
                 const sourceEnd = sourceEndRaw === cycleLength ? cycleLength : (sourceEndRaw % cycleLength);
 
@@ -75,11 +79,15 @@ const IncrustationEscamotageGroupe = ({ ctx, conflictMatrix, escamotageGroupActi
                 } else {
                     // No target defined - show rectangle on source group
                     // If deb/fin are specified, use them (e.g. for seconde lucarne); otherwise use green phase
-                    const actionDeb = action.deb !== '' ? entier(action.deb) : null;
-                    const actionFin = action.fin !== '' ? entier(action.fin) : null;
-                    if (actionDeb !== null && actionFin !== null && !isNaN(actionDeb) && !isNaN(actionFin)) {
+                    const debSaisi = action.deb !== '' ? entier(action.deb) : null;
+                    const finSaisie = action.fin !== '' ? entier(action.fin) : null;
+                    const actionDeb = debSaisi !== null && !isNaN(debSaisi) ? projeterInstant(debSaisi, sourceGfId) : null;
+                    const actionFin = finSaisie !== null && !isNaN(finSaisie) ? projeterInstant(finSaisie, sourceGfId) : null;
+                    if (actionDeb !== null && actionFin !== null) {
                         rectX = actionDeb * pixelsPerSecond;
-                        rectWidth = (actionFin > actionDeb ? actionFin - actionDeb : (cycleLength - actionDeb + actionFin)) * pixelsPerSecond;
+                        // Plage entièrement retirée par une contraction : plus rien à dessiner.
+                        rectWidth = (actionFin > actionDeb ? actionFin - actionDeb
+                            : actionFin === actionDeb ? 0 : (cycleLength - actionDeb + actionFin)) * pixelsPerSecond;
                     } else {
                         rectX = sourceStart * pixelsPerSecond;
                         rectWidth = (sourceEnd - sourceStart) * pixelsPerSecond;

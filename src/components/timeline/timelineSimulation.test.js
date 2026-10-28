@@ -149,3 +149,36 @@ describe('createTimelineSimulation', () => {
         });
     });
 });
+
+import { calculateSimulatedDiagram } from '../../simulation/calculSimulation';
+
+describe('Secondes affichées dans l’infobulle d’une action en simulation', () => {
+    const groupes = [
+        { id: 1, name: 'A', type: 'VL', offset: 0, minGreen: 6, durations: { green: 30, orange: 3, red: 57 } },
+        { id: 2, name: 'B', type: 'VL', offset: 72, minGreen: 6, durations: { green: 8, orange: 3, red: 79 } },
+    ];
+    const ligne = { gf: '', plage1: '', plage2: '', actGf1: '', description: '' };
+    const actions = [
+        { ...ligne, id: 1, action: 'Adaptatif vertical', deb: 10, fin: 18 },
+        { ...ligne, id: 2, action: 'Escamotage', gf: '2', actGf1: '2', deb: 72, fin: 80 },
+        { ...ligne, id: 3, action: 'Seconde lucarne', gf: '2', deb: 60, fin: 66 },
+        { ...ligne, id: 4, action: 'Synchro BTS', deb: 50, fin: '' },
+    ];
+    const modele = ids => createTimelineSimulation({
+        groups: groupes, cycleLength: 90,
+        simulationResult: ids ? calculateSimulatedDiagram(groupes, actions, ids, 90, []) : null,
+    });
+
+    it('hors simulation : les secondes saisies', () => {
+        expect(modele(null).secondesAffichees(actions[1])).toBeNull();
+    });
+    it('escamotage et seconde lucarne recalés par l’adaptatif coché', () => {
+        const m = modele([1]);
+        expect(m.secondesAffichees(actions[1])).toEqual({ deb: 64, fin: 72 });
+        expect(m.secondesAffichees(actions[2])).toEqual({ deb: 52, fin: 58 });
+        expect(m.projeterInstant(80, 2)).toBe(72);
+    });
+    it('la synchro BTS garde son instant saisi', () => {
+        expect(modele([1]).secondesAffichees(actions[3])).toBeNull();
+    });
+});

@@ -37,6 +37,15 @@ test('la plage d’escamotage suit le vert déplacé par un adaptatif coché', a
     let m = await mesurer(piste);
     expect(m.ecart).toBeLessThan(2);
     expect(Math.abs(m.coupe - m.vert)).toBeLessThan(2);
+    // Le cadre de l'action Escamotage (non cochée) part et finit avec le vert simulé…
+    const vert = (await piste.locator('.phase-bar.green').first().boundingBox())!;
+    const cadre = (await page.locator('.escamotage-hachure-cadre').first().boundingBox())!;
+    expect(Math.abs(cadre.x - vert.x)).toBeLessThan(2);
+    expect(Math.abs(cadre.x + cadre.width - (vert.x + vert.width))).toBeLessThan(2);
+    // … et son infobulle donne ces secondes simulées, pas celles saisies.
+    await page.locator('.escamotage-group-hover').first().hover();
+    await expect(page.locator('.action-hover-tooltip-seconds').first()).toHaveText('seconde 44 à 52');
+    await page.mouse.move(5, 5);
 
     // Adaptatif et escamotage cochés : le vert escamoté, au même endroit.
     await panneau.locator('.simulation-item', { hasText: 'GF9' }).locator('input[type=checkbox]').check();
