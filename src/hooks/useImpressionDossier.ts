@@ -80,7 +80,6 @@ export const useMiseEnPageImpression = ({ actionColWidths, activeTab, simulation
     // réserve de quoi loger un caractère de plus, si bien qu'un mot en bout de
     // ligne peut se placer autrement qu'à l'écran.
     const [descriptionPrintStyle, setDescriptionPrintStyle] = useState<CSSProperties | null>(null);
-    const [largeurTableauConditions, setLargeurTableauConditions] = useState(0);
     /**
      * Relève sur l'écran les largeurs dont l'impression a besoin.
      *
@@ -100,8 +99,6 @@ export const useMiseEnPageImpression = ({ actionColWidths, activeTab, simulation
      * d'impression, où le tableau est à coup sûr en place.
      */
     const mesurerColonnesImpression = useCallback(() => {
-        const tableau = document.querySelector<HTMLElement>('.action-table');
-        if (tableau?.offsetWidth) setLargeurTableauConditions(tableau.offsetWidth);
 
         /** Largeur intérieure d'un champ, rembourrage déduit. */
         const utileDe = (champ: Element) => {
@@ -128,8 +125,10 @@ export const useMiseEnPageImpression = ({ actionColWidths, activeTab, simulation
             // les caractères était une approximation — 62 par ligne à
             // l'impression contre 57 à l'écran — et l'équation se coupait
             // ailleurs, ce qui est précisément ce qu'il faut éviter ici.
+            // La largeur, elle, vient des réglages du projet (colonnesConditionsImpression) :
+            // relevée sur la page, elle manquait ou datait quand le tableau était
+            // détaché ou démonté, et la colonne s'imprimait trop étroite.
             if (utile > 0) setMicroPrintStyle({
-                width: `${Math.round(utile)}px`,
                 fontFamily: style.fontFamily,
                 fontSize: style.fontSize,
                 lineHeight: style.lineHeight
@@ -146,7 +145,6 @@ export const useMiseEnPageImpression = ({ actionColWidths, activeTab, simulation
             // repli peut donc différer d'un mot de celui de l'écran ; la
             // largeur, elle, est respectée.
             if (utile > 0) setDescriptionPrintStyle({
-                width: `${Math.round(utile)}px`,
                 fontSize: style.fontSize,
                 lineHeight: style.lineHeight
             });
@@ -164,32 +162,32 @@ export const useMiseEnPageImpression = ({ actionColWidths, activeTab, simulation
     }, [mesurerColonnesImpression, actionColWidths?.micro, actionColWidths?.description,
         activeTab, simulationEnabled, phasageBulleEnabled]);
     /**
-     * Largeur du tableau des conditions à retenir pour l'impression.
-     *
-     * La mesure d'écran est la bonne valeur — elle porte les colonnes telles que
-     * l'utilisateur les a réglées. Mais elle suppose le tableau monté, ce qu'il
-     * n'est pas lorsqu'on imprime depuis l'onglet Simulation ou Phasage. Sans
-     * repli, le tableau partait alors à sa largeur naturelle, débordait la
-     * feuille en portrait, et le navigateur réduisait TOUT le document —
-     * diagramme compris, aux trois quarts de sa taille.
-     *
-     * Le repli reconstruit cette largeur à partir des trois colonnes réglables
-     * et d'une constante pour les dix autres, relevée à 343 px sur le tableau
-     * par défaut (961 px pour 160 + 420 + 38 de colonnes réglables). Une
-     * approximation suffit : elle ne sert qu'à décider d'un facteur de
-     * réduction, et quelques pixels d'écart ne se voient pas.
+     * Largeurs des colonnes du tableau des conditions à l'impression, en px
+     * d'écran : celles du tableau de l'application, déduites des réglages du
+     * projet (Description, Abrv et Action_Micro réglables, les autres fixes —
+     * cf. ActionTable.css) plutôt que relevées sur la page. Le relevé manquait
+     * ou datait quand le tableau était détaché ou démonté : le navigateur
+     * répartissait alors les colonnes à sa guise, et Action_Micro sortait bien
+     * plus étroite qu'à l'écran. Le tableau imprimé garde ces proportions et
+     * c'est sa composition entière qui est mise à l'échelle de la feuille.
      */
-    const LARGEUR_COLONNES_FIXES = 343;
-    const largeurConditionsImpression = largeurTableauConditions > 0
-        ? largeurTableauConditions
-        : LARGEUR_COLONNES_FIXES
-            + (actionColWidths?.description ?? 160)
-            + (actionColWidths?.micro ?? 420)
-            + (actionColWidths?.abrv ?? 38);
+    const reglage = (k: keyof LargeursColonnes, def: number, min: number, max: number) => {
+        const n = Number(actionColWidths?.[k]);
+        return Number.isFinite(n) && n > 0 ? Math.min(max, Math.max(min, n)) : def;
+    };
+    // GF, Action, Description, Déb, Fin, Abrv, Action_Micro, Plage 1-2, Action GF 1-4
+    // (largeurs de champ + marges intérieures des cellules, relevées à l'écran).
+    const colonnesConditionsImpression = [
+        38, 223, reglage('description', 160, 100, 350) + 9, 45, 39,
+        reglage('abrv', 38, 38, 75) + 9, reglage('micro', 420, 300, 700) + 3,
+        26, 26, 26, 26, 26, 26
+    ];
+    const largeurConditionsImpression = colonnesConditionsImpression.reduce((a, b) => a + b, 0);
 
     return {
         dossierPortrait, setDossierPortrait, dossierPrintWidth,
-        microPrintStyle, descriptionPrintStyle, mesurerColonnesImpression, largeurConditionsImpression
+        microPrintStyle, descriptionPrintStyle, mesurerColonnesImpression, largeurConditionsImpression,
+        colonnesConditionsImpression
     };
 };
 
