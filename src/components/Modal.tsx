@@ -14,9 +14,11 @@ interface ModalProps {
      * lire et à cliquer le diagramme), et la fenêtre se déplace par son bandeau.
      */
     nonModale?: boolean;
+    /** Infobulle « Faites glisser… » du bandeau (fenêtre non modale). */
+    tooltipsEnabled?: boolean;
 }
 
-const Modal = ({ isOpen, onClose, title, children, className = '', overlayClassName = '', nonModale = false }: ModalProps) => {
+const Modal = ({ isOpen, onClose, title, children, className = '', overlayClassName = '', nonModale = false, tooltipsEnabled = true }: ModalProps) => {
     // Déplacement de la fenêtre non modale, repris à zéro à chaque ouverture.
     const [decalage, setDecalage] = useState({ x: 0, y: 0 });
     const depart = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null);
@@ -50,7 +52,7 @@ const Modal = ({ isOpen, onClose, title, children, className = '', overlayClassN
             <div className={`modal-content ${className}`} onClick={(e) => e.stopPropagation()}
                 style={nonModale ? { transform: `translate(${decalage.x}px, ${decalage.y}px)` } : undefined}>
                 <div className={`modal-header${nonModale ? ' modal-header-deplacable' : ''}`} onMouseDown={commencerDeplacement}
-                    title={nonModale ? 'Faites glisser pour déplacer la fenêtre' : undefined}>
+                    title={nonModale && tooltipsEnabled ? 'Faites glisser pour déplacer la fenêtre' : undefined}>
                     <h3>{title}</h3>
                     <button className="modal-close" onClick={onClose}>&times;</button>
                 </div>

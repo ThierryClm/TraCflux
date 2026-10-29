@@ -6,7 +6,14 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
 /** Sections des infobulles réglables dans Mise en page → Infobulles. */
-export type PrefsInfobulles = Record<'menu' | 'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>;
+export type SectionInfobulles = 'menu' | 'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro' | 'actions' | 'assistant' | 'image';
+export type PrefsInfobulles = Record<SectionInfobulles, boolean>;
+
+/** Toutes cochées par défaut ; une section ajoutée plus tard part cochée. */
+export const PREFS_INFOBULLES_DEFAUT: PrefsInfobulles = {
+    menu: true, main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true,
+    actions: true, assistant: true, image: true
+};
 
 /**
  * Interrupteur mémorisé sous la clé `cle` : relu au démarrage, réenregistré à
@@ -26,19 +33,19 @@ export const useBooleenMemorise = (cle: string, defaut: boolean): [boolean, Disp
     return [valeur, setValeur];
 };
 
-/** Préférences « Infobulles... » : 7 sections, toutes cochées par défaut. */
+/** Préférences « Infobulles... » : dix sections, toutes cochées par défaut. */
 export const usePrefsInfobulles = () => {
-    // Preferences "Infobulles..." (Mise en page). 7 sections, toutes
-    // cochees par defaut. Persiste au niveau de l'application (localStorage).
+    // Préférences « Infobulles... » (Mise en page). Dix sections, toutes
+    // cochées par défaut. Persiste au niveau de l'application (localStorage).
     const [tooltipPrefs, setTooltipPrefsState] = useState<PrefsInfobulles>(() => {
         try {
             const raw = localStorage.getItem('tracflux.tooltips');
-            const def = { menu: true, main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
+            const def = PREFS_INFOBULLES_DEFAUT;
             if (!raw) return def;
             const parsed = JSON.parse(raw);
             return { ...def, ...parsed };
         } catch {
-            return { menu: true, main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true };
+            return PREFS_INFOBULLES_DEFAUT;
         }
     });
     const setTooltipPref = useCallback((key: keyof PrefsInfobulles) => {

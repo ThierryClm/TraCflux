@@ -35,6 +35,8 @@ interface SimulationPanelProps {
     onCreerScenario?: (titre: string) => void;
     onEnregistrerScenario?: (titre: string) => void;
     onSupprimerScenario?: () => void;
+    /** Case « Actions micro » de Mise en page → Infobulles (tout le panneau). */
+    tooltipsEnabled?: boolean;
 }
 
 /** La fenêtre ouverte par la liste ou les boutons du scénario. */
@@ -66,8 +68,10 @@ const SimulationPanel = ({
     onChoisirScenario = rien,
     onCreerScenario = rien,
     onEnregistrerScenario = rien,
-    onSupprimerScenario = rien
+    onSupprimerScenario = rien,
+    tooltipsEnabled = true
 }: SimulationPanelProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const contientSynchroBts = actionData.some(action =>
         action.action === 'Synchro BTS' && action.deb !== '' && action.deb != null &&
         Number.isFinite(Number(action.deb)) && Number(action.deb) >= 0 && Number(action.deb) <= cycleLength);
@@ -243,7 +247,7 @@ const SimulationPanel = ({
                     prenait une ligne du panneau. */}
                 <h3>
                     Simulation
-                    <span className="simulation-cycle" title="Cycle simulé, et écart au cycle du plan">
+                    <span className="simulation-cycle" title={tip('Cycle simulé, et écart au cycle du plan')}>
                         {' · '}<span className="sim-info-value">{simulatedCycleLength}s</span>
                         {simulatedCycleLength !== cycleLength && (
                             <span className="sim-info-delta">
@@ -277,9 +281,9 @@ const SimulationPanel = ({
                     onClick={() => setMenuOuvert(o => !o)}
                     // Modifié, l'infobulle dit quoi faire des cases changées — sans
                     // ligne sous le champ, qui décalait la liste des actions.
-                    title={modifie
+                    title={tip(modifie
                         ? (fixe ? `« ${nomActif} » modifié — Enregistrer… en fait un nouveau scénario` : `« ${nomActif} » modifié depuis le dernier enregistrement — Enregistrer… le met à jour`)
-                        : "Choisir, créer ou modifier un scénario. Les scénarios sont enregistrés avec le plan de feu ; celui choisi titre la section Simulation du dossier imprimé."}
+                        : "Choisir, créer ou modifier un scénario. Les scénarios sont enregistrés avec le plan de feu ; celui choisi titre la section Simulation du dossier imprimé.")}
                 >
                     <span className="simulation-scenario-nom">{scenarioActif ? scenarioActif.nom : 'Sans titre'}</span>
                     {modifie && <span className="simulation-scenario-modifie" aria-label="modifié">●</span>}
@@ -298,7 +302,7 @@ const SimulationPanel = ({
                             >
                                 <span className="scenario-coche">{sc.nom === nomActif ? '✓' : ''}</span>
                                 <span className="scenario-nom">{sc.nom}</span>
-                                <span className="scenario-compte" title="Actions cochées">{actionsDuScenario(sc, actionData).length}</span>
+                                <span className="scenario-compte" title={tip('Actions cochées')}>{actionsDuScenario(sc, actionData).length}</span>
                             </button>
                         ))}
                         {scenarios.length > 0 && <div className="scenario-separateur" />}
@@ -313,7 +317,7 @@ const SimulationPanel = ({
                             >
                                 <span className="scenario-coche">{sc.nom === nomActif ? '✓' : ''}</span>
                                 <span className="scenario-nom">{sc.nom}</span>
-                                <span className="scenario-compte" title="Actions cochées">{actionsDuScenario(sc, actionData).length}</span>
+                                <span className="scenario-compte" title={tip('Actions cochées')}>{actionsDuScenario(sc, actionData).length}</span>
                             </button>
                         ))}
                         <div className="scenario-separateur" />
@@ -327,11 +331,11 @@ const SimulationPanel = ({
                 <button
                     className="sim-btn"
                     onClick={() => ouvrir(scenarioActif && !fixe ? { type: 'enregistrer' } : { type: 'nouveau' })}
-                    title={scenarioActif && !fixe
+                    title={tip(scenarioActif && !fixe
                         ? 'Enregistrer les cases cochées dans ce scénario, le renommer ou en créer une copie'
                         : fixe
                             ? `« ${nomActif} » n'est pas modifiable : enregistre ces cases sous un nouveau scénario`
-                            : 'Enregistrer ces cases sous un nouveau scénario'}
+                            : 'Enregistrer ces cases sous un nouveau scénario')}
                 >
                     Enregistrer…
                 </button>
@@ -339,8 +343,8 @@ const SimulationPanel = ({
                     className="sim-btn"
                     onClick={() => ouvrir({ type: 'supprimer' })}
                     disabled={!scenarioActif || fixe}
-                    title={fixe ? `« ${nomActif} » est un scénario fixe : il ne se supprime pas`
-                        : scenarioActif ? 'Retirer ce scénario de la liste' : 'Aucun scénario choisi'}
+                    title={tip(fixe ? `« ${nomActif} » est un scénario fixe : il ne se supprime pas`
+                        : scenarioActif ? 'Retirer ce scénario de la liste' : 'Aucun scénario choisi')}
                 >
                     Supprimer…
                 </button>
@@ -380,7 +384,7 @@ const SimulationPanel = ({
                                     <span className="sim-time">{action.deb}s</span>
                                 )}
                                 {action.description && (
-                                    <span className="sim-desc" title={action.description}>
+                                    <span className="sim-desc" title={tip(action.description)}>
                                         {action.description.length > 15
                                             ? action.description.slice(0, 15) + '...'
                                             : action.description}
@@ -492,31 +496,32 @@ const SimulationPanel = ({
                                         ? `« ${nomActif} » a été modifié. Ces cases ne s'enregistrent que sous un nouveau scénario : le créer avant d'ouvrir « ${dialogue.vers} » ?`
                                         : `« ${nomActif} » a été modifié. L'enregistrer avant d'ouvrir « ${dialogue.vers} » ?`}
                             </p>
-                            <p className="scenario-dialog-aide">Survole les boutons pour le détail de chaque choix.</p>
+                            {/* L'invite renvoie aux infobulles : inutile quand elles sont coupées. */}
+                            {tooltipsEnabled && <p className="scenario-dialog-aide">Survole les boutons pour le détail de chaque choix.</p>}
                             <div className="scenario-dialog-boutons">
                                 <button type="button" className="scenario-btn" onClick={fermer}
-                                    title={`Ferme cette fenêtre et reste sur « ${nomActif} » avec tes modifications : rien n'est perdu, rien n'est enregistré.`}>
+                                    title={tip(`Ferme cette fenêtre et reste sur « ${nomActif} » avec tes modifications : rien n'est perdu, rien n'est enregistré.`)}>
                                     Annuler
                                 </button>
                                 <button type="button" className="scenario-btn"
                                     onClick={() => { onChoisirScenario(dialogue.vers); fermer(); }}
-                                    title={dialogue.vers === nomActif
+                                    title={tip(dialogue.vers === nomActif
                                         ? `Oublie les modifications et revient à « ${nomActif} » tel qu'il est${fixe ? '' : ' enregistré'}.`
-                                        : `Ouvre « ${dialogue.vers} » sans enregistrer : les modifications de « ${nomActif} » sont perdues${fixe ? '' : ', sa version enregistrée reste intacte'}.`}>
+                                        : `Ouvre « ${dialogue.vers} » sans enregistrer : les modifications de « ${nomActif} » sont perdues${fixe ? '' : ', sa version enregistrée reste intacte'}.`)}>
                                     Abandonner
                                 </button>
                                 {fixe ? (
                                     <button type="button" className="scenario-btn principal" autoFocus
                                         onClick={() => ouvrir({ type: 'nouveau', puis: dialogue.vers === nomActif ? undefined : dialogue.vers })}
-                                        title={`Enregistre ces cases sous un nouveau titre${dialogue.vers === nomActif ? '' : `, puis ouvre « ${dialogue.vers} »`}.`}>
+                                        title={tip(`Enregistre ces cases sous un nouveau titre${dialogue.vers === nomActif ? '' : `, puis ouvre « ${dialogue.vers} »`}.`)}>
                                         Créer un scénario…
                                     </button>
                                 ) : (
                                     <button type="button" className="scenario-btn principal" autoFocus
                                         onClick={() => { onEnregistrerScenario(nomActif); if (dialogue.vers !== nomActif) onChoisirScenario(dialogue.vers); fermer(); }}
-                                        title={dialogue.vers === nomActif
+                                        title={tip(dialogue.vers === nomActif
                                             ? `Enregistre les modifications dans « ${nomActif} ».`
-                                            : `Enregistre les modifications dans « ${nomActif} », puis ouvre « ${dialogue.vers} ».`}>
+                                            : `Enregistre les modifications dans « ${nomActif} », puis ouvre « ${dialogue.vers} ».`)}>
                                         Enregistrer
                                     </button>
                                 )}

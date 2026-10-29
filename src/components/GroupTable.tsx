@@ -104,7 +104,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                 <div className="empty-state-overlay">
                     <EmptyState
                         icon="list"
-                        title={tip("Formulaire non renseigné")}
+                        title="Formulaire non renseigné"
                         hint="Saisissez les noms des groupes de feu ainsi que les types (Véhicules, Piéton, Cycliste, etc.) dans la colonne « Type »."
                     />
                 </div>

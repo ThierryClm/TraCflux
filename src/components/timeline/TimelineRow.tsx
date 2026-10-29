@@ -27,6 +27,7 @@ interface TimelineRowProps {
     selectedEscamotageGroup: ActionMicro[];
     setHoveredGroupId: (id: number | null) => void;
     simulationResult: SimulationResult | null;
+    tooltipsEnabled?: boolean;
 }
 
 /**
@@ -34,7 +35,9 @@ interface TimelineRowProps {
  * d'escamotage) et les actions qui lui sont rattachées (seconde lucarne,
  * accolade de fermeture anticipée, ouverture anticipée...).
  */
-const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZoneRanges, conflictMatrix, getActionsForGroup, getSimulatedGroup, handleDragStart, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredVUtile, onGroupClick, selectedEscamotageGroup, setHoveredGroupId, simulationResult }: TimelineRowProps) => {
+const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZoneRanges, conflictMatrix, getActionsForGroup, getSimulatedGroup, handleDragStart, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredVUtile, onGroupClick, selectedEscamotageGroup, setHoveredGroupId, simulationResult, tooltipsEnabled = true }: TimelineRowProps) => {
+    // Case « Diagramme » de Mise en page → Infobulles : coupe les bulles « nom + secondes » et « V.Utile ».
+    const tip = (text: string | null | undefined) => tooltipsEnabled ? text : undefined;
     const { groups, pixelsPerSecond, cycleLength, effectiveCycleLength, hoveredActionId, setHoveredActionId, dragState, handleActionDragStart, getShiftedActionPosition } = ctx;
 
     const groupActions = getActionsForGroup(group.id);
@@ -149,7 +152,7 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                                     className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
                                     style={{ left: `${offset * pixelsPerSecond}px` }}
                                 >
-                                    <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                    <CustomTooltip text={tip(`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`)}>
                                         <div
                                             className="drag-handle drag-handle-start"
                                             onMouseDown={(e) => handleDragStart(e, group.id, 'start', offset)}
@@ -157,7 +160,7 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                                     </CustomTooltip>
                                     <div className="phase-bar green" style={{ width: `${firstPartWidth}px` }}></div>
                                     {showVUtileOverlay && vUtileFirstSec > 0 && (
-                                        <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileFirstSec * pixelsPerSecond}px` }} /></CustomTooltip>
+                                        <CustomTooltip text={tip(vUtileTitle)}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileFirstSec * pixelsPerSecond}px` }} /></CustomTooltip>
                                     )}
                                 </div>
                                 {/* Second part: green from 0 + orange first part to end of cycle */}
@@ -168,9 +171,9 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                                     <div className="phase-bar green" style={{ width: `${secondPartWidth}px` }}></div>
                                     <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeFirstPartWidth}px` }}></div>
                                     {showVUtileOverlay && vUtileSecondSec > 0 && (
-                                        <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileSecondSec * pixelsPerSecond}px` }} /></CustomTooltip>
+                                        <CustomTooltip text={tip(vUtileTitle)}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileSecondSec * pixelsPerSecond}px` }} /></CustomTooltip>
                                     )}
-                                    <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                    <CustomTooltip text={tip(`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`)}>
                                         <div
                                             className="drag-handle drag-handle-end"
                                             onMouseDown={(e) => handleDragStart(e, group.id, 'end', endValue)}
@@ -196,7 +199,7 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                                 className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
                                 style={{ left: `${offset * pixelsPerSecond}px` }}
                             >
-                                <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                <CustomTooltip text={tip(`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`)}>
                                     <div
                                         className="drag-handle drag-handle-start"
                                         onMouseDown={(e) => handleDragStart(e, group.id, 'start', offset)}
@@ -204,7 +207,7 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                                 </CustomTooltip>
                                 <div className="phase-bar green" style={{ width: `${firstPartWidth}px` }}></div>
                                 {showVUtileOverlay && vUtileFirstSec > 0 && (
-                                    <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileFirstSec * pixelsPerSecond}px` }} /></CustomTooltip>
+                                    <CustomTooltip text={tip(vUtileTitle)}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileFirstSec * pixelsPerSecond}px` }} /></CustomTooltip>
                                 )}
                             </div>
                             {/* Second part: from start of cycle to end */}
@@ -215,9 +218,9 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                                 <div className="phase-bar green" style={{ width: `${secondPartWidth}px` }}></div>
                                 <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeWidth}px` }}></div>
                                 {showVUtileOverlay && vUtileSecondSec > 0 && (
-                                    <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileSecondSec * pixelsPerSecond}px` }} /></CustomTooltip>
+                                    <CustomTooltip text={tip(vUtileTitle)}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileSecondSec * pixelsPerSecond}px` }} /></CustomTooltip>
                                 )}
-                                <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                <CustomTooltip text={tip(`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`)}>
                                     <div
                                         className="drag-handle drag-handle-end"
                                         onMouseDown={(e) => handleDragStart(e, group.id, 'end', endValue)}
@@ -244,7 +247,7 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                                 className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
                                 style={{ left: `${offset * pixelsPerSecond}px` }}
                             >
-                                <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                <CustomTooltip text={tip(`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`)}>
                                     <div
                                         className="drag-handle drag-handle-start"
                                         onMouseDown={(e) => handleDragStart(e, group.id, 'start', offset)}
@@ -253,9 +256,9 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                                 <div className="phase-bar green" style={{ width: `${greenWidth}px` }}></div>
                                 <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeFirstPartWidth}px` }}></div>
                                 {showVUtileOverlay && vUtileSec > 0 && (
-                                    <CustomTooltip text={vUtileTitle}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileWidthPx}px` }} /></CustomTooltip>
+                                    <CustomTooltip text={tip(vUtileTitle)}><div className={`vutile-overlay ${vUtileColorClass}`} style={{ width: `${vUtileWidthPx}px` }} /></CustomTooltip>
                                 )}
-                                <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                                <CustomTooltip text={tip(`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`)}>
                                     <div
                                         className="drag-handle drag-handle-end"
                                         onMouseDown={(e) => handleDragStart(e, group.id, 'end', endValue)}
@@ -280,7 +283,7 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                         className={`cycle-block ${dragState?.groupId === group.id ? 'dragging' : ''} ${arrowHighlightClass}`}
                         style={{ left: `${offset * pixelsPerSecond}px` }}
                     >
-                        <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                        <CustomTooltip text={tip(`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`)}>
                             <div
                                 className="drag-handle drag-handle-start"
                                 onMouseDown={(e) => handleDragStart(e, group.id, 'start', offset)}
@@ -289,14 +292,14 @@ const TimelineRow = ({ ctx, group, activeConflicts, biCarrefourSeparator, braceZ
                         <div className="phase-bar green" style={{ width: `${greenWidth}px` }}></div>
                         <div className={`phase-bar ${orangeClass}`} style={{ width: `${orangeWidth}px` }}></div>
                         {showVUtileOverlay && vUtileSec > 0 && (
-                            <CustomTooltip text={vUtileTitle}>
+                            <CustomTooltip text={tip(vUtileTitle)}>
                                 <div
                                     className={`vutile-overlay ${vUtileColorClass}`}
                                     style={{ width: `${vUtileSec * pixelsPerSecond}px` }}
                                 />
                             </CustomTooltip>
                         )}
-                        <CustomTooltip text={`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`}>
+                        <CustomTooltip text={tip(`${group.name}\nseconde ${Math.round(offset)} à ${Math.round(endValue)}`)}>
                             <div
                                 className="drag-handle drag-handle-end"
                                 onMouseDown={(e) => handleDragStart(e, group.id, 'end', endValue)}

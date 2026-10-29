@@ -83,6 +83,7 @@ interface WorkspaceSidebarModel {
         traffic?: boolean;
         config?: boolean;
         matrix?: boolean;
+        actions?: boolean;
     };
     activeTab: ActiveTab;
     setActiveTab: (tab: ActiveTab) => void;
@@ -206,6 +207,12 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
     // cocher : masquer les paramètres ne doit pas le replier avec eux.
     const panneauVisible = sidebarVisible || simulationEnabled;
 
+    // Infobulles rangées sous d'autres cases que « Page principale » (`tip`) :
+    // la réserve de capacité suit « Trafic », l'avertissement de l'onglet
+    // Configuration suit « Configuration ».
+    const tipTrafic = (text: string) => tooltipPrefs.traffic === false ? undefined : text;
+    const tipConfig = (text: string) => tooltipPrefs.config === false ? undefined : text;
+
     return (
                 <aside className={`sidebar${panneauVisible ? '' : ' repliee'}`} style={{
                     width: panneauVisible ? `${phasageBulleEnabled ? Math.min(sidebarWidth, 350) : sidebarWidth}px` : '0px',
@@ -285,6 +292,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 onCreerScenario={creerScenarioSimulation}
                                 onEnregistrerScenario={enregistrerScenarioSimulation}
                                 onSupprimerScenario={supprimerScenarioSimulation}
+                                tooltipsEnabled={tooltipPrefs.actions}
                             />
                             {/* Même tableau que l'onglet Trafic, aux mêmes formules :
                                 seuls les temps changent (diagramme simulé), et la
@@ -337,7 +345,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 >
                                     Configuration
                                     {groups.length > 0 && groups.every(g => !g.type) && (
-                                        <span className="tab-warning-icon" title={tip("Formulaire non renseigné")} role="img" aria-label="Formulaire non renseigné"> ⚠</span>
+                                        <span className="tab-warning-icon" title={tipConfig("Formulaire non renseigné")} role="img" aria-label="Formulaire non renseigné"> ⚠</span>
                                     )}
                                 </button>
                                 <button
@@ -472,7 +480,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                         actionData={actionData}
                                         activeTrafficDataset={activeTrafficDataset}
                                         onDetach={showFloatingDiagnostic ? null : () => setShowFloatingDiagnostic(true)}
-                                        tip={tip}
+                                        tip={tipTrafic}
                                     />
                                 )}
                                 </div>

@@ -148,7 +148,7 @@ interface WorkspaceMainModel {
     simulationSpeed: number;
     startDrag: NonNullable<TimelineDiagramProps['startDrag']>;
     tip: (label: string) => string | undefined | undefined;
-    tooltipPrefs: { diagram?: boolean; micro?: boolean };
+    tooltipPrefs: { main?: boolean; diagram?: boolean; micro?: boolean; actions?: boolean; image?: boolean };
     updateActionRow: ActionTableProps['updateActionRow'];
     updateGroupParams: TimelineDiagramProps['updateGroupParams'];
     updateMicroCustomField: NonNullable<ActionTableProps['updateMicroCustomField']>;
@@ -237,9 +237,10 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                         renamePF(pf.id, newName.trim());
                                     }
                                 }}
-                                data-pf-tooltip={pf.readOnly
+                                // Bulle CSS (App.css) : sans l'attribut, rien ne s'affiche.
+                                data-pf-tooltip={tip(pf.readOnly
                                     ? '🔒 Importé — lecture seule (référence de comparaison)'
-                                    : 'Glissez pour réordonner, double-cliquez pour renommer'}
+                                    : 'Glissez pour réordonner, double-cliquez pour renommer')}
                             >
                                 <span className="pf-tab-name">
                                     {pf.readOnly && <span className="pf-tab-lock">🔒</span>}
@@ -364,6 +365,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 showMicroOnHover={showMicroOnHover}
                                 showWrapFlash={showWrapFlash}
                             tooltipsEnabled={tooltipPrefs.diagram}
+                            actionTooltipsEnabled={tooltipPrefs.actions}
                                 onDetach={showFloatingDiagram ? null : () => setShowFloatingDiagram(true)}
                             />
                         </div>
@@ -375,7 +377,8 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                             className={`horizontal-resize-divider ${isResizingDiagram ? 'resizing' : ''}`}
                             onMouseDown={handleDiagramResizeStart}
                             onDoubleClick={resetDiagramHeight}
-                            title={tip("Faites glisser pour redimensionner. Double-clic pour réinitialiser.")}
+                            // Séparateur du diagramme : rangé sous la case « Diagramme ».
+                            title={tooltipPrefs.diagram === false ? undefined : "Faites glisser pour redimensionner. Double-clic pour réinitialiser."}
                         >
                             <div className="horizontal-resize-handle"></div>
                         </div>
@@ -561,6 +564,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 setImageContrast={setImageContrast}
                                 displayOptions={intersectionDisplay}
                                 onDisplayOptionChange={setIntersectionDisplayOption}
+                                tooltipsEnabled={tooltipPrefs.image}
                             />
                         </div>
                         <div style={{ display: !phasageBulleEnabled && !simulationEnabled ? 'contents' : 'none' }}>

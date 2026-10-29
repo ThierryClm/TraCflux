@@ -337,7 +337,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
             computeActualDelay
         });
 
-    // Infobulle custom (delai 1 s a l'apparition, disparition immediate a
+    // Infobulle custom (delai 500 ms a l'apparition, disparition immediate a
     // la sortie de la case). title natif limite a ~500 ms non configurable
     // -> implementation custom pour respecter le delai et eviter l'effet
     // "sapin de Noel" lors du survol rapide de la grille.
@@ -400,7 +400,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
                     <div className="empty-state-overlay">
                         <EmptyState
                             icon="matrix"
-                            title={tip("Matrice non renseignée")}
+                            title="Matrice non renseignée"
                             hint="Saisissez les temps interverts (en secondes) entre les groupes de feux antagonistes. Un clic dans une cellule suffit."
                         />
                     </div>
@@ -419,7 +419,7 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
                                 <td className={`row-header${separatorIdx >= 0 && fromIdx === separatorIdx ? ' matrix-bi-sep-bottom' : ''}`}>{fromIdx + 1}</td>
                                 {showGroupNames && (
                                     <td className={`row-name${separatorIdx >= 0 && fromIdx === separatorIdx ? ' matrix-bi-sep-bottom' : ''}`}
-                                        title={groups?.[fromIdx]?.name}>
+                                        title={groups?.[fromIdx]?.name ? tip(groups[fromIdx].name) : undefined}>
                                         {groups && groups[fromIdx] ? groups[fromIdx].name : '-'}
                                     </td>
                                 )}

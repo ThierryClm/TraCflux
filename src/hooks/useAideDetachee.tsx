@@ -11,7 +11,9 @@ const chargerAide = () => import('../components/HelpContent');
  * Dans la page sur un téléphone, qui n'a qu'un écran, ou si le navigateur
  * bloque la fenêtre.
  */
-const useAideDetachee = (helpModal: boolean, setHelpModal: (ouverte: boolean) => void, helpAnchor: string | null) => {
+const useAideDetachee = (helpModal: boolean, setHelpModal: (ouverte: boolean) => void, helpAnchor: string | null,
+    /** Case « Page principale » de Mise en page → Infobulles. */
+    tooltipsEnabled = true) => {
     const aideDansLaPage = !!window.matchMedia?.(ECRAN_MOBILE).matches;
     const aidePopup = usePopupWindow({
         geometryKey: 'aide',
@@ -28,11 +30,11 @@ const useAideDetachee = (helpModal: boolean, setHelpModal: (ouverte: boolean) =>
         renderToPopup(
             <div className="modal-content modal-wide aide-detachee">
                 <div className="modal-body">
-                    <HelpContentDiffere initialAnchor={helpAnchor} />
+                    <HelpContentDiffere initialAnchor={helpAnchor} tooltipsEnabled={tooltipsEnabled} />
                 </div>
             </div>
         );
-    }, [helpModal, aideDansLaPage, helpAnchor, renderToPopup]);
+    }, [helpModal, aideDansLaPage, helpAnchor, tooltipsEnabled, renderToPopup]);
 
     // Le module de l'aide (et sa feuille de style) est chargé avant d'ouvrir
     // la fenêtre, qui recopie les styles de l'application à son ouverture.
