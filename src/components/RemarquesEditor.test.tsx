@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
-import RemarquesEditor from './RemarquesEditor';
+import { describe, expect, it, vi } from 'vitest';
+import RemarquesEditor, { LONGUEUR_MAX_REMARQUES, tronquerRemarques } from './RemarquesEditor';
 
 const ControlledEditor = () => {
     const [remarques, setRemarques] = useState('Texte de test');
@@ -90,5 +90,33 @@ describe('RemarquesEditor', () => {
         expect(editable.innerHTML).toBe('Texte<br>Suite');
         expect(editable.textContent).toBe('TexteSuite');
         expect(editable.querySelector('[style]')).toBeNull();
+    });
+});
+
+describe('Remarques : 1 000 caractères, mise en forme et sauts de ligne conservés', () => {
+    it('la coupe garde la structure : sauts de ligne et couleurs avant la limite', () => {
+        const racine = document.createElement('div');
+        racine.innerHTML = 'Ligne 1<div>Ligne <span style="color: rgb(76, 175, 80);">deux</span></div><div>Ligne trois</div>';
+        expect(tronquerRemarques(racine, 14)).toBe(true);
+        expect(racine.innerHTML).toBe('Ligne 1<div>Ligne <span style="color: rgb(76, 175, 80);">d</span></div>');
+        expect(tronquerRemarques(racine, 1000)).toBe(false);
+    });
+
+    it('un texte de 1 000 caractères avec sauts de ligne est enregistré tel quel', () => {
+        const updateRemarques = vi.fn();
+        const html = `${'a'.repeat(500)}<div>${'b'.repeat(400)}</div><div>Fin : ponctuation ; « ok » !</div>`;
+        const { container } = render(<RemarquesEditor remarques={html} updateRemarques={updateRemarques} groupCount={3} />);
+        const editable = container.querySelector('.input-remarques') as HTMLElement;
+        fireEvent.blur(editable);
+        expect(updateRemarques).toHaveBeenCalledWith(html);
+        expect(LONGUEUR_MAX_REMARQUES).toBe(1000);
+    });
+
+    it('la saisie est refusée une fois la limite atteinte', () => {
+        const { container } = render(<RemarquesEditor remarques={'x'.repeat(1000)} updateRemarques={vi.fn()} groupCount={3} />);
+        const editable = container.querySelector('.input-remarques') as HTMLElement;
+        const evt = new InputEvent('beforeinput', { inputType: 'insertText', data: 'y', cancelable: true });
+        editable.dispatchEvent(evt);
+        expect(evt.defaultPrevented).toBe(true);
     });
 });

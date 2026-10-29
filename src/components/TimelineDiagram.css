@@ -1401,7 +1401,9 @@ body.light-mode .action-hover-tooltip-micro .micro-keyword {
     font-size: 0.90em;
     font-family: inherit;
     box-sizing: border-box;
-    overflow: hidden;
+    /* Jusqu'à 1 000 caractères : au-delà de la hauteur du diagramme, la zone
+       défile au lieu de cacher la fin du texte. */
+    overflow-y: auto;
     white-space: pre-wrap;
     word-wrap: break-word;
     cursor: text;

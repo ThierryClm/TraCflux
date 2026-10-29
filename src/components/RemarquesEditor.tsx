@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { SyntheticEvent } from 'react';
 import CustomTooltip from './CustomTooltip';
 import { resetTextFormatting } from '../utils/resetTextFormatting';
@@ -93,6 +93,32 @@ const rangeFromBookmark = (editable: HTMLElement, bookmark: RangeBookmark | null
  *   la limite de caractères est virtuellement levée — le popup est
  *   redimensionnable, plus de contrainte d'alignement avec le diagramme.
  */
+/** Longueur maximale des remarques d'un plan de feu, en caractères. */
+export const LONGUEUR_MAX_REMARQUES = 1000;
+
+/**
+ * Coupe le texte de l'éditable à `max` caractères en gardant sa structure :
+ * sauts de ligne, couleurs et tailles avant la coupe sont conservés. On
+ * remplaçait autrefois tout le contenu par son texte brut tronqué, ce qui
+ * effaçait la mise en forme et les retours à la ligne.
+ */
+export const tronquerRemarques = (racine: HTMLElement, max: number): boolean => {
+    const doc = racine.ownerDocument;
+    const parcours = doc.createTreeWalker(racine, NodeFilter.SHOW_TEXT);
+    let compte = 0;
+    for (let n = parcours.nextNode() as Text | null; n; n = parcours.nextNode() as Text | null) {
+        if (compte + n.data.length > max) {
+            const plage = doc.createRange();
+            plage.setStart(n, max - compte);
+            plage.setEnd(racine, racine.childNodes.length);
+            plage.deleteContents();
+            return true;
+        }
+        compte += n.data.length;
+    }
+    return false;
+};
+
 interface RemarquesEditorProps {
     remarques?: string;
     updateRemarques?: (html: string) => void;
@@ -105,15 +131,35 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
     const editableRef = useRef<HTMLDivElement | null>(null);
     const restoreSelectionAfterRenderRef = useRef(false);
 
-    const linesAvailable = popupMode ? 9999 : Math.max(1, Math.floor((groupCount * 30 - 16) / 17));
-    const charsPerLine = 35;
-    const calculatedMaxLength = popupMode ? Number.MAX_SAFE_INTEGER : linesAvailable * charsPerLine;
-    const tooltipText = popupMode
-        ? 'Remarques générales — Sélectionnez du texte puis + (vert), − (rouge), ▲ (agrandir), ▼ (réduire)'
-        : `Remarques générales (${charsPerLine} car. x ${linesAvailable} lignes max) - Sélectionnez du texte puis + (vert), − (rouge), ▲ (agrandir), ▼ (réduire)`;
+    // Limite fixe, quelle que soit la hauteur de la colonne (qui défile au-delà).
+    // Elle dépendait du nombre de groupes — près de 490 caractères pour neuf
+    // groupes — et un texte plus long était coupé à l'enregistrement.
+    void groupCount;
+    const calculatedMaxLength = LONGUEUR_MAX_REMARQUES;
+    const tooltipText = `Remarques générales (${LONGUEUR_MAX_REMARQUES} caractères au plus) — Sélectionnez du texte puis + (vert), − (rouge), ▲ (agrandir), ▼ (réduire)`;
+
 
     const docOf = (node: Node | null) => node?.ownerDocument || document;
     const winOf = (node: Node | null) => docOf(node).defaultView || window;
+
+    // La saisie s'arrête à la limite au lieu de couper le texte après coup.
+    // Un collage trop long est réduit à la place restante, en texte simple.
+    useEffect(() => {
+        const editable = editableRef.current;
+        if (!editable) return;
+        const garde = (e: InputEvent) => {
+            if (!e.inputType.startsWith('insert')) return;
+            const sel = winOf(editable).getSelection();
+            const remplace = sel && sel.rangeCount > 0 ? sel.toString().length : 0;
+            const ajout = e.data ?? e.dataTransfer?.getData('text/plain') ?? '';
+            const place = LONGUEUR_MAX_REMARQUES - ((editable.textContent || '').length - remplace);
+            if (ajout.length <= place) return;
+            e.preventDefault();
+            if (place > 0) docOf(editable).execCommand('insertText', false, ajout.slice(0, place));
+        };
+        editable.addEventListener('beforeinput', garde);
+        return () => editable.removeEventListener('beforeinput', garde);
+    });
 
     const rememberRange = (editable: HTMLElement, range: Range) => {
         remarquesSelectionRef.current = bookmarkRange(editable, range);
@@ -312,14 +358,10 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
                 onKeyUp={(e) => saveSelectionFrom(e.currentTarget)}
                 onSelect={(e) => saveSelectionFrom(e.currentTarget)}
                 onBlur={(e) => {
-                    const html = e.currentTarget.innerHTML;
-                    const text = e.currentTarget.textContent || '';
-                    if (text.length <= calculatedMaxLength) {
-                        updateRemarques && updateRemarques(html);
-                    } else {
-                        e.currentTarget.textContent = text.slice(0, calculatedMaxLength);
-                        updateRemarques && updateRemarques(e.currentTarget.innerHTML);
-                    }
+                    // Filet de sécurité (texte venu d'un ancien projet, par exemple) :
+                    // la coupe garde la mise en forme et les sauts de ligne.
+                    tronquerRemarques(e.currentTarget, calculatedMaxLength);
+                    updateRemarques && updateRemarques(e.currentTarget.innerHTML);
                 }}
                 onKeyDown={(e) => {
                     // Raccourcis clavier : + / − colorent la sélection.
