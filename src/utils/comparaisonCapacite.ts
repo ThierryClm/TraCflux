@@ -1,6 +1,7 @@
 import { calculateVUtile, calculateCapacity } from './capacityCalc';
 import { calculerScenario, planImprime } from '../simulation/impressionScenarios';
 import { scenariosDuPlan } from '../simulation/scenarios';
+import { getTotalGreenTime, parseTrafficVol } from './trafficHelpers';
 import type { ActionMicro, Groupe, JeuTrafic, Matrice, PlanDeFeu, ScenarioSimulation } from '../types/projet';
 
 /**
@@ -53,7 +54,8 @@ export interface ColonneComparaison {
     scenario: ScenarioSimulation | null;
     jeu: string;
     cycle: number;
-    /** Vert de chaque groupe dans cette colonne (nominal, ou simulé pour un scénario). */
+    /** Vert de chaque groupe dans cette colonne (nominal, ou simulé pour un scénario),
+        secondes lucarnes comprises comme dans le tableau Trafic. */
     verts: Record<number, number>;
 }
 
@@ -82,13 +84,20 @@ export const colonnesComparaison = (
     pfTabs.forEach(pf => {
         if (!planComparable(pf, selection.choixJeu, t)) return;
         const jeu = jeuDuPlan(pf, selection.choixJeu, t);
+        const cycle = pf.cycleLength ?? actif.cycleLength;
+        // Les secondes lucarnes du plan s'ajoutent au vert principal, comme dans
+        // le tableau Trafic (getTotalGreenTime) : sans elles, un groupe à seconde
+        // lucarne paraissait saturé.
+        const actionsPlan = pf.id === actif.activePFId ? actif.actionData : (pf.data || []);
         if (pfIds.includes(pf.id)) {
             const verts: Record<number, number> = {};
             actif.groups.forEach(g => {
-                const d = pf.diagram?.find(x => x.groupId === g.id);
-                verts[g.id] = d && d.greenDuration !== undefined && d.greenDuration !== null ? d.greenDuration : g.durations?.green;
+                const d = pf.id === actif.activePFId ? undefined : pf.diagram?.find(x => x.groupId === g.id);
+                const vertPrincipal = d && d.greenDuration !== undefined && d.greenDuration !== null ? d.greenDuration : g.durations?.green;
+                const drapeau = d?.phaseFlag !== undefined ? d.phaseFlag : g.phaseFlag;
+                verts[g.id] = getTotalGreenTime(g.id, vertPrincipal, actionsPlan, cycle, drapeau ?? '');
             });
-            colonnes.push({ cle: String(pf.id), pf, scenario: null, jeu, cycle: pf.cycleLength ?? actif.cycleLength, verts });
+            colonnes.push({ cle: String(pf.id), pf, scenario: null, jeu, cycle, verts });
         }
         const scenarios = scenariosDuPlan(pf).filter(s => selection.scenarios.includes(cleScenarioComparaison(pf.id, s.nom)));
         if (scenarios.length === 0) return;
@@ -96,7 +105,9 @@ export const colonnesComparaison = (
         scenarios.forEach(scenario => {
             const calcule = calculerScenario(scenario, plan, pf.conflictMatrix ?? conflictMatrix);
             const verts: Record<number, number> = {};
-            calcule.groupesSimules.forEach(g => { verts[g.id] = g.durations?.green; });
+            calcule.groupesSimules.forEach(g => {
+                verts[g.id] = getTotalGreenTime(g.id, g.durations?.green, plan.actionData, calcule.cycleSimule, g.phaseFlag ?? '');
+            });
             colonnes.push({
                 cle: cleScenarioComparaison(pf.id, scenario.nom), pf, scenario, jeu,
                 cycle: calcule.cycleSimule, verts
@@ -123,7 +134,8 @@ export const cellulesComparaison = (
         out[c.cle] = {};
         groupes.forEach(g => {
             const trafficVol = t.trafficDatasets?.[c.jeu]?.[g.id]?.trafficVol ?? 0;
-            const vUtile = calculateVUtile(trafficVol as number, g.laneCoef ?? 0, c.cycle ?? 0);
+            // « 350c » (trafic coordonné) se lit 350, comme dans le tableau Trafic.
+            const vUtile = calculateVUtile(parseTrafficVol(trafficVol), g.laneCoef ?? 0, c.cycle ?? 0);
             out[c.cle][g.id] = { trafficVol, vUtile, capacity: calculateCapacity(c.verts[g.id], vUtile ?? 0) };
         });
     });

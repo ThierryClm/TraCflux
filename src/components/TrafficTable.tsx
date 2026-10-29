@@ -85,7 +85,7 @@ const TrafficTable = ({
     const handleTrafficMouseEnter = useCallback((groupId: number) => {
         tooltipTimerRef.current = setTimeout(() => {
             setTooltipGroupId(groupId);
-        }, 5000);
+        }, 2500);
     }, []);
 
     const handleTrafficMouseLeave = useCallback(() => {
@@ -522,7 +522,7 @@ const TrafficTable = ({
                                                 )}
                                                 {tooltipGroupId === g.id && (
                                                     <div className="trafic-custom-tooltip">
-                                                        Appuyez sur 'c' pour indiquer un trafic coordonné
+                                                        Touche « c » : trafic coordonné (retard et file d'attente à 0) — « c » de nouveau pour l'annuler
                                                     </div>
                                                 )}
                                             </div>

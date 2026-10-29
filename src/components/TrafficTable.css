@@ -212,7 +212,8 @@
     color: #fff;
     font-size: 0.8em;
     pointer-events: none;
-    margin-left: 0;
+    /* Rapproché du nombre, centré dans sa case : l'écart est divisé par deux. */
+    margin-left: -6px;
 }
 
 .trafic-custom-tooltip {
@@ -224,7 +225,7 @@
     color: #eee;
     padding: 6px 10px;
     border-radius: 4px;
-    font-size: 0.85em;
+    font-size: 1.05em;
     white-space: nowrap;
     z-index: 100;
     pointer-events: none;

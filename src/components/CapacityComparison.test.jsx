@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import CapacityComparison from './CapacityComparison';
-import { colonnesComparaison, cleScenarioComparaison, planComparable, PAR_PLAN } from '../utils/comparaisonCapacite';
+import { cellulesComparaison, colonnesComparaison, cleScenarioComparaison, planComparable, PAR_PLAN } from '../utils/comparaisonCapacite';
 
 const groups = [
     { id: 1, name: 'Nord', type: 'V', laneCoef: 1, offset: 0, minGreen: 6, durations: { green: 40, orange: 3, red: 47 } },
@@ -57,5 +57,31 @@ describe('CapacityComparison', () => {
         rendre({ afficherVUtile: false });
         expect(screen.queryAllByText('V.Utile')).toHaveLength(0);
         expect(screen.getByLabelText('Afficher le V.Utile')).not.toBeChecked();
+    });
+});
+
+describe('capacité : secondes lucarnes comprises, comme dans le tableau Trafic', () => {
+    const lucarne = { ...ligne, id: 21, action: 'Seconde lucarne', gf: '1', deb: 60, fin: 80 };
+    const plansSL = [
+        { id: 1, name: 'Actuel', cycleLength: 90, diagram: [], data: [lucarne] },
+        { id: 2, name: 'Autre', cycleLength: 90, diagram: [{ groupId: 1, offset: 0, greenDuration: 40 }], data: [lucarne] },
+    ];
+    const actifSL = { activePFId: 1, groups, cycleLength: 90, actionData: [lucarne] };
+    const cols = colonnesComparaison(plansSL, { pfIds: null, scenarios: [], choixJeu: 'HPM' }, trafic, actifSL, []);
+
+    it('le vert du GF1 ajoute les 20 s de sa seconde lucarne, plan actif comme autre plan', () => {
+        expect(cols.map(c => c.verts[1])).toEqual([60, 60]);
+        expect(cols[0].verts[2]).toBe(30);
+    });
+    it('la capacité utilisée baisse d’autant', () => {
+        const cellules = cellulesComparaison(cols, groups, trafic);
+        const avec = cellules['1'][1].capacity.value;
+        const sansLucarne = cellulesComparaison([{ ...cols[0], verts: { ...cols[0].verts, 1: 40 } }], groups, trafic)['1'][1].capacity.value;
+        expect(Math.abs(avec - sansLucarne * 40 / 60)).toBeLessThanOrEqual(1);
+    });
+    it('un groupe en aiguillage ne cumule pas sa seconde lucarne', () => {
+        const aiguille = colonnesComparaison(plansSL, { pfIds: [1], scenarios: [], choixJeu: 'HPM' }, trafic,
+            { ...actifSL, groups: groups.map(g => g.id === 1 ? { ...g, phaseFlag: 'a' } : g) }, []);
+        expect(aiguille[0].verts[1]).toBe(40);
     });
 });
