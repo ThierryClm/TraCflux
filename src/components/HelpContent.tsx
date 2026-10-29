@@ -789,6 +789,8 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     </li>
                     <li><strong>Sous-options par PF</strong> (indentées sous chaque PF) :
                         <ul>
+                            <li><em>Commentaires :</em> Les commentaires des groupes du PF, une ligne « GF x : » par groupe commenté. Proposée seulement si le PF a des commentaires</li>
+                            <li><em>Remarques :</em> Les remarques du PF, avec leurs sauts de ligne. Proposée seulement si le PF a des remarques</li>
                             <li><em>Conditions de micro-régulation :</em> Tableau des actions de micro-régulation du PF</li>
                             <li><em>Variables micro :</em> Variables personnalisées de micro-régulation du PF</li>
                             <li><em>Phasage bulle :</em> Représentation graphique des phases du PF sous forme de bulles sur l'image du carrefour (disponible si l'image et les flèches existent)</li>

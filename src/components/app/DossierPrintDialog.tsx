@@ -4,6 +4,7 @@ import {
     planImprime, calculerScenario, optionScenario
 } from '../../simulation';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
+import { commentairesDuPlan, imprimerCommentaires, imprimerRemarques, remarquesRenseignees } from '../../utils/commentairesPlan';
 
 type DossierSections = Record<string, boolean>;
 
@@ -167,6 +168,8 @@ function DossierPrintDialog({
                                                 setDossierSections(s => ({
                                                     ...s,
                                                     [`diagram_${pf.id}`]: checked,
+                                                    [`commentaires_${pf.id}`]: checked,
+                                                    [`remarques_${pf.id}`]: checked,
                                                     [`conditionsMicro_${pf.id}`]: checked,
                                                     [`variablesMicro_${pf.id}`]: checked,
                                                     [`phasageBulle_${pf.id}`]: checked,
@@ -178,6 +181,22 @@ function DossierPrintDialog({
                                     </label>
                                     {pfChecked && (
                                     <div className="dossier-pf-suboptions">
+                                        {/* Commentaires des groupes et remarques du plan : proposés
+                                            seulement quand le plan en a. */}
+                                        {commentairesDuPlan(pf, contexteScenarios).length > 0 && (
+                                        <label>
+                                            <input type="checkbox" checked={imprimerCommentaires(dossierSections, pf.id)}
+                                                onChange={e => { const v = e.target.checked; setDossierSections(s => ({ ...s, [`commentaires_${pf.id}`]: v })); }} />
+                                            Commentaires
+                                        </label>
+                                        )}
+                                        {remarquesRenseignees(pf) && (
+                                        <label>
+                                            <input type="checkbox" checked={imprimerRemarques(dossierSections, pf.id)}
+                                                onChange={e => { const v = e.target.checked; setDossierSections(s => ({ ...s, [`remarques_${pf.id}`]: v })); }} />
+                                            Remarques
+                                        </label>
+                                        )}
                                         <label>
                                             <input type="checkbox" checked={dossierSections[`conditionsMicro_${pf.id}`] || false}
                                                 onChange={e => { const v = e.target.checked; setDossierSections(s => {

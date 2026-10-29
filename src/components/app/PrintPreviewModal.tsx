@@ -11,6 +11,7 @@ import ScenariosDuPlanImprimes from './ImpressionScenarios';
 import TableauComparaisonCapacite from '../TableauComparaisonCapacite';
 import { cellulesComparaison, colonnesComparaison, groupesComparables } from '../../utils/comparaisonCapacite';
 import '../CapacityComparison.css';
+import { commentairesDuPlan, imprimerCommentaires, imprimerRemarques, remarquesRenseignees } from '../../utils/commentairesPlan';
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
@@ -878,16 +879,26 @@ function PrintPreviewModal({
                                             </div>
                                         </div>
 
-                                        {/* Remarques du PF (si non vides) */}
-                                        {(() => {
-                                            const pfRemarques = pf.remarques || '';
-                                            const textOnly = pfRemarques.replace(/<[^>]*>/g, '').trim();
-                                            return textOnly ? (
-                                                <div className="print-dossier-remarques">
-                                                    <strong>Remarques :</strong> <span dangerouslySetInnerHTML={{ __html: pfRemarques }} />
+                                        {/* Commentaires des groupes du PF (case « Commentaires ») :
+                                            une ligne « GF x : » par groupe commenté. */}
+                                        {imprimerCommentaires(dossierSections, pf.id) && (() => {
+                                            const commentaires = commentairesDuPlan(pf, { activePFId, groups });
+                                            return commentaires.length > 0 ? (
+                                                <div className="print-dossier-remarques print-dossier-commentaires">
+                                                    <strong>Commentaires :</strong>
+                                                    {commentaires.map(c => (
+                                                        <div key={c.groupId} className="print-commentaire-ligne">GF {c.groupId} : {c.texte}</div>
+                                                    ))}
                                                 </div>
                                             ) : null;
                                         })()}
+
+                                        {/* Remarques du PF (case « Remarques », si non vides) */}
+                                        {imprimerRemarques(dossierSections, pf.id) && remarquesRenseignees(pf) && (
+                                            <div className="print-dossier-remarques">
+                                                <strong>Remarques :</strong> <span dangerouslySetInnerHTML={{ __html: pf.remarques || '' }} />
+                                            </div>
+                                        )}
 
                                         {/* Conditions micro pour ce PF */}
                                         {dossierSections[`conditionsMicro_${pf.id}`] && pfActionData.filter(row => row.gf || row.action || row.description || row.deb !== '' || row.fin !== '').length > 0 && (
