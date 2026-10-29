@@ -1,4 +1,5 @@
 import type { Groupe, PlanDeFeu } from '../types/projet';
+import { texteBrut } from './couleursTexte';
 
 /** Commentaire renseigné d'un groupe dans un plan de feu. */
 export interface CommentaireGroupe {
@@ -20,7 +21,9 @@ export const commentairesDuPlan = (
         const ligne = pf.id === actif.activePFId ? undefined : pf.diagram?.find(d => d.groupId === g.id);
         const texte = ligne?.comment !== undefined ? ligne.comment : g.comment;
         const couleur = ligne?.commentColor !== undefined ? ligne.commentColor : g.commentColor;
-        return { groupId: g.id, texte: (texte || '').trim(), couleur: couleur || '' };
+        // Le commentaire est mis en forme (couleur, taille) : le dossier en imprime
+        // le texte seul, sans balises ni style.
+        return { groupId: g.id, texte: texteBrut(texte), couleur: couleur || '' };
     })
     .filter(c => c.texte !== '');
 

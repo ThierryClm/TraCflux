@@ -5,7 +5,7 @@ import PrintPreviewModal from './PrintPreviewModal';
 /** Dossier : les commentaires des groupes, une ligne « GF x : » chacun, et les remarques du plan. */
 const groupes = [1, 2, 3].map(id => ({
     id, name: `G${id}`, type: 'VL', courant: 'TD', minGreen: 5, laneCoef: 1,
-    comment: id === 2 ? 'Boucle à remplacer' : '',
+    comment: id === 2 ? '<span style="color: #4CAF50">Boucle à remplacer</span>' : '',
     offset: (id - 1) * 20, durations: { green: 15, orange: 3, red: 42 }
 }));
 const plans = [

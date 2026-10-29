@@ -74,7 +74,7 @@ describe('RemarquesEditor', () => {
         fireEvent.mouseDown(screen.getByRole('button', { name: 'Agrandir la taille du texte sélectionné' }));
 
         const formatted = editable.querySelector<HTMLSpanElement>('span');
-        expect(formatted?.style.color).toBe('rgb(76, 175, 80)');
+        expect(formatted?.style.color).toBe('rgb(57, 255, 20)');
         expect(formatted?.style.fontSize).toBe('16px');
         expect(formatted?.textContent).toBe('Texte');
     });

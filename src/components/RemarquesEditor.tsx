@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { SyntheticEvent } from 'react';
 import CustomTooltip from './CustomTooltip';
 import { resetTextFormatting } from '../utils/resetTextFormatting';
+import { ROUGE_TEXTE, VERT_TEXTE, vertFluo } from '../utils/couleursTexte';
 
 interface RangeBookmark {
     startPath: number[];
@@ -271,7 +272,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
         }
     };
 
-    // Couleur : '#4CAF50' (vert) ou '#F44336' (rouge). Si la sélection est
+    // Couleur : VERT_TEXTE (vert fluo) ou ROUGE_TEXTE (rouge). Si la sélection est
     // déjà colorée, on bascule sur blanc (retour visuel à la couleur du fond).
     const applyColor = (color: string) => (e: SyntheticEvent<HTMLElement>) => {
         e.preventDefault();
@@ -321,7 +322,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
                     className="comment-color-btn comment-color-plus"
                     role="button"
                     aria-label="Colorer le texte sélectionné en vert"
-                    onMouseDown={applyColor('#4CAF50')}
+                    onMouseDown={applyColor(VERT_TEXTE)}
                 >+</span></CustomTooltip>
                 <CustomTooltip text="Couleur rouge (-)"><span
                     className="comment-color-btn comment-color-minus"
@@ -353,7 +354,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
                 className="input-remarques"
                 contentEditable
                 suppressContentEditableWarning
-                dangerouslySetInnerHTML={{ __html: remarques || '' }}
+                dangerouslySetInnerHTML={{ __html: vertFluo(remarques) }}
                 onMouseUp={(e) => saveSelectionFrom(e.currentTarget)}
                 onKeyUp={(e) => saveSelectionFrom(e.currentTarget)}
                 onSelect={(e) => saveSelectionFrom(e.currentTarget)}
@@ -368,7 +369,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
                     if (e.key === '+' || e.key === '-') {
                         const sel = winOf(e.currentTarget).getSelection();
                         if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-                            applyColor(e.key === '+' ? '#4CAF50' : '#F44336')(e);
+                            applyColor(e.key === '+' ? VERT_TEXTE : ROUGE_TEXTE)(e);
                         }
                     }
                 }}
