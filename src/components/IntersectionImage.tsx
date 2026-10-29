@@ -50,6 +50,8 @@ export interface IntersectionImageProps {
     setImageContrast?: (value: number) => void;
     displayOptions?: IntersectionDisplayOptions;
     onDisplayOptionChange?: (option: IntersectionDisplayOption, value: boolean) => void;
+    /** Case « Image du carrefour » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 const IntersectionImage = ({
@@ -94,8 +96,10 @@ const IntersectionImage = ({
     setImageContrast,
     // Cases numéros / noms / flèches (persistées avec le projet)
     displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true },
-    onDisplayOptionChange
+    onDisplayOptionChange,
+    tooltipsEnabled = true
 }: IntersectionImageProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const fileInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedArrow, setSelectedArrow] = useState<number | null>(null);
@@ -796,7 +800,7 @@ const IntersectionImage = ({
                         <button
                             className="upload-btn floating-btn"
                             onClick={onShowFloatingImage}
-                            title="Ouvrir dans une fenêtre séparée"
+                            title={tip('Ouvrir dans une fenêtre séparée')}
                         >
                             Détacher image
                         </button>
@@ -817,7 +821,7 @@ const IntersectionImage = ({
                                 <button onClick={handleScreenCapture}>
                                     Capture écran...
                                 </button>
-                                <button onClick={handlePasteImage} title="Coller une image du presse-papiers (ex. après une capture de zone Windows : Win+Maj+S)">
+                                <button onClick={handlePasteImage} title={tip('Coller une image du presse-papiers (ex. après une capture de zone Windows : Win+Maj+S)')}>
                                     Coller (presse-papiers)...
                                 </button>
                                 {recentImageDirs.length > 0 && (
@@ -831,7 +835,7 @@ const IntersectionImage = ({
                                                     setShowImageMenu(false);
                                                     handleImageUpload();
                                                 }}
-                                                title={dir.name}
+                                                title={tip(dir.name)}
                                             >
                                                 {dir.name}
                                             </button>
@@ -897,7 +901,7 @@ const IntersectionImage = ({
                                         e.stopPropagation();
                                         rotateArrow(arrow.id);
                                     }}
-                                    title={`GF${arrow.groupId} - ${groupInfo.courant || 'Sans courant'} - Double-clic pour tourner`}
+                                    title={tip(`GF${arrow.groupId} - ${groupInfo.courant || 'Sans courant'} - Double-clic pour tourner`)}
                                 >
                                     <div
                                         className="arrow-symbol"
@@ -1015,7 +1019,7 @@ const IntersectionImage = ({
                                             const current = arrows.find(a => a.id === selectedArrow)?.rotation || 0;
                                             setArrowRotation(selectedArrow, (current - 1 + 360) % 360);
                                         }}
-                                        title="-1°"
+                                        title={tip('-1°')}
                                     >−</button>
                                     <input
                                         type="range"
@@ -1031,7 +1035,7 @@ const IntersectionImage = ({
                                             const current = arrows.find(a => a.id === selectedArrow)?.rotation || 0;
                                             setArrowRotation(selectedArrow, (current + 1) % 360);
                                         }}
-                                        title="+1°"
+                                        title={tip('+1°')}
                                     >+</button>
                                     <input
                                         type="number"
@@ -1053,7 +1057,7 @@ const IntersectionImage = ({
                                             const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
                                             setArrowScale(selectedArrow, Math.max(0.5, current - 0.1).toFixed(1));
                                         }}
-                                        title="-0.1"
+                                        title={tip('-0.1')}
                                     >−</button>
                                     <input
                                         type="range"
@@ -1070,7 +1074,7 @@ const IntersectionImage = ({
                                             const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
                                             setArrowScale(selectedArrow, Math.min(3, current + 0.1).toFixed(1));
                                         }}
-                                        title="+0.1"
+                                        title={tip('+0.1')}
                                     >+</button>
                                     <input
                                         type="number"

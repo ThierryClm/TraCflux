@@ -105,13 +105,15 @@ const ActionTooltip = ({ actionData, actionTooltip, microVariableNames, secondes
 interface TimelineFloatingOverlaysProps {
     actionData: ActionMicro[];
     actionTooltip: TimelineActionTooltip | null;
+    /** Case « Actions micro » de Mise en page → Infobulles. */
+    actionTooltipsEnabled?: boolean;
     cycleLength: number;
     dragState: TimelineDragState | null;
     microVariableNames: string[];
     secondesAffichees?: SecondesAffichees;
 }
 
-const TimelineFloatingOverlays = ({ actionData, actionTooltip, cycleLength, dragState, microVariableNames, secondesAffichees }: TimelineFloatingOverlaysProps) => {
+const TimelineFloatingOverlays = ({ actionData, actionTooltip, actionTooltipsEnabled = true, cycleLength, dragState, microVariableNames, secondesAffichees }: TimelineFloatingOverlaysProps) => {
     let groupDrag: { position: FloatingPosition; value: number } | null = null;
     let actionDrag: { position: FloatingPosition; value: number } | null = null;
 
@@ -142,7 +144,7 @@ const TimelineFloatingOverlays = ({ actionData, actionTooltip, cycleLength, drag
         <>
             {groupDrag && <FloatingValue dragState={groupDrag.position} value={groupDrag.value} />}
             {actionDrag && <FloatingValue dragState={actionDrag.position} value={actionDrag.value} />}
-            <ActionTooltip actionData={actionData} actionTooltip={actionTooltip} microVariableNames={microVariableNames} secondesAffichees={secondesAffichees} />
+            <ActionTooltip actionData={actionData} actionTooltip={actionTooltipsEnabled ? actionTooltip : null} microVariableNames={microVariableNames} secondesAffichees={secondesAffichees} />
         </>
     );
 };

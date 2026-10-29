@@ -63,9 +63,12 @@ const amenerEnVue = (r: Range, barre: HTMLElement | null) => {
 interface RechercheAideProps {
     /** Conteneur du texte de l'aide. */
     racine: RefObject<HTMLElement | null>;
+    /** Case « Page principale » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
-const RechercheAide = ({ racine }: RechercheAideProps) => {
+const RechercheAide = ({ racine, tooltipsEnabled = true }: RechercheAideProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const [saisie, setSaisie] = useState('');
     const [resultat, setResultat] = useState<{ requete: string; occurrences: OccurrenceAide[] }>({ requete: '', occurrences: [] });
     const [courante, setCourante] = useState(0);
@@ -184,16 +187,16 @@ const RechercheAide = ({ racine }: RechercheAideProps) => {
                 />
                 <span className={`help-recherche-compteur${actif && total === 0 ? ' help-recherche-vide' : ''}`} aria-live="polite">{compteur}</span>
                 <button type="button" className="help-recherche-btn" onClick={() => aller(-1)} disabled={total === 0 || premiere}
-                    title="Occurrence précédente (Maj+Entrée)" aria-label="Occurrence précédente">▲</button>
+                    title={tip('Occurrence précédente (Maj+Entrée)')} aria-label="Occurrence précédente">▲</button>
                 <button type="button" className="help-recherche-btn" onClick={() => aller(1)} disabled={total === 0 || derniere}
-                    title="Occurrence suivante (Entrée)" aria-label="Occurrence suivante">▼</button>
+                    title={tip('Occurrence suivante (Entrée)')} aria-label="Occurrence suivante">▼</button>
                 <button type="button" className="help-recherche-btn help-recherche-chapitres" onClick={() => setListeOuverte(o => !o)}
                     disabled={total === 0} aria-expanded={listeOuverte} aria-haspopup="listbox"
-                    title="Chapitres qui contiennent ce mot">
+                    title={tip('Chapitres qui contiennent ce mot')}>
                     Chapitres{total > 0 ? ` (${rubriques.length})` : ''} ▾
                 </button>
                 {saisie && (
-                    <button type="button" className="help-recherche-btn" onClick={vider} title="Effacer la recherche (Échap)" aria-label="Effacer la recherche">✕</button>
+                    <button type="button" className="help-recherche-btn" onClick={vider} title={tip('Effacer la recherche (Échap)')} aria-label="Effacer la recherche">✕</button>
                 )}
             </div>
             {listeOuverte && total > 0 && (

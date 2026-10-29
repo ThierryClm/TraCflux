@@ -50,6 +50,8 @@ interface CapacityComparisonProps {
     actionData?: ActionMicro[];
     conflictMatrix?: Matrice;
     onContentSize?: ((size: ContentSize) => void) | null;
+    /** Case « Page principale » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 const CapacityComparison = ({
@@ -82,8 +84,10 @@ const CapacityComparison = ({
        la faire mesurer par la fenêtre elle-même dépendait de l'instant où elle
        regardait : selon que le contenu était rendu ou non, elle tombait juste
        ou pas du tout. */
-    onContentSize = null
+    onContentSize = null,
+    tooltipsEnabled = true
 }: CapacityComparisonProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const [exporting, setExporting] = useState(false);
     const tableRef = useRef<HTMLTableElement>(null);
     const racineRef = useRef<HTMLDivElement>(null);
@@ -210,7 +214,7 @@ const CapacityComparison = ({
                         <div className="cc-pf-liste" role="group" aria-label="Plans de feu et scénarios à comparer">
                             {pfTabs.map(pf => {
                                 const comparable = planComparable(pf, effectiveDatasetChoice, trafic);
-                                const titre = comparable ? undefined : 'Aucune donnée de trafic pour ce plan de feu';
+                                const titre = comparable ? undefined : tip('Aucune donnée de trafic pour ce plan de feu');
                                 return (
                                     <div key={pf.id} className={`cc-pf-groupe${comparable ? '' : ' cc-indisponible'}`} title={titre}>
                                         <label className="cc-pf-checkbox">
@@ -259,7 +263,7 @@ const CapacityComparison = ({
                         className="cc-export-btn"
                         onClick={handleExport}
                         disabled={exporting || colonnes.length === 0 || vlGroups.length === 0}
-                        title="Exporter le tableau en image PNG (téléchargée et copiée dans le presse-papiers) pour l'intégrer dans un document"
+                        title={tip("Exporter le tableau en image PNG (téléchargée et copiée dans le presse-papiers) pour l'intégrer dans un document")}
                     >
                         {exporting ? 'Export…' : 'Exporter (PNG)'}
                     </button>
@@ -275,7 +279,7 @@ const CapacityComparison = ({
                    agrandit la fenêtre du débordement réellement mesuré. */
                 <div className="cc-table-scroll" data-fit-scroll>
                     <TableauComparaisonCapacite colonnes={colonnes} cellules={cellules} groupes={vlGroups}
-                        afficherVUtile={afficherVUtile} tableRef={tableRef} />
+                        afficherVUtile={afficherVUtile} tableRef={tableRef} tooltipsEnabled={tooltipsEnabled} />
                 </div>
             )}
 

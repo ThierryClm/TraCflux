@@ -26,7 +26,6 @@ const buildProps = (overrides = {}) => ({
         formatDate: vi.fn((value) => value),
         onFileClick: vi.fn(),
     },
-    tip: (value) => value,
     ...overrides,
 });
 

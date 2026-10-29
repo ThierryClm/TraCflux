@@ -77,7 +77,7 @@ function SlideDialog({ groups, tip, dialog }: {
     dialog: SlideDialogModel;
 }) {
     return (
-        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Glisser le diagramme')} overlayClassName="modal-menu-overlay modal-compact-overlay">
+        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title="Glisser le diagramme" overlayClassName="modal-menu-overlay modal-compact-overlay">
             <div className="form-row">
                 <label>
                     Du groupe :
@@ -111,7 +111,7 @@ function InsertDialog({ cycleLength, tip, dialog }: {
     dialog: RangeDialogModel;
 }) {
     return (
-        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Insérer une plage')} overlayClassName="modal-menu-overlay modal-compact-overlay">
+        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title="Insérer une plage" overlayClassName="modal-menu-overlay modal-compact-overlay">
             <div className="form-row">
                 <label>
                     À partir de la seconde :
@@ -135,7 +135,7 @@ function ReduceDialog({ cycleLength, tip, dialog }: {
     dialog: RangeDialogModel;
 }) {
     return (
-        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Réduire une plage')} overlayClassName="modal-menu-overlay modal-compact-overlay">
+        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title="Réduire une plage" overlayClassName="modal-menu-overlay modal-compact-overlay">
             <div className="form-row">
                 <label>
                     À partir de la seconde :
@@ -159,7 +159,7 @@ function MoveGroupDialog({ groups, tip, dialog }: {
     dialog: MoveGroupDialogModel;
 }) {
     return (
-        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Déplacer un groupe de feu')} overlayClassName="modal-menu-overlay modal-compact-overlay">
+        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title="Déplacer un groupe de feu" overlayClassName="modal-menu-overlay modal-compact-overlay">
             <div className="form-row">
                 <label>
                     Groupe à déplacer :
@@ -188,7 +188,7 @@ function BiCarrefourDialog({ groups, tip, dialog }: {
     dialog: BiCarrefourDialogModel;
 }) {
     return (
-        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Intégrer un bi-Carrefour')} overlayClassName="modal-menu-overlay modal-compact-overlay">
+        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title="Intégrer un bi-Carrefour" overlayClassName="modal-menu-overlay modal-compact-overlay">
             <div className="form-row">
                 <label>
                     Séparation après le groupe :

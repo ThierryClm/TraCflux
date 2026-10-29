@@ -12,6 +12,8 @@ export interface NouveauPlanDialogProps {
     onAssocier: (jeu: string) => void;
     onSuggererCycle: () => void;
     onOuvrirTrafic: () => void;
+    /** Case « Page principale » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface NouveauPlanDialogProps {
  * Première étape de l'assistant ; la suivante est la suggestion de cycle.
  */
 const NouveauPlanDialog = ({
-    isOpen, onClose, planName, jeuxAvecDonnees, jeuActif, onAssocier, onSuggererCycle, onOuvrirTrafic,
+    isOpen, onClose, planName, jeuxAvecDonnees, jeuActif, onAssocier, onSuggererCycle, onOuvrirTrafic, tooltipsEnabled = true,
 }: NouveauPlanDialogProps) => {
     const defaut = jeuxAvecDonnees.includes(jeuActif) ? jeuActif : (jeuxAvecDonnees[0] ?? '');
     const [jeu, setJeu] = useState(defaut);
@@ -34,7 +36,7 @@ const NouveauPlanDialog = ({
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} nonModale className="nouveau-plan" title={`Nouveau plan de feu — ${planName}`}>
+        <Modal isOpen={isOpen} onClose={onClose} nonModale tooltipsEnabled={tooltipsEnabled} className="nouveau-plan" title={`Nouveau plan de feu — ${planName}`}>
             <p style={{ marginTop: 0 }}>
                 Le plan <b>{planName}</b> est créé, avec les mêmes groupes et la même matrice : les verts (Déb, Fin),
                 les DA, les conditions et les variables micro sont vides.

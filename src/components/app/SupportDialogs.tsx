@@ -46,7 +46,7 @@ interface SupportDialogsModel {
     setMicroVariablesModal: (value: boolean) => void;
     setOptionsModal: (value: boolean) => void;
     tip: (label: string) => string | undefined | undefined;
-    tooltipPrefs: { main?: boolean };
+    tooltipPrefs: { main?: boolean; micro?: boolean };
 }
 
 interface SupportDialogsProps {
@@ -70,11 +70,11 @@ export default function SupportDialogs({ model }: SupportDialogsProps) {
             <MicroVariablesDialog
                 isOpen={microVariablesModal}
                 onClose={() => setMicroVariablesModal(false)}
-                tooltipsEnabled={tooltipPrefs.main}
+                tooltipsEnabled={tooltipPrefs.micro}
             />
 
             {/* Modal Options - Légende des actions */}
-            <Modal isOpen={optionsModal} onClose={() => setOptionsModal(false)} title={tip("Options - Légende des actions")}>
+            <Modal isOpen={optionsModal} onClose={() => setOptionsModal(false)} title="Options - Légende des actions">
                 <div className="legend-container">
                     <div className="legend-item">
                         <div className="legend-preview legend-adaptatif"></div>
@@ -116,15 +116,15 @@ export default function SupportDialogs({ model }: SupportDialogsProps) {
             </Modal>
 
             {/* Modal Aide en ligne */}
-            <Modal isOpen={helpModal} onClose={() => setHelpModal(false)} title={tip("Aide - TraCflux")} className="modal-wide">
-                <HelpContent initialAnchor={helpAnchor} />
+            <Modal isOpen={helpModal} onClose={() => setHelpModal(false)} title="Aide - TraCflux" className="modal-wide">
+                <HelpContent initialAnchor={helpAnchor} tooltipsEnabled={tooltipPrefs.main} />
             </Modal>
 
             {/* Comparateur de capacité : rendu dans une fenêtre détachée
                 (usePopupWindow ci-dessus), non modale et déplaçable. */}
 
             {/* Modal À propos */}
-            <Modal isOpen={aboutModal} onClose={() => setAboutModal(false)} title={tip(`À propos — ${APP_NAME}`)}>
+            <Modal isOpen={aboutModal} onClose={() => setAboutModal(false)} title={`À propos — ${APP_NAME}`}>
                 <div style={{ padding: '10px 4px', textAlign: 'center', position: 'relative' }}>
                     <img
                         src="./logo.svg"
@@ -189,7 +189,7 @@ export default function SupportDialogs({ model }: SupportDialogsProps) {
             </Modal>
 
             {/* Modal Rapport de diagnostic */}
-            <Modal isOpen={diagnosticModal} onClose={() => setDiagnosticModal(false)} title={tip("Rapport de diagnostic")} className="modal-wide">
+            <Modal isOpen={diagnosticModal} onClose={() => setDiagnosticModal(false)} title="Rapport de diagnostic" className="modal-wide">
                 {(() => {
                     // diagnosticRefresh is read here so the modal re-renders when the journal is cleared
                     void diagnosticRefresh;

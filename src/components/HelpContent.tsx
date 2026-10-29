@@ -16,6 +16,8 @@ import RechercheAide from './RechercheAide';
  */
 export interface HelpContentProps {
     initialAnchor?: string | null;
+    /** Case « Page principale » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 /** Entrée du sommaire : un chapitre (h3) et ses sections (h4). */
@@ -25,7 +27,7 @@ interface ChapitreAide {
     sections: { id: string; title: string }[];
 }
 
-const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
+const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpContentProps) => {
     const helpContentRef = useRef<HTMLDivElement>(null);
     const [helpToc, setHelpToc] = useState<ChapitreAide[]>([]);
     // L'aide peut vivre dans une fenêtre détachée : ses ancres se cherchent
@@ -67,7 +69,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
 
     return (
         <div className="help-content" ref={helpContentRef}>
-            <RechercheAide racine={helpContentRef} />
+            <RechercheAide racine={helpContentRef} tooltipsEnabled={tooltipsEnabled} />
             {helpToc.length > 0 && (
                 <nav id="help-sommaire" className="help-toc" style={{ background: '#2a2a2a', border: '1px solid #444', borderRadius: '6px', padding: '12px 16px', marginBottom: '20px' }}>
                     <h3 style={{ color: '#4ecdc4', marginTop: 0, marginBottom: '10px', fontSize: '1em' }}>Sommaire</h3>
@@ -203,7 +205,20 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Zoom indépendant dans chaque fenêtre détachée :</strong> Chaque popup (Formulaire, Matrice, Trafic, Conditions micro, Variables micro, Image, Remarques) accepte le zoom natif du navigateur sans affecter la fenêtre principale. Utilisez <strong>Ctrl + molette de la souris</strong> pour zoomer/dézoomer, ou <strong>Ctrl++</strong> / <strong>Ctrl+-</strong>, et <strong>Ctrl+0</strong> pour revenir à 100 %. Pratique pour optimiser la lecture sur un grand écran ou dans une fenêtre partagée en visio, sans modifier la mise en page de l'application principale. Selon le navigateur, le niveau de zoom peut être mémorisé d'une session à l'autre.</li>
                     <li><strong>Confirmation à la fermeture :</strong> Si le projet a été modifié sans être sauvegardé, le navigateur affiche une confirmation avant de fermer l'onglet ou la fenêtre.</li>
                     <li><strong>Verrouillage de la saisie par section :</strong> Le menu <strong>Mise en page → Verrouillage saisie...</strong> propose sept cases : <em>Propriétés</em>, <em>Configuration</em>, <em>Matrice</em>, <em>Trafic</em>, <em>Diagramme</em>, <em>Conditions de micro-régulation</em> et <em>Variables micro</em>. Une section cochée garde ses valeurs lisibles mais non modifiables : ses champs passent en lecture seule, ses listes et cases sont désactivées, y compris dans les fenêtres détachées. Très utile sur smartphone ou tablette, où toucher un champ pour faire défiler ouvre le clavier ou une liste de choix. Le réglage est enregistré avec le projet et retrouvé à son ouverture ; un nouveau projet part sans verrou. Décochez pour saisir à nouveau.</li>
-                    <li><strong>Désactivation des infobulles par section :</strong> Le menu <strong>Mise en page → Infobulles</strong> ouvre un sous-menu où chaque section de l'interface (<em>Page principale</em>, <em>Configuration</em>, <em>Diagramme</em>, <em>Matrice</em>, <em>Trafic</em>, <em>Conditions de micro-régulation</em>) peut être cochée individuellement. Décocher une section masque toutes ses infobulles — utile pour épurer l'interface une fois familiarisé avec l'outil. Préférence enregistrée au niveau de l'application (s'applique à tous les projets).</li>
+                    <li><strong>Désactivation des infobulles par section :</strong> Le menu <strong>Mise en page → Infobulles</strong> ouvre un sous-menu de dix cases, à cocher individuellement :
+                        <ul>
+                            <li><em>Menu</em> : les commandes de la barre de menus ;</li>
+                            <li><em>Page principale</em> : en-tête du projet, onglets des plans de feu, liste des conflits, comparateur de capacité, aide en ligne et fenêtres de dialogue ;</li>
+                            <li><em>Configuration</em> : formulaire des groupes de feu et propriétés du carrefour ;</li>
+                            <li><em>Diagramme</em> : en-tête et commandes de lecture, colonne des groupes, barres de vert et V.Utile, commentaires, remarques et séparateur sous le diagramme ;</li>
+                            <li><em>Matrice</em> : matrice des temps interverts et copie de matrice ;</li>
+                            <li><em>Trafic</em> : tableau Trafic et réserve de capacité ;</li>
+                            <li><em>Conditions de micro-régulation</em> : tableau des conditions et fenêtre Variables Priorité Bus ;</li>
+                            <li><em>Actions micro</em> : bulle d'une action survolée dans le diagramme et panneau Simulation ;</li>
+                            <li><em>Assistant conception</em> : fenêtre de l'assistant ;</li>
+                            <li><em>Image du carrefour</em> : image, flèches et réglages, fenêtre détachée comprise.</li>
+                        </ul>
+                        Décocher une case masque toutes les infobulles de sa section, fenêtres détachées comprises ; les titres et textes affichés restent visibles — utile pour épurer l'interface une fois familiarisé avec l'outil. Préférence enregistrée au niveau de l'application (s'applique à tous les projets).</li>
                 </ul>
             </section>
 
@@ -268,12 +283,12 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong style={{ color: '#fff', background: 'rgba(255,0,0,0.3)', padding: '0 4px', borderRadius: '2px' }}>Fond rouge :</strong> Conflit détecté — le temps de dégagement requis n'est pas respecté dans le diagramme.</li>
                     <li><strong style={{ color: '#fff', background: 'rgba(255,165,0,0.3)', padding: '0 4px', borderRadius: '2px' }}>Fond orange :</strong> Valeur manquante — une case symétrique (GFx→GFy / GFy→GFx) n'est pas renseignée, ce qui compromet la symétrie de la matrice.</li>
                 </ul>
-                <p>Au survol stable d'une case pendant <strong>une seconde</strong>, une infobulle apparaît si elle a quelque chose à dire :</p>
+                <p>Au survol stable d'une case pendant <strong>une demi-seconde</strong>, une infobulle apparaît si elle a quelque chose à dire :</p>
                 <ul>
                     <li>la valeur diffère du plan de référence → l'écart est précisé, avec le nom de ce plan : <em>« Augmentée / Réduite de X s vs PF de base (PF1_120) : a → b »</em> ;</li>
                     <li>la case est en <strong style={{ background:'rgba(255,0,0,0.3)', padding:'0 4px', borderRadius:'2px' }}>fond rouge</strong> → le problème est décrit : recouvrement des verts, ou intervert demandé supérieur au délai réel disponible entre fin de vert d'un groupe et début de vert de l'autre.</li>
                 </ul>
-                <p>Le délai d'une seconde évite l'apparition d'infobulles à la chaîne lors d'un balayage rapide de la grille.</p>
+                <p>Ce délai d'une demi-seconde évite l'apparition d'infobulles à la chaîne lors d'un balayage rapide de la grille.</p>
             </section>
 
             <section id="help-diagramme" className="help-section">
@@ -1127,7 +1142,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
             <button
                 className="help-back-to-top"
                 onClick={() => aller('help-sommaire')}
-                title="Retour au sommaire"
+                title={tooltipsEnabled ? 'Retour au sommaire' : undefined}
                 aria-label="Retour au sommaire de l'aide"
             >
                 ↑
