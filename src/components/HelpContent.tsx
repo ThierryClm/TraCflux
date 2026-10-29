@@ -581,6 +581,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                     <li><strong>Coloration du texte :</strong> Sélectionnez du texte puis appuyez sur <span style={{color: '#4CAF50'}}>+</span> (vert) ou <span style={{color: '#F44336'}}>−</span> (rouge).</li>
                     <li><strong>Taille du texte :</strong> Sélectionnez du texte puis appuyez sur <strong>▲</strong> (agrandir) ou <strong>▼</strong> (réduire). Utile pour hiérarchiser les informations (titre plus grand, détails plus petits).</li>
                     <li><strong>Mise en forme conservée :</strong> Si vous collez depuis un traitement de texte (Word, LibreOffice...), la mise en forme (taille de police, couleurs) est préservée.</li>
+                    <li><strong>Longueur :</strong> jusqu'à 1 000 caractères par plan de feu, quel que soit le nombre de groupes. Sauts de ligne, ponctuation et mise en forme sont conservés ; au-delà de la hauteur du diagramme, la zone défile. Arrivée à la limite, la saisie s'arrête ; un collage trop long est réduit à la place restante.</li>
                     <li><strong>Affichage :</strong> Les remarques sont affichées dans une zone dédiée à droite du diagramme. L'option <em>Mise en page → Remarques du diagramme</em> permet de les masquer globalement.</li>
                     <li><strong>Impression :</strong> Les remarques du PF actif figurent dans l'export du dossier complet.</li>
                 </ul>
