@@ -4693,3 +4693,8 @@ body.print-portrait .dossier-phasage-centered .dossier-phasage-content {
     border-radius: 0;
     box-shadow: none;
 }
+
+/* Remarques au dossier : texte simple, sauts de ligne saisis conservés. */
+.print-dossier-remarques .print-remarques-texte {
+    white-space: pre-wrap;
+}

@@ -9,7 +9,7 @@ const groupes = [1, 2, 3].map(id => ({
     offset: (id - 1) * 20, durations: { green: 15, orange: 3, red: 42 }
 }));
 const plans = [
-    { id: 1, name: 'PF1', data: [], diagram: [], cycleLength: 60, remarques: 'Première ligne<div>Seconde ligne</div>' },
+    { id: 1, name: 'PF1', data: [], diagram: [], cycleLength: 60, remarques: '<span style="font-size: 22px; color: #4CAF50">Première ligne</span><div>Seconde ligne</div>' },
     { id: 2, name: 'PF2', data: [], diagram: [{ groupId: 3, offset: 40, greenDuration: 15, comment: 'Nuit seulement' }], cycleLength: 60, remarques: '' }
 ];
 
@@ -43,9 +43,10 @@ describe('Dossier : commentaires et remarques des plans de feu', () => {
         expect(container.querySelector('.print-dossier-remarques')).toBeNull();
     });
 
-    it('remarques imprimées avec leurs sauts de ligne', () => {
+    it('remarques imprimées en texte simple, sauts de ligne conservés', () => {
         const { container } = apercu({ diagram_1: true, remarques_1: true });
-        const bloc = container.querySelector('.print-dossier-remarques');
-        expect(bloc.querySelector('div').textContent).toBe('Seconde ligne');
+        const texte = container.querySelector('.print-remarques-texte');
+        expect(texte.textContent).toBe('Première ligne\nSeconde ligne');
+        expect(texte.querySelector('span, div')).toBeNull();
     });
 });

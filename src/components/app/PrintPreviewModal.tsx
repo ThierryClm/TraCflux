@@ -12,6 +12,8 @@ import TableauComparaisonCapacite from '../TableauComparaisonCapacite';
 import { cellulesComparaison, colonnesComparaison, groupesComparables } from '../../utils/comparaisonCapacite';
 import '../CapacityComparison.css';
 import { commentairesDuPlan, imprimerCommentaires, imprimerRemarques, remarquesRenseignees } from '../../utils/commentairesPlan';
+import { imageRenseignee, phasageRenseigne, traficRenseigne } from '../../utils/disponibiliteDossier';
+import { texteAvecSauts } from '../../utils/couleursTexte';
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
@@ -123,6 +125,7 @@ function PrintPreviewModal({
     const { projectName, intersectionName, projectProperties, groups, conflictMatrix, cycleLength } = project;
     const { pfTabs, activePFId, pfTrafficDatasetMap } = plans;
     const { activeTrafficDataset, trafficDatasets, trafficDatasetNames } = traffic;
+    const donneesTrafic = { trafficDatasets: trafficDatasets as Record<string, JeuTrafic>, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames };
     const { intersectionImage, intersectionArrows, imageBrightness, imageContrast, imageNaturalDims } = image;
     const printedImageFrame = fitDetachedImageBox(imageNaturalDims);
     // Les symboles mesurent 96 px dans la boîte de référence 750 × 530 à
@@ -489,7 +492,7 @@ function PrintPreviewModal({
                                         </div>
 
                                         {/* 2. Plan du carrefour + Propriétés du projet */}
-                                        {dossierSections.image && (
+                                        {dossierSections.image && imageRenseignee(intersectionImage) && (
                                         <div className="print-dossier-section print-dossier-image-props">
                                             <div className="dossier-image-props-headers">
                                                 <h3 className="dossier-image-props-h3-left">Plan du carrefour</h3>
@@ -896,7 +899,9 @@ function PrintPreviewModal({
                                         {/* Remarques du PF (case « Remarques », si non vides) */}
                                         {imprimerRemarques(dossierSections, pf.id) && remarquesRenseignees(pf) && (
                                             <div className="print-dossier-remarques">
-                                                <strong>Remarques :</strong> <span dangerouslySetInnerHTML={{ __html: pf.remarques || '' }} />
+                                                {/* Texte simple, dans la police du dossier : ni couleur ni
+                                                    taille, mais les sauts de ligne saisis. */}
+                                                <strong>Remarques :</strong> <span className="print-remarques-texte">{texteAvecSauts(pf.remarques)}</span>
                                             </div>
                                         )}
 
@@ -971,7 +976,7 @@ function PrintPreviewModal({
                                         )}
 
                                         {/* Phasage bulle pour ce PF (si image + flèches existent) */}
-                                        {dossierSections[`phasageBulle_${pf.id}`] && intersectionArrows.length > 0 && intersectionImage && (() => {
+                                        {dossierSections[`phasageBulle_${pf.id}`] && phasageRenseigne(pf, intersectionImage, intersectionArrows) && (() => {
                                             const bulleCount = pf.phasageBulleCount || 4;
                                             const bulleCycleLength = pf.id === activePFId ? cycleLength : (pf.cycleLength || cycleLength);
                                             // Le dessin est composé DIRECTEMENT à la taille de la page.
@@ -1073,7 +1078,7 @@ function PrintPreviewModal({
                                         })()}
 
                                         {/* Données de trafic et calcul de capacité pour ce PF */}
-                                        {dossierSections[`traficCapacite_${pf.id}`] && (
+                                        {dossierSections[`traficCapacite_${pf.id}`] && traficRenseigne(pf, donneesTrafic) && (
                                             <div className="print-dossier-section print-dossier-traffic">
                                                 <h3>Données de trafic et calcul de capacité - {pf.name}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Données de trafic : {pfDataset}</h3>
                                                 {/* Le même composant qu'à l'écran, en lecture seule.
@@ -1103,7 +1108,7 @@ function PrintPreviewModal({
                                         )}
 
                                         {/* Réserve de capacité (même calcul que le panneau à l'écran) */}
-                                        {dossierSections[`reserveCapacite_${pf.id}`] && (
+                                        {dossierSections[`reserveCapacite_${pf.id}`] && traficRenseigne(pf, donneesTrafic) && (
                                             <div className="print-dossier-section print-dossier-reserve">
                                                 <h3>Réserve de capacité - {pf.name}</h3>
                                                 {/* Même jeu de données que le tableau ci-dessus.

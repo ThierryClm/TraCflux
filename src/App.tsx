@@ -2551,7 +2551,8 @@ function App() {
                 sections={dossierSections}
                 setSections={setDossierSections}
                 plans={pfTabs}
-                contexteScenarios={{ activePFId, groups, cycleLength, actionData, conflictMatrix }}
+                contexteScenarios={{ activePFId, groups, cycleLength, actionData, conflictMatrix, microCustomFields }}
+                trafic={{ trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames }}
                 intersectionImage={intersectionImage}
                 intersectionArrows={intersectionArrows}
                 onExportPdf={handleDossierExportPDF}

@@ -68,3 +68,39 @@ describe('Imprimer le projet — cases Commentaires et Remarques', () => {
         expect(JSON.parse(screen.getByTestId('sections').textContent).remarques_1).toBe(false);
     });
 });
+
+describe('Imprimer le projet — sections vides grisées', () => {
+    it('image, phasage, variables micro, trafic et réserve : en place, grisés et décochés quand vides', () => {
+        const trafic = { trafficDatasets: { HPM: { 1: { trafficVol: 300 } }, Vide: {} }, pfTrafficDatasetMap: { 1: 'HPM', 2: 'Vide' }, activeTrafficDataset: 'Vide', trafficDatasetNames: ['HPM', 'Vide'] };
+        const Banc2 = () => {
+            const [sections, setSections] = useState({ image: true });
+            return (
+                <DossierPrintDialog
+                    isOpen onClose={vi.fn()} portrait={false} setPortrait={vi.fn()}
+                    sections={sections} setSections={setSections}
+                    plans={[{ ...plans[0], phasageBulleTimes: [0, 0, 0, 0], microCustomFields: [''] }, { ...plans[1], phasageBulleTimes: [0, 20, 0, 0] }]}
+                    contexteScenarios={{ ...actif, cycleLength: 60, actionData: [], conflictMatrix: [], microCustomFields: ['TMAB = 10'] }}
+                    trafic={trafic}
+                    intersectionImage={null} intersectionArrows={[]} onExportPdf={vi.fn()} onPrint={vi.fn()} tip={(t) => t}
+                />
+            );
+        };
+        render(<Banc2 />);
+        const image = screen.getByLabelText('Image du carrefour');
+        expect(image).toBeDisabled();
+        expect(image).not.toBeChecked();
+        fireEvent.click(screen.getByLabelText('Diagramme PF1'));
+        fireEvent.click(screen.getByLabelText('Diagramme PF2'));
+        const [pf1, pf2] = screen.getAllByText(/^Diagramme PF/).map(l => l.closest('.dossier-pf-group'));
+        // PF1 (plan actif) : variables de l'écran, trafic HPM ; pas d'image donc pas de phasage.
+        expect(within(pf1).getByLabelText('Variables micro')).toBeChecked();
+        expect(within(pf1).getByLabelText('Phasage bulle')).toBeDisabled();
+        expect(within(pf1).getByLabelText('Phasage bulle')).not.toBeChecked();
+        expect(within(pf1).getByLabelText('Données de trafic et calcul de capacité')).toBeChecked();
+        // PF2 : ni variables ni trafic.
+        for (const nom of ['Variables micro', 'Données de trafic et calcul de capacité', 'Réserve de capacité']) {
+            expect(within(pf2).getByLabelText(nom)).toBeDisabled();
+            expect(within(pf2).getByLabelText(nom)).not.toBeChecked();
+        }
+    });
+});

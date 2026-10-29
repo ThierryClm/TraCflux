@@ -20,3 +20,17 @@ export const texteBrut = (html: string | undefined): string => {
     bloc.innerHTML = html;
     return (bloc.textContent || '').replace(/ /g, ' ').trim();
 };
+
+/**
+ * Texte simple d'un champ mis en forme, sauts de ligne conservés : ceux des
+ * balises <br> et des blocs (<div>, <p>, <li>) créés par l'éditeur. Couleurs,
+ * tailles et balises disparaissent.
+ */
+export const texteAvecSauts = (html: string | undefined): string => {
+    if (!html) return '';
+    const bloc = document.createElement('div');
+    bloc.innerHTML = html;
+    bloc.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+    bloc.querySelectorAll('div, p, li').forEach(el => el.before('\n'));
+    return (bloc.textContent || '').replace(/\u00a0/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+};

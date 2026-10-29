@@ -5,6 +5,8 @@ import {
 } from '../../simulation';
 import type { ActionMicro, Groupe, Matrice, PlanDeFeu } from '../../types/projet';
 import { commentairesDuPlan, imprimerCommentaires, imprimerRemarques, remarquesRenseignees } from '../../utils/commentairesPlan';
+import { imageRenseignee, phasageRenseigne, traficRenseigne, variablesRenseignees } from '../../utils/disponibiliteDossier';
+import type { DonneesTrafic } from '../../utils/comparaisonCapacite';
 
 type DossierSections = Record<string, boolean>;
 
@@ -15,6 +17,8 @@ interface ContexteScenarios {
     cycleLength: number;
     actionData: ActionMicro[];
     conflictMatrix: Matrice;
+    /** Variables micro du plan actif, telles qu'à l'écran. */
+    microCustomFields?: string[];
 }
 
 interface DossierPrintDialogProps {
@@ -26,6 +30,8 @@ interface DossierPrintDialogProps {
     setSections: Dispatch<SetStateAction<DossierSections>>;
     plans: PlanDeFeu[];
     contexteScenarios: ContexteScenarios;
+    /** Jeux de trafic, pour griser les sections trafic d'un plan sans données. */
+    trafic?: DonneesTrafic;
     intersectionImage: string | null;
     intersectionArrows: unknown[];
     onExportPdf: () => void;
@@ -42,6 +48,7 @@ function DossierPrintDialog({
     setSections,
     plans,
     contexteScenarios,
+    trafic,
     intersectionImage,
     intersectionArrows,
     onExportPdf,
@@ -123,12 +130,14 @@ function DossierPrintDialog({
                                     >Portrait</button>
                                 </div>
                             </div>
-                            <label>
-                                <input type="checkbox" checked={dossierSections.image || false}
+                            <label className={imageRenseignee(intersectionImage) ? '' : 'dossier-option-indisponible'}
+                                title={imageRenseignee(intersectionImage) ? undefined : tip("Aucune image du carrefour n'est chargée.")}>
+                                <input type="checkbox" disabled={!imageRenseignee(intersectionImage)}
+                                    checked={imageRenseignee(intersectionImage) && (dossierSections.image || false)}
                                     onChange={e => setDossierSections(s => ({...s, image: e.target.checked}))} />
                                 Image du carrefour
                             </label>
-                            {dossierSections.image && intersectionArrows.length > 0 && (
+                            {imageRenseignee(intersectionImage) && dossierSections.image && intersectionArrows.length > 0 && (
                             <label className="dossier-checkbox-indent">
                                 <input type="checkbox" checked={dossierSections.gfNumbers || false}
                                     onChange={e => setDossierSections(s => ({...s, gfNumbers: e.target.checked}))} />
@@ -159,6 +168,10 @@ function DossierPrintDialog({
                                 const isValidated = pf.color === '#4CAF50';
                                 const isInvalidated = pf.color === '#e74c3c';
                                 const pfChecked = dossierSections[`diagram_${pf.id}`] || false;
+                                // Sections vides : case en place, grisée et décochée.
+                                const variablesOk = variablesRenseignees(pf, contexteScenarios);
+                                const phasageOk = phasageRenseigne(pf, intersectionImage, intersectionArrows);
+                                const traficOk = trafic ? traficRenseigne(pf, trafic) : true;
                                 return (
                                 <div key={pf.id} className="dossier-pf-group">
                                     <label className={isValidated ? 'dossier-pf-validated' : isInvalidated ? 'dossier-pf-invalidated' : ''}>
@@ -205,17 +218,19 @@ function DossierPrintDialog({
                                                 }); }} />
                                             Conditions de micro-régulation
                                         </label>
-                                        <label>
-                                            <input type="checkbox" checked={dossierSections[`variablesMicro_${pf.id}`] || false}
+                                        <label className={variablesOk ? '' : 'dossier-option-indisponible'}
+                                            title={variablesOk ? undefined : tip("Aucune variable micro n'est saisie pour ce plan de feu.")}>
+                                            <input type="checkbox" disabled={!variablesOk} checked={variablesOk && (dossierSections[`variablesMicro_${pf.id}`] || false)}
                                                 onChange={e => { const v = e.target.checked; setDossierSections(s => {
                                                     if (v) return {...s, [`variablesMicro_${pf.id}`]: true};
                                                     const u = {...s}; pfTabs.forEach(p => { if (s[`diagram_${p.id}`]) u[`variablesMicro_${p.id}`] = false; }); return u;
                                                 }); }} />
                                             Variables micro
                                         </label>
-                                        {intersectionArrows.length > 0 && intersectionImage && (
-                                        <label>
-                                            <input type="checkbox" checked={dossierSections[`phasageBulle_${pf.id}`] || false}
+                                        {(
+                                        <label className={phasageOk ? '' : 'dossier-option-indisponible'}
+                                            title={phasageOk ? undefined : tip("Le phasage bulle de ce plan de feu n'est pas renseigné (instants à 0, ou pas d'image avec flèches).")}>
+                                            <input type="checkbox" disabled={!phasageOk} checked={phasageOk && (dossierSections[`phasageBulle_${pf.id}`] || false)}
                                                 onChange={e => { const v = e.target.checked; setDossierSections(s => {
                                                     if (v) return {...s, [`phasageBulle_${pf.id}`]: true};
                                                     const u = {...s}; pfTabs.forEach(p => { if (s[`diagram_${p.id}`]) u[`phasageBulle_${p.id}`] = false; }); return u;
@@ -223,16 +238,18 @@ function DossierPrintDialog({
                                             Phasage bulle
                                         </label>
                                         )}
-                                        <label>
-                                            <input type="checkbox" checked={dossierSections[`traficCapacite_${pf.id}`] || false}
+                                        <label className={traficOk ? '' : 'dossier-option-indisponible'}
+                                            title={traficOk ? undefined : tip("Le jeu de trafic de ce plan de feu est vide.")}>
+                                            <input type="checkbox" disabled={!traficOk} checked={traficOk && (dossierSections[`traficCapacite_${pf.id}`] || false)}
                                                 onChange={e => { const v = e.target.checked; setDossierSections(s => {
                                                     if (v) return {...s, [`traficCapacite_${pf.id}`]: true};
                                                     const u = {...s}; pfTabs.forEach(p => { if (s[`diagram_${p.id}`]) u[`traficCapacite_${p.id}`] = false; }); return u;
                                                 }); }} />
                                             Données de trafic et calcul de capacité
                                         </label>
-                                        <label>
-                                            <input type="checkbox" checked={dossierSections[`reserveCapacite_${pf.id}`] || false}
+                                        <label className={traficOk ? '' : 'dossier-option-indisponible'}
+                                            title={traficOk ? undefined : tip("Le jeu de trafic de ce plan de feu est vide.")}>
+                                            <input type="checkbox" disabled={!traficOk} checked={traficOk && (dossierSections[`reserveCapacite_${pf.id}`] || false)}
                                                 onChange={e => { const v = e.target.checked; setDossierSections(s => {
                                                     if (v) return {...s, [`reserveCapacite_${pf.id}`]: true};
                                                     const u = {...s}; pfTabs.forEach(p => { if (s[`diagram_${p.id}`]) u[`reserveCapacite_${p.id}`] = false; }); return u;

@@ -791,6 +791,7 @@ const HelpContent = ({ initialAnchor = null }: HelpContentProps) => {
                         <ul>
                             <li><em>Commentaires :</em> Les commentaires des groupes du PF, une ligne « GF x : » par groupe commenté. Proposée seulement si le PF a des commentaires</li>
                             <li><em>Remarques :</em> Les remarques du PF, avec leurs sauts de ligne. Proposée seulement si le PF a des remarques</li>
+                            <li><em>Sections vides :</em> Image du carrefour, Phasage bulle (instants tous à 0), Variables micro, Données de trafic et Réserve de capacité (jeu de trafic vide) restent dans la liste, mais grisées et décochées ; elles ne s'impriment pas. Commentaires et remarques s'impriment en texte simple, dans la police du dossier, sans couleur ni taille</li>
                             <li><em>Conditions de micro-régulation :</em> Tableau des actions de micro-régulation du PF</li>
                             <li><em>Variables micro :</em> Variables personnalisées de micro-régulation du PF</li>
                             <li><em>Phasage bulle :</em> Représentation graphique des phases du PF sous forme de bulles sur l'image du carrefour (disponible si l'image et les flèches existent)</li>
