@@ -2,7 +2,7 @@ import { groupeEnConflit } from './timeline/conflitsVisibles';
 import { useRef, useState, useCallback, useEffect } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 import CustomTooltip from './CustomTooltip';
-import RemarquesEditor from './RemarquesEditor';
+import RemarquesEditor, { tronquerRemarques } from './RemarquesEditor';
 import TimelineFloatingOverlays from './timeline/TimelineFloatingOverlays';
 import TimelineGridBackground, { TimelineEmptyState } from './timeline/TimelineGridBackground';
 import TimelineHeader from './timeline/TimelineHeader';
@@ -37,6 +37,7 @@ import type { ParametresGroupe } from '../hooks/useTrafficLight';
 import type { TimelineActionTooltip } from './timeline/timelineTypes';
 import './TimelineDiagram.css';
 import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { ROUGE_TEXTE, VERT_TEXTE, vertFluo } from '../utils/couleursTexte';
 
 /** Vert utile survolé dans le tableau de capacité, à reporter sur la barre du groupe. */
 export interface VertUtileSurvole {
@@ -789,24 +790,18 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                                 data-group-id={g.id}
                                 contentEditable
                                 suppressContentEditableWarning
-                                dangerouslySetInnerHTML={{ __html: g.comment || '' }}
+                                dangerouslySetInnerHTML={{ __html: vertFluo(g.comment) }}
                                 onFocus={(e) => { activeCommentRef.current = e.currentTarget; }}
                                 onBlur={(e) => {
-                                    const html = e.currentTarget.innerHTML;
-                                    // Extract text to check length
-                                    const text = e.currentTarget.textContent || '';
-                                    if (text.length <= 50) {
-                                        updateGroupParams(g.id, { comment: html });
-                                    } else {
-                                        // Truncate and save
-                                        e.currentTarget.textContent = text.slice(0, 50);
-                                        updateGroupParams(g.id, { comment: e.currentTarget.innerHTML });
-                                    }
+                                    // 50 caractères au plus ; la coupe garde la mise en forme
+                                    // (elle réduisait le commentaire à son texte brut).
+                                    tronquerRemarques(e.currentTarget, 50);
+                                    updateGroupParams(g.id, { comment: e.currentTarget.innerHTML });
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key === '+' || e.key === '-') {
                                         e.preventDefault();
-                                        const color = e.key === '+' ? '#4CAF50' : '#F44336';
+                                        const color = e.key === '+' ? VERT_TEXTE : ROUGE_TEXTE;
                                         const selection = window.getSelection();
 
                                         if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {

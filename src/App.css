@@ -2359,8 +2359,6 @@ body.amber-mode .help-back-to-top {
 /* Checkbox indentée sous une option parente */
 .dossier-checkbox-indent {
     margin-left: 24px;
-    font-size: 13px !important;
-    opacity: 0.85;
 }
 
 /* Groupe PF dans le dialog */
@@ -2390,9 +2388,12 @@ body.amber-mode .help-back-to-top {
     gap: 1px;
 }
 
+/* Même police et même éclat que les cases principales : une case active doit
+   se lire comme telle. Seules les cases inactives sont grisées
+   (.dossier-option-indisponible). Elles étaient en 12 px à 85 % d'opacité, et
+   une case active ressemblait déjà à une case grisée. */
 .dossier-pf-suboptions label {
-    font-size: 12px !important;
-    opacity: 0.85;
+    font-size: 14px;
 }
 
 /* Option momentanément hors d'atteinte — la simulation, tant que son onglet
@@ -2401,6 +2402,11 @@ body.amber-mode .help-back-to-top {
 .dossier-option-indisponible {
     opacity: 0.45;
     cursor: default;
+}
+
+/* Une case inactive ne réagit pas au survol. */
+.dossier-dialog-body label.dossier-option-indisponible:hover {
+    color: inherit;
 }
 
 .dossier-option-indisponible input[type="checkbox"] {
@@ -4692,4 +4698,9 @@ body.print-portrait .dossier-phasage-centered .dossier-phasage-content {
     border: 0;
     border-radius: 0;
     box-shadow: none;
+}
+
+/* Remarques au dossier : texte simple, sauts de ligne saisis conservés. */
+.print-dossier-remarques .print-remarques-texte {
+    white-space: pre-wrap;
 }

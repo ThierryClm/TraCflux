@@ -1286,7 +1286,22 @@ body.light-mode .action-hover-tooltip-micro .micro-keyword {
 }
 
 .comment-color-plus {
-    color: #4CAF50;
+    color: #39FF14;
+}
+
+/* Vert fluo des commentaires et des remarques (touche +) : lisible sur le fond
+   sombre, mais pas sur un fond clair, où il passe à un vert soutenu. */
+body.light-mode .input-comment [style*="57, 255, 20"],
+body.light-mode .input-comment [style*="39FF14" i],
+body.light-mode .input-remarques [style*="57, 255, 20"],
+body.light-mode .input-remarques [style*="39FF14" i],
+body.sepia-mode .input-comment [style*="57, 255, 20"],
+body.sepia-mode .input-comment [style*="39FF14" i],
+body.sepia-mode .input-remarques [style*="57, 255, 20"],
+body.sepia-mode .input-remarques [style*="39FF14" i],
+body.light-mode .comment-color-plus,
+body.sepia-mode .comment-color-plus {
+    color: #1a8f00 !important;
 }
 
 .comment-color-minus {
