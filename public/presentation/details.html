@@ -134,27 +134,23 @@ npm run dev
 </tr>
 <tr>
 <td><code>npm run build</code></td>
-<td>Build de production dans <code>dist/</code></td>
+<td>Build de production dans <code>dist/</code> ; régénère d&#39;abord la FAQ et cette présentation (<code>docs:build</code>)</td>
 </tr>
 <tr>
 <td><code>npm run preview</code></td>
-<td>Aperçu local du build de production</td>
+<td>Aperçu local du build de production, à <code>http://localhost:4173</code></td>
 </tr>
 <tr>
 <td><code>npm run serve</code></td>
-<td>Reconstruit <code>dist/</code>, s&#39;assure que le serveur d&#39;aperçu tourne, et <strong>vérifie qu&#39;il sert bien ce build</strong> — la commande à utiliser au quotidien (voir <a href="#d%C3%A9pannage">Dépannage</a>)</td>
-</tr>
-<tr>
-<td><code>npm run clean</code></td>
-<td>Nettoyage local : supprime <code>dist/</code> et arrête les processus <code>node.exe</code> (Windows — voir <a href="#d%C3%A9pannage">Dépannage</a>)</td>
+<td>Reconstruit <code>dist/</code>, démarre le serveur d&#39;aperçu s&#39;il ne tourne pas, puis <strong>vérifie qu&#39;il sert bien ce build</strong></td>
 </tr>
 <tr>
 <td><code>npm test</code></td>
-<td>Lancer les tests (Vitest), en mode surveillance</td>
+<td>Les tests (Vitest), en mode surveillance</td>
 </tr>
 <tr>
-<td><code>npx vitest run</code></td>
-<td>Lancer les tests une seule fois</td>
+<td><code>npm run test:run</code></td>
+<td>Les tests, une seule fois</td>
 </tr>
 <tr>
 <td><code>npm run test:coverage</code></td>
@@ -165,20 +161,20 @@ npm run dev
 <td>Les mêmes tests dans l&#39;interface graphique de Vitest</td>
 </tr>
 <tr>
-<td><code>npm run e2e</code></td>
-<td>Parcours réels dans Chrome, Edge, Firefox, Safari et Brave (Playwright) sur la version compilée : ouvrir et sauvegarder, projet exemple, couleurs de la matrice, ajout de condition, fenêtre détachée, export PNG, dossier imprimé. Première fois : <code>npx playwright install --with-deps</code> ; Brave est pris s&#39;il est installé (ou désigné par <code>BRAVE_PATH</code>)</td>
-</tr>
-<tr>
 <td><code>npm run types</code></td>
-<td>Vérification des types TypeScript (<code>tsc --noEmit</code>)</td>
+<td>Vérification des types TypeScript, de l&#39;application et des parcours (<code>e2e/</code>)</td>
 </tr>
 <tr>
 <td><code>npm run lint</code></td>
 <td>Analyse du code par Oxlint (<code>.oxlintrc.json</code>) : les erreurs bloquent l&#39;intégration continue, les avertissements sont une dette à réduire</td>
 </tr>
 <tr>
-<td><code>npm run preview:deploy</code></td>
-<td>Construit et publie la branche en cours sur une adresse de prévisualisation Surge ; refuse de s&#39;exécuter sur <code>master</code></td>
+<td><code>npm run e2e</code></td>
+<td>Parcours réels (Playwright) sur la version compilée : ouvrir et sauvegarder, projet exemple, couleurs de la matrice, ajout de condition, fenêtre détachée, export PNG, dossier imprimé. Navigateurs : Chromium, Edge, Firefox et WebKit (le moteur de Safari), plus Brave s&#39;il est installé (ou désigné par <code>BRAVE_PATH</code>). Première fois : <code>npx playwright install --with-deps chromium msedge firefox webkit</code>. Un seul navigateur : <code>npm run e2e -- --project=firefox</code></td>
+</tr>
+<tr>
+<td><code>npm run docs:build</code></td>
+<td>Régénère la FAQ (<code>public/faq/</code>) et la présentation détaillée (<code>public/presentation/details.html</code>) à partir de <code>FAQ.md</code> et de ce README ; lancée automatiquement avant chaque build</td>
 </tr>
 <tr>
 <td><code>npm run check</code></td>
@@ -190,23 +186,13 @@ npm run dev
 </tr>
 </tbody></table>
 <p>Le projet passant parfois plusieurs semaines sans modification, <code>npm run check</code> est la commande à lancer en reprenant : de nouvelles alertes de sécurité peuvent être apparues sans qu&#39;une seule ligne de code ait bougé.</p>
-<p>Les quelques fichiers <code>.vbs</code> à la racine sont des lanceurs Windows personnels — un double-clic enchaîne <code>npm run build</code> puis <code>npm run preview</code>. Ils ne sont nécessaires ni à l&#39;usage de l&#39;application, ni pour développer.</p>
-<h3 id="dépannage">Dépannage</h3>
-<p>Le symptôme à connaître en développement : <strong>l&#39;application semble ignorer vos modifications</strong>. La PWA installée sur <code>localhost:4173</code> sert son cache tant qu&#39;un serveur ne lui présente pas un nouveau build, et elle le fait sans rien signaler.</p>
-<p><strong>Utilisez <code>npm run serve</code> plutôt que <code>npm run preview</code>.</strong> Il reconstruit <code>dist/</code>, démarre le serveur s&#39;il ne tourne pas, puis télécharge <code>/index.html</code> depuis ce serveur et le compare au fichier qui vient d&#39;être produit. Il ne dit « c&#39;est prêt » qu&#39;après cette vérification, et sort en erreur sinon — serveur arrêté, ou processus résiduel occupant le port sans rien servir. Un <code>npm run preview</code> ne vérifie rien et vous laisse devant une page muette.</p>
-<p>Rechargez ensuite la fenêtre par <strong>Ctrl+R</strong>, puis cliquez sur <strong>« Recharger »</strong> quand le bandeau apparaît. Laisser la fenêtre ouverte ne suffit pas : c&#39;est le rechargement qui déclenche la recherche de nouvelle version. En cas de doute, la date de build figure dans le rapport de diagnostic — c&#39;est le seul contrôle fiable.</p>
-<p>Si le cache reste malgré tout figé (thème ou contenu d&#39;une fenêtre détachée qui ne bouge plus) :</p>
-<ol>
-<li>Fermer toutes les fenêtres du navigateur ouvertes sur <code>localhost:4173</code></li>
-<li><code>edge://settings/cookies/detail?site=localhost%3A4173</code> → <strong>Supprimer</strong> — vide le service worker et le cache pour ce seul site</li>
-<li><code>npm run serve</code></li>
-</ol>
-<p><code>npm run clean</code> reste disponible, mais son <code>taskkill</code> arrête <strong>tous</strong> les processus <code>node.exe</code> de la machine, pas seulement ceux du projet : à éviter si un autre travail tourne en parallèle.</p>
-<p>Deux malentendus courants, que la configuration actuelle écarte. Les processus <code>node.exe</code> ne s&#39;accumulent plus après plusieurs aperçus : <code>strictPort</code> fait échouer franchement un second serveur au lieu de le replier silencieusement sur le port suivant. Et le bandeau « Nouvelle version disponible » à chaque rebuild n&#39;est pas un défaut, c&#39;est le mécanisme lui-même — chaque build produit un nouveau service worker. Pour l&#39;utilisateur final (PWA hébergée ou installée depuis une release), ce bandeau n&#39;apparaît qu&#39;après un vrai déploiement.</p>
+<h3 id="intégration-continue">Intégration continue</h3>
+<p>À chaque pull request vers <code>master</code>, GitHub vérifie les types, le lint, les tests avec leurs seuils de couverture et le build, puis joue les parcours dans les navigateurs. Une fusion dans <code>master</code> publie l&#39;application sur <a href="https://tracflux.com">tracflux.com</a> après avoir rejoué les tests.</p>
+<p>Le poste du mainteneur (aperçu local de la PWA, dépannage du cache, lanceurs Windows, prévisualisation d&#39;une branche) est décrit dans <a href="https://github.com/ThierryClm/TraCflux/blob/master/DEVELOPPEMENT.md">DEVELOPPEMENT.md</a>.</p>
 <h2 id="exemple">Exemple</h2>
 <p>Un projet d&#39;exemple est fourni dans le dossier <a href="https://github.com/ThierryClm/TraCflux/tree/master/examples/"><code>examples/</code></a>. Ouvrez l&#39;application, puis utilisez <strong>Fichier → Ouvrir un projet</strong> et sélectionnez <code>examples/Carrefour_exemple.json</code>.</p>
 <h2 id="architecture">Architecture</h2>
-<p>Application React + TypeScript (strict) + Vite, état centralisé dans <a href="https://github.com/ThierryClm/TraCflux/blob/master/src/hooks/useTrafficLight.ts"><code>src/hooks/useTrafficLight.ts</code></a>, découpé en sous-modules dans <a href="https://github.com/ThierryClm/TraCflux/tree/master/src/hooks/trafficLight/"><code>src/hooks/trafficLight/</code></a>. L&#39;intégration continue vérifie les types, le lint, les tests avec leur couverture et le build à chaque PR. Voir <a href="https://github.com/ThierryClm/TraCflux/blob/master/CLAUDE.md"><code>CLAUDE.md</code></a> pour les détails d&#39;implémentation (structures de données, rendu du timeline, détection de conflits).</p>
+<p>Application React + TypeScript (strict) + Vite, état centralisé dans <a href="https://github.com/ThierryClm/TraCflux/blob/master/src/hooks/useTrafficLight.ts"><code>src/hooks/useTrafficLight.ts</code></a>, découpé en sous-modules dans <a href="https://github.com/ThierryClm/TraCflux/tree/master/src/hooks/trafficLight/"><code>src/hooks/trafficLight/</code></a>. Voir <a href="https://github.com/ThierryClm/TraCflux/blob/master/CLAUDE.md"><code>CLAUDE.md</code></a> pour les détails d&#39;implémentation (structures de données, rendu du timeline, détection de conflits).</p>
 <h2 id="comptes-utilisateurs">Comptes utilisateurs</h2>
 <p>L&#39;application embarque un système de comptes à 3 niveaux de permissions (lecture seule, modification partielle, modification totale), avec mots de passe hachés en SHA-256.</p>
 <p><strong>Il est désactivé par défaut</strong> : à l&#39;ouverture, on entre directement dans l&#39;application, sans écran de connexion. Il s&#39;adresse aux postes partagés et s&#39;active depuis <strong>À propos → Utilisateurs → Activer les comptes</strong>. Une fois activé, l&#39;application demande une connexion à chaque ouverture ; on peut le désactiver au même endroit, les comptes créés étant conservés.</p>

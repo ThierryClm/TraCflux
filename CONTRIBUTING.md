@@ -21,9 +21,9 @@ Pour les changements significatifs, il est préférable de discuter dans une iss
 
 1. **Forkez** le dépôt et créez une branche depuis `master` : `git checkout -b ma-modification`.
 2. **Respectez le style du code existant** — pas de reformatage massif sans raison.
-3. **Ajoutez des tests** pour toute nouvelle logique ou correction de bug (`src/utils/*.test.js`, exécutables via `npm test`).
-4. **Vérifiez que le build passe** : `npm run build` doit terminer sans erreur.
-5. **Vérifiez que tous les tests passent** : `npm test`.
+3. **Ajoutez des tests** pour toute nouvelle logique ou correction de bug, à côté du code qu'ils couvrent (`*.test.ts`, `*.test.tsx`…).
+4. **Vérifiez types et lint** : `npm run types` et `npm run lint` doivent terminer sans erreur.
+5. **Vérifiez que tous les tests et le build passent** : `npm run test:run` puis `npm run build`. Les mêmes vérifications, plus les parcours dans les navigateurs, sont rejouées par GitHub sur la pull request.
 6. **Commit** avec un message concis en français, décrivant le *pourquoi* plus que le *quoi*.
 7. Ouvrez la pull request en décrivant le changement, les cas de test, et les éventuelles captures d'écran si l'UI change.
 
@@ -31,12 +31,12 @@ Pour les changements significatifs, il est préférable de discuter dans une iss
 
 ```bash
 npm install
-npm run dev      # serveur à http://localhost:3000
-npm test         # lance les tests
-npm run build    # build de production
+npm run dev       # serveur à http://localhost:3000
+npm run test:run  # lance les tests une fois (npm test : en continu)
+npm run build     # build de production
 ```
 
-Prérequis : [Node.js](https://nodejs.org/) 18+.
+Prérequis : [Node.js](https://nodejs.org/) 20.19 ou plus (22.12 ou plus pour la branche 22), exigé par Vite. Les autres commandes sont décrites dans la section [Commandes](README.md#commandes) du README.
 
 ## Licence des contributions
 
