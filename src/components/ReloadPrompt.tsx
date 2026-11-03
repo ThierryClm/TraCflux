@@ -93,7 +93,7 @@ const ReloadPrompt = () => {
             <button
                 className="reload-prompt-close"
                 onClick={() => setNeedRefresh(false)}
-                title="Plus tard"
+                title={infobullesPagePrincipale() ? 'Plus tard' : undefined}
                 aria-label="Plus tard"
             >
                 ×

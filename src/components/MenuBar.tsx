@@ -76,7 +76,7 @@ export interface OptionsMenuBar {
     hasIntersectionImage?: boolean;
     hasMultiplePf?: boolean;
     matricesLocked?: boolean;
-    tooltipPrefs?: Partial<Record<'menu' | 'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro', boolean>>;
+    tooltipPrefs?: Partial<Record<'menu' | 'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro' | 'actions' | 'assistant' | 'image', boolean>>;
     toastPrefs?: Partial<Record<'success' | 'error' | 'info', boolean>>;
     openPropertiesOnNewProject?: boolean;
     showWrapFlash?: boolean;
@@ -529,7 +529,10 @@ const MenuBar = ({
                         { label: 'Diagramme',                       action: 'toggleTooltipsDiagram', checked: !!layoutOptions.tooltipPrefs?.diagram, keepSubmenuOpen: true },
                         { label: 'Matrice',                         action: 'toggleTooltipsMatrix',  checked: !!layoutOptions.tooltipPrefs?.matrix,  keepSubmenuOpen: true },
                         { label: 'Trafic',                          action: 'toggleTooltipsTraffic', checked: !!layoutOptions.tooltipPrefs?.traffic, keepSubmenuOpen: true },
-                        { label: 'Conditions de micro-régulation',  action: 'toggleTooltipsMicro',   checked: !!layoutOptions.tooltipPrefs?.micro,   keepSubmenuOpen: true }
+                        { label: 'Conditions de micro-régulation',  action: 'toggleTooltipsMicro',   checked: !!layoutOptions.tooltipPrefs?.micro,   keepSubmenuOpen: true },
+                        { label: 'Actions micro',                   action: 'toggleTooltipsActions', checked: !!layoutOptions.tooltipPrefs?.actions, keepSubmenuOpen: true },
+                        { label: 'Assistant conception',            action: 'toggleTooltipsAssistant', checked: !!layoutOptions.tooltipPrefs?.assistant, keepSubmenuOpen: true },
+                        { label: 'Image du carrefour',              action: 'toggleTooltipsImage',   checked: !!layoutOptions.tooltipPrefs?.image, keepSubmenuOpen: true }
                     ]
                 },
                 {

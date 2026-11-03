@@ -52,6 +52,8 @@ interface FloatingImageRendererOptions {
     /** Cases numéros / noms de groupe de l'image du carrefour. */
     intersectionDisplay: IntersectionDisplayOptions;
     floatingImagePopup: FloatingImagePopup;
+    /** Case « Image du carrefour » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 /**
@@ -82,10 +84,12 @@ const useFloatingImageRenderer = ({
     imageBrightness,
     imageContrast,
     intersectionDisplay,
-    floatingImagePopup
+    floatingImagePopup,
+    tooltipsEnabled = true
 }: FloatingImageRendererOptions) => {
     useEffect(() => {
         if (!showFloatingImage || !intersectionImage) return;
+        const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
         const showNums = intersectionDisplay.showGroupNumbers;
         const showNames = intersectionDisplay.showGroupNames;
@@ -143,14 +147,14 @@ const useFloatingImageRenderer = ({
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ padding: '6px 12px', background: '#2a2a2a', borderBottom: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     <div className="floating-zoom-control">
-                        <button className="floating-zoom-btn" onClick={() => setFloatingZoom(z => Math.max(0.3, z - 0.1))} title="Réduire">−</button>
+                        <button className="floating-zoom-btn" onClick={() => setFloatingZoom(z => Math.max(0.3, z - 0.1))} title={tip('Réduire')}>−</button>
                         <span className="floating-zoom-value">{Math.round(floatingZoom * 100)}%</span>
-                        <button className="floating-zoom-btn" onClick={() => setFloatingZoom(z => Math.min(2, z + 0.1))} title="Agrandir">+</button>
+                        <button className="floating-zoom-btn" onClick={() => setFloatingZoom(z => Math.min(2, z + 0.1))} title={tip('Agrandir')}>+</button>
                     </div>
                     <button
                         className={`floating-crop-btn ${showCropControls ? 'active' : ''}`}
                         onClick={() => setShowCropControls(!showCropControls)}
-                        title="Rogner l'image"
+                        title={tip("Rogner l'image")}
                     >
                         ✂
                     </button>
@@ -286,7 +290,7 @@ const useFloatingImageRenderer = ({
         selectedActions, conflictMatrix,
         isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast,
-        intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+        intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames, tooltipsEnabled, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 
 export default useFloatingImageRenderer;

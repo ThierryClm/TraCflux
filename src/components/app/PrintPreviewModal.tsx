@@ -89,7 +89,7 @@ interface PrintPreviewModalProps {
         microCustomFields: string[];
     };
     preferences: {
-        tooltipPrefs: { diagram?: boolean };
+        tooltipPrefs: { diagram?: boolean; traffic?: boolean };
     };
 }
 
@@ -1123,6 +1123,7 @@ function PrintPreviewModal({
                                                     actionData={pfActionData}
                                                     activeTrafficDataset={pfDataset}
                                                     hideTitle={true}
+                                                    tip={(t: string) => tooltipPrefs.traffic === false ? undefined : t}
                                                 />
                                             </div>
                                         )}

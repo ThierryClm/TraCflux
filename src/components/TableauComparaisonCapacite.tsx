@@ -10,6 +10,8 @@ interface TableauComparaisonCapaciteProps {
     groupes: Groupe[];
     afficherVUtile: boolean;
     tableRef?: Ref<HTMLTableElement>;
+    /** Case « Page principale » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 /**
@@ -17,7 +19,8 @@ interface TableauComparaisonCapaciteProps {
  * colonne par plan de feu ou scénario (Trafic, V.Utile facultatif, Cap.U).
  * Affiché dans la fenêtre du comparateur et dans le dossier imprimé.
  */
-const TableauComparaisonCapacite = ({ colonnes, cellules, groupes, afficherVUtile, tableRef }: TableauComparaisonCapaciteProps) => {
+const TableauComparaisonCapacite = ({ colonnes, cellules, groupes, afficherVUtile, tableRef, tooltipsEnabled = true }: TableauComparaisonCapaciteProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     // Même jeu de trafic partout : une seule colonne Trafic, au début.
     const jeuUnique = colonnes.length > 0 && colonnes.every(c => c.jeu === colonnes[0].jeu);
     const parColonne = (afficherVUtile ? 2 : 1) + (jeuUnique ? 0 : 1);
@@ -36,7 +39,7 @@ const TableauComparaisonCapacite = ({ colonnes, cellules, groupes, afficherVUtil
                         <th key={c.cle} colSpan={parColonne} className={`cc-pf-header${c.scenario ? ' cc-scenario-header' : ''}`}>
                             {c.pf.name}
                             {c.scenario && <span className="cc-scenario-nom">{c.scenario.nom}</span>}
-                            <span className="cc-pf-dataset" title="Jeu de trafic appliqué">
+                            <span className="cc-pf-dataset" title={tip('Jeu de trafic appliqué')}>
                                 {jeuUnique ? `cycle ${c.cycle}s` : `${c.jeu || '—'} · cycle ${c.cycle}s`}
                             </span>
                         </th>
@@ -44,15 +47,15 @@ const TableauComparaisonCapacite = ({ colonnes, cellules, groupes, afficherVUtil
                 </tr>
                 <tr className="cc-subheader">
                     {jeuUnique && (
-                        <th className="cc-col-trafic-single" title="Trafic (véh/h)">
+                        <th className="cc-col-trafic-single" title={tip('Trafic (véh/h)')}>
                             Trafic<span className="cc-pf-dataset">{colonnes[0]?.jeu || '—'}</span>
                         </th>
                     )}
                     {colonnes.map(c => (
                         <React.Fragment key={c.cle}>
-                            {!jeuUnique && <th title="Trafic (véh/h)">Trafic</th>}
-                            {afficherVUtile && <th title="Vert utile">V.Utile</th>}
-                            <th title="Capacité utilisée">Cap.U</th>
+                            {!jeuUnique && <th title={tip('Trafic (véh/h)')}>Trafic</th>}
+                            {afficherVUtile && <th title={tip('Vert utile')}>V.Utile</th>}
+                            <th title={tip('Capacité utilisée')}>Cap.U</th>
                         </React.Fragment>
                     ))}
                 </tr>

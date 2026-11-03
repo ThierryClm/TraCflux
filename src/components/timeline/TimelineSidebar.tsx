@@ -34,6 +34,7 @@ interface TimelineSidebarProps {
     showWrapFlash: boolean;
     simulationResult?: TimelineSimulationResult | null;
     updateGroupParams: UpdateTimelineGroup;
+    tooltipsEnabled?: boolean;
 }
 
 const TimelineSidebar = ({
@@ -56,13 +57,17 @@ const TimelineSidebar = ({
     showGroupNames,
     showWrapFlash,
     simulationResult,
-    updateGroupParams
-}: TimelineSidebarProps) => (
+    updateGroupParams,
+    tooltipsEnabled = true
+}: TimelineSidebarProps) => {
+    // Case « Diagramme » de Mise en page → Infobulles.
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
+    return (
     <div className="timeline-sidebar" style={!showGroupNames ? { width: '165px' } : undefined}>
         <div className="sidebar-header-row">
             <span className="col-label col-grp">GF</span>
             {showGroupNames && <span className="col-label col-name">Nom</span>}
-            <CustomTooltip text="Code trajet (2 caractères) concernant la procédure d'approche bus.">
+            <CustomTooltip text={tip("Code trajet (2 caractères) concernant la procédure d'approche bus.")}>
                 <span className="col-label col-da">DA</span>
             </CustomTooltip>
             <span className="col-label col-time">Déb</span>
@@ -111,24 +116,25 @@ const TimelineSidebar = ({
                                 className="label-name"
                                 onMouseEnter={(event: MouseEvent<HTMLSpanElement>) => {
                                     const element = event.currentTarget;
-                                    element.title = element.scrollWidth > element.clientWidth ? group.name : '';
+                                    // Nom complet seulement s'il est tronqué, et si les infobulles du diagramme sont actives.
+                                    element.title = tooltipsEnabled && element.scrollWidth > element.clientWidth ? group.name : '';
                                 }}
                                 style={{ backgroundColor: groupNameBackground(group.type) }}
                             >
                                 {group.name || '-'}
                                 {(group.phaseFlag || (!group.phaseFlag && escamotageGroupIds.has(group.id))) && (
-                                    <CustomTooltip text={(group.phaseFlag || 'e') === 'a' ? 'Aiguillage' : 'Escamotage'} delay={100}>
+                                    <CustomTooltip text={tip((group.phaseFlag || 'e') === 'a' ? 'Aiguillage' : 'Escamotage')} delay={100}>
                                         <span className="phase-flag-indicator">{group.phaseFlag || 'e'}</span>
                                     </CustomTooltip>
                                 )}
                             </span>
-                            {phaseFlagTooltipId === group.id && (
+                            {tooltipsEnabled && phaseFlagTooltipId === group.id && (
                                 <div className="phase-flag-tooltip">Alt+A : aiguillage, Alt+E : escamotage</div>
                             )}
                         </div>
                     )}
                     {(group.type === 'V' || group.type === 'B') ? (
-                        <CustomTooltip text="Code trajet">
+                        <CustomTooltip text={tip('Code trajet')}>
                             <LocalInput
                                 className="input-da"
                                 value={group.da || ''}
@@ -180,7 +186,7 @@ const TimelineSidebar = ({
                                 title={undefined}
                                 placeholder=""
                             />
-                            <CustomTooltip text="Durée nominale dans le cycle">
+                            <CustomTooltip text={tip('Durée nominale dans le cycle')}>
                                 <input
                                     type="number"
                                     className="input-time-sm"
@@ -208,6 +214,7 @@ const TimelineSidebar = ({
             );
         })}
     </div>
-);
+    );
+};
 
 export default TimelineSidebar;

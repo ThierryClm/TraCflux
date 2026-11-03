@@ -378,7 +378,8 @@ const TrafficTable = ({
                             ))}
                         </select>
                     )}
-                    {datasetTooltip && (
+                    {/* Infobulles maison : elles suivent aussi la case « Trafic ». */}
+                    {tooltipsEnabled && datasetTooltip && (
                         <div className="traffic-dataset-tooltip">
                             Appuyez sur + pour ajouter un jeu de données personnalisé{supprimerJeu ? ', sur − pour supprimer le jeu affiché' : ''}
                         </div>
@@ -390,7 +391,7 @@ const TrafficTable = ({
                 <div className="empty-state-overlay" style={{ alignItems: 'flex-start', paddingTop: '120px' }}>
                     <EmptyState
                         icon="traffic"
-                        title={tip("Données trafic non renseignées")}
+                        title="Données trafic non renseignées"
                         hint={`Saisissez les volumes de trafic (véh/h) dans la colonne "${activeTrafficDataset}" pour les groupes véhicules. Les coefficients de voie permettent d'affiner le calcul de capacité.`}
                     />
                 </div>
@@ -520,7 +521,8 @@ const TrafficTable = ({
                                                 {isCoordinated(trafficData.trafficVol) && (
                                                     <span className="trafic-coordinated-c">c</span>
                                                 )}
-                                                {tooltipGroupId === g.id && (
+                                                {/* Rien à saisir en lecture seule : la touche « c » n'y agit pas. */}
+                                                {tooltipsEnabled && !readOnly && tooltipGroupId === g.id && (
                                                     <div className="trafic-custom-tooltip">
                                                         Touche « c » : trafic coordonné (retard et file d'attente à 0) — « c » de nouveau pour l'annuler
                                                     </div>

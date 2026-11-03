@@ -51,6 +51,8 @@ export interface SuggestionCycleDialogProps {
     readOnly?: boolean;
     /** Rendu dans une fenêtre détachée du navigateur (usePopupWindow), sans cadre de modale. */
     detachee?: boolean;
+    /** Case « Assistant conception » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 /** Titre de la fenêtre, partagé avec la fenêtre détachée. */
@@ -72,23 +74,24 @@ interface ValidationChapitre {
  * le contenu ne s'affiche que déplié. Son bouton Valider applique la
  * proposition au diagramme ; un second clic l'invalide et rétablit le plan.
  */
-const Chapitre = ({ titre, resume, ouvert, basculer, validation, children }: {
+const Chapitre = ({ tip, titre, resume, ouvert, basculer, validation, children }: {
+    tip: (text: string | undefined) => string | undefined;
     titre: string; resume?: ReactNode; ouvert: boolean; basculer: () => void; validation?: ValidationChapitre; children: ReactNode;
 }) => (
     <section className={`sc-chapitre${ouvert ? ' ouvert' : ''}${validation?.valide ? ' valide' : ''}`} aria-label={titre}>
         <div className="sc-chapitre-ligne">
             <button type="button" className="sc-chapitre-tete" aria-expanded={ouvert} onClick={basculer}
-                title={ouvert ? 'Réduire' : 'Déployer'}>
+                title={tip(ouvert ? 'Réduire' : 'Déployer')}>
                 <span className="sc-chevron" aria-hidden="true">{ouvert ? '▾' : '▸'}</span>
                 <span className="sc-chapitre-titre">{titre}</span>
-                {resume && <span className="sc-chapitre-resume" title={typeof resume === 'string' ? resume : undefined}>{resume}</span>}
+                {resume && <span className="sc-chapitre-resume" title={tip(typeof resume === 'string' ? resume : undefined)}>{resume}</span>}
             </button>
             {validation && (
                 <button type="button" className={`sc-valider${validation.valide ? ' actif' : ''}`} aria-pressed={validation.valide}
                     disabled={!validation.valide && !!validation.motif} onClick={validation.basculer}
-                    title={validation.valide
+                    title={tip(validation.valide
                         ? 'Invalider : le diagramme revient à son état d\'avant la validation'
-                        : validation.motif ?? 'Valider : la proposition s\'applique tout de suite au diagramme'}>
+                        : validation.motif ?? 'Valider : la proposition s\'applique tout de suite au diagramme')}>
                     {validation.valide ? '✓ Validé' : 'Valider'}
                 </button>
             )}
@@ -124,8 +127,9 @@ const SuggestionCycleDialog = ({
     isOpen, onClose, planName, groups, conflictMatrix, cycleLength, getTrafficData,
     trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
     setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, variablesMicro, setVariableMicro, readOnly = false, detachee = false,
-    phasageBulleCount, phasageBulleTimes, actionData,
+    phasageBulleCount, phasageBulleTimes, actionData, tooltipsEnabled = true,
 }: SuggestionCycleDialogProps) => {
+    const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
     const [remplirBulle, setRemplirBulle] = useState(true);
     // Chemin critique lu sur le diagramme, quand il est renseigné : phases,
     // groupe à la plus forte capacité utilisée, dégagements effectifs.
@@ -552,7 +556,7 @@ const SuggestionCycleDialog = ({
     const corps = (
         <>
             <div className="sc-defilement">
-            <Chapitre titre="Phases et groupes déterminants" resume={resumePhases} ouvert={ouverts.phases} basculer={basculer('phases')} validation={validation('phases')}>
+            <Chapitre tip={tip} titre="Phases et groupes déterminants" resume={resumePhases} ouvert={ouverts.phases} basculer={basculer('phases')} validation={validation('phases')}>
             <p className="sc-intro">
                 Choisissez, dans l'ordre du cycle, le <b>groupe déterminant</b> de chaque phase : le courant le plus
                 chargé de la phase. Le dégagement vers la phase suivante est proposé par la matrice ; corrigez-le
@@ -568,7 +572,7 @@ const SuggestionCycleDialog = ({
             )}
             {chemin && (
                 <button type="button" className="modal-btn modal-btn-secondary sc-relire"
-                    title="Refaire la détection des phases et des groupes déterminants sur le diagramme actuel"
+                    title={tip("Refaire la détection des phases et des groupes déterminants sur le diagramme actuel")}
                     onClick={() => { const lu = depuisDiagramme(); if (lu) { setBrouillon(lu); setOrigine('diagramme'); } }}>
                     Relire le diagramme
                 </button>
@@ -637,7 +641,7 @@ const SuggestionCycleDialog = ({
                 <p className="sc-attente">Précisez le dégagement après la phase {resultat.degagementsManquants.map(i => i + 1).join(', ')}.</p>}
 
             {resultat && calculable && (
-                <Chapitre titre="Durée de cycle" resume={resumeCycle} ouvert={ouverts.cycle} basculer={basculer('cycle')} validation={validation('cycle')}>
+                <Chapitre tip={tip} titre="Durée de cycle" resume={resumeCycle} ouvert={ouverts.cycle} basculer={basculer('cycle')} validation={validation('cycle')}>
                 <div className="sc-resultat" aria-label="Résultat">
                     <p>Y = <b>{fmt(resultat.Y)}</b> · temps perdu L = <b>{resultat.L} s</b></p>
                     {resultat.sature && <p className="sc-alerte">Y ≥ 0,9 : le carrefour est saturé ; aucun cycle ne suffira à écouler ce trafic.</p>}
@@ -662,7 +666,7 @@ const SuggestionCycleDialog = ({
             )}
 
             {placements.length > 0 && (
-                <Chapitre titre="Groupes associés" resume={resumeAssocies} ouvert={ouverts.associes} basculer={basculer('associes')} validation={validation('associes')}>
+                <Chapitre tip={tip} titre="Groupes associés" resume={resumeAssocies} ouvert={ouverts.associes} basculer={basculer('associes')} validation={validation('associes')}>
                 <div className="sc-associes">
                     {resultat?.cycleSuggere ? <p className="sc-note">Calés sur le cycle proposé de {resultat.cycleSuggere} s.</p> : null}
                     <table className="sc-table">
@@ -670,7 +674,7 @@ const SuggestionCycleDialog = ({
                         <tbody>
                             {placements.map(p => (
                                 <tr key={p.id} className={p.aVerifier ? 'sc-a-verifier' : ''}>
-                                    <td className="sc-gauche sc-nom" title={nomGroupe(p.id)}>GF{p.id} {nomGroupe(p.id)}</td>
+                                    <td className="sc-gauche sc-nom" title={tip(nomGroupe(p.id))}>GF{p.id} {nomGroupe(p.id)}</td>
                                     <td>{p.phases.length ? p.phases.map(i => i + 1).join(', ') : '—'}</td>
                                     <td className="sc-insecable">{p.fin > p.debut ? `${p.debut} – ${p.fin} s` : '—'}</td>
                                     <td className="sc-gauche sc-source">
@@ -692,9 +696,9 @@ const SuggestionCycleDialog = ({
             )}
 
             {propositionAV && propositionAV.adaptatifs.length > 0 && (
-                <Chapitre titre="Adaptatifs verticaux" resume={resumeAdaptatifs} ouvert={ouverts.adaptatifs} basculer={basculer('adaptatifs')} validation={validation('adaptatifs')}>
+                <Chapitre tip={tip} titre="Adaptatifs verticaux" resume={resumeAdaptatifs} ouvert={ouverts.adaptatifs} basculer={basculer('adaptatifs')} validation={validation('adaptatifs')}>
                 <div className="sc-associes sc-adaptatifs">
-                    <label className="sc-nb" title="Une phase ne se contracte que lorsque sa demande est servie : le taux visé peut être plus haut que pour le cycle">
+                    <label className="sc-nb" title={tip("Une phase ne se contracte que lorsque sa demande est servie : le taux visé peut être plus haut que pour le cycle")}>
                         Taux de saturation visé pour les zones :
                         <input type="number" min={50} max={99} value={tauxAV} aria-label="Taux visé des adaptatifs"
                             onChange={e => setTauxAV(Math.max(50, Math.min(99, parseInt(e.target.value, 10) || TAUX_VISE_ADAPTATIFS)))} /> %
@@ -708,15 +712,15 @@ const SuggestionCycleDialog = ({
                     </label>
                     <table className="sc-table">
                         <thead><tr><th>Phase</th><th>Déterminant</th><th>Zone Déb – Fin</th><th>Durée</th>
-                            <th title={`Capacité utilisée du déterminant au cycle de ${propositionAV.cycleNominal} s`}>Cap. U nominale</th>
-                            <th title="Toutes les zones contractées ensemble">Cap. U tout contracté</th>
-                            <th title="Cette zone seule contractée, les autres en extension. Taux fourni à titre indicatif, car sur le principe, la demande a été satisfaite.">Cap. U zone seule</th>
+                            <th title={tip(`Capacité utilisée du déterminant au cycle de ${propositionAV.cycleNominal} s`)}>Cap. U nominale</th>
+                            <th title={tip("Toutes les zones contractées ensemble")}>Cap. U tout contracté</th>
+                            <th title={tip("Cette zone seule contractée, les autres en extension. Taux fourni à titre indicatif, car sur le principe, la demande a été satisfaite.")}>Cap. U zone seule</th>
                             <th>Limité par</th></tr></thead>
                         <tbody>
                             {propositionAV.adaptatifs.map(a => (
                                 <tr key={a.phase}>
                                     <td>{a.phase}</td>
-                                    <td className="sc-gauche sc-nom" title={nomGroupe(a.determinant)}>GF{a.determinant} {nomGroupe(a.determinant)}</td>
+                                    <td className="sc-gauche sc-nom" title={tip(nomGroupe(a.determinant))}>GF{a.determinant} {nomGroupe(a.determinant)}</td>
                                     <td className="sc-insecable">{a.duree > 0 ? `${a.deb} – ${a.fin} s` : '—'}</td>
                                     <td>{a.duree > 0 ? `${a.duree} s` : '—'}</td>
                                     <td>{pct(a.capNominale)}</td>
@@ -748,9 +752,9 @@ const SuggestionCycleDialog = ({
             )}
 
             {disposition && (
-                <Chapitre titre="Fermetures anticipées avec glissements" resume={resumeFermetures} ouvert={ouverts.fermetures} basculer={basculer('fermetures')} validation={validation('fermetures')}>
+                <Chapitre tip={tip} titre="Fermetures anticipées avec glissements" resume={resumeFermetures} ouvert={ouverts.fermetures} basculer={basculer('fermetures')} validation={validation('fermetures')}>
                 <div className="sc-associes sc-adaptatifs">
-                    <label className="sc-nb" title="Groupes voitures dont la capacité utilisée, au cycle proposé, est sous ce seuil">
+                    <label className="sc-nb" title={tip("Groupes voitures dont la capacité utilisée, au cycle proposé, est sous ce seuil")}>
                         Groupes voitures sous
                         <input type="number" min={30} max={99} value={seuilFA} aria-label="Seuil de capacité des fermetures anticipées"
                             onChange={e => setSeuilFA(Math.max(30, Math.min(99, parseInt(e.target.value, 10) || SEUIL_CAPACITE_FERMETURE)))} />
@@ -758,14 +762,14 @@ const SuggestionCycleDialog = ({
                     </label>
                     {fermetures.length > 0 ? (
                         <table className="sc-table">
-                            <thead><tr><th>Groupe</th><th>Cap. U</th><th title="Vert moins V.utile">Temps disponible</th>
-                                <th title={`Environ ${Math.round(PART_TEMPS_DISPONIBLE * 100)} % du temps disponible, en fin de vert, sans passer sous le vert mini`}>Fermeture Déb – Fin</th>
-                                <th title="Groupes antagonistes qui ouvrent après la fermeture et peuvent ouvrir plus tôt sans conflit intervert (Action GF)">Glissements</th>
+                            <thead><tr><th>Groupe</th><th>Cap. U</th><th title={tip("Vert moins V.utile")}>Temps disponible</th>
+                                <th title={tip(`Environ ${Math.round(PART_TEMPS_DISPONIBLE * 100)} % du temps disponible, en fin de vert, sans passer sous le vert mini`)}>Fermeture Déb – Fin</th>
+                                <th title={tip("Groupes antagonistes qui ouvrent après la fermeture et peuvent ouvrir plus tôt sans conflit intervert (Action GF)")}>Glissements</th>
                                 <th>Non retenus</th></tr></thead>
                             <tbody>
                                 {fermetures.map(f => (
                                     <tr key={f.groupe} className={f.duree > 0 ? '' : 'sc-sans-objet'}>
-                                        <td className="sc-gauche sc-nom" title={nomGroupe(f.groupe)}>GF{f.groupe} {nomGroupe(f.groupe)}</td>
+                                        <td className="sc-gauche sc-nom" title={tip(nomGroupe(f.groupe))}>GF{f.groupe} {nomGroupe(f.groupe)}</td>
                                         <td>{pct(f.capacite)}</td>
                                         <td>{fmt(f.disponible, 1)} s</td>
                                         <td className="sc-insecable">{f.duree > 0 ? `${f.deb} – ${f.fin} s (${f.duree} s)` : '—'}</td>
@@ -786,19 +790,19 @@ const SuggestionCycleDialog = ({
             )}
 
             {disposition && (
-                <Chapitre titre="Points de repos bus" resume={resumeRepos} ouvert={ouverts.repos} basculer={basculer('repos')} validation={validation('repos')}>
+                <Chapitre tip={tip} titre="Points de repos bus" resume={resumeRepos} ouvert={ouverts.repos} basculer={basculer('repos')} validation={validation('repos')}>
                 <div className="sc-associes sc-adaptatifs">
                     {reposBus.length > 0 ? (
                         <table className="sc-table">
                             <thead><tr><th>Groupe bus</th>
-                                <th title={`Dans les ${FENETRE_REPOS_BUS} dernières secondes du vert bus, à l'instant où le plus de groupes sont au vert`}>Repos à</th>
+                                <th title={tip(`Dans les ${FENETRE_REPOS_BUS} dernières secondes du vert bus, à l'instant où le plus de groupes sont au vert`)}>Repos à</th>
                                 <th>Groupes au vert</th>
-                                <th title="Temps passé dans la phase bus à l'instant du repos, moins 1">N</th>
+                                <th title={tip("Temps passé dans la phase bus à l'instant du repos, moins 1")}>N</th>
                                 <th>Condition</th></tr></thead>
                             <tbody>
                                 {reposBus.map(r => (
                                     <tr key={r.groupe}>
-                                        <td className="sc-gauche sc-nom" title={nomGroupe(r.groupe)}>GF{r.groupe} {nomGroupe(r.groupe)}</td>
+                                        <td className="sc-gauche sc-nom" title={tip(nomGroupe(r.groupe))}>GF{r.groupe} {nomGroupe(r.groupe)}</td>
                                         <td>{r.instant} s</td>
                                         <td>{r.inclus.map(court).join(', ')}</td>
                                         <td>{r.n}</td>
@@ -828,7 +832,7 @@ const SuggestionCycleDialog = ({
             {tablePleine && <p className="sc-alerte">La table est pleine (30 conditions) : certaines lignes n'ont pas été inscrites.</p>}
             </div>
             <div className="sc-pied">
-            <label className="sc-nb" title="Une bulle par phase, au milieu du vert de son groupe déterminant">
+            <label className="sc-nb" title={tip("Une bulle par phase, au milieu du vert de son groupe déterminant")}>
                 <input type="checkbox" checked={remplirBulle} onChange={e => setRemplirBulle(e.target.checked)} />
                 Modifier ou pré-remplir le phasage bulle
             </label>
@@ -836,15 +840,15 @@ const SuggestionCycleDialog = ({
             <div className="modal-actions">
                 <button className="modal-btn modal-btn-secondary" onClick={onClose}>Fermer</button>
                 <button className="modal-btn modal-btn-secondary" disabled={!complet || readOnly} onClick={() => appliquerChapitre('phases')}
-                    title="Garder ces groupes déterminants avec le plan de feu (ils servent aussi au phasage bulle)">
+                    title={tip("Garder ces groupes déterminants avec le plan de feu (ils servent aussi au phasage bulle)")}>
                     Enregistrer le phasage
                 </button>
                 <button className="modal-btn modal-btn-primary"
                     disabled={!calculable || resultat?.cycleSuggere == null || readOnly}
-                    title={['Règle la durée du cycle du plan',
+                    title={tip(['Règle la durée du cycle du plan',
                         aPlacer.length ? `place ${aPlacer.length} groupe${aPlacer.length > 1 ? 's' : ''} associé${aPlacer.length > 1 ? 's' : ''}` : '',
                         avUtiles.length || faUtiles.length || reposBus.length
-                            ? `inscrit ${[...avUtiles.map(a => `AV${a.phase}`), ...faUtiles.map((_, k) => `FA${k + 1}`), ...reposBus.map(() => 'Att bus')].join(', ')}` : ''].filter(Boolean).join(', puis ')}
+                            ? `inscrit ${[...avUtiles.map(a => `AV${a.phase}`), ...faUtiles.map((_, k) => `FA${k + 1}`), ...reposBus.map(() => 'Att bus')].join(', ')}` : ''].filter(Boolean).join(', puis '))}
                     onClick={appliquer}>
                     Appliquer le cycle{calculable && resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
                 </button>
@@ -863,7 +867,7 @@ const SuggestionCycleDialog = ({
         ) : null;
     }
     return (
-        <Modal isOpen={isOpen} onClose={onClose} nonModale className="suggestion-cycle" overlayClassName="suggestion-cycle-overlay"
+        <Modal isOpen={isOpen} onClose={onClose} nonModale tooltipsEnabled={tooltipsEnabled} className="suggestion-cycle" overlayClassName="suggestion-cycle-overlay"
             title={titreSuggestionCycle(planName)}>
             {corps}
         </Modal>

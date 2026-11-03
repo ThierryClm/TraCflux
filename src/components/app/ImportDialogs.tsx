@@ -33,7 +33,6 @@ interface ImportDialogsProps {
     spreadsheet: SpreadsheetImportDialogModel;
     html: ImportDialogModel;
     recent: RecentImportsModel;
-    tip: (label: string) => string | undefined;
 }
 
 const fileInputStyle: CSSProperties = {
@@ -60,10 +59,9 @@ const formatInfoStyle: CSSProperties = {
 function SpreadsheetImportDialog({
     dialog,
     recent,
-    tip,
-}: { dialog: SpreadsheetImportDialogModel; recent: RecentImportsModel; tip: (label: string) => string | undefined }) {
+}: { dialog: SpreadsheetImportDialogModel; recent: RecentImportsModel }) {
     return (
-        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Importer un fichier')}>
+        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title="Importer un fichier">
             {dialog.hintDirectory && (
                 <div style={{ backgroundColor: '#2a3a2a', border: '1px solid #4a6a4a', borderRadius: '4px', padding: '10px', marginBottom: '15px', fontSize: '0.9em' }}>
                     <span style={{ color: '#8f8' }}>Répertoire suggéré :</span>
@@ -135,10 +133,9 @@ function SpreadsheetImportDialog({
 
 function HtmImportDialog({
     dialog,
-    tip,
-}: { dialog: ImportDialogModel; tip: (label: string) => string | undefined }) {
+}: { dialog: ImportDialogModel }) {
     return (
-        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title={tip('Importer un fichier HTM')}>
+        <Modal isOpen={dialog.isOpen} onClose={dialog.onClose} title="Importer un fichier HTM">
             <div className="form-row">
                 <label>
                     Sélectionner un fichier HTM :
@@ -159,11 +156,13 @@ function HtmImportDialog({
     );
 }
 
-export default function ImportDialogs({ spreadsheet, html, recent, tip }: ImportDialogsProps) {
+// Plus d'infobulle ici : les titres des fenêtres sont des textes affichés,
+// qui ne dépendent pas des préférences « Infobulles ».
+export default function ImportDialogs({ spreadsheet, html, recent }: ImportDialogsProps) {
     return (
         <>
-            <SpreadsheetImportDialog dialog={spreadsheet} recent={recent} tip={tip} />
-            <HtmImportDialog dialog={html} tip={tip} />
+            <SpreadsheetImportDialog dialog={spreadsheet} recent={recent} />
+            <HtmImportDialog dialog={html} />
         </>
     );
 }

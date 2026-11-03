@@ -57,7 +57,6 @@ describe('TimelineGridBackground', () => {
             <TimelineEmptyState
                 groups={[{ id: 1, type: '', durations: { green: 0 } }]}
                 conflictMatrix={[['']]}
-                tooltipsEnabled
             />
         );
 

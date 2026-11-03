@@ -8,6 +8,8 @@ interface CopyMatrixModalProps {
     activePFId: number;
     onCopy: (sourceId: number) => void;
     onClose: () => void;
+    /** Case « Matrice » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface CopyMatrixModalProps {
  * - onCopy(sourceId) : lance la copie.
  * - onClose() : annule.
  */
-const CopyMatrixModal = ({ pfTabs = [], activePFId, onCopy, onClose }: CopyMatrixModalProps) => {
+const CopyMatrixModal = ({ pfTabs = [], activePFId, onCopy, onClose, tooltipsEnabled = true }: CopyMatrixModalProps) => {
     const sources = pfTabs.filter(p => p.id !== activePFId);
     const [sourceId, setSourceId] = useState(sources[0]?.id ?? null);
     const activeName = pfTabs.find(p => p.id === activePFId)?.name || 'actif';
@@ -42,7 +44,7 @@ const CopyMatrixModal = ({ pfTabs = [], activePFId, onCopy, onClose }: CopyMatri
                                 onChange={() => setSourceId(p.id)}
                             />
                             <span>{p.name || `PF${p.id}`}</span>
-                            {p.readOnly && <span className="pf-tab-lock" title="Plan importé, en lecture seule">🔒</span>}
+                            {p.readOnly && <span className="pf-tab-lock" title={tooltipsEnabled ? 'Plan importé, en lecture seule' : undefined}>🔒</span>}
                         </label>
                     </li>
                 ))}

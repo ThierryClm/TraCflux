@@ -125,9 +125,12 @@ interface RemarquesEditorProps {
     updateRemarques?: (html: string) => void;
     groupCount: number;
     popupMode?: boolean;
+    /** Case « Diagramme » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
-const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = false }: RemarquesEditorProps) => {
+const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = false, tooltipsEnabled = true }: RemarquesEditorProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const remarquesSelectionRef = useRef<RangeBookmark | null>(null);
     const editableRef = useRef<HTMLDivElement | null>(null);
     const restoreSelectionAfterRenderRef = useRef(false);
@@ -318,31 +321,31 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
         <div className={`timeline-remarques no-print${popupMode ? ' remarques-popup-mode' : ''}`}>
             <div className="remarques-header">
                 <span>Remarques</span>
-                <CustomTooltip text="Couleur verte (+)"><span
+                <CustomTooltip text={tip('Couleur verte (+)')}><span
                     className="comment-color-btn comment-color-plus"
                     role="button"
                     aria-label="Colorer le texte sélectionné en vert"
                     onMouseDown={applyColor(VERT_TEXTE)}
                 >+</span></CustomTooltip>
-                <CustomTooltip text="Couleur rouge (-)"><span
+                <CustomTooltip text={tip('Couleur rouge (-)')}><span
                     className="comment-color-btn comment-color-minus"
                     role="button"
                     aria-label="Colorer le texte sélectionné en rouge"
                     onMouseDown={applyColor('#F44336')}
                 >−</span></CustomTooltip>
-                <CustomTooltip text="Agrandir le texte sélectionné"><span
+                <CustomTooltip text={tip('Agrandir le texte sélectionné')}><span
                     className="comment-size-btn"
                     role="button"
                     aria-label="Agrandir la taille du texte sélectionné"
                     onMouseDown={applyResize(+2)}
                 >▲</span></CustomTooltip>
-                <CustomTooltip text="Réduire le texte sélectionné"><span
+                <CustomTooltip text={tip('Réduire le texte sélectionné')}><span
                     className="comment-size-btn"
                     role="button"
                     aria-label="Réduire la taille du texte sélectionné"
                     onMouseDown={applyResize(-2)}
                 >▼</span></CustomTooltip>
-                <CustomTooltip text="Réinitialiser la couleur et la taille"><span
+                <CustomTooltip text={tip('Réinitialiser la couleur et la taille')}><span
                     className="comment-reset-btn"
                     role="button"
                     aria-label="Réinitialiser la couleur et la taille des remarques"
@@ -373,7 +376,7 @@ const RemarquesEditor = ({ remarques, updateRemarques, groupCount, popupMode = f
                         }
                     }
                 }}
-                data-tooltip={tooltipText}
+                data-tooltip={tip(tooltipText)}
             />
         </div>
     );

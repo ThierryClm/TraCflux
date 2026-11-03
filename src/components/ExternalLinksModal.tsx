@@ -16,9 +16,12 @@ interface ExternalLinksModalProps {
     onClose: () => void;
     links?: ExternalLink[];
     onLinksChange?: (links: ExternalLink[]) => void;
+    /** Case « Page principale » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
-const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }: ExternalLinksModalProps) => {
+const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange, tooltipsEnabled = true }: ExternalLinksModalProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const askConfirm = useConfirm();
     const showAlert = useAlert();
     const [localLinks, setLocalLinks] = useState<ExternalLink[]>([]);
@@ -168,7 +171,7 @@ const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }: Exte
                         <div key={link.id} className="link-item">
                             <div className="link-info" onDoubleClick={() => handleOpenLink(link)}>
                                 <span className="link-name">{link.name}</span>
-                                <span className="link-path" title={link.path}>{link.path}</span>
+                                <span className="link-path" title={tip(link.path)}>{link.path}</span>
                             </div>
                             <div className="link-actions">
                                 <button
@@ -178,21 +181,21 @@ const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }: Exte
                                         navigator.clipboard.writeText(link.path);
                                         toast.success('Chemin copié dans le presse-papiers');
                                     }}
-                                    title="Copier le chemin"
+                                    title={tip('Copier le chemin')}
                                 >
                                     📋
                                 </button>
                                 <button
                                     className="btn-edit"
                                     onClick={(e) => { e.stopPropagation(); handleEditLink(link); }}
-                                    title="Modifier"
+                                    title={tip('Modifier')}
                                 >
                                     ✎
                                 </button>
                                 <button
                                     className="btn-delete"
                                     onClick={(e) => { e.stopPropagation(); handleDeleteLink(link.id); }}
-                                    title="Supprimer"
+                                    title={tip('Supprimer')}
                                 >
                                     ×
                                 </button>
@@ -223,7 +226,7 @@ const ExternalLinksModal = ({ isOpen, onClose, links = [], onLinksChange }: Exte
                             onChange={(e) => setNewLinkPath(e.target.value)}
                             placeholder="Chemin du fichier ou URL"
                         />
-                        <button className="btn-browse" onClick={handleBrowseFile} title="Parcourir...">
+                        <button className="btn-browse" onClick={handleBrowseFile} title={tip('Parcourir...')}>
                             ...
                         </button>
                     </div>

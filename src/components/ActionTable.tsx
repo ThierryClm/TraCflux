@@ -568,7 +568,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
                 </div>
             );
         }
-    }, [showFloatingConditions, visibleRows, actionData, hoveredActionId, conditionsPopup.renderToPopup]);
+    }, [showFloatingConditions, visibleRows, actionData, hoveredActionId, tooltipsEnabled, conditionsPopup.renderToPopup]);
 
     useEffect(() => {
         if (showFloatingVariables) {

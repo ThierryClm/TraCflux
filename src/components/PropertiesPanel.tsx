@@ -188,7 +188,7 @@ const PropertiesPanel = ({ intersectionName, setIntersectionName, projectPropert
                         id="horsAgglomeration"
                         checked={!!projectProperties.horsAgglomeration}
                         onChange={(e) => updateProjectProperty('horsAgglomeration', e.target.checked)}
-                        title="Hors agglomération : le temps de jaune des groupes VL et Bus passe à 5 secondes"
+                        title={tip('Hors agglomération : le temps de jaune des groupes VL et Bus passe à 5 secondes')}
                         style={{ width: '18px', height: '18px', flex: '0 0 auto', cursor: 'pointer', accentColor: '#3498db' }}
                     />
                 </div>

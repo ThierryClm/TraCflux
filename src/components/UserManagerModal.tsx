@@ -26,6 +26,8 @@ interface UserManagerModalProps {
     resetPassword: (username: string, password: string) => Promise<BasicResult>;
     exportUsersToFile: () => Promise<BasicResult>;
     importUsersFromFile: () => Promise<ImportResult>;
+    /** Case « Page principale » de Mise en page → Infobulles. */
+    tooltipsEnabled?: boolean;
 }
 
 const UserManagerModal = ({
@@ -38,8 +40,10 @@ const UserManagerModal = ({
     deleteUser,
     resetPassword,
     exportUsersToFile,
-    importUsersFromFile
+    importUsersFromFile,
+    tooltipsEnabled = true
 }: UserManagerModalProps) => {
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const askConfirm = useConfirm();
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -175,7 +179,7 @@ const UserManagerModal = ({
                                         <button
                                             className="user-action-btn"
                                             onClick={() => setResetPasswordUser(user.username)}
-                                            title="Réinitialiser le mot de passe"
+                                            title={tip('Réinitialiser le mot de passe')}
                                         >
                                             🔑
                                         </button>
@@ -183,7 +187,7 @@ const UserManagerModal = ({
                                             className="user-action-btn delete"
                                             onClick={() => handleDeleteUser(user.username)}
                                             disabled={user.username === currentUser?.username}
-                                            title="Supprimer l'utilisateur"
+                                            title={tip("Supprimer l'utilisateur")}
                                         >
                                             🗑
                                         </button>

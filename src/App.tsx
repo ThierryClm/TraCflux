@@ -359,7 +359,11 @@ function App() {
     // Préférences « Infobulles... » (Mise en page), mémorisées dans le navigateur.
     const { tooltipPrefs, setTooltipPref } = usePrefsInfobulles();
     // Helper local : utilise tooltipPrefs.main pour les title= de App.tsx.
-    const tip = (text: string | undefined) => tooltipPrefs.main ? text : undefined;
+    // Mémorisé : les fenêtres détachées le citent dans leurs dépendances et
+    // doivent se redessiner quand la case change, pas à chaque rendu.
+    const tip = useCallback((text: string | undefined) => tooltipPrefs.main ? text : undefined, [tooltipPrefs.main]);
+    // Réserve de capacité : rangée sous la case « Trafic ».
+    const tipTrafic = useCallback((text: string | undefined) => tooltipPrefs.traffic ? text : undefined, [tooltipPrefs.traffic]);
     const [showSaveReminder, setShowSaveReminder] = useState(() => {
         const saved = localStorage.getItem('showSaveReminder');
         return saved === null ? true : saved === 'true';
@@ -920,7 +924,7 @@ function App() {
         draggedTabIndex, setDraggedTabIndex
     } = useDialogState();
     // Aide en ligne : fenêtre détachée, non modale, repli dans la page si besoin.
-    const { ouvrirAide, aideEnModale } = useAideDetachee(helpModal, setHelpModal, helpAnchor);
+    const { ouvrirAide, aideEnModale } = useAideDetachee(helpModal, setHelpModal, helpAnchor, tooltipPrefs.main);
 
     // Les cases à cocher du dossier appartiennent au projet : on branche leur
     // lecture et leur écriture sur la sérialisation, plutôt que d'en faire une
@@ -1496,6 +1500,9 @@ function App() {
             case 'toggleTooltipsMatrix':  setTooltipPref('matrix');  break;
             case 'toggleTooltipsTraffic': setTooltipPref('traffic'); break;
             case 'toggleTooltipsMicro':   setTooltipPref('micro');   break;
+            case 'toggleTooltipsActions': setTooltipPref('actions'); break;
+            case 'toggleTooltipsAssistant': setTooltipPref('assistant'); break;
+            case 'toggleTooltipsImage':   setTooltipPref('image');   break;
             case 'toggleSaveReminder': {
                 const newVal = !showSaveReminder;
                 setShowSaveReminder(newVal);
@@ -1994,7 +2001,8 @@ function App() {
         actionData, cycleLength,
         imageBrightness, imageContrast,
         intersectionDisplay,
-        floatingImagePopup
+        floatingImagePopup,
+        tooltipsEnabled: tooltipPrefs.image
     });
 
     // Render matrix into popup window
@@ -2021,7 +2029,7 @@ function App() {
             </div>
         );
     }, [showFloatingMatrix, conflictMatrix, groups, cycleLength, actionData, activePFId,
-        pfTabs, biCarrefourSeparator, showGroupNamesMatrix, matricesLocked, hoveredArrowGroupId, matrixPopup.renderToPopup]);
+        pfTabs, biCarrefourSeparator, showGroupNamesMatrix, matricesLocked, hoveredArrowGroupId, tooltipPrefs.matrix, matrixPopup.renderToPopup]);
 
     // Render form into popup window
     useEffect(() => {
@@ -2072,11 +2080,11 @@ function App() {
                     getTrafficData={getTrafficData}
                     actionData={actionData}
                     activeTrafficDataset={activeTrafficDataset}
-                    tip={tip}
+                    tip={tipTrafic}
                 />
             </div>
         );
-    }, [showFloatingDiagnostic, groups, cycleLength, getTrafficData, actionData, activeTrafficDataset, diagnosticPopup.renderToPopup]);
+    }, [showFloatingDiagnostic, groups, cycleLength, getTrafficData, actionData, activeTrafficDataset, tipTrafic, diagnosticPopup.renderToPopup]);
 
     // Render remarques (notes du PF actif) into popup window
     useEffect(() => {
@@ -2087,9 +2095,10 @@ function App() {
                 updateRemarques={updatePFRemarques}
                 groupCount={groups.length}
                 popupMode={true}
+                tooltipsEnabled={tooltipPrefs.diagram}
             />
         );
-    }, [showFloatingRemarks, currentRemarques, updatePFRemarques, groups.length, remarquesPopup.renderToPopup]);
+    }, [showFloatingRemarks, currentRemarques, updatePFRemarques, groups.length, tooltipPrefs.diagram, remarquesPopup.renderToPopup]);
 
     useEffect(() => {
         if (!showFloatingLegend) return;
@@ -2125,9 +2134,10 @@ function App() {
         phasageCycle, setPhasageCycle, setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, phasageBulleCount, phasageBulleTimes,
         updateGroupParams, intersectionArrows, ajouterActions, variablesMicro: microCustomFields, setVariableMicro: updateMicroCustomField,
         actionData, readOnly: dossierReadOnly || activePfReadOnly,
+        tooltipsEnabled: tooltipPrefs.assistant,
     }), [activePFName, groups, conflictMatrix, cycleLength, getTrafficData, activeTrafficDataset, phasageCycle, setPhasageCycle,
         setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, phasageBulleCount, phasageBulleTimes, updateGroupParams, intersectionArrows, ajouterActions,
-        microCustomFields, updateMicroCustomField, actionData, dossierReadOnly, activePfReadOnly]);
+        microCustomFields, updateMicroCustomField, actionData, dossierReadOnly, activePfReadOnly, tooltipPrefs.assistant]);
     const renderSuggestionCycle = suggestionCyclePopup.renderToPopup;
     useEffect(() => {
         if (!suggestionCycleModal || assistantDansLaPage) return;
@@ -2158,9 +2168,10 @@ function App() {
                 actionData={actionData}
                 conflictMatrix={conflictMatrix}
                 onContentSize={noterTailleComparateur}
+                tooltipsEnabled={tooltipPrefs.main}
             />
         );
-    }, [capacityCompareModal, pfTabs, groups, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames, capacityCompareSelection, setCapacityCompareSelection, capacityCompareDataset, setCapacityCompareDataset, capacityCompareScenarios, setCapacityCompareScenarios, capacityCompareVUtile, setCapacityCompareVUtile, activePFId, cycleLength, actionData, conflictMatrix, noterTailleComparateur, capacityComparisonPopup.renderToPopup]);
+    }, [capacityCompareModal, pfTabs, groups, trafficDatasets, pfTrafficDatasetMap, activeTrafficDataset, trafficDatasetNames, capacityCompareSelection, setCapacityCompareSelection, capacityCompareDataset, setCapacityCompareDataset, capacityCompareScenarios, setCapacityCompareScenarios, capacityCompareVUtile, setCapacityCompareVUtile, activePFId, cycleLength, actionData, conflictMatrix, noterTailleComparateur, tooltipPrefs.main, capacityComparisonPopup.renderToPopup]);
 
     // Render read-only diagram mirror into its detached popup (présentation).
     // Reflète le diagramme du PF actif en direct (offsets, verts, simulation)
@@ -2200,6 +2211,7 @@ function App() {
                     showMicroOnHover={showMicroOnHover}
                     showWrapFlash={false}
                     tooltipsEnabled={tooltipPrefs.diagram}
+                    actionTooltipsEnabled={tooltipPrefs.actions}
                     cycleLengthInput={String(cycleLength)}
                     setCycleLengthInput={noop}
                     onGroupClick={noop}
@@ -2231,10 +2243,11 @@ function App() {
                     groups={groups}
                     isConflictGrayed={isConflictGrayed}
                     setHoveredConflict={setHoveredConflict}
+                    tip={tip}
                 />
             </div>
         );
-    }, [showFloatingConflicts, displayConflicts, groups, isConflictGrayed, setHoveredConflict, conflictsPopup.renderToPopup]);
+    }, [showFloatingConflicts, displayConflicts, groups, isConflictGrayed, setHoveredConflict, tip, conflictsPopup.renderToPopup]);
 
     // Render traffic table into popup window
     useEffect(() => {
@@ -2271,7 +2284,7 @@ function App() {
         simulationSelectedActions, simulationResult, simulationEnabled, hoveredArrowGroupId,
         trafficPopup.renderToPopup, updateTrafficData,
         getTrafficData, updateGroupParams, trafficDatasetNames, trafficDatasetSourceNames, copyTrafficDataset, addCustomTrafficDataset,
-        infoSuppressionJeuTrafic, supprimerJeuTrafic]);
+        infoSuppressionJeuTrafic, supprimerJeuTrafic, tooltipPrefs.traffic]);
 
     // Afficher l'écran de connexion si non authentifié
     // Écran de connexion seulement si les comptes sont activés sur ce poste.
@@ -2469,6 +2482,7 @@ function App() {
                 onAssocier={setActiveTrafficDataset}
                 onSuggererCycle={ouvrirSuggestionCycle}
                 onOuvrirTrafic={() => { setSidebarVisible(true); setActiveTab('traffic'); }}
+                tooltipsEnabled={tooltipPrefs.main}
             />
             {/* Repli dans la page quand le navigateur bloque la fenêtre détachée. */}
             <SuggestionCycleDialog {...propsSuggestionCycle} isOpen={suggestionCycleModal && (assistantDansLaPage || suggestionCyclePopup.bloquee)} />
@@ -2511,7 +2525,6 @@ function App() {
                         message: `Pour réimporter « ${file.name} », veuillez le sélectionner à nouveau via le bouton ci-dessus.\n\nPour des raisons de sécurité, le navigateur ne permet pas d'accéder directement aux fichiers précédemment sélectionnés.`,
                     }),
                 }}
-                tip={tip}
             />
 
             <GreenWaveDialogs
@@ -2596,6 +2609,7 @@ function App() {
                 resetPassword={resetPassword}
                 exportUsersToFile={exportUsersToFile}
                 importUsersFromFile={importUsersFromFile}
+                tooltipsEnabled={tooltipPrefs.main}
             />
 
             {/* External Links Modal */}
@@ -2604,6 +2618,7 @@ function App() {
                 onClose={() => setShowExternalLinksModal(false)}
                 links={externalLinks}
                 onLinksChange={setExternalLinks}
+                tooltipsEnabled={tooltipPrefs.main}
             />
 
             {/* La légende est désormais rendue dans une fenêtre détachée
@@ -2664,6 +2679,7 @@ function App() {
                         }
                     }}
                     onClose={() => setShowCopyMatrixModal(false)}
+                    tooltipsEnabled={tooltipPrefs.matrix}
                 />
             )}
             <input

@@ -94,7 +94,7 @@ const TimelineHeader = ({
             )}
             {planName && setIsPlayingSimulation && !readOnly && (
                 <div className="diagram-playback" style={{ marginLeft: '20px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: 'normal' }}>
-                    <CustomTooltip text={isPlayingSimulation ? 'Pause' : 'Lecture'}>
+                    <CustomTooltip text={tip(isPlayingSimulation ? 'Pause' : 'Lecture')}>
                         <button
                             className={`sim-btn ${isPlayingSimulation ? 'playing' : ''}`}
                             onClick={() => setIsPlayingSimulation(!isPlayingSimulation)}
@@ -103,7 +103,7 @@ const TimelineHeader = ({
                             {isPlayingSimulation ? '⏸' : '▶'}
                         </button>
                     </CustomTooltip>
-                    <CustomTooltip text="Réinitialiser">
+                    <CustomTooltip text={tip('Réinitialiser')}>
                         <button
                             className="sim-btn reset-btn"
                             onClick={() => { setIsPlayingSimulation(false); setSimulationCurrentTime?.(0); }}
@@ -113,7 +113,7 @@ const TimelineHeader = ({
                         </button>
                     </CustomTooltip>
                     {cycleSimulationSpeed && (
-                        <CustomTooltip text="Vitesse de déroulement — cliquer pour changer">
+                        <CustomTooltip text={tip('Vitesse de déroulement — cliquer pour changer')}>
                             <button
                                 className={`sim-btn sim-speed-btn ${simulationSpeed > 1 ? 'accelere' : ''}`}
                                 onClick={cycleSimulationSpeed}
@@ -123,7 +123,7 @@ const TimelineHeader = ({
                             </button>
                         </CustomTooltip>
                     )}
-                    <CustomTooltip text="Position dans le cycle">
+                    <CustomTooltip text={tip('Position dans le cycle')}>
                         <input
                             type="range"
                             min="0"

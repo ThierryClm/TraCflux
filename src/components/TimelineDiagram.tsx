@@ -97,14 +97,18 @@ export interface TimelineDiagramProps {
     onDragConflicts?: (conflicts: TrafficConflict[] | null) => void;
     remarquesDetached?: boolean;
     tooltipsEnabled?: boolean;
+    /** Case « Actions micro » : bulle d'action survolée dans le diagramme. */
+    actionTooltipsEnabled?: boolean;
     readOnly?: boolean;
     onDetach?: (() => void) | null;
     scrollable?: boolean;
     titreEnBandeau?: boolean;
 }
 
-const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId = () => {}, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }: TimelineDiagramProps) => {
+const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId = () => {}, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, actionTooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, titreEnBandeau = false }: TimelineDiagramProps) => {
     const { names: microVariableNames } = useMicroVariables();
+    // Case « Diagramme » de Mise en page → Infobulles.
+    const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const containerRef = useRef<HTMLDivElement>(null);
     const activeCommentRef = useRef<HTMLElement | null>(null);
     // Whether the mouse is currently over the diagram container (not the action table)
@@ -135,6 +139,8 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
         // Only show the tooltip when the mouse is in the diagram,
         // not when the hover comes from the ActionTable (to avoid redundancy with the micro field)
         if (!hoveredActionId || !isMouseInDiagram) return;
+        // Case « Actions micro » décochée : aucun minuteur, aucune bulle.
+        if (!actionTooltipsEnabled) return;
 
         const action = actionData.find(a => a.id === hoveredActionId);
         if (!action) return;
@@ -158,7 +164,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
             if (tooltipTimer1Ref.current) { clearTimeout(tooltipTimer1Ref.current); tooltipTimer1Ref.current = null; }
             if (tooltipTimer2Ref.current) { clearTimeout(tooltipTimer2Ref.current); tooltipTimer2Ref.current = null; }
         };
-    }, [hoveredActionId, showMicroOnHover, actionData, isMouseInDiagram]);
+    }, [hoveredActionId, showMicroOnHover, actionData, isMouseInDiagram, actionTooltipsEnabled]);
 
     // Position du curseur, pour poser l'infobulle.
     //
@@ -626,13 +632,13 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                     showWrapFlash={showWrapFlash}
                     simulationResult={simulationResult}
                     updateGroupParams={updateGroupParams}
+                    tooltipsEnabled={tooltipsEnabled}
                 />
 
                 <div className="timeline-scroll-area" style={{ width: `${totalWidth}px`, position: 'relative' }}>
                     <TimelineEmptyState
                         conflictMatrix={conflictMatrix}
                         groups={groups}
-                        tooltipsEnabled={tooltipsEnabled}
                     />
                     {/* L'instant survolé, qui anime l'image du carrefour, se suit sur
                         tout le conteneur : lignes ET cadres d'action posés par-dessus
@@ -684,6 +690,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                                 selectedEscamotageGroup={selectedEscamotageGroup}
                                 setHoveredGroupId={setHoveredGroupId}
                                 simulationResult={simulationResult}
+                                tooltipsEnabled={tooltipsEnabled}
                             />
                         ))}
 
@@ -772,9 +779,9 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                     {/* Header for comments */}
                     <div className="comments-header">
                         <span>Commentaire</span>
-                        <CustomTooltip text="Couleur verte (+)"><span className="comment-color-btn comment-color-plus" role="button" aria-label="Colorer le texte sélectionné en vert">+</span></CustomTooltip>
-                        <CustomTooltip text="Couleur rouge (-)"><span className="comment-color-btn comment-color-minus" role="button" aria-label="Colorer le texte sélectionné en rouge">−</span></CustomTooltip>
-                        <CustomTooltip text="Réinitialiser la couleur et la taille du commentaire actif"><span
+                        <CustomTooltip text={tip('Couleur verte (+)')}><span className="comment-color-btn comment-color-plus" role="button" aria-label="Colorer le texte sélectionné en vert">+</span></CustomTooltip>
+                        <CustomTooltip text={tip('Couleur rouge (-)')}><span className="comment-color-btn comment-color-minus" role="button" aria-label="Colorer le texte sélectionné en rouge">−</span></CustomTooltip>
+                        <CustomTooltip text={tip('Réinitialiser la couleur et la taille du commentaire actif')}><span
                             className="comment-reset-btn"
                             role="button"
                             aria-label="Réinitialiser la couleur et la taille du commentaire actif"
@@ -838,7 +845,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                                         }
                                     }
                                 }}
-                                data-tooltip="Commentaire (50 caractères max) - Sélectionnez du texte puis + pour vert, - pour rouge"
+                                data-tooltip={tip('Commentaire (50 caractères max) - Sélectionnez du texte puis + pour vert, - pour rouge')}
                             />
                         </div>
                     ))}
@@ -850,6 +857,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                         remarques={remarques}
                         updateRemarques={updateRemarques ?? undefined}
                         groupCount={groups.length}
+                        tooltipsEnabled={tooltipsEnabled}
                     />
                 )}
             </div>
@@ -857,6 +865,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
         <TimelineFloatingOverlays
             actionData={actionData}
             actionTooltip={actionTooltip}
+            actionTooltipsEnabled={actionTooltipsEnabled}
             cycleLength={cycleLength}
             dragState={dragState}
             microVariableNames={microVariableNames}
