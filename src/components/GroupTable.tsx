@@ -4,7 +4,8 @@ import EmptyState from './EmptyState';
 import type { Groupe, TypeGroupe } from '../types/projet';
 import './GroupTable.css';
 import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
-import { famillesPourType, libelleSignalIsr, signalAdmis, typeFormulaire } from '../utils/signauxIsr';
+import { libelleSignalIsr, signalAdmis, typeFormulaire } from '../utils/signauxIsr';
+import SignalSelect from './SignalSelect';
 
 type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
     durations?: Partial<Groupe['durations']>;
@@ -156,24 +157,15 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
                                 </td>
                                 {/* Signal ISR */}
                                 <td>
-                                    <select
+                                    <SignalSelect
                                         value={g.signal || ''}
-                                        onChange={(e) => updateGroupParams(g.id, { signal: e.target.value })}
-                                        className="input-signal"
-                                        aria-label={`Signal du groupe ${g.id}`}
+                                        type={g.type}
+                                        courant={g.courant}
+                                        onChange={(signal) => updateGroupParams(g.id, { signal })}
+                                        label={`Signal du groupe ${g.id}`}
                                         title={tip(libelleSignalIsr(g.signal) ?? INFOBULLE_SIGNAL)}
-                                    >
-                                        <option value=""></option>
-                                        {/* Un code hors de la liste du type reste affiché plutôt que d'être effacé. */}
-                                        {g.signal && !signalAdmis(g.type, g.signal) && <option value={g.signal}>{g.signal}</option>}
-                                        {famillesPourType(g.type).map(f => (
-                                            <optgroup key={f.famille} label={f.famille}>
-                                                {f.signaux.map(s => (
-                                                    <option key={s.code} value={s.code} title={tip(s.libelle)}>{s.code}</option>
-                                                ))}
-                                            </optgroup>
-                                        ))}
-                                    </select>
+                                        tooltipsEnabled={tooltipsEnabled}
+                                    />
                                 </td>
                                 {/* Courant */}
                                 <td>

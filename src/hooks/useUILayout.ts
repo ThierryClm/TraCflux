@@ -13,7 +13,7 @@ interface EvenementAnnulable {
  * - Onglet actif et zoom du diagramme
  */
 /** Largeur du panneau à l'onglet Configuration : tout le formulaire, Signal compris. */
-export const LARGEUR_CONFIGURATION = 490;
+export const LARGEUR_CONFIGURATION = 550;
 
 const useUILayout = () => {
     const [pixelsPerSecond, setPixelsPerSecond] = useState(10);
