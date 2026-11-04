@@ -6,6 +6,8 @@ export interface IntersectionDisplayOptions {
     showGroupNames: boolean;
     /** Ajout de flèches au clic sur l'image (« Ajouter un courant de circulation »). */
     showArrows: boolean;
+    /** Signal ISR du groupe à la place de sa flèche, si le champ Signal est renseigné. */
+    showSignals: boolean;
 }
 
 export type IntersectionDisplayOption = keyof IntersectionDisplayOptions;
@@ -13,24 +15,26 @@ export type IntersectionDisplayOption = keyof IntersectionDisplayOptions;
 const STORAGE_KEYS: Record<IntersectionDisplayOption, string> = {
     showGroupNumbers: 'intersection_showGroupNumbers',
     showGroupNames: 'intersection_showGroupNames',
-    showArrows: 'intersection_showArrows'
+    showArrows: 'intersection_showArrows',
+    showSignals: 'intersection_showSignals'
 };
 
 const OPTIONS = Object.keys(STORAGE_KEYS) as IntersectionDisplayOption[];
 
-const readStored = (option: IntersectionDisplayOption): boolean => {
+const readStored = (option: IntersectionDisplayOption, parDefaut = true): boolean => {
     try {
         const saved = localStorage.getItem(STORAGE_KEYS[option]);
-        return saved !== null ? JSON.parse(saved) : true;
+        return saved !== null ? JSON.parse(saved) : parDefaut;
     } catch {
-        return true;
+        return parDefaut;
     }
 };
 
 /**
- * Cases « Afficher numéro de groupe », « Afficher noms des groupes » et
- * « Ajouter un courant de circulation » (ajout de flèches au clic) de l'image
- * du carrefour.
+ * Cases « Afficher numéro de groupe », « Afficher noms des groupes »,
+ * « Ajouter un courant de circulation » (ajout de flèches au clic) et « Signal »
+ * (décochée d'origine : les flèches restent la vue par défaut) de l'image du
+ * carrefour.
  *
  * Elles appartiennent au projet et s'enregistrent avec ses options de mise en
  * page : un carrefour dont les flèches sont posées garde l'ajout désactivé à
@@ -42,7 +46,8 @@ const useIntersectionDisplayOptions = () => {
     const [options, setOptions] = useState<IntersectionDisplayOptions>(() => ({
         showGroupNumbers: readStored('showGroupNumbers'),
         showGroupNames: readStored('showGroupNames'),
-        showArrows: readStored('showArrows')
+        showArrows: readStored('showArrows'),
+        showSignals: readStored('showSignals', false)
     }));
 
     useEffect(() => {

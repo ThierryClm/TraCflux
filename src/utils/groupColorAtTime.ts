@@ -36,6 +36,24 @@ interface GroupColorContext extends PPLitContext {
     conflictMatrix?: Matrice;
 }
 
+/** État lumineux d'un groupe, déduit de la couleur que produit getGroupColorAtTime. */
+export type EtatFeu = 'vert' | 'jaune' | 'rouge' | 'eteint';
+
+export const etatDeCouleur = (couleur: string): EtatFeu => {
+    switch (couleur) {
+        case 'rgb(0, 255, 0)':
+        case 'rgb(0, 180, 0)': // seconde lucarne
+            return 'vert';
+        case 'rgb(255, 255, 0)':
+        case 'rgb(180, 180, 0)': // creux du clignotement de la priorité piétons
+            return 'jaune';
+        case 'rgb(120, 120, 120)': // feu clignotant hors de sa période
+            return 'eteint';
+        default:
+            return 'rouge';
+    }
+};
+
 /**
  * Numéro de groupe porté par un champ GF d'action.
  *

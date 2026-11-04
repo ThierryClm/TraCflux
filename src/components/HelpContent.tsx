@@ -526,6 +526,13 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Déplacement au clavier :</strong> Sélectionnez une flèche en cliquant dessus, puis utilisez les touches fléchées du clavier (gauche, droite, haut, bas) pour la déplacer point par point. Le focus doit être sur l'image du carrefour (ne fonctionne pas quand l'image est détachée).</li>
                     <li><strong>Glisser-déposer :</strong> Cliquez et maintenez sur une flèche pour la déplacer. La flèche suit le mouvement de la souris sans se recentrer sur le point de clic.</li>
                 </ul>
+                <p><strong>Case Signal :</strong> Cochée, chaque groupe dont le champ <em>Signal</em> du formulaire est renseigné montre, à la place de sa flèche, un feu de ce signal tel qu'il apparaît sur le terrain, d'après les figures de l'ISR (livre 1, 6e partie). L'image détachée fait de même ; un groupe sans signal garde sa flèche et les bulles de phasage ne changent pas. Le numéro de groupe passe au coin haut droit du feu.</p>
+                <ul>
+                    <li><strong>Couleur :</strong> Le feu suit l'état du groupe comme la flèche, au survol du diagramme comme en simulation. Un signal ne montre toutefois que ce qu'il possède : le piéton passe du vert au rouge sans jaune, et le signal R17 ou R18 reste blanc (barre verticale ou inclinée au vert, disque au jaune, barre horizontale au rouge).</li>
+                    <li><strong>Jaune clignotant :</strong> Les signaux R15, R16, R19 et ceux dont le vert est remplacé par du jaune clignotant (R11j, R13bj, R13cj, R22j…) ne clignotent que pendant la lecture ; à l'arrêt, ils restent en jaune fixe. Hors du vert du groupe, les signaux R15, R16 et R19, qui n'ont qu'une lampe, sont éteints.</li>
+                    <li><strong>Réglages :</strong> Le signal reste à l'endroit. Il se déplace comme la flèche, et le réglage Zoom le redimensionne, à la moitié de la taille de la flèche pour laisser voir le plan ; la rotation, la longueur et le retour ne s'appliquent pas à lui et sont conservés pour la flèche.</li>
+                </ul>
+
                 <p>Le survol d'une flèche l'entoure d'un halo et met en évidence le groupe partout ailleurs — diagramme, formulaire, données Trafic. Voir <em>Survol et mise en relation</em>.</p>
             </section>
 

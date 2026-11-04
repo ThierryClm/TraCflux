@@ -42,6 +42,7 @@ interface LayoutSetters {
     setShowImageGroupNumbers?: SetterBooleen;
     setShowImageGroupNames?: SetterBooleen;
     setShowImageArrows?: SetterBooleen;
+    setShowImageSignals?: SetterBooleen;
     setDossierSections?: (sections: Record<string, boolean>) => void;
     /** Verrouillage de la saisie : celui du projet, ou rien de verrouillé. */
     setVerrouSaisie?: (prefs?: OptionsMiseEnPage['verrouSaisie']) => void;
@@ -49,7 +50,7 @@ interface LayoutSetters {
 
 /**
  * Les sept drapeaux de détachement, les quatre options d'affichage et les
- * trois cases de l'image du carrefour.
+ * quatre cases de l'image du carrefour.
  * La liste est liée au type afin qu'une nouvelle option ne puisse pas être
  * oubliée silencieusement lors de la persistance.
  */
@@ -58,7 +59,7 @@ const DRAPEAUX_MISE_EN_PAGE: (keyof OptionsMiseEnPage)[] = [
     'showFloatingForm', 'showFloatingMatrix', 'showFloatingTraffic',
     'showFloatingImage', 'showFloatingConditions', 'showFloatingVariables',
     'showFloatingRemarks',
-    'showImageGroupNumbers', 'showImageGroupNames', 'showImageArrows'
+    'showImageGroupNumbers', 'showImageGroupNames', 'showImageArrows', 'showImageSignals'
 ];
 
 /** Compose les réglages persistants depuis l'état courant de l'application. */
@@ -86,6 +87,7 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
         showImageGroupNumbers: v.showImageGroupNumbers,
         showImageGroupNames: v.showImageGroupNames,
         showImageArrows: v.showImageArrows,
+        showImageSignals: v.showImageSignals,
         verrouSaisie: v.verrouSaisie
     },
     directoryNames: {
@@ -144,7 +146,8 @@ export const appliquerMiseEnPage = (
         showFloatingRemarks: s.setShowFloatingRemarks,
         showImageGroupNumbers: s.setShowImageGroupNumbers,
         showImageGroupNames: s.setShowImageGroupNames,
-        showImageArrows: s.setShowImageArrows
+        showImageArrows: s.setShowImageArrows,
+        showImageSignals: s.setShowImageSignals
     };
 
     s.setVerrouSaisie?.(data.layoutOptions && typeof data.layoutOptions === 'object' ? data.layoutOptions.verrouSaisie : undefined);
