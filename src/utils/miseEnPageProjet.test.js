@@ -19,6 +19,7 @@ const etatCourant = {
     showImageGroupNumbers: true,
     showImageGroupNames: false,
     showImageArrows: false,
+    showImageSignals: true,
     directoryNames: { open: 'Études', save: 'Études', import: null, image: 'Plans', greenWave: null }
 };
 
@@ -48,7 +49,8 @@ const poseurs = () => {
             setDossierSections: espion('dossier'),
             setShowImageGroupNumbers: espion('imageNumeros'),
             setShowImageGroupNames: espion('imageNoms'),
-            setShowImageArrows: espion('imageFleches')
+            setShowImageArrows: espion('imageFleches'),
+            setShowImageSignals: espion('imageSignaux')
         }
     };
 };
@@ -154,11 +156,11 @@ describe("miseEnPageProjet — cases de l'image du carrefour", () => {
     it('les enregistre avec le projet et les restitue', () => {
         const paquet = lireMiseEnPage(etatCourant);
         expect(paquet.layoutOptions).toMatchObject({
-            showImageGroupNumbers: true, showImageGroupNames: false, showImageArrows: false
+            showImageGroupNumbers: true, showImageGroupNames: false, showImageArrows: false, showImageSignals: true
         });
         const { vus, s } = poseurs();
         appliquerMiseEnPage(paquet, s);
-        expect(vus).toMatchObject({ imageNumeros: true, imageNoms: false, imageFleches: false });
+        expect(vus).toMatchObject({ imageNumeros: true, imageNoms: false, imageFleches: false, imageSignaux: true });
     });
 
     it("laisse la valeur du navigateur pour un projet enregistré avant qu'elles n'en fassent partie", () => {
@@ -167,6 +169,7 @@ describe("miseEnPageProjet — cases de l'image du carrefour", () => {
         expect(vus).not.toHaveProperty('imageNumeros');
         expect(vus).not.toHaveProperty('imageNoms');
         expect(vus).not.toHaveProperty('imageFleches');
+        expect(vus).not.toHaveProperty('imageSignaux');
 
         const { vus: vusAncien, s: sAncien } = poseurs();
         appliquerMiseEnPage({ groups: [], pfTabs: [] }, sAncien);

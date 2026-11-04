@@ -3,6 +3,8 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
 import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
+import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
+import SignalModule from '../components/SignalModule';
 import type { ActionMicro, Groupe, Matrice } from '../types/projet';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
 import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
@@ -49,7 +51,7 @@ interface FloatingImageRendererOptions {
     cycleLength: number;
     imageBrightness: number;
     imageContrast: number;
-    /** Cases numéros / noms de groupe de l'image du carrefour. */
+    /** Cases numéros / noms de groupe / signal de l'image du carrefour. */
     intersectionDisplay: IntersectionDisplayOptions;
     floatingImagePopup: FloatingImagePopup;
     /** Case « Image du carrefour » de Mise en page → Infobulles. */
@@ -92,7 +94,12 @@ const useFloatingImageRenderer = ({
         const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
         const showNums = intersectionDisplay.showGroupNumbers;
-        const showNames = intersectionDisplay.showGroupNames;
+        // Même règle que l'image de la page : sans signal renseigné, la case ne pèse sur rien.
+        const showSignals = intersectionDisplay.showSignals && auMoinsUnSignal(groups);
+        const showNames = intersectionDisplay.showGroupNames && !showSignals;
+        // Signal montré à la place de la flèche : case cochée et champ Signal renseigné.
+        const signalDe = (group: Groupe | undefined) =>
+            showSignals && signalDessinable(group?.signal) ? group?.signal : undefined;
 
         // Compute group number centroids
         const groupMap: Record<number, Array<{ x: number; y: number }>> = {};
@@ -102,7 +109,11 @@ const useFloatingImageRenderer = ({
             const courant = group?.courant || '';
             let px = arrow.x;
             let py = arrow.y;
-            if (courant === 'TàD' || courant === 'TàG') {
+            if (signalDe(group)) {
+                const { dx, dy } = decalageNumeroSignal(arrow.scale || 1, courant);
+                px += dx / 750 * 100;
+                py += dy / 530 * 100;
+            } else if (courant === 'TàD' || courant === 'TàG') {
                 const sc = arrow.scale || 1;
                 const svgSize = 96 * sc;
                 const dxSvg = courant === 'TàD' ? -8 : 8;
@@ -250,6 +261,8 @@ const useFloatingImageRenderer = ({
                                 const arrowColor = getGroupColorAtTime(groupId, activeTime, colorContext);
 
                                 const isPedestrianOrCycle = courant === 'Piéton' || courant === 'Cycle';
+                                const signal = signalDe(group);
+                                const ppAllume = isPPLit(groupId, activeTime, colorContext);
 
                                 return (
                                     <div
@@ -259,8 +272,10 @@ const useFloatingImageRenderer = ({
                                         onMouseEnter={() => setHoveredArrowGroupId && setHoveredArrowGroupId(groupId || null)}
                                         onMouseLeave={() => setHoveredArrowGroupId && setHoveredArrowGroupId(null)}
                                     >
-                                        <div className="arrow-symbol" style={{ transform: `rotate(${rotation}deg) scale(${scale})` }}>
-                                            {renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, isPPLit(groupId, activeTime, colorContext))}
+                                        <div className="arrow-symbol" style={{ transform: signal ? `scale(${echelleSignal(scale, courant)})` : `rotate(${rotation}deg) scale(${scale})` }}>
+                                            {signal ? (
+                                                <SignalModule code={signal} couleur={arrowColor} temps={activeTime} enLecture={isPlayingSimulation} a13bAllume={ppAllume} courant={courant} />
+                                            ) : renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, ppAllume)}
                                         </div>
                                         {showNames && group?.name && (
                                             // Contre-échelle : l'étiquette garde sa taille à l'écran quel que
@@ -290,7 +305,7 @@ const useFloatingImageRenderer = ({
         selectedActions, conflictMatrix,
         isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast,
-        intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames, tooltipsEnabled, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+        intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames, intersectionDisplay.showSignals, tooltipsEnabled, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 
 export default useFloatingImageRenderer;

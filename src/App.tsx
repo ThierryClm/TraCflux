@@ -969,6 +969,7 @@ function App() {
                 showImageGroupNumbers: intersectionDisplay.showGroupNumbers,
                 showImageGroupNames: intersectionDisplay.showGroupNames,
                 showImageArrows: intersectionDisplay.showArrows,
+                showImageSignals: intersectionDisplay.showSignals,
                 verrouSaisie: prefsVerrouAEnregistrer(),
                 directoryNames: {
                     open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
@@ -989,6 +990,7 @@ function App() {
             setShowImageGroupNumbers: (v) => setIntersectionDisplayOption('showGroupNumbers', v),
             setShowImageGroupNames: (v) => setIntersectionDisplayOption('showGroupNames', v),
             setShowImageArrows: (v) => setIntersectionDisplayOption('showArrows', v),
+            setShowImageSignals: (v) => setIntersectionDisplayOption('showSignals', v),
             setVerrouSaisie: definirPrefsVerrou
         })
     };

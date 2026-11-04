@@ -6,6 +6,9 @@ import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
+import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
+import { demarrerHorloge } from '../utils/horlogeLecture';
+import SignalModule from './SignalModule';
 import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
@@ -94,8 +97,8 @@ const IntersectionImage = ({
     setImageBrightness,
     imageContrast = 100,
     setImageContrast,
-    // Cases numéros / noms / flèches (persistées avec le projet)
-    displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true },
+    // Cases numéros / noms / flèches / signal (persistées avec le projet)
+    displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true, showSignals: false },
     onDisplayOptionChange,
     tooltipsEnabled = true
 }: IntersectionImageProps) => {
@@ -116,9 +119,14 @@ const IntersectionImage = ({
 
     // Cases d'affichage : enregistrées avec le projet (useIntersectionDisplayOptions).
     const { showGroupNumbers, showGroupNames, showArrows } = displayOptions;
+    // Sans signal renseigné, la case est grisée et ne pèse sur rien d'autre ; son
+    // choix reste mémorisé pour le jour où un signal sera saisi.
+    const signalDisponible = auMoinsUnSignal(groups);
+    const showSignals = displayOptions.showSignals && signalDisponible;
     const setShowGroupNumbers = (value: boolean) => onDisplayOptionChange?.('showGroupNumbers', value);
     const setShowGroupNames = (value: boolean) => onDisplayOptionChange?.('showGroupNames', value);
     const setShowArrows = (value: boolean) => onDisplayOptionChange?.('showArrows', value);
+    const setShowSignals = (value: boolean) => onDisplayOptionChange?.('showSignals', value);
     const [applyToAllSameType, setApplyToAllSameType] = useState(false);
 
     // Close image menu when clicking outside
@@ -135,8 +143,6 @@ const IntersectionImage = ({
     }, [showImageMenu]);
 
     // Animation refs
-    const animationRef = useRef<number | null>(null);
-    const lastTimeRef = useRef<number | null>(null);
 
     // Compresse l'image importée (redimensionnement + WebP) avant de l'appliquer,
     // puis alerte si elle reste volumineuse. L'image source n'est pas modifiée.
@@ -495,6 +501,12 @@ const IntersectionImage = ({
         return group ? { name: group.name, courant: group.courant || '' } : { name: '?', courant: '' };
     };
 
+    // Signal montré à la place de la flèche : case cochée et champ Signal renseigné.
+    const getSignalAffiche = (groupId: number) => {
+        const signal = groups.find(g => g.id === groupId)?.signal;
+        return showSignals && signalDessinable(signal) ? signal : undefined;
+    };
+
     // Set arrow length (for Piéton/Cycle arrows)
     const setArrowLength = (arrowId: number, length: number | string) => {
         const lengthValue = parseFloat(String(length)) || 1;
@@ -747,48 +759,18 @@ const IntersectionImage = ({
         cycleEffectifRef.current = simulationResult?.simulatedCycleLength || cycleLength;
     }, [simulationResult, cycleLength]);
 
-    // Animation loop
+    // Une seconde de cycle par intervalle, l'intervalle étant divisé par la
+    // vitesse choisie. On accélère donc le défilement SANS sauter de seconde : le
+    // triangle de priorité piéton clignote à la seconde et l'affichage compte en
+    // secondes entières — avancer par bonds rendrait les deux faux.
     useEffect(() => {
-        if (isPlaying) {
-            lastTimeRef.current = performance.now();
-
-            const animate = (timestamp: number) => {
-                if (lastTimeRef.current === null) {
-                    lastTimeRef.current = timestamp;
-                }
-
-                const elapsed = timestamp - lastTimeRef.current;
-
-                // Une seconde de cycle par intervalle, l'intervalle étant divisé
-                // par la vitesse choisie. On accélère donc le défilement SANS
-                // sauter de seconde : le triangle de priorité piéton clignote à
-                // la seconde et l'affichage compte en secondes entières —
-                // avancer par bonds rendrait les deux faux.
-                const intervalle = 1000 / (playbackSpeed || 1);
-                if (elapsed >= intervalle) {
-                    lastTimeRef.current = timestamp;
-                    setCurrentTime?.(prev => {
-                        const next = prev + 1;
-                        return next >= cycleEffectifRef.current ? 0 : next;
-                    });
-                }
-
-                animationRef.current = requestAnimationFrame(animate);
-            };
-
-            animationRef.current = requestAnimationFrame(animate);
-        } else {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-                animationRef.current = null;
-            }
-        }
-
-        return () => {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
-        };
+        if (!isPlaying) return;
+        return demarrerHorloge(1000 / (playbackSpeed || 1), () => {
+            setCurrentTime?.(prev => {
+                const next = prev + 1;
+                return next >= cycleEffectifRef.current ? 0 : next;
+            });
+        });
     }, [isPlaying, playbackSpeed, setCurrentTime]);
 
     return (
@@ -881,6 +863,8 @@ const IntersectionImage = ({
                             const arrowColor = getGroupColorAtTime(arrow.groupId, displayedTime);
                             const isHovered = hoveredArrowGroupId === arrow.groupId || !!hoveredArrowGroupIds?.includes(arrow.groupId);
                             const isPedestrianOrCycle = groupInfo.courant === 'Piéton' || groupInfo.courant === 'Cycle';
+                            const signal = getSignalAffiche(arrow.groupId);
+                            const ppAllume = isPPLit(arrow.groupId, displayedTime, { groups, simulationResult, cycleLength });
                             return (
                                 <div
                                     key={arrow.id}
@@ -899,19 +883,21 @@ const IntersectionImage = ({
                                     onMouseLeave={() => setHoveredArrowGroupId && setHoveredArrowGroupId(null)}
                                     onDoubleClick={(e) => {
                                         e.stopPropagation();
-                                        rotateArrow(arrow.id);
+                                        if (!showSignals) rotateArrow(arrow.id);
                                     }}
-                                    title={tip(`GF${arrow.groupId} - ${groupInfo.courant || 'Sans courant'} - Double-clic pour tourner`)}
+                                    title={tip(`GF${arrow.groupId} - ${signal || groupInfo.courant || 'Sans courant'}${showSignals ? '' : ' - Double-clic pour tourner'}`)}
                                 >
                                     <div
                                         className="arrow-symbol"
                                         style={{
-                                            transform: `rotate(${rotation}deg) scale(${scale})`
+                                            transform: signal ? `scale(${echelleSignal(scale, groupInfo.courant)})` : `rotate(${rotation}deg) scale(${scale})`
                                         }}
                                     >
-                                        {renderArrowSVG(groupInfo.courant, arrowColor, arrowLength, turnLength, isPPLit(arrow.groupId, displayedTime, { groups, simulationResult, cycleLength }))}
+                                        {signal ? (
+                                            <SignalModule code={signal} couleur={arrowColor} temps={displayedTime} enLecture={!!isPlaying} a13bAllume={ppAllume} courant={groupInfo.courant} />
+                                        ) : renderArrowSVG(groupInfo.courant, arrowColor, arrowLength, turnLength, ppAllume)}
                                     </div>
-                                    {showGroupNames && groupInfo.name && (
+                                    {showGroupNames && !showSignals && groupInfo.name && (
                                         <span className="arrow-label">
                                             {groupInfo.name}
                                         </span>
@@ -928,8 +914,12 @@ const IntersectionImage = ({
                                 const courant = getGroupInfo(arrow.groupId).courant;
                                 let px = arrow.x;
                                 let py = arrow.y;
+                                if (getSignalAffiche(arrow.groupId)) {
+                                    const { dx, dy } = decalageNumeroSignal(arrow.scale || 1, courant);
+                                    px += dx / containerW * 100;
+                                    py += dy / containerH * 100;
                                 // Pour TàD/TàG, décaler vers le corps de la flèche (ignorer le retour)
-                                if (courant === 'TàD' || courant === 'TàG') {
+                                } else if (courant === 'TàD' || courant === 'TàG') {
                                     const scale = arrow.scale || 1;
                                     const svgSize = 96 * scale;
                                     // Corps à x=8 (TàD) ou x=24 (TàG) dans un viewBox 32x32
@@ -982,8 +972,10 @@ const IntersectionImage = ({
                 {/* Right side: Arrow editor */}
                 <div className="intersection-sidebar">
                     {selectedArrow ? (
-                        <div className="arrow-editor">
+                        <fieldset className="arrow-editor" disabled={showSignals}>
                             <h4>Modifier la flèche</h4>
+                            {/* Ces réglages décrivent la flèche : la vue Signal ne les montre pas. */}
+                            {showSignals && <p className="arrow-editor-note">Réglages inactifs tant que la case Signal est cochée.</p>}
                             {/* Apply to all same type option */}
                             <label className="checkbox-option apply-all-option">
                                 <input
@@ -1160,7 +1152,7 @@ const IntersectionImage = ({
                             <button className="delete-arrow-btn" onClick={() => deleteArrow(selectedArrow)}>
                                 Supprimer
                             </button>
-                        </div>
+                        </fieldset>
                     ) : showArrows ? (
                         <div className="no-selection-hint">
                             <p>Cliquez sur l'image pour ajouter une flèche</p>
@@ -1178,10 +1170,12 @@ const IntersectionImage = ({
                             />
                             <span>Afficher n° des groupes</span>
                         </label>
-                        <label className="checkbox-option">
+                        {/* Vue Signal : pas de noms ; la case retrouve sa valeur une fois décochée. */}
+                        <label className={`checkbox-option ${showSignals ? 'inactive' : ''}`}>
                             <input
                                 type="checkbox"
-                                checked={showGroupNames}
+                                checked={showGroupNames && !showSignals}
+                                disabled={showSignals}
                                 onChange={(e) => setShowGroupNames(e.target.checked)}
                             />
                             <span>Afficher noms des groupes</span>
@@ -1193,6 +1187,20 @@ const IntersectionImage = ({
                                 onChange={(e) => setShowArrows(e.target.checked)}
                             />
                             <span>Ajouter un courant de circulation</span>
+                        </label>
+                        <label
+                            className={`checkbox-option ${signalDisponible ? '' : 'inactive'}`}
+                            title={tip(signalDisponible
+                                ? 'Affiche le signal du formulaire à la place de la flèche. Sans signal renseigné, le groupe garde sa flèche.'
+                                : 'Aucun signal renseigné : choisissez-en au moins un dans la colonne Signal du formulaire.')}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={showSignals}
+                                disabled={!signalDisponible}
+                                onChange={(e) => setShowSignals(e.target.checked)}
+                            />
+                            <span>Signal</span>
                         </label>
                     </div>
                     {imageData && setImageBrightness && (
