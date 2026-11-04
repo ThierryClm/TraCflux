@@ -138,7 +138,7 @@ const ZOOM_SIGNAL_TRAVERSEE = 0.8;
  * Le Zoom d'une flèche piéton ou cycle sert à couvrir la largeur de la
  * traversée : il ne dit rien de la taille d'un feu, qui est donc fixe.
  */
-export const estSignalTraversee = (courant: string | undefined) => courant === 'Piéton' || courant === 'Cycle';
+const estSignalTraversee = (courant: string | undefined) => courant === 'Piéton' || courant === 'Cycle';
 
 /**
  * Échelle du module, rapportée au Zoom : une flèche est un trait fin qui laisse

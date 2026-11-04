@@ -55,6 +55,11 @@ describe('useFloatingImageRenderer — case Signal', () => {
         expect(sansSignal.querySelector('.arrow-symbol').style.transform).toContain('rotate(45deg)');
     });
 
+    it('masque les noms des groupes tant que la case est cochée', () => {
+        expect(contenuDetache({ showSignals: true }).querySelector('.arrow-label')).toBeNull();
+        expect(contenuDetache({ showSignals: false }).querySelector('.arrow-label')).not.toBeNull();
+    });
+
     it('fait clignoter le jaune pendant la lecture, et seulement alors', () => {
         const disque = fenetre => fenetre.querySelector('[role="img"]').innerHTML;
         expect(disque(contenuDetache({ showSignals: true, simulationCurrentTime: 5 }))).toContain('rgb(255, 255, 0)');

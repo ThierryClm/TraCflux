@@ -94,7 +94,7 @@ const useFloatingImageRenderer = ({
         const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
         const showNums = intersectionDisplay.showGroupNumbers;
-        const showNames = intersectionDisplay.showGroupNames;
+        const showNames = intersectionDisplay.showGroupNames && !intersectionDisplay.showSignals;
         // Signal montré à la place de la flèche : case cochée et champ Signal renseigné.
         const signalDe = (group: Groupe | undefined) =>
             intersectionDisplay.showSignals && signalDessinable(group?.signal) ? group?.signal : undefined;
@@ -258,9 +258,8 @@ const useFloatingImageRenderer = ({
                                 // les temps simulés que pendant la lecture.
                                 const arrowColor = getGroupColorAtTime(groupId, activeTime, colorContext);
 
+                                const isPedestrianOrCycle = courant === 'Piéton' || courant === 'Cycle';
                                 const signal = signalDe(group);
-                                // L'étiquette latérale longe une flèche ; elle traverserait un module.
-                                const isPedestrianOrCycle = (courant === 'Piéton' || courant === 'Cycle') && !signal;
                                 const ppAllume = isPPLit(groupId, activeTime, colorContext);
 
                                 return (

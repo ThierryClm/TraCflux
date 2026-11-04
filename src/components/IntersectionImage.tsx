@@ -6,7 +6,7 @@ import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
-import { decalageNumeroSignal, echelleSignal, estSignalTraversee, signalDessinable } from '../utils/aspectSignal';
+import { decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import SignalModule from './SignalModule';
 import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import type { SimulationResult } from '../simulation';
@@ -504,9 +504,6 @@ const IntersectionImage = ({
         return showSignals && signalDessinable(signal) ? signal : undefined;
     };
 
-    const groupeSelectionne = arrows.find(a => a.id === selectedArrow)?.groupId;
-    const signalSelectionne = groupeSelectionne ? getSignalAffiche(groupeSelectionne) : undefined;
-
     // Set arrow length (for Piéton/Cycle arrows)
     const setArrowLength = (arrowId: number, length: number | string) => {
         const lengthValue = parseFloat(String(length)) || 1;
@@ -898,7 +895,7 @@ const IntersectionImage = ({
                             return (
                                 <div
                                     key={arrow.id}
-                                    className={`arrow-marker ${selectedArrow === arrow.id ? 'selected' : ''} ${isPlaying ? 'animating' : ''} ${isHovered ? 'hovered' : ''} ${isPedestrianOrCycle && !signal ? 'side-label' : ''}`}
+                                    className={`arrow-marker ${selectedArrow === arrow.id ? 'selected' : ''} ${isPlaying ? 'animating' : ''} ${isHovered ? 'hovered' : ''} ${isPedestrianOrCycle ? 'side-label' : ''}`}
                                     style={{
                                         left: `${arrow.x}%`,
                                         top: `${arrow.y}%`
@@ -913,11 +910,9 @@ const IntersectionImage = ({
                                     onMouseLeave={() => setHoveredArrowGroupId && setHoveredArrowGroupId(null)}
                                     onDoubleClick={(e) => {
                                         e.stopPropagation();
-                                        if (!signal) rotateArrow(arrow.id);
+                                        if (!showSignals) rotateArrow(arrow.id);
                                     }}
-                                    title={tip(signal
-                                        ? `GF${arrow.groupId} - ${signal}`
-                                        : `GF${arrow.groupId} - ${groupInfo.courant || 'Sans courant'} - Double-clic pour tourner`)}
+                                    title={tip(`GF${arrow.groupId} - ${signal || groupInfo.courant || 'Sans courant'}${showSignals ? '' : ' - Double-clic pour tourner'}`)}
                                 >
                                     <div
                                         className="arrow-symbol"
@@ -929,7 +924,7 @@ const IntersectionImage = ({
                                             <SignalModule code={signal} couleur={arrowColor} temps={displayedTime} enLecture={!!isPlaying} a13bAllume={ppAllume} courant={groupInfo.courant} />
                                         ) : renderArrowSVG(groupInfo.courant, arrowColor, arrowLength, turnLength, ppAllume)}
                                     </div>
-                                    {showGroupNames && groupInfo.name && (
+                                    {showGroupNames && !showSignals && groupInfo.name && (
                                         <span className="arrow-label">
                                             {groupInfo.name}
                                         </span>
@@ -1004,8 +999,10 @@ const IntersectionImage = ({
                 {/* Right side: Arrow editor */}
                 <div className="intersection-sidebar">
                     {selectedArrow ? (
-                        <div className="arrow-editor">
-                            <h4>{signalSelectionne ? 'Modifier le signal' : 'Modifier la flèche'}</h4>
+                        <fieldset className="arrow-editor" disabled={showSignals}>
+                            <h4>Modifier la flèche</h4>
+                            {/* Ces réglages décrivent la flèche : la vue Signal ne les montre pas. */}
+                            {showSignals && <p className="arrow-editor-note">Réglages inactifs tant que la case Signal est cochée.</p>}
                             {/* Apply to all same type option */}
                             <label className="checkbox-option apply-all-option">
                                 <input
@@ -1032,90 +1029,84 @@ const IntersectionImage = ({
                                     ))}
                                 </select>
                             </div>
-                            {/* Un signal reste à l'endroit : la rotation ne vaut que pour la flèche. */}
-                            {!signalSelectionne && (
-                                <div className="editor-row">
-                                    <label>Rotation:</label>
-                                    <div className="rotation-controls">
-                                        <button
-                                            className="slider-btn minus"
-                                            onClick={() => {
-                                                const current = arrows.find(a => a.id === selectedArrow)?.rotation || 0;
-                                                setArrowRotation(selectedArrow, (current - 1 + 360) % 360);
-                                            }}
-                                            title={tip('-1°')}
-                                        >−</button>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="359"
-                                            value={arrows.find(a => a.id === selectedArrow)?.rotation || 0}
-                                            onChange={(e) => setArrowRotation(selectedArrow, e.target.value)}
-                                            className="rotation-slider"
-                                        />
-                                        <button
-                                            className="slider-btn plus"
-                                            onClick={() => {
-                                                const current = arrows.find(a => a.id === selectedArrow)?.rotation || 0;
-                                                setArrowRotation(selectedArrow, (current + 1) % 360);
-                                            }}
-                                            title={tip('+1°')}
-                                        >+</button>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="359"
-                                            value={arrows.find(a => a.id === selectedArrow)?.rotation || 0}
-                                            onChange={(e) => setArrowRotation(selectedArrow, e.target.value)}
-                                            className="rotation-input"
-                                        />
-                                        <span className="rotation-unit">°</span>
-                                    </div>
+                            <div className="editor-row">
+                                <label>Rotation:</label>
+                                <div className="rotation-controls">
+                                    <button
+                                        className="slider-btn minus"
+                                        onClick={() => {
+                                            const current = arrows.find(a => a.id === selectedArrow)?.rotation || 0;
+                                            setArrowRotation(selectedArrow, (current - 1 + 360) % 360);
+                                        }}
+                                        title={tip('-1°')}
+                                    >−</button>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="359"
+                                        value={arrows.find(a => a.id === selectedArrow)?.rotation || 0}
+                                        onChange={(e) => setArrowRotation(selectedArrow, e.target.value)}
+                                        className="rotation-slider"
+                                    />
+                                    <button
+                                        className="slider-btn plus"
+                                        onClick={() => {
+                                            const current = arrows.find(a => a.id === selectedArrow)?.rotation || 0;
+                                            setArrowRotation(selectedArrow, (current + 1) % 360);
+                                        }}
+                                        title={tip('+1°')}
+                                    >+</button>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="359"
+                                        value={arrows.find(a => a.id === selectedArrow)?.rotation || 0}
+                                        onChange={(e) => setArrowRotation(selectedArrow, e.target.value)}
+                                        className="rotation-input"
+                                    />
+                                    <span className="rotation-unit">°</span>
                                 </div>
-                            )}
-                            {/* Un signal de traversée a une taille fixe : le Zoom reste celui de sa flèche. */}
-                            {!(signalSelectionne && estSignalTraversee(getGroupInfo(groupeSelectionne ?? 0).courant)) && (
-                                <div className="editor-row">
-                                    <label>Zoom:</label>
-                                    <div className="scale-controls">
-                                        <button
-                                            className="slider-btn minus"
-                                            onClick={() => {
-                                                const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
-                                                setArrowScale(selectedArrow, Math.max(0.5, current - 0.1).toFixed(1));
-                                            }}
-                                            title={tip('-0.1')}
-                                        >−</button>
-                                        <input
-                                            type="range"
-                                            min="0.5"
-                                            max="3"
-                                            step="0.1"
-                                            value={arrows.find(a => a.id === selectedArrow)?.scale || 1}
-                                            onChange={(e) => setArrowScale(selectedArrow, e.target.value)}
-                                            className="scale-slider"
-                                        />
-                                        <button
-                                            className="slider-btn plus"
-                                            onClick={() => {
-                                                const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
-                                                setArrowScale(selectedArrow, Math.min(3, current + 0.1).toFixed(1));
-                                            }}
-                                            title={tip('+0.1')}
-                                        >+</button>
-                                        <input
-                                            type="number"
-                                            min="0.5"
-                                            max="3"
-                                            step="0.1"
-                                            value={arrows.find(a => a.id === selectedArrow)?.scale || 1}
-                                            onChange={(e) => setArrowScale(selectedArrow, e.target.value)}
-                                            className="scale-input"
-                                        />
-                                        <span className="scale-unit">x</span>
-                                    </div>
+                            </div>
+                            <div className="editor-row">
+                                <label>Zoom:</label>
+                                <div className="scale-controls">
+                                    <button
+                                        className="slider-btn minus"
+                                        onClick={() => {
+                                            const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
+                                            setArrowScale(selectedArrow, Math.max(0.5, current - 0.1).toFixed(1));
+                                        }}
+                                        title={tip('-0.1')}
+                                    >−</button>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="3"
+                                        step="0.1"
+                                        value={arrows.find(a => a.id === selectedArrow)?.scale || 1}
+                                        onChange={(e) => setArrowScale(selectedArrow, e.target.value)}
+                                        className="scale-slider"
+                                    />
+                                    <button
+                                        className="slider-btn plus"
+                                        onClick={() => {
+                                            const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
+                                            setArrowScale(selectedArrow, Math.min(3, current + 0.1).toFixed(1));
+                                        }}
+                                        title={tip('+0.1')}
+                                    >+</button>
+                                    <input
+                                        type="number"
+                                        min="0.5"
+                                        max="3"
+                                        step="0.1"
+                                        value={arrows.find(a => a.id === selectedArrow)?.scale || 1}
+                                        onChange={(e) => setArrowScale(selectedArrow, e.target.value)}
+                                        className="scale-input"
+                                    />
+                                    <span className="scale-unit">x</span>
                                 </div>
-                            )}
+                            </div>
                             {/* Length option - only for Piéton/Cycle arrows */}
                             {(() => {
                                 const selectedArrowData = arrows.find(a => a.id === selectedArrow);
@@ -1123,7 +1114,7 @@ const IntersectionImage = ({
                                 // La hampe des mouvements composés se règle aussi en longueur.
                                 const AVEC_LONGUEUR = ['Piéton', 'Cycle', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG', 'TD_G_D'];
                                 const isPedOrCycle = selectedGroupInfo && AVEC_LONGUEUR.includes(selectedGroupInfo.courant);
-                                return isPedOrCycle && !signalSelectionne ? (
+                                return isPedOrCycle ? (
                                     <div className="editor-row">
                                         <label>Longueur:</label>
                                         <div className="length-controls">
@@ -1157,7 +1148,7 @@ const IntersectionImage = ({
                                 // « Retour » : portée de la branche tournante, pour les
                                 // mouvements tournants comme pour les composés.
                                 const AVEC_RETOUR = ['TàD', 'TàG', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG', 'TD_G_D'];
-                                const isTurnArrow = selectedGroupInfo && AVEC_RETOUR.includes(selectedGroupInfo.courant) && !signalSelectionne;
+                                const isTurnArrow = selectedGroupInfo && AVEC_RETOUR.includes(selectedGroupInfo.courant);
                                 return isTurnArrow ? (
                                     <div className="editor-row">
                                         <label>Retour:</label>
@@ -1188,7 +1179,7 @@ const IntersectionImage = ({
                             <button className="delete-arrow-btn" onClick={() => deleteArrow(selectedArrow)}>
                                 Supprimer
                             </button>
-                        </div>
+                        </fieldset>
                     ) : showArrows ? (
                         <div className="no-selection-hint">
                             <p>Cliquez sur l'image pour ajouter une flèche</p>
@@ -1206,10 +1197,12 @@ const IntersectionImage = ({
                             />
                             <span>Afficher n° des groupes</span>
                         </label>
-                        <label className="checkbox-option">
+                        {/* Vue Signal : pas de noms ; la case retrouve sa valeur une fois décochée. */}
+                        <label className={`checkbox-option ${showSignals ? 'inactive' : ''}`}>
                             <input
                                 type="checkbox"
-                                checked={showGroupNames}
+                                checked={showGroupNames && !showSignals}
+                                disabled={showSignals}
                                 onChange={(e) => setShowGroupNames(e.target.checked)}
                             />
                             <span>Afficher noms des groupes</span>
@@ -1225,7 +1218,7 @@ const IntersectionImage = ({
                         <label className="checkbox-option" title={tip('Affiche le signal du formulaire à la place de la flèche. Sans signal renseigné, le groupe garde sa flèche.')}>
                             <input
                                 type="checkbox"
-                                checked={!!showSignals}
+                                checked={showSignals}
                                 onChange={(e) => setShowSignals(e.target.checked)}
                             />
                             <span>Signal</span>

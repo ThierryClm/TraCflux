@@ -57,20 +57,23 @@ describe('IntersectionImage — case Signal', () => {
         expect(screen.getByRole('img', { name: 'Signal R14tg' }).innerHTML).toContain('rgb(0, 255, 0)');
     });
 
-    it("place l'étiquette d'un piéton sous le signal, plus à côté", () => {
-        const groupes = [{ ...GROUPES[0], courant: 'Piéton', signal: 'R12' }, { ...GROUPES[1], courant: 'Piéton' }];
-        const { container } = render(
-            <IntersectionImage
-                groups={groupes} imageData="data:image/png;base64,AA==" onImageChange={vi.fn()} arrows={FLECHES}
-                onArrowsChange={vi.fn()} cycleLength={60} currentTime={0} actionData={[]} selectedActions={[]} conflictMatrix={[]}
-                displayOptions={{ showGroupNumbers: false, showGroupNames: true, showArrows: false, showSignals: true }}
-            />
-        );
-        expect(marqueur(container, 0).classList.contains('side-label')).toBe(false);
-        expect(marqueur(container, 1).classList.contains('side-label')).toBe(true);
+    it('masque les noms des groupes et grise leur case tant que Signal est cochée', () => {
+        const { container } = renderImage({ showSignals: true });
+        expect(container.querySelector('.arrow-label')).toBeNull();
+        const caseNoms = screen.getByRole('checkbox', { name: 'Afficher noms des groupes' });
+        expect(caseNoms.disabled).toBe(true);
+        expect(caseNoms.checked).toBe(false);
     });
 
-    it('dessine les signaux de traversée à une taille fixe, sans Zoom', () => {
+    it('rend les noms et leur case quand Signal est décochée', () => {
+        const { container } = renderImage({ showSignals: false });
+        expect(container.querySelector('.arrow-label')).not.toBeNull();
+        const caseNoms = screen.getByRole('checkbox', { name: 'Afficher noms des groupes' });
+        expect(caseNoms.disabled).toBe(false);
+        expect(caseNoms.checked).toBe(true);
+    });
+
+    it('dessine les signaux de traversée à une taille fixe', () => {
         const groupes = [{ ...GROUPES[0], courant: 'Piéton', signal: 'R12' }, { ...GROUPES[1], courant: 'Cycle', signal: 'R13c' }];
         const fleches = [{ ...FLECHES[0], scale: 1.8 }, { ...FLECHES[1], scale: 1.4 }];
         const { container } = render(
@@ -82,8 +85,6 @@ describe('IntersectionImage — case Signal', () => {
         );
         expect(marqueur(container, 0).querySelector('.arrow-symbol').style.transform).toBe('scale(0.4)');
         expect(marqueur(container, 1).querySelector('.arrow-symbol').style.transform).toBe('scale(0.4)');
-        fireEvent.click(marqueur(container, 0));
-        expect(screen.queryByText('Zoom:')).toBeNull();
     });
 
     it('la case enregistre le choix', () => {
@@ -102,20 +103,41 @@ describe('IntersectionImage — case Signal', () => {
         expect(numeros[1].style.left).toBe('60%');
     });
 
-    it('le double-clic ne tourne pas une flèche que le signal cache', () => {
+    it('le double-clic ne tourne rien tant que la case est cochée', () => {
         const onArrowsChange = vi.fn();
         const { container } = renderImage({ showSignals: true, onArrowsChange });
         fireEvent.doubleClick(marqueur(container, 0));
+        fireEvent.doubleClick(marqueur(container, 1));
         expect(onArrowsChange).not.toHaveBeenCalled();
     });
 
-    it("n'offre plus la rotation sur un signal, et la rend à la flèche voisine", () => {
+    it('grise tous les réglages tant que la case est cochée, flèche sans signal comprise', () => {
         const { container } = renderImage({ showSignals: true });
+        for (const index of [0, 1]) {
+            fireEvent.click(marqueur(container, index));
+            const reglages = container.querySelector('.arrow-editor');
+            expect(reglages.disabled).toBe(true);
+            expect(screen.getByText('Rotation:')).toBeTruthy();
+            expect(screen.getByText('Zoom:')).toBeTruthy();
+            for (const champ of reglages.querySelectorAll('input, select, button')) {
+                expect(champ.matches(':disabled')).toBe(true);
+            }
+        }
+        expect(screen.getByText(/Réglages inactifs/)).toBeTruthy();
+    });
+
+    it('rend les réglages quand la case est décochée', () => {
+        const { container } = renderImage({ showSignals: false });
         fireEvent.click(marqueur(container, 0));
-        expect(screen.getByRole('heading', { name: 'Modifier le signal' })).toBeTruthy();
-        expect(screen.queryByText('Rotation:')).toBeNull();
-        fireEvent.click(marqueur(container, 1));
-        expect(screen.getByRole('heading', { name: 'Modifier la flèche' })).toBeTruthy();
-        expect(screen.getByText('Rotation:')).toBeTruthy();
+        expect(container.querySelector('.arrow-editor').disabled).toBe(false);
+        expect(screen.queryByText(/Réglages inactifs/)).toBeNull();
+    });
+
+    it('la case cochée laisse le signal déplaçable', () => {
+        const onArrowsChange = vi.fn();
+        const { container } = renderImage({ showSignals: true, onArrowsChange });
+        fireEvent.click(marqueur(container, 0));
+        fireEvent.keyDown(container.querySelector('.intersection-image-area'), { key: 'ArrowRight' });
+        expect(onArrowsChange).toHaveBeenCalled();
     });
 });
