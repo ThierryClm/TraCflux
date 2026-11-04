@@ -73,6 +73,44 @@ describe('IntersectionImage — case Signal', () => {
         expect(caseNoms.checked).toBe(true);
     });
 
+    it('grise la case et explique pourquoi quand aucun signal n’est renseigné', () => {
+        const groupes = GROUPES.map(g => ({ ...g, signal: '' }));
+        const { container } = render(
+            <IntersectionImage
+                groups={groupes} imageData="data:image/png;base64,AA==" onImageChange={vi.fn()} arrows={FLECHES}
+                onArrowsChange={vi.fn()} cycleLength={60} currentTime={0} actionData={[]} selectedActions={[]} conflictMatrix={[]}
+                displayOptions={{ showGroupNumbers: true, showGroupNames: true, showArrows: false, showSignals: true }}
+            />
+        );
+        const caseSignal = screen.getByRole('checkbox', { name: 'Signal' });
+        expect(caseSignal.disabled).toBe(true);
+        expect(caseSignal.checked).toBe(false);
+        expect(caseSignal.closest('label').title).toMatch(/Aucun signal renseigné/);
+        // Le choix mémorisé ne doit griser ni les noms ni les réglages.
+        expect(screen.getByRole('checkbox', { name: 'Afficher noms des groupes' }).disabled).toBe(false);
+        expect(container.querySelector('.arrow-label')).not.toBeNull();
+        fireEvent.click(marqueur(container, 0));
+        expect(container.querySelector('.arrow-editor').disabled).toBe(false);
+    });
+
+    it('fait avancer le curseur pendant la lecture, une seconde par intervalle', () => {
+        vi.useFakeTimers();
+        const setCurrentTime = vi.fn();
+        render(
+            <IntersectionImage
+                groups={GROUPES} imageData="data:image/png;base64,AA==" onImageChange={vi.fn()} arrows={FLECHES}
+                onArrowsChange={vi.fn()} cycleLength={60} currentTime={59} setCurrentTime={setCurrentTime} isPlaying playbackSpeed={2}
+                actionData={[]} selectedActions={[]} conflictMatrix={[]}
+            />
+        );
+        vi.advanceTimersByTime(1000);
+        vi.useRealTimers();
+        expect(setCurrentTime).toHaveBeenCalledTimes(2);
+        const avancer = setCurrentTime.mock.calls[0][0];
+        expect(avancer(10)).toBe(11);
+        expect(avancer(59)).toBe(0);
+    });
+
     it('dessine les signaux de traversée à une taille fixe', () => {
         const groupes = [{ ...GROUPES[0], courant: 'Piéton', signal: 'R12' }, { ...GROUPES[1], courant: 'Cycle', signal: 'R13c' }];
         const fleches = [{ ...FLECHES[0], scale: 1.8 }, { ...FLECHES[1], scale: 1.4 }];

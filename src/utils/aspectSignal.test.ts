@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { FAMILLES_SIGNAUX_ISR } from './signauxIsr';
-import { aspectSignal, BLANC_SIGNAL, decalageNumeroSignal, echelleSignal, ETEINT_SIGNAL, JAUNE_SIGNAL, ROUGE_SIGNAL, signalDessinable } from './aspectSignal';
+import { aspectSignal, auMoinsUnSignal, BLANC_SIGNAL, decalageNumeroSignal, echelleSignal, ETEINT_SIGNAL, JAUNE_SIGNAL, ROUGE_SIGNAL, signalDessinable } from './aspectSignal';
 
 const VERT = 'rgb(0, 255, 0)';
 const LUCARNE = 'rgb(0, 180, 0)';
 const fixe = { temps: 0, enLecture: false };
+
+describe('auMoinsUnSignal', () => {
+    it('ne retient que les signaux qui ont un dessin', () => {
+        expect(auMoinsUnSignal([{ signal: '' }, {}])).toBe(false);
+        expect(auMoinsUnSignal([{ signal: 'R99' }])).toBe(false);
+        expect(auMoinsUnSignal([{ signal: '' }, { signal: 'R12' }])).toBe(true);
+    });
+});
 
 describe('echelleSignal', () => {
     it('suit le Zoom pour un véhicule, réduit de moitié', () => {

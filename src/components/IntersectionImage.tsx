@@ -6,7 +6,8 @@ import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
-import { decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
+import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
+import { demarrerHorloge } from '../utils/horlogeLecture';
 import SignalModule from './SignalModule';
 import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import type { SimulationResult } from '../simulation';
@@ -117,7 +118,11 @@ const IntersectionImage = ({
     const imageMenuRef = useRef<HTMLDivElement>(null);
 
     // Cases d'affichage : enregistrées avec le projet (useIntersectionDisplayOptions).
-    const { showGroupNumbers, showGroupNames, showArrows, showSignals } = displayOptions;
+    const { showGroupNumbers, showGroupNames, showArrows } = displayOptions;
+    // Sans signal renseigné, la case est grisée et ne pèse sur rien d'autre ; son
+    // choix reste mémorisé pour le jour où un signal sera saisi.
+    const signalDisponible = auMoinsUnSignal(groups);
+    const showSignals = displayOptions.showSignals && signalDisponible;
     const setShowGroupNumbers = (value: boolean) => onDisplayOptionChange?.('showGroupNumbers', value);
     const setShowGroupNames = (value: boolean) => onDisplayOptionChange?.('showGroupNames', value);
     const setShowArrows = (value: boolean) => onDisplayOptionChange?.('showArrows', value);
@@ -138,8 +143,6 @@ const IntersectionImage = ({
     }, [showImageMenu]);
 
     // Animation refs
-    const animationRef = useRef<number | null>(null);
-    const lastTimeRef = useRef<number | null>(null);
 
     // Compresse l'image importée (redimensionnement + WebP) avant de l'appliquer,
     // puis alerte si elle reste volumineuse. L'image source n'est pas modifiée.
@@ -756,48 +759,18 @@ const IntersectionImage = ({
         cycleEffectifRef.current = simulationResult?.simulatedCycleLength || cycleLength;
     }, [simulationResult, cycleLength]);
 
-    // Animation loop
+    // Une seconde de cycle par intervalle, l'intervalle étant divisé par la
+    // vitesse choisie. On accélère donc le défilement SANS sauter de seconde : le
+    // triangle de priorité piéton clignote à la seconde et l'affichage compte en
+    // secondes entières — avancer par bonds rendrait les deux faux.
     useEffect(() => {
-        if (isPlaying) {
-            lastTimeRef.current = performance.now();
-
-            const animate = (timestamp: number) => {
-                if (lastTimeRef.current === null) {
-                    lastTimeRef.current = timestamp;
-                }
-
-                const elapsed = timestamp - lastTimeRef.current;
-
-                // Une seconde de cycle par intervalle, l'intervalle étant divisé
-                // par la vitesse choisie. On accélère donc le défilement SANS
-                // sauter de seconde : le triangle de priorité piéton clignote à
-                // la seconde et l'affichage compte en secondes entières —
-                // avancer par bonds rendrait les deux faux.
-                const intervalle = 1000 / (playbackSpeed || 1);
-                if (elapsed >= intervalle) {
-                    lastTimeRef.current = timestamp;
-                    setCurrentTime?.(prev => {
-                        const next = prev + 1;
-                        return next >= cycleEffectifRef.current ? 0 : next;
-                    });
-                }
-
-                animationRef.current = requestAnimationFrame(animate);
-            };
-
-            animationRef.current = requestAnimationFrame(animate);
-        } else {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-                animationRef.current = null;
-            }
-        }
-
-        return () => {
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
-        };
+        if (!isPlaying) return;
+        return demarrerHorloge(1000 / (playbackSpeed || 1), () => {
+            setCurrentTime?.(prev => {
+                const next = prev + 1;
+                return next >= cycleEffectifRef.current ? 0 : next;
+            });
+        });
     }, [isPlaying, playbackSpeed, setCurrentTime]);
 
     return (
@@ -1215,10 +1188,16 @@ const IntersectionImage = ({
                             />
                             <span>Ajouter un courant de circulation</span>
                         </label>
-                        <label className="checkbox-option" title={tip('Affiche le signal du formulaire à la place de la flèche. Sans signal renseigné, le groupe garde sa flèche.')}>
+                        <label
+                            className={`checkbox-option ${signalDisponible ? '' : 'inactive'}`}
+                            title={tip(signalDisponible
+                                ? 'Affiche le signal du formulaire à la place de la flèche. Sans signal renseigné, le groupe garde sa flèche.'
+                                : 'Aucun signal renseigné : choisissez-en au moins un dans la colonne Signal du formulaire.')}
+                        >
                             <input
                                 type="checkbox"
                                 checked={showSignals}
+                                disabled={!signalDisponible}
                                 onChange={(e) => setShowSignals(e.target.checked)}
                             />
                             <span>Signal</span>

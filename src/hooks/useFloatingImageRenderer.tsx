@@ -3,7 +3,7 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
 import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
-import { decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
+import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import SignalModule from '../components/SignalModule';
 import type { ActionMicro, Groupe, Matrice } from '../types/projet';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
@@ -94,10 +94,12 @@ const useFloatingImageRenderer = ({
         const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
         const showNums = intersectionDisplay.showGroupNumbers;
-        const showNames = intersectionDisplay.showGroupNames && !intersectionDisplay.showSignals;
+        // Même règle que l'image de la page : sans signal renseigné, la case ne pèse sur rien.
+        const showSignals = intersectionDisplay.showSignals && auMoinsUnSignal(groups);
+        const showNames = intersectionDisplay.showGroupNames && !showSignals;
         // Signal montré à la place de la flèche : case cochée et champ Signal renseigné.
         const signalDe = (group: Groupe | undefined) =>
-            intersectionDisplay.showSignals && signalDessinable(group?.signal) ? group?.signal : undefined;
+            showSignals && signalDessinable(group?.signal) ? group?.signal : undefined;
 
         // Compute group number centroids
         const groupMap: Record<number, Array<{ x: number; y: number }>> = {};

@@ -131,6 +131,10 @@ export const aspectSignal = (code: string | undefined, contexte: ContexteSignal)
 export const signalDessinable = (code: string | undefined): boolean =>
     aspectSignal(code, { couleur: ROUGE_SIGNAL, temps: 0, enLecture: false }) !== undefined;
 
+/** Un groupe au moins a-t-il un signal à montrer ? Sinon, la case Signal est sans objet. */
+export const auMoinsUnSignal = (groupes: { signal?: string }[]): boolean =>
+    groupes.some(g => signalDessinable(g.signal));
+
 /** Zoom des signaux de traversée, dans l'unité du réglage Zoom des flèches. */
 const ZOOM_SIGNAL_TRAVERSEE = 0.8;
 

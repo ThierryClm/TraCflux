@@ -138,7 +138,7 @@ const dessins: Record<FormeSignal, (couleur: string, extra: { couleurStop?: stri
     a13b: c => (
         <>
             <polygon points="16,3 30,28 2,28" fill={c === ETEINT_SIGNAL ? '#000000' : c} stroke="#e00000" strokeWidth={2.2} strokeLinejoin="round" />
-            <g transform="translate(9.6,7.4) scale(0.6)"><PietonMarche couleur={c === ETEINT_SIGNAL ? c : '#000000'} /></g>
+            <g transform="translate(7.2,11) scale(0.55)"><PietonMarche couleur={c === ETEINT_SIGNAL ? c : '#000000'} /></g>
         </>
     )
 };
