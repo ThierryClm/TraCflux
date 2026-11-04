@@ -70,6 +70,22 @@ describe('IntersectionImage — case Signal', () => {
         expect(marqueur(container, 1).classList.contains('side-label')).toBe(true);
     });
 
+    it('dessine les signaux de traversée à une taille fixe, sans Zoom', () => {
+        const groupes = [{ ...GROUPES[0], courant: 'Piéton', signal: 'R12' }, { ...GROUPES[1], courant: 'Cycle', signal: 'R13c' }];
+        const fleches = [{ ...FLECHES[0], scale: 1.8 }, { ...FLECHES[1], scale: 1.4 }];
+        const { container } = render(
+            <IntersectionImage
+                groups={groupes} imageData="data:image/png;base64,AA==" onImageChange={vi.fn()} arrows={fleches}
+                onArrowsChange={vi.fn()} cycleLength={60} currentTime={0} actionData={[]} selectedActions={[]} conflictMatrix={[]}
+                displayOptions={{ showGroupNumbers: false, showGroupNames: true, showArrows: false, showSignals: true }}
+            />
+        );
+        expect(marqueur(container, 0).querySelector('.arrow-symbol').style.transform).toBe('scale(0.4)');
+        expect(marqueur(container, 1).querySelector('.arrow-symbol').style.transform).toBe('scale(0.4)');
+        fireEvent.click(marqueur(container, 0));
+        expect(screen.queryByText('Zoom:')).toBeNull();
+    });
+
     it('la case enregistre le choix', () => {
         const onDisplayOptionChange = vi.fn();
         renderImage({ showSignals: false, onDisplayOptionChange });

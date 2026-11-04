@@ -108,7 +108,7 @@ const useFloatingImageRenderer = ({
             let px = arrow.x;
             let py = arrow.y;
             if (signalDe(group)) {
-                const { dx, dy } = decalageNumeroSignal(arrow.scale || 1);
+                const { dx, dy } = decalageNumeroSignal(arrow.scale || 1, courant);
                 px += dx / 750 * 100;
                 py += dy / 530 * 100;
             } else if (courant === 'TàD' || courant === 'TàG') {
@@ -271,7 +271,7 @@ const useFloatingImageRenderer = ({
                                         onMouseEnter={() => setHoveredArrowGroupId && setHoveredArrowGroupId(groupId || null)}
                                         onMouseLeave={() => setHoveredArrowGroupId && setHoveredArrowGroupId(null)}
                                     >
-                                        <div className="arrow-symbol" style={{ transform: signal ? `scale(${echelleSignal(scale)})` : `rotate(${rotation}deg) scale(${scale})` }}>
+                                        <div className="arrow-symbol" style={{ transform: signal ? `scale(${echelleSignal(scale, courant)})` : `rotate(${rotation}deg) scale(${scale})` }}>
                                             {signal ? (
                                                 <SignalModule code={signal} couleur={arrowColor} temps={activeTime} enLecture={isPlayingSimulation} a13bAllume={ppAllume} courant={courant} />
                                             ) : renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, ppAllume)}

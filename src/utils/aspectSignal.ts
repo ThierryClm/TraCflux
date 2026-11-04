@@ -131,15 +131,25 @@ export const aspectSignal = (code: string | undefined, contexte: ContexteSignal)
 export const signalDessinable = (code: string | undefined): boolean =>
     aspectSignal(code, { couleur: ROUGE_SIGNAL, temps: 0, enLecture: false }) !== undefined;
 
+/** Zoom des signaux de traversée, dans l'unité du réglage Zoom des flèches. */
+const ZOOM_SIGNAL_TRAVERSEE = 0.8;
+
 /**
- * Échelle du module, rapportée à celle de la flèche : une flèche est un trait
- * fin qui laisse voir le plan, un module est un bloc opaque. À taille égale, ils
- * se recouvraient sur le projet exemple. Le réglage Zoom le fait toujours varier.
+ * Le Zoom d'une flèche piéton ou cycle sert à couvrir la largeur de la
+ * traversée : il ne dit rien de la taille d'un feu, qui est donc fixe.
  */
-export const echelleSignal = (echelleFleche: number) => echelleFleche * 0.5;
+export const estSignalTraversee = (courant: string | undefined) => courant === 'Piéton' || courant === 'Cycle';
+
+/**
+ * Échelle du module, rapportée au Zoom : une flèche est un trait fin qui laisse
+ * voir le plan, un module est un bloc opaque. À taille égale, ils se
+ * recouvraient sur le projet exemple.
+ */
+export const echelleSignal = (zoomFleche: number, courant?: string) =>
+    (estSignalTraversee(courant) ? ZOOM_SIGNAL_TRAVERSEE : zoomFleche) * 0.5;
 
 /** Numéro de groupe au coin haut droit du module : au centre, il couvrirait le pictogramme. */
-export const decalageNumeroSignal = (echelleFleche: number) => {
-    const demiCote = 40 * echelleSignal(echelleFleche);
+export const decalageNumeroSignal = (zoomFleche: number, courant?: string) => {
+    const demiCote = 40 * echelleSignal(zoomFleche, courant);
     return { dx: demiCote, dy: -demiCote };
 };

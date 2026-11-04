@@ -6,7 +6,7 @@ import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
-import { decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
+import { decalageNumeroSignal, echelleSignal, estSignalTraversee, signalDessinable } from '../utils/aspectSignal';
 import SignalModule from './SignalModule';
 import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import type { SimulationResult } from '../simulation';
@@ -922,7 +922,7 @@ const IntersectionImage = ({
                                     <div
                                         className="arrow-symbol"
                                         style={{
-                                            transform: signal ? `scale(${echelleSignal(scale)})` : `rotate(${rotation}deg) scale(${scale})`
+                                            transform: signal ? `scale(${echelleSignal(scale, groupInfo.courant)})` : `rotate(${rotation}deg) scale(${scale})`
                                         }}
                                     >
                                         {signal ? (
@@ -947,7 +947,7 @@ const IntersectionImage = ({
                                 let px = arrow.x;
                                 let py = arrow.y;
                                 if (getSignalAffiche(arrow.groupId)) {
-                                    const { dx, dy } = decalageNumeroSignal(arrow.scale || 1);
+                                    const { dx, dy } = decalageNumeroSignal(arrow.scale || 1, courant);
                                     px += dx / containerW * 100;
                                     py += dy / containerH * 100;
                                 // Pour TàD/TàG, décaler vers le corps de la flèche (ignorer le retour)
@@ -1073,46 +1073,49 @@ const IntersectionImage = ({
                                     </div>
                                 </div>
                             )}
-                            <div className="editor-row">
-                                <label>Zoom:</label>
-                                <div className="scale-controls">
-                                    <button
-                                        className="slider-btn minus"
-                                        onClick={() => {
-                                            const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
-                                            setArrowScale(selectedArrow, Math.max(0.5, current - 0.1).toFixed(1));
-                                        }}
-                                        title={tip('-0.1')}
-                                    >−</button>
-                                    <input
-                                        type="range"
-                                        min="0.5"
-                                        max="3"
-                                        step="0.1"
-                                        value={arrows.find(a => a.id === selectedArrow)?.scale || 1}
-                                        onChange={(e) => setArrowScale(selectedArrow, e.target.value)}
-                                        className="scale-slider"
-                                    />
-                                    <button
-                                        className="slider-btn plus"
-                                        onClick={() => {
-                                            const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
-                                            setArrowScale(selectedArrow, Math.min(3, current + 0.1).toFixed(1));
-                                        }}
-                                        title={tip('+0.1')}
-                                    >+</button>
-                                    <input
-                                        type="number"
-                                        min="0.5"
-                                        max="3"
-                                        step="0.1"
-                                        value={arrows.find(a => a.id === selectedArrow)?.scale || 1}
-                                        onChange={(e) => setArrowScale(selectedArrow, e.target.value)}
-                                        className="scale-input"
-                                    />
-                                    <span className="scale-unit">x</span>
+                            {/* Un signal de traversée a une taille fixe : le Zoom reste celui de sa flèche. */}
+                            {!(signalSelectionne && estSignalTraversee(getGroupInfo(groupeSelectionne ?? 0).courant)) && (
+                                <div className="editor-row">
+                                    <label>Zoom:</label>
+                                    <div className="scale-controls">
+                                        <button
+                                            className="slider-btn minus"
+                                            onClick={() => {
+                                                const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
+                                                setArrowScale(selectedArrow, Math.max(0.5, current - 0.1).toFixed(1));
+                                            }}
+                                            title={tip('-0.1')}
+                                        >−</button>
+                                        <input
+                                            type="range"
+                                            min="0.5"
+                                            max="3"
+                                            step="0.1"
+                                            value={arrows.find(a => a.id === selectedArrow)?.scale || 1}
+                                            onChange={(e) => setArrowScale(selectedArrow, e.target.value)}
+                                            className="scale-slider"
+                                        />
+                                        <button
+                                            className="slider-btn plus"
+                                            onClick={() => {
+                                                const current = arrows.find(a => a.id === selectedArrow)?.scale || 1;
+                                                setArrowScale(selectedArrow, Math.min(3, current + 0.1).toFixed(1));
+                                            }}
+                                            title={tip('+0.1')}
+                                        >+</button>
+                                        <input
+                                            type="number"
+                                            min="0.5"
+                                            max="3"
+                                            step="0.1"
+                                            value={arrows.find(a => a.id === selectedArrow)?.scale || 1}
+                                            onChange={(e) => setArrowScale(selectedArrow, e.target.value)}
+                                            className="scale-input"
+                                        />
+                                        <span className="scale-unit">x</span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             {/* Length option - only for Piéton/Cycle arrows */}
                             {(() => {
                                 const selectedArrowData = arrows.find(a => a.id === selectedArrow);

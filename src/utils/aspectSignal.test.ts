@@ -1,10 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { FAMILLES_SIGNAUX_ISR } from './signauxIsr';
-import { aspectSignal, BLANC_SIGNAL, ETEINT_SIGNAL, JAUNE_SIGNAL, ROUGE_SIGNAL, signalDessinable } from './aspectSignal';
+import { aspectSignal, BLANC_SIGNAL, decalageNumeroSignal, echelleSignal, ETEINT_SIGNAL, JAUNE_SIGNAL, ROUGE_SIGNAL, signalDessinable } from './aspectSignal';
 
 const VERT = 'rgb(0, 255, 0)';
 const LUCARNE = 'rgb(0, 180, 0)';
 const fixe = { temps: 0, enLecture: false };
+
+describe('echelleSignal', () => {
+    it('suit le Zoom pour un véhicule, réduit de moitié', () => {
+        expect(echelleSignal(1, 'TD')).toBe(0.5);
+        expect(echelleSignal(2, 'TàG')).toBe(1);
+    });
+
+    it('fixe les traversées à 0,8 sur le même Zoom, quel que soit celui de la flèche', () => {
+        expect(echelleSignal(1.8, 'Piéton')).toBeCloseTo(0.4);
+        expect(echelleSignal(1.4, 'Cycle')).toBeCloseTo(0.4);
+    });
+
+    it('cale le numéro de groupe sur la taille du module', () => {
+        expect(decalageNumeroSignal(2, 'TD')).toEqual({ dx: 40, dy: -40 });
+        expect(decalageNumeroSignal(1.8, 'Piéton').dx).toBeCloseTo(16);
+    });
+});
 
 describe('aspectSignal', () => {
     it('sait dessiner tous les signaux de la liste du formulaire', () => {
