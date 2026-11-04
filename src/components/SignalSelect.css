@@ -96,16 +96,31 @@ body.blue-night-mode {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 44px;
+    min-height: 34px;
     box-sizing: border-box;
-    padding: 6px 10px;
+    padding: 4px 10px;
     cursor: pointer;
 }
-.signal-select-option .signal-select-icon { width: 32px; height: 32px; flex-basis: 32px; }
+.signal-select-option .signal-select-icon { width: 24px; height: 24px; flex-basis: 24px; }
 .signal-select-option.active,
 .signal-select-option:hover { background: var(--signal-hover); outline: 1px solid var(--signal-title); outline-offset: -2px; }
-.signal-select-description { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.signal-select-option-code { flex: 1; min-width: 0; }
 .signal-select-check { color: var(--signal-title); font-weight: 700; }
+.signal-select-tooltip {
+    position: fixed;
+    z-index: 10001;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--signal-title);
+    background: var(--signal-bg);
+    color: var(--signal-text);
+    box-shadow: 0 2px 8px #0006;
+    font-size: 13px;
+    line-height: 1.4;
+    pointer-events: none;
+}
 @media (pointer: coarse), (max-width: 768px) {
     .group-table .signal-select-trigger { min-height: 44px; }
+    .signal-select-option { min-height: 44px; }
 }

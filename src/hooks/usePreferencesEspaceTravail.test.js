@@ -33,6 +33,7 @@ describe('préférences des infobulles', () => {
     it('toutes cochées par défaut, une section décochée est mémorisée', () => {
         const { result } = renderHook(() => usePrefsInfobulles());
         expect(Object.values(result.current.tooltipPrefs).every(Boolean)).toBe(true);
+        expect(result.current.tooltipPrefs.form).toBe(true);
         act(() => result.current.setTooltipPref('matrix'));
         expect(result.current.tooltipPrefs.matrix).toBe(false);
         expect(JSON.parse(localStorage.getItem('tracflux.tooltips')).matrix).toBe(false);
@@ -42,6 +43,21 @@ describe('préférences des infobulles', () => {
     it('préférence enregistrée illisible : toutes cochées', () => {
         localStorage.setItem('tracflux.tooltips', '{abîmé');
         expect(renderHook(() => usePrefsInfobulles()).result.current.tooltipPrefs.main).toBe(true);
+    });
+
+    it('ajoute Formulaire coché aux anciennes préférences, indépendamment de Configuration', () => {
+        localStorage.setItem('tracflux.tooltips', JSON.stringify({ config: false, matrix: false }));
+        const { result } = renderHook(() => usePrefsInfobulles());
+        expect(result.current.tooltipPrefs.form).toBe(true);
+        expect(result.current.tooltipPrefs.config).toBe(false);
+        expect(result.current.tooltipPrefs.matrix).toBe(false);
+        act(() => result.current.setTooltipPref('form'));
+        const relu = renderHook(() => usePrefsInfobulles()).result.current.tooltipPrefs;
+        expect(relu.form).toBe(false);
+        expect(relu.config).toBe(false);
+        act(() => result.current.setTooltipPref('config'));
+        expect(result.current.tooltipPrefs.config).toBe(true);
+        expect(result.current.tooltipPrefs.form).toBe(false);
     });
 });
 

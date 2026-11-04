@@ -4,8 +4,8 @@ import WorkspaceSidebar from './WorkspaceSidebar';
 
 vi.mock('../SimulationPanel', () => ({ default: () => <div data-testid="simulation-panel" /> }));
 vi.mock('../TrafficTable', () => ({ default: () => <div data-testid="traffic-table" /> }));
-vi.mock('../PropertiesPanel', () => ({ default: () => <div data-testid="properties-panel" /> }));
-vi.mock('../GroupTable', () => ({ default: () => <div data-testid="group-table" /> }));
+vi.mock('../PropertiesPanel', () => ({ default: ({ tooltipsEnabled }) => <div data-testid="properties-panel" data-infobulles={String(tooltipsEnabled)} /> }));
+vi.mock('../GroupTable', () => ({ default: ({ tooltipsEnabled }) => <div data-testid="group-table" data-infobulles={String(tooltipsEnabled)} /> }));
 vi.mock('../IntergreenMatrix', () => ({
     default: ({ setMatrixValue }) => (
         <div data-testid="matrix" data-has-setter={String(typeof setMatrixValue === 'function')} />
@@ -62,7 +62,7 @@ const buildModel = (overrides = {}) => ({
     addCustomTrafficDataset: vi.fn(),
     simulationResult: null,
     setShowFloatingTraffic: vi.fn(),
-    tooltipPrefs: { traffic: true, config: true, matrix: true },
+    tooltipPrefs: { traffic: true, config: true, form: true, matrix: true },
     activeTab: 'properties',
     setActiveTab: vi.fn(),
     setSidebarWidth: vi.fn(),
@@ -142,5 +142,18 @@ describe('WorkspaceSidebar', () => {
         render(<WorkspaceSidebar model={model} />);
 
         expect(screen.getByTestId('matrix')).toHaveAttribute('data-has-setter', 'true');
+    });
+
+    it('les infobulles du formulaire se règlent indépendamment de la configuration', () => {
+        const model = buildModel({ activeTab: 'config', tooltipPrefs: { config: false, form: true } });
+        const { rerender } = render(<WorkspaceSidebar model={model} />);
+        expect(screen.getByTestId('group-table')).toHaveAttribute('data-infobulles', 'true');
+        rerender(<WorkspaceSidebar model={{ ...model, activeTab: 'properties' }} />);
+        expect(screen.getByTestId('properties-panel')).toHaveAttribute('data-infobulles', 'false');
+        const inverse = { ...model, tooltipPrefs: { config: true, form: false } };
+        rerender(<WorkspaceSidebar model={inverse} />);
+        expect(screen.getByTestId('group-table')).toHaveAttribute('data-infobulles', 'false');
+        rerender(<WorkspaceSidebar model={{ ...inverse, activeTab: 'properties' }} />);
+        expect(screen.getByTestId('properties-panel')).toHaveAttribute('data-infobulles', 'true');
     });
 });

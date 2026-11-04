@@ -1498,6 +1498,7 @@ function App() {
             case 'toggleTooltipsMenu':    setTooltipPref('menu');    break;
             case 'toggleTooltipsMain':    setTooltipPref('main');    break;
             case 'toggleTooltipsConfig':  setTooltipPref('config');  break;
+            case 'toggleTooltipsForm':    setTooltipPref('form');    break;
             case 'toggleTooltipsDiagram': setTooltipPref('diagram'); break;
             case 'toggleTooltipsMatrix':  setTooltipPref('matrix');  break;
             case 'toggleTooltipsTraffic': setTooltipPref('traffic'); break;
@@ -2045,11 +2046,11 @@ function App() {
                     showGroupNames={showGroupNamesForm}
                     titreEnBandeau
                     hoveredGroupId={hoveredArrowGroupId}
-                tooltipsEnabled={tooltipPrefs.config}
+                    tooltipsEnabled={tooltipPrefs.form}
                 />
             </div>
         );
-    }, [showFloatingForm, groups, cycleLength, showGroupNamesForm, hoveredArrowGroupId, formPopup.renderToPopup, updateGroupParams, tooltipPrefs.config]);
+    }, [showFloatingForm, groups, cycleLength, showGroupNamesForm, hoveredArrowGroupId, formPopup.renderToPopup, updateGroupParams, tooltipPrefs.form]);
 
     // Render properties into popup window
     useEffect(() => {

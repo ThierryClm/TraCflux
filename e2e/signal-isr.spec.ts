@@ -1,6 +1,6 @@
 /** Formulaire : colonne Signal (ISR, livre 1, 6e partie) juste après Type. */
 import { expect, test, type Page } from '@playwright/test';
-import { ouvrirExemple } from './aide';
+import { ouvrirExemple, ouvrirMenu } from './aide';
 
 const signalDuGroupe = (page: Page, id: number) => page.getByRole('combobox', { name: `Signal du groupe ${id}`, exact: true });
 
@@ -45,16 +45,66 @@ test('le type propose signal et courant, et le formulaire tient en entier dans l
     // La liste se limite aux signaux du type ; PP propose le panneau A13b.
     await signalDuGroupe(page, 1).click();
     const options = page.getByRole('listbox').getByRole('option');
-    await expect(options).toHaveText(['Aucun signal', /R12\s*Signal piéton/, /R12m\s*Signal mixte piéton-cycle/, /R12pps\s*Signal piéton pour passage spécifique/]);
+    await expect(options).toHaveText(['Aucun signal', /^R12\s*✓$/, 'R12m', 'R12pps']);
     expect(await options.evaluateAll(elements => elements.map(element => element.getAttribute('data-value')))).toEqual(['', 'R12', 'R12m', 'R12pps']);
+    await expect(options.nth(1)).toHaveAttribute('title', 'Signal piéton');
+    await expect(options.nth(2)).toHaveAttribute('title', 'Signal mixte piéton-cycle');
+    await expect(options.nth(3)).toHaveAttribute('title', 'Signal piéton pour passage spécifique');
     await page.keyboard.press('Escape');
     await premiere.locator('.input-type').selectOption('PP');
     await expect(signalDuGroupe(page, 1)).toHaveJSProperty('value', 'A13b');
     await signalDuGroupe(page, 1).click();
-    await expect(options).toHaveText(['Aucun signal', /A13b\s*Panneau A13b lumineux, passage pour piétons/]);
+    await expect(options).toHaveText(['Aucun signal', /^A13b\s*✓$/]);
     expect(await options.evaluateAll(elements => elements.map(element => element.getAttribute('data-value')))).toEqual(['', 'A13b']);
+    await expect(options.nth(1)).toHaveAttribute('title', /Panneau A13b lumineux, passage pour piétons/);
     await page.keyboard.press('Escape');
     await page.locator('.group-table-container').first().screenshot({ path: test.info().outputPath('formulaire-elargi.png') });
+});
+
+test('les infobulles Formulaire sont cochées par défaut et leur désactivation reste mémorisée', async ({ page }) => {
+    await ouvrirExemple(page);
+    const signal = signalDuGroupe(page, 1);
+    await expect(signal).toHaveAttribute('title', /Signal lumineux de circulation/);
+    await signal.click();
+    const liste = page.getByRole('listbox');
+    const option = liste.getByRole('option', { name: 'R14tg Signal tricolore directionnel, tourne-à-gauche', exact: true });
+    await expect(option).toHaveText('R14tg');
+    await expect(option).toHaveAttribute('title', 'Signal tricolore directionnel, tourne-à-gauche');
+    await page.keyboard.press('Escape');
+
+    const infobulles = page.locator('.menu-item.has-submenu').filter({ hasText: /^Infobulles/ });
+    const sousMenu = infobulles.locator('..').locator('.submenu-dropdown');
+    const formulaire = sousMenu.getByRole('button', { name: /^(?:✓\s*)?Formulaire$/ });
+    const configuration = sousMenu.getByRole('button', { name: /^(?:✓\s*)?Configuration$/ });
+    await ouvrirMenu(page, 'Mise en page', infobulles);
+    await infobulles.hover();
+    await expect(formulaire).toHaveClass(/checked/);
+    await expect(configuration).toHaveClass(/checked/);
+    await formulaire.click();
+    await expect(formulaire).not.toHaveClass(/checked/);
+    await expect(configuration).toHaveClass(/checked/);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tracflux.tooltips') || '{}')))
+        .toMatchObject({ form: false, config: true });
+    await page.locator('.group-table th').first().click();
+    await signal.click();
+    await expect(page.locator('.group-table [title]')).toHaveCount(0);
+    await expect(liste.locator('[role="option"][title]')).toHaveCount(0);
+    // La désignation reste accessible aux lecteurs d’écran quand l’infobulle est coupée.
+    await expect(option).toHaveText('R14tg');
+    await page.keyboard.press('Escape');
+
+    // L’exemple ne se restaure pas avec F5 : on recharge son URL, comme dans les autres parcours.
+    await ouvrirExemple(page);
+    await expect(signal).not.toHaveAttribute('title');
+    await ouvrirMenu(page, 'Mise en page', infobulles);
+    await infobulles.hover();
+    await expect(formulaire).not.toHaveClass(/checked/);
+    await expect(configuration).toHaveClass(/checked/);
+    await page.locator('.group-table th').first().click();
+    await signal.click();
+    await expect(page.locator('.group-table [title]')).toHaveCount(0);
+    await expect(liste.locator('[role="option"][title]')).toHaveCount(0);
+    await expect(option).toHaveText('R14tg');
 });
 
 test('sur téléphone, les signaux illustrés restent dans l’écran et le choix est conservé', async ({ page }) => {

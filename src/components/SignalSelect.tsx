@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import type { CSSProperties, KeyboardEvent } from 'react';
+import type { CSSProperties, KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import SignalModule from './SignalModule';
 import { famillesPourType, libelleSignalIsr, signalAdmis } from '../utils/signauxIsr';
@@ -25,6 +25,79 @@ const VignetteSignal = ({ code, courant }: { code: string; courant?: string }) =
             temps={0} enLecture={false} a13bAllume />
     </span>
 );
+
+interface SignalOptionProps {
+    code: string;
+    libelle: string;
+    courant?: string;
+    id: string;
+    active: boolean;
+    selected: boolean;
+    tooltipsEnabled: boolean;
+    onChoose: (code: string) => void;
+}
+
+/** Sur écran tactile, un appui prolongé remplace le survol sans choisir le signal. */
+const SignalOption = ({ code, libelle, courant, id, active, selected, tooltipsEnabled, onChoose }: SignalOptionProps) => {
+    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const appui = useRef({ x: 0, y: 0, explique: false });
+    const [bulle, setBulle] = useState<{ document: Document; left: number; top: number; width: number } | null>(null);
+    if (bulle && !tooltipsEnabled) setBulle(null);
+    const annulerMinuteur = () => { if (timer.current !== null) clearTimeout(timer.current); timer.current = null; };
+    useEffect(() => () => { if (timer.current !== null) clearTimeout(timer.current); }, [tooltipsEnabled]);
+    useEffect(() => {
+        if (!bulle) return;
+        const fermer = () => setBulle(null);
+        bulle.document.addEventListener('pointerdown', fermer, true);
+        bulle.document.addEventListener('scroll', fermer, true);
+        return () => {
+            bulle.document.removeEventListener('pointerdown', fermer, true);
+            bulle.document.removeEventListener('scroll', fermer, true);
+        };
+    }, [bulle]);
+
+    const commencerAppui = (e: ReactPointerEvent<HTMLDivElement>) => {
+        e.preventDefault(); // Conserver le focus sur le champ qui pilote la liste.
+        annulerMinuteur();
+        appui.current = { x: e.clientX, y: e.clientY, explique: false };
+        if (!tooltipsEnabled || e.pointerType === 'mouse' || !e.pointerType || !code) return;
+        const cible = e.currentTarget;
+        timer.current = setTimeout(() => {
+            const doc = cible.ownerDocument;
+            const fenetre = doc.defaultView!;
+            const rect = cible.getBoundingClientRect();
+            const width = Math.min(280, fenetre.innerWidth - 16);
+            appui.current.explique = true;
+            setBulle({ document: doc, width, left: Math.max(8, Math.min(rect.left, fenetre.innerWidth - width - 8)),
+                top: Math.max(8, Math.min(rect.bottom + 4, fenetre.innerHeight - 160)) });
+        }, 600);
+    };
+
+    return (<>
+        <div id={id} role="option" aria-label={code ? `${code} ${libelle}` : libelle} aria-selected={selected} data-value={code}
+            className={`signal-select-option${active ? ' active' : ''}`} title={tooltipsEnabled ? libelle : undefined}
+            onPointerDown={commencerAppui} onPointerUp={annulerMinuteur}
+            onPointerCancel={() => { annulerMinuteur(); setBulle(null); }}
+            onPointerMove={e => {
+                if (Math.hypot(e.clientX - appui.current.x, e.clientY - appui.current.y) > 10) {
+                    annulerMinuteur(); setBulle(null);
+                }
+            }}
+            onContextMenu={e => e.preventDefault()}
+            onClick={() => {
+                annulerMinuteur();
+                if (appui.current.explique) { appui.current.explique = false; return; }
+                onChoose(code);
+            }}>
+            <VignetteSignal code={code} courant={courant} />
+            <span className="signal-select-option-code">{code || libelle}</span>
+            {selected && <span className="signal-select-check" aria-hidden="true">✓</span>}
+        </div>
+        {bulle && tooltipsEnabled && createPortal(
+            <div role="tooltip" className="signal-select-tooltip" style={{ left: bulle.left, top: bulle.top, width: bulle.width }}>{libelle}</div>, bulle.document.body
+        )}
+    </>);
+};
 
 /** Liste illustrée commune à la page, au téléphone et au formulaire détaché. */
 const SignalSelect = ({ value, type, courant, label, title, tooltipsEnabled = true, disabled = false, onChange }: SignalSelectProps) => {
@@ -72,7 +145,7 @@ const SignalSelect = ({ value, type, courant, label, title, tooltipsEnabled = tr
             const haut = vue?.offsetTop ?? 0;
             const largeur = vue?.width ?? fenetre.innerWidth;
             const hauteur = vue?.height ?? fenetre.innerHeight;
-            const width = Math.min(380, largeur - 16);
+            const width = Math.min(320, largeur - 16);
             const dessous = Math.max(0, haut + hauteur - rect.bottom - 12);
             const dessus = Math.max(0, rect.top - haut - 12);
             const versLeHaut = dessous < 220 && dessus > dessous;
@@ -130,13 +203,8 @@ const SignalSelect = ({ value, type, courant, label, title, tooltipsEnabled = tr
     const option = (code: string, libelle: string) => {
         const index = options.findIndex(o => o.code === code);
         return (
-            <div key={code} id={`${id}-option-${index}`} role="option" aria-label={code ? `${code} ${libelle}` : libelle} aria-selected={code === value} data-value={code}
-                className={`signal-select-option${actif === index ? ' active' : ''}`} title={tooltipsEnabled ? libelle : undefined}
-                onPointerDown={e => e.preventDefault()} onClick={() => choisir(code)}>
-                <VignetteSignal code={code} courant={courant} />
-                <span className="signal-select-description">{code && <strong>{code} </strong>}<span>{libelle}</span></span>
-                {code === value && <span className="signal-select-check" aria-hidden="true">✓</span>}
-            </div>
+            <SignalOption key={code} id={`${id}-option-${index}`} code={code} libelle={libelle} courant={courant}
+                active={actif === index} selected={code === value} tooltipsEnabled={tooltipsEnabled} onChoose={choisir} />
         );
     };
 

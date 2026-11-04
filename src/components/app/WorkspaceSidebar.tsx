@@ -82,6 +82,7 @@ interface WorkspaceSidebarModel {
     tooltipPrefs: {
         traffic?: boolean;
         config?: boolean;
+        form?: boolean;
         matrix?: boolean;
         actions?: boolean;
     };
@@ -402,7 +403,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                         showGroupNames={showGroupNamesForm}
                                         onDetach={() => setShowFloatingForm(v => !v)}
                                         hoveredGroupId={hoveredArrowGroupId}
-                                    tooltipsEnabled={tooltipPrefs.config}
+                                        tooltipsEnabled={tooltipPrefs.form}
                                     />
                                     </div>
                                     <div style={{ marginTop: '2rem' }} onMouseEnter={() => { helpZoneRef.current = 'matrice'; }}>

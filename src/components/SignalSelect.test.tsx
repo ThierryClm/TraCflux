@@ -5,6 +5,7 @@ import SignalSelect from './SignalSelect';
 import { definirPrefsVerrou } from '../utils/verrouSaisie';
 
 afterEach(() => {
+    vi.useRealTimers();
     act(() => definirPrefsVerrou());
 });
 
@@ -34,6 +35,8 @@ describe('SignalSelect — mêmes pictogrammes que sur le carrefour', () => {
         expect(champ.querySelector('svg')).toHaveAttribute('data-forme', 'tg');
         const direct = within(liste).getByRole('option', { name: /^R14d\s/ });
         expect(direct.querySelector('svg')).toHaveAttribute('data-forme', 'd');
+        expect(direct.textContent).toBe('R14d');
+        expect(direct).toHaveAttribute('title', 'Signal tricolore directionnel, direct');
         expect(within(liste).getByRole('option', { name: /^R14tg\s/ })).toHaveAttribute('aria-selected', 'true');
         await user.click(direct);
         expect(onChange).toHaveBeenCalledWith('R14d');
@@ -67,6 +70,50 @@ describe('SignalSelect — mêmes pictogrammes que sur le carrefour', () => {
 });
 
 describe('SignalSelect — navigation et verrouillage', () => {
+    it('sur téléphone, un appui prolongé explique le symbole sans le sélectionner', () => {
+        vi.useFakeTimers();
+        const onChange = vi.fn();
+        render(<SignalSelect {...props} onChange={onChange} />);
+        const { liste } = ouvrir();
+        const option = within(liste).getByRole('option', { name: /^R14d\s/ });
+        fireEvent.pointerDown(option, { pointerType: 'touch', clientX: 30, clientY: 100 });
+        act(() => vi.advanceTimersByTime(600));
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Signal tricolore directionnel, direct');
+        fireEvent.pointerUp(option, { pointerType: 'touch' });
+        fireEvent.click(option);
+        expect(onChange).not.toHaveBeenCalled();
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+        fireEvent.pointerDown(document.body);
+        expect(screen.queryByRole('tooltip')).toBeNull();
+    });
+
+    it('un geste de défilement ne déclenche pas l’infobulle tactile', () => {
+        vi.useFakeTimers();
+        render(<SignalSelect {...props} onChange={vi.fn()} />);
+        const { liste } = ouvrir();
+        const option = within(liste).getByRole('option', { name: /^R14d\s/ });
+        fireEvent.pointerDown(option, { pointerType: 'touch', clientX: 30, clientY: 100 });
+        fireEvent.pointerMove(option, { pointerType: 'touch', clientX: 30, clientY: 130 });
+        act(() => vi.advanceTimersByTime(600));
+        expect(screen.queryByRole('tooltip')).toBeNull();
+    });
+
+    it('la préférence coupée masque les infobulles, y compris sur téléphone', () => {
+        vi.useFakeTimers();
+        const { rerender } = render(<SignalSelect {...props} onChange={vi.fn()} />);
+        const { liste } = ouvrir();
+        const option = within(liste).getByRole('option', { name: /^R14d\s/ });
+        fireEvent.pointerDown(option, { pointerType: 'touch' });
+        act(() => vi.advanceTimersByTime(600));
+        expect(screen.getByRole('tooltip')).toBeInTheDocument();
+        rerender(<SignalSelect {...props} tooltipsEnabled={false} onChange={vi.fn()} />);
+        expect(screen.queryByRole('tooltip')).toBeNull();
+        expect(option).not.toHaveAttribute('title');
+        fireEvent.pointerDown(option, { pointerType: 'touch' });
+        act(() => vi.advanceTimersByTime(600));
+        expect(screen.queryByRole('tooltip')).toBeNull();
+    });
+
     it('parcourt au clavier sans enregistrer avant Entrée ; Échap annule le choix en cours', () => {
         const onChange = vi.fn();
         render(<SignalSelect {...props} onChange={onChange} />);
