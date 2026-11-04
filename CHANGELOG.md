@@ -7,6 +7,48 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [1.5.9] — 2026-11-04
+
+### Ajouté
+
+- **Image du carrefour : case Signal.** Les groupes dont le champ Signal est renseigné peuvent afficher
+  un feu de leur signal ISR à la place de leur flèche, dans la page et dans l'image détachée. Les
+  pictogrammes restent orientés vers le haut et suivent l'état du groupe ; les signaux clignotants
+  clignotent pendant la lecture. Les traversées piétonnes et cycles ont une échelle fixe de 0,8.
+  Les noms et les réglages des flèches sont désactivés dans ce mode ; le déplacement reste possible.
+  Sans signal renseigné, la case est grisée avec une infobulle. Le choix est enregistré avec le projet.
+  Les bulles de phasage et le dossier imprimé conservent les flèches.
+- **Dossier imprimé : commentaires et remarques au choix pour chaque plan de feu.** Deux cases
+  permettent de les inclure séparément. Les commentaires prennent la forme « GF x : … » ; les remarques
+  gardent leurs sauts de ligne, dans la police du dossier, sans couleur ni taille particulières.
+
+### Modifié
+
+- **Remarques** : limite portée à 1 000 caractères, indépendante du nombre de groupes, avec défilement
+  dans la colonne.
+- **Commentaires et remarques** : vert plus lisible sur le fond sombre, adapté aux thèmes clair et sépia.
+- **Infobulles** : dix sections réglables dans Mise en page, avec trois cases supplémentaires pour les
+  actions de simulation, l'assistant conception et l'image du carrefour. Les réglages s'appliquent
+  également aux fenêtres détachées et aux dialogues concernés.
+- **Dossier imprimé** : les sections sans contenu sont grisées et décochées, avec une infobulle
+  explicative ; les sous-options des plans utilisent la même taille de texte que les cases principales.
+- **Trafic coordonné** : le « c » est rapproché du volume ; une infobulle plus lisible rappelle son effet
+  après 2,5 secondes de survol. L'aide précise que le vert utile et la capacité restent calculés.
+
+### Corrigé
+
+- **Capacité des plans de feu et scénarios** : les secondes lucarnes sont comprises dans le vert total,
+  et les volumes marqués « c » sont lus correctement, comme dans le tableau Trafic.
+- **Remarques et commentaires** : atteindre la limite de caractères ne supprime plus la mise en forme
+  ni les sauts de ligne déjà saisis.
+- **Lecture de l'image détachée** : horloge revue pour limiter les arrêts de l'animation lorsque la
+  fenêtre principale passe en arrière-plan.
+
+### Interne
+
+- Documentation des commandes npm actualisée ; les particularités du poste Windows du mainteneur
+  sont regroupées dans DEVELOPPEMENT.md.
+
 ## [1.5.8] — 2026-10-28
 
 ### Ajouté
