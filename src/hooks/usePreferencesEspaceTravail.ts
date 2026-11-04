@@ -6,12 +6,12 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
 /** Sections des infobulles réglables dans Mise en page → Infobulles. */
-export type SectionInfobulles = 'menu' | 'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro' | 'actions' | 'assistant' | 'image';
+export type SectionInfobulles = 'menu' | 'main' | 'config' | 'form' | 'diagram' | 'matrix' | 'traffic' | 'micro' | 'actions' | 'assistant' | 'image';
 export type PrefsInfobulles = Record<SectionInfobulles, boolean>;
 
 /** Toutes cochées par défaut ; une section ajoutée plus tard part cochée. */
 export const PREFS_INFOBULLES_DEFAUT: PrefsInfobulles = {
-    menu: true, main: true, config: true, diagram: true, matrix: true, traffic: true, micro: true,
+    menu: true, main: true, config: true, form: true, diagram: true, matrix: true, traffic: true, micro: true,
     actions: true, assistant: true, image: true
 };
 
@@ -33,10 +33,10 @@ export const useBooleenMemorise = (cle: string, defaut: boolean): [boolean, Disp
     return [valeur, setValeur];
 };
 
-/** Préférences « Infobulles... » : dix sections, toutes cochées par défaut. */
+/** Préférences « Infobulles... » : toutes les sections cochées par défaut. */
 export const usePrefsInfobulles = () => {
-    // Préférences « Infobulles... » (Mise en page). Dix sections, toutes
-    // cochées par défaut. Persiste au niveau de l'application (localStorage).
+    // Préférences « Infobulles... » (Mise en page), cochées par défaut.
+    // Persiste au niveau de l'application (localStorage).
     const [tooltipPrefs, setTooltipPrefsState] = useState<PrefsInfobulles>(() => {
         try {
             const raw = localStorage.getItem('tracflux.tooltips');

@@ -1,0 +1,126 @@
+/* Couleurs des titres et des champs de chacun des sept thèmes. Le portail
+   est dans le body, ces variables couvrent aussi la fenêtre détachée. */
+body {
+    --signal-bg: #333;
+    --signal-text: #fff;
+    --signal-border: #555;
+    --signal-title: #eee;
+    --signal-hover: #484848;
+}
+body.light-mode {
+    --signal-bg: #fff;
+    --signal-text: #222;
+    --signal-border: #999;
+    --signal-title: #222;
+    --signal-hover: #e5eef6;
+}
+body.high-contrast-mode {
+    --signal-bg: #1a2050;
+    --signal-text: #fff;
+    --signal-border: #4466bb;
+    --signal-title: #ffdd00;
+    --signal-hover: #253080;
+}
+body.amber-mode {
+    --signal-bg: #303030;
+    --signal-text: #f5f0e8;
+    --signal-border: #666;
+    --signal-title: #ffb300;
+    --signal-hover: #484038;
+}
+body.daltonian-mode {
+    --signal-bg: #1b263b;
+    --signal-text: #e0e1dd;
+    --signal-border: #415a77;
+    --signal-title: #4cc9f0;
+    --signal-hover: #30445d;
+}
+body.sepia-mode {
+    --signal-bg: #faf3e0;
+    --signal-text: #5b4636;
+    --signal-border: #c9b88e;
+    --signal-title: #8b4513;
+    --signal-hover: #ede2c5;
+}
+body.blue-night-mode {
+    --signal-bg: #073642;
+    --signal-text: #eee8d5;
+    --signal-border: #586e75;
+    --signal-title: #2aa198;
+    --signal-hover: #164955;
+}
+.group-table .signal-select-trigger {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    width: 98px;
+    min-height: 28px;
+    padding: 1px 3px;
+    border: 1px solid var(--signal-border);
+    border-radius: 3px;
+    background: var(--signal-bg);
+    color: var(--signal-text);
+    font: inherit;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+.signal-select-trigger .signal-select-code,
+.signal-select-trigger .signal-select-chevron { color: inherit; }
+.signal-select-code { flex: 1; text-align: left; }
+.signal-select-icon { display: inline-flex; flex: 0 0 24px; width: 24px; height: 24px; }
+.signal-select-icon svg { display: block; width: 100%; height: 100%; }
+.signal-select-trigger:disabled,
+.dossier-readonly .signal-select-trigger { opacity: 0.55; cursor: not-allowed; }
+.dossier-readonly .signal-select-trigger { pointer-events: none; }
+.signal-select-list {
+    position: fixed;
+    z-index: 10000;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--signal-bg);
+    color: var(--signal-text);
+    border: 1px solid var(--signal-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 18px #0006;
+    font-size: 13px;
+    line-height: 1.35;
+}
+.signal-select-family {
+    padding: 10px 10px 5px;
+    color: var(--signal-title);
+    font-weight: 700;
+    border-top: 1px solid var(--signal-border);
+}
+.signal-select-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    box-sizing: border-box;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+.signal-select-option .signal-select-icon { width: 24px; height: 24px; flex-basis: 24px; }
+.signal-select-option.active,
+.signal-select-option:hover { background: var(--signal-hover); outline: 1px solid var(--signal-title); outline-offset: -2px; }
+.signal-select-option-code { flex: 1; min-width: 0; }
+.signal-select-check { color: var(--signal-title); font-weight: 700; }
+.signal-select-tooltip {
+    position: fixed;
+    z-index: 10001;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--signal-title);
+    background: var(--signal-bg);
+    color: var(--signal-text);
+    box-shadow: 0 2px 8px #0006;
+    font-size: 13px;
+    line-height: 1.4;
+    pointer-events: none;
+}
+@media (pointer: coarse), (max-width: 768px) {
+    .group-table .signal-select-trigger { min-height: 44px; }
+    .signal-select-option { min-height: 44px; }
+}

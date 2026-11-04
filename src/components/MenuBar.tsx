@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import type { PermissionFlag } from '../hooks/useAuth';
 import type { ModeAffichage } from '../utils/modeAffichage';
+import type { PrefsInfobulles } from '../hooks/usePreferencesEspaceTravail';
 import { usePrefsVerrou } from '../utils/verrouSaisie';
 import './MenuBar.css';
 import { INFOBULLE_ASSISTANT } from '../utils/prerequisAssistant';
@@ -76,7 +77,7 @@ export interface OptionsMenuBar {
     hasIntersectionImage?: boolean;
     hasMultiplePf?: boolean;
     matricesLocked?: boolean;
-    tooltipPrefs?: Partial<Record<'menu' | 'main' | 'config' | 'diagram' | 'matrix' | 'traffic' | 'micro' | 'actions' | 'assistant' | 'image', boolean>>;
+    tooltipPrefs?: Partial<PrefsInfobulles>;
     toastPrefs?: Partial<Record<'success' | 'error' | 'info', boolean>>;
     openPropertiesOnNewProject?: boolean;
     showWrapFlash?: boolean;
@@ -526,6 +527,7 @@ const MenuBar = ({
                         { label: 'Menu', action: 'toggleTooltipsMenu', checked: layoutOptions.tooltipPrefs?.menu !== false, keepSubmenuOpen: true },
                         { label: 'Page principale',                 action: 'toggleTooltipsMain',    checked: !!layoutOptions.tooltipPrefs?.main,    keepSubmenuOpen: true },
                         { label: 'Configuration',                   action: 'toggleTooltipsConfig',  checked: !!layoutOptions.tooltipPrefs?.config,  keepSubmenuOpen: true },
+                        { label: 'Formulaire',                      action: 'toggleTooltipsForm',    checked: layoutOptions.tooltipPrefs?.form !== false, keepSubmenuOpen: true },
                         { label: 'Diagramme',                       action: 'toggleTooltipsDiagram', checked: !!layoutOptions.tooltipPrefs?.diagram, keepSubmenuOpen: true },
                         { label: 'Matrice',                         action: 'toggleTooltipsMatrix',  checked: !!layoutOptions.tooltipPrefs?.matrix,  keepSubmenuOpen: true },
                         { label: 'Trafic',                          action: 'toggleTooltipsTraffic', checked: !!layoutOptions.tooltipPrefs?.traffic, keepSubmenuOpen: true },

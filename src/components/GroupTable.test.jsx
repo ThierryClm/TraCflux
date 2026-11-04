@@ -1,9 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import GroupTable from './GroupTable';
 
 const groupe = (id, name, type) => ({ id, name, type, courant: '', minGreen: 6, offset: 0, durations: { green: 10, orange: 3, red: 57 } });
 const groups = [groupe(1, 'V1', 'V'), groupe(2, 'P6', 'P'), groupe(3, 'C1', 'CY')];
+
+const ouvrirSignaux = (id = 1) => {
+    fireEvent.click(screen.getByRole('combobox', { name: `Signal du groupe ${id}` }));
+    return screen.getByRole('listbox');
+};
+
+const codesProposes = (liste) => within(liste).getAllByRole('option').map(o => o.dataset.value);
 
 describe('formulaire : infobulles des colonnes Mini et Jaune (ISR, 6e partie)', () => {
     it('le jaune d\'un piéton est son temps de dégagement ; celui d\'un véhicule, 3 s ou 5 s', () => {
@@ -27,18 +34,19 @@ describe('formulaire : colonne Signal (ISR, 6e partie)', () => {
         render(<GroupTable groups={[{ ...groups[0], type: '' }]} updateGroupParams={vi.fn()} cycleLength={70} />);
         const entetes = [...document.querySelectorAll('.group-table th')].map(th => th.textContent);
         expect(entetes.indexOf('Signal')).toBe(entetes.indexOf('Type') + 1);
-        const liste = screen.getByLabelText('Signal du groupe 1');
-        const codes = [...liste.querySelectorAll('option')].map(o => o.value);
+        const liste = ouvrirSignaux();
+        const codes = codesProposes(liste);
         for (const code of ['', 'R11v', 'R11j', 'R12', 'R12m', 'R13b', 'R14tg', 'R16dtd', 'R17', 'R18td', 'R19', 'R22v', 'R24', 'R25', 'A13b']) {
             expect(codes).toContain(code);
         }
-        expect(liste.querySelector('optgroup[label="R14 · Tricolores directionnels"]')).not.toBeNull();
+        expect(within(liste).getByText('R14 · Tricolores directionnels')).not.toBeNull();
     });
 
     it('le choix est enregistré et sa désignation apparaît en infobulle', () => {
         const update = vi.fn();
         const { rerender } = render(<GroupTable groups={groups} updateGroupParams={update} cycleLength={70} />);
-        fireEvent.change(screen.getByLabelText('Signal du groupe 2'), { target: { value: 'R12' } });
+        const listeSignaux = ouvrirSignaux(2);
+        fireEvent.click(within(listeSignaux).getByRole('option', { name: /^R12\s/ }));
         expect(update).toHaveBeenCalledWith(2, { signal: 'R12' });
         rerender(<GroupTable groups={[{ ...groups[0], signal: 'R14tg' }]} updateGroupParams={update} cycleLength={70} />);
         const liste = screen.getByLabelText('Signal du groupe 1');
@@ -56,7 +64,7 @@ describe('formulaire : colonne Signal (ISR, 6e partie)', () => {
         ['PP', ['A13b']]
     ])('type %s : seuls ses signaux sont proposés', (type, attendus) => {
         render(<GroupTable groups={[{ ...groups[0], type }]} updateGroupParams={vi.fn()} cycleLength={70} />);
-        const codes = [...screen.getByLabelText('Signal du groupe 1').querySelectorAll('option')].map(o => o.value);
+        const codes = codesProposes(ouvrirSignaux());
         expect(codes).toEqual(['', ...attendus]);
     });
 
@@ -121,6 +129,7 @@ describe('formulaire : infobulles de la liste Signal', () => {
         render(<GroupTable groups={groups} updateGroupParams={vi.fn()} cycleLength={70} tooltipsEnabled={false} />);
         const liste = screen.getByLabelText('Signal du groupe 1');
         expect(liste.getAttribute('title')).toBeNull();
-        expect(liste.querySelector('option[value="R14tg"]').getAttribute('title')).toBeNull();
+        const option = within(ouvrirSignaux()).getByRole('option', { name: /^R14tg\s/ });
+        expect(option.getAttribute('title')).toBeNull();
     });
 });
