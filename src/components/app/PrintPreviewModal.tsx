@@ -17,6 +17,7 @@ import { texteAvecSauts } from '../../utils/couleursTexte';
 import { fitBubblesToPage, REF_IMAGE_BOX_HEIGHT, REF_IMAGE_BOX_WIDTH } from '../../utils/phasageLayout';
 import { LOGO_APP } from '../../utils/logoApp';
 import renderArrowSVG from '../../utils/renderArrowSVG';
+import VignetteSignal from '../VignetteSignal';
 import { ARROW_SIZE, BOX_H, BOX_W, fitDetachedImageBox } from '../../utils/floatingImageBox';
 import { matriceDeReference } from '../../utils/matrixComparison';
 import type { ActionMicro, Groupe, JeuTrafic, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
@@ -306,6 +307,7 @@ function PrintPreviewModal({
                                                 globalTime={0}
                                                 onGroupClick={() => {}}
                                                 pixelsPerSecond={optimalPPS}
+                                                flechesBasAuPied
                                                 conflicts={[]}
                                                 conflictMatrix={conflictMatrix}
                                                 updateGroupParams={() => {}}
@@ -648,7 +650,9 @@ function PrintPreviewModal({
                                                             <td>{g.id}</td>
                                                             <td>{g.name || ''}</td>
                                                             <td>{g.type || 'VL'}</td>
-                                                            <td>{g.signal || ''}</td>
+                                                            <td className="print-form-signal">
+                                                                {g.signal && <><VignetteSignal code={g.signal} courant={g.courant} />{g.signal}</>}
+                                                            </td>
                                                             <td>{g.courant || ''}</td>
                                                             <td>{g.minGreen || 0}</td>
                                                             <td>{g.durations?.orange || 0}</td>
@@ -854,6 +858,7 @@ function PrintPreviewModal({
                                                         globalTime={0}
                                                         onGroupClick={() => {}}
                                                         pixelsPerSecond={pfPPS}
+                                                        flechesBasAuPied
                                                         conflicts={[]}
                                                         conflictMatrix={conflictMatrix}
                                                         updateGroupParams={() => {}}

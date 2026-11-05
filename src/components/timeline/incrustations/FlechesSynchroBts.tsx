@@ -17,7 +17,7 @@ const FlechesSynchroBts = ({ ctx, synchroBtsActions }: FlechesSynchroBtsProps) =
             {/* Synchro BTS arrows - vertical blue arrows */}
             {synchroBtsActions.map((action, idx) => {
                 const rawDeb = entier(action.deb) || 0;
-                const plage2 = entier(action.plage2) || 0;
+                const dernierRang = ctx.flechesBasAuPied ? groups.length : entier(action.plage2) || 0;
                 const abrv = action.abrv || '';
                 const isHighlighted = hoveredActionId === action.id;
 
@@ -31,7 +31,7 @@ const FlechesSynchroBts = ({ ctx, synchroBtsActions }: FlechesSynchroBtsProps) =
                 const arrowLength = 16;
 
                 // Upward arrow: ends just below plage2 row
-                const upArrowEndY = RULER_HEIGHT + 1 + plage2 * ROW_TOTAL_HEIGHT + 2;
+                const upArrowEndY = RULER_HEIGHT + 1 + dernierRang * ROW_TOTAL_HEIGHT + 2;
                 const upArrowStartY = upArrowEndY + arrowLength;
 
                 // Arrow head size

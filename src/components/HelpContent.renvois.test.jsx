@@ -34,6 +34,20 @@ describe("Renvois de l'aide", () => {
         expect(introuvables).toEqual([]);
     });
 
+    it.each([null, 6])('les renvois bi- et uni-carrefour mènent à l\'entrée en place (séparateur %s)', (biCarrefourSeparator) => {
+        const { container } = render(
+            <>
+                <MenuBar hasPermission={() => true} hasActiveProject biCarrefourSeparator={biCarrefourSeparator} layoutOptions={OPTIONS} onAction={() => {}} />
+                <HelpContent />
+            </>
+        );
+        const attendu = biCarrefourSeparator ? 'Rétablir en uni-carrefour' : 'Intégrer un bi-Carrefour';
+        ['Intégrer un bi-Carrefour', 'Rétablir en uni-carrefour'].forEach((entree) => {
+            fireEvent.click(renvoi(container, 'data-aide-menu', `Diagramme → Modification du diagramme → ${entree}`));
+            expect(container.querySelector('.menu-repere')).toHaveTextContent(attendu);
+        });
+    });
+
     it('chaque renvoi de section conduit à un titre qui existe', () => {
         const { container } = dessiner();
         const titres = [...container.querySelectorAll('h3, h4')].map(titre => titre.textContent.trim());

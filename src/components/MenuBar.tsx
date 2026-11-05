@@ -13,6 +13,8 @@ import { INFOBULLE_ASSISTANT } from '../utils/prerequisAssistant';
 /** Une entrée de menu : action, case à cocher, séparateur, en-tête, sous-menu ou curseur. */
 interface ElementMenu {
     label?: string;
+    /** Libellé de l'autre état, pour une entrée dont le libellé bascule. */
+    labelAlterne?: string;
     action?: string;
     /** 'separator', 'header', 'submenu' ou 'slider' ; absent pour une simple action. */
     type?: string;
@@ -610,8 +612,8 @@ const MenuBar = ({
                         { label: 'Insérer...', action: 'insert', disabled: !hasPermission('canModifyDiagram') },
                         { label: 'Réduire...', action: 'reduce', disabled: !hasPermission('canModifyDiagram') },
                         biCarrefourSeparator
-                            ? { label: 'Rétablir en uni-carrefour', action: 'uniCarrefour', disabled: !hasPermission('canModifyDiagram') }
-                            : { label: 'Intégrer un bi-Carrefour...', action: 'biCarrefour', disabled: !hasPermission('canModifyDiagram') }
+                            ? { label: 'Rétablir en uni-carrefour', labelAlterne: 'Intégrer un bi-Carrefour', action: 'uniCarrefour', disabled: !hasPermission('canModifyDiagram') }
+                            : { label: 'Intégrer un bi-Carrefour...', labelAlterne: 'Rétablir en uni-carrefour', action: 'biCarrefour', disabled: !hasPermission('canModifyDiagram') }
                     ]
                 },
                 {
