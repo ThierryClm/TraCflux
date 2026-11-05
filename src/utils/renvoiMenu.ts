@@ -22,9 +22,14 @@ export const allerAuMenu = (chemin: string): boolean => {
 /** Libellé sans casse, coche ni points de suite : l'aide écrit « … », le menu « ... ». */
 export const libelleMenu = (texte: string) => texte.replace(/[✓▶]/g, '').trim().replace(/(\.\.\.|…)$/, '').trim().toLowerCase();
 
-/** L'entrée au libellé exact ou, à défaut, celle qui commence par lui (« Dupliquer »). */
-export const trouverEntreeMenu = <T extends { label?: string; type?: string }>(entrees: T[], libelle: string): T | undefined => {
+/**
+ * L'entrée au libellé exact ou, à défaut, celle qui commence par lui (« Dupliquer »).
+ * `labelAlterne` nomme l'autre état d'une entrée dont le libellé bascule.
+ */
+export const trouverEntreeMenu = <T extends { label?: string; labelAlterne?: string; type?: string }>(entrees: T[], libelle: string): T | undefined => {
     const cible = libelleMenu(libelle);
     const nommees = entrees.filter(e => e.label && e.type !== 'header');
-    return nommees.find(e => libelleMenu(e.label!) === cible) ?? nommees.find(e => libelleMenu(e.label!).startsWith(cible));
+    return nommees.find(e => libelleMenu(e.label!) === cible)
+        ?? nommees.find(e => e.labelAlterne && libelleMenu(e.labelAlterne) === cible)
+        ?? nommees.find(e => libelleMenu(e.label!).startsWith(cible));
 };
