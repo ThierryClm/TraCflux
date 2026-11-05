@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ActionAPlage, ContexteIncrustations } from './contexteIncrustations';
+import { instantRepereFixe } from './instantsActions';
 import { entier } from '../../../utils/entier';
 
 interface FlechesInstantCoProps {
@@ -9,34 +10,25 @@ interface FlechesInstantCoProps {
 
 /** Instants Co : flèches verticales orange. */
 const FlechesInstantCo = ({ ctx, instantCoActions }: FlechesInstantCoProps) => {
-    const { groups, pixelsPerSecond, RULER_HEIGHT, ROW_TOTAL_HEIGHT, svgHeight, totalWidth, hoveredActionId, setHoveredActionId, handleActionDragStart, effectiveCycleLength } = ctx;
+    const { groups, pixelsPerSecond, RULER_HEIGHT, ROW_TOTAL_HEIGHT, svgHeight, totalWidth, hoveredActionId, setHoveredActionId, handleActionDragStart } = ctx;
 
     return (
         <>
             {/* Instant Co arrows - vertical orange arrows */}
             {instantCoActions.map((action, idx) => {
                 const rawDeb = entier(action.deb) || 0;
-                const plage1 = entier(action.plage1) || 0;
                 const plage2 = entier(action.plage2) || 0;
                 const abrv = action.abrv || '';
                 const isHighlighted = hoveredActionId === action.id;
 
-                if (plage1 < 1 || plage2 < 1 || plage1 > groups.length || plage2 > groups.length) return null;
-
-                // Repère fixe : les autres actions simulées ne le déplacent pas.
-                // Au-delà d'un cycle simulé raccourci, il n'a plus de place.
-                if (rawDeb >= effectiveCycleLength) return null;
-                const deb = rawDeb;
+                const deb = instantRepereFixe(ctx, action);
+                if (deb === null) return null;
 
                 // X position at deb
                 const xPos = deb * pixelsPerSecond;
 
                 // Arrow length fixed at 13 pixels
                 const arrowLength = 13;
-
-                // Downward arrow: ends just above plage1 row
-                const downArrowEndY = RULER_HEIGHT + 1 + (plage1 - 1) * ROW_TOTAL_HEIGHT - 2;
-                const downArrowStartY = downArrowEndY - arrowLength;
 
                 // Upward arrow: ends just below plage2 row
                 const upArrowEndY = RULER_HEIGHT + 1 + plage2 * ROW_TOTAL_HEIGHT + 2;
@@ -63,20 +55,6 @@ const FlechesInstantCo = ({ ctx, instantCoActions }: FlechesInstantCoProps) => {
                                 overflow: 'visible'
                             }}
                         >
-                            {/* Downward arrow line */}
-                            <line
-                                x1={xPos}
-                                y1={downArrowStartY}
-                                x2={xPos}
-                                y2={downArrowEndY}
-                                stroke="#FF8C00"
-                                strokeWidth="2"
-                            />
-                            {/* Downward arrow head (pointing down) */}
-                            <polygon
-                                points={`${xPos - arrowSize},${downArrowEndY} ${xPos + arrowSize},${downArrowEndY} ${xPos},${downArrowEndY + arrowSize * 1.5}`}
-                                fill="#FF8C00"
-                            />
                             {/* Upward arrow line */}
                             <line
                                 x1={xPos}
@@ -91,18 +69,7 @@ const FlechesInstantCo = ({ ctx, instantCoActions }: FlechesInstantCoProps) => {
                                 points={`${xPos - arrowSize},${upArrowEndY} ${xPos + arrowSize},${upArrowEndY} ${xPos},${upArrowEndY - arrowSize * 1.5}`}
                                 fill="#FF8C00"
                             />
-                            {/* Invisible hover+drag zones */}
-                            <rect
-                                x={xPos - 6}
-                                y={downArrowStartY}
-                                width={12}
-                                height={downArrowEndY + arrowSize * 1.5 - downArrowStartY}
-                                fill="transparent"
-                                style={{ pointerEvents: 'auto', cursor: 'ew-resize' }}
-                                onMouseEnter={() => setHoveredActionId(action.id)}
-                                onMouseLeave={() => setHoveredActionId(null)}
-                                onMouseDown={(e) => handleActionDragStart(e, action.id, 'deb', rawDeb)}
-                            />
+                            {/* Invisible hover+drag zone */}
                             <rect
                                 x={xPos - 6}
                                 y={upArrowEndY - arrowSize * 1.5}

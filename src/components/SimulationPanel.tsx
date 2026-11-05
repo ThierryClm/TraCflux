@@ -6,6 +6,7 @@ import {
 } from '../simulation';
 import type { ActionMicro, Groupe, Matrice, ScenarioSimulation } from '../types/projet';
 import Modal from './Modal';
+import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import './SimulationPanel.css';
 
 interface HoveredConflict {
@@ -123,6 +124,12 @@ const SimulationPanel = ({
     // Le panneau disparaît (onglet quitté) sans recevoir la fin du survol :
     // on éteint les flèches de l'action qui était survolée.
     useEffect(() => () => onSurvolAction(null), [onSurvolAction]);
+
+    // Une fenêtre détachée remontée passerait devant la liste déployée.
+    useEffect(() => {
+        setMainOverlayOpen('scenarioMenu', menuOuvert);
+        return () => setMainOverlayOpen('scenarioMenu', false);
+    }, [menuOuvert]);
 
     useEffect(() => {
         if (!menuOuvert) return;

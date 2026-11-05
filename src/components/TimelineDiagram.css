@@ -985,6 +985,22 @@
     filter: var(--surlignage-halo-svg);
 }
 
+/* Flèches du haut, dans la barre des secondes */
+.fleche-regle line {
+    transition: stroke-width 0.15s ease;
+}
+
+.fleche-regle.highlighted line {
+    stroke: var(--surlignage-couleur);
+    stroke-width: var(--surlignage-trait-svg);
+    filter: var(--surlignage-halo-svg);
+}
+
+.fleche-regle.highlighted polygon {
+    fill: var(--surlignage-couleur);
+    filter: var(--surlignage-halo-svg);
+}
+
 /* Labels below the arrows: cursor indicates hover target */
 .point-repos-label,
 .synchro-bts-label,

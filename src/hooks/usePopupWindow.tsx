@@ -217,13 +217,21 @@ const flushAllPopups = () => {
     popupFlushers.forEach(fn => { try { fn(); } catch { /* ignore */ } });
 };
 
-// Un champ de saisie est-il en cours d'édition (fenêtre principale ou popup) ?
-// Sert à suspendre la remontée des popups au premier plan (qui volerait le
-// focus du champ) tant qu'on tape dedans.
+// Liste déroulante en cours d'usage dans la fenêtre active : remonter une popup
+// la replierait. Le test porte sur la balise, `instanceof` échouant sur un
+// élément de popup, et n'entre pas dans isFieldEl : une liste garde le focus
+// après le choix, son rendu ne doit pas attendre qu'on la quitte.
+const isListeEnCours = (doc: Document) => doc.activeElement?.tagName === 'SELECT' && doc.hasFocus();
+
+// Un champ de saisie ou une liste sont-ils en cours d'usage (fenêtre principale
+// ou popup) ? Sert à suspendre la remontée des popups au premier plan (qui
+// volerait leur focus) tant qu'on s'en sert.
 const isEditingAnyField = () => {
-    if (isFieldEl(document.activeElement)) return true;
+    if (isFieldEl(document.activeElement) || isListeEnCours(document)) return true;
     for (const p of openPopups) {
-        try { if (!p.closed && isFieldEl(p.document.activeElement)) return true; } catch { /* closed */ }
+        try {
+            if (!p.closed && (isFieldEl(p.document.activeElement) || isListeEnCours(p.document))) return true;
+        } catch { /* closed */ }
     }
     return false;
 };
@@ -305,7 +313,7 @@ function installMainListener() {
     mainListenerInstalled = true;
 
     const bringPopupsIfAllowed = () => {
-        if (openPopups.size === 0 || isBringingToFront || isFilePickerActive() || mainModalActive || isEditingAnyField()) return;
+        if (openPopups.size === 0 || isBringingToFront || isFilePickerActive() || mainModalActive) return;
         if (isMainOverlayOpen()) return;
         if (bringPopupsTimer) clearTimeout(bringPopupsTimer);
         bringPopupsTimer = setTimeout(() => {
@@ -315,6 +323,8 @@ function installMainListener() {
         }, 1000);
         // Note : la temporisation est relue à l'échéance (bringAllPopupsToFront
         // revérifie les gardes), un menu ouvert entre-temps annule donc l'effet.
+        // L'édition n'est jugée qu'à ce moment : au mousedown, le focus n'a pas
+        // encore bougé, et cliquer hors d'une liste doit bien remonter les popups.
     };
 
     // When main window regains focus from outside (alt-tab, taskbar)

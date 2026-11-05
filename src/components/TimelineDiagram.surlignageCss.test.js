@@ -38,6 +38,7 @@ const FAMILLES_SVG = [
     'point-repos-arrows',
     'synchro-bts-arrows',
     'instant-co-arrows',
+    'fleche-regle',
     'escamotage-arrows',
     'debut-bande-arrows',
     'fin-bande-arrows'
