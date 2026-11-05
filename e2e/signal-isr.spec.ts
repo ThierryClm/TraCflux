@@ -14,16 +14,16 @@ test('choisir le signal ISR d\'un groupe dans le formulaire', async ({ page }) =
     const entetes = await page.locator('.group-table th').allTextContents();
     expect(entetes.indexOf('Signal')).toBe(entetes.indexOf('Type') + 1);
     const signal = signalDuGroupe(page, 1);
-    await expect(signal).toHaveJSProperty('value', '');
+    await expect(signal).toHaveJSProperty('value', 'R11v');
     await choisirSignal(page, 1, 'R14tg');
     await expect(signal).toHaveJSProperty('value', 'R14tg');
     await expect(signal).toHaveAttribute('title', 'Signal tricolore directionnel, tourne-à-gauche');
-    await choisirSignal(page, 4, 'R12');
+    await choisirSignal(page, 4, 'R12m');
     await page.locator('.group-table-container').screenshot({ path: test.info().outputPath('formulaire-signal.png') });
     // Annuler revient au choix précédent.
     await page.locator('body').click({ position: { x: 900, y: 5 } });
     await page.keyboard.press('Control+z');
-    await expect(signalDuGroupe(page, 4)).toHaveJSProperty('value', '');
+    await expect(signalDuGroupe(page, 4)).toHaveJSProperty('value', 'R12');
     await expect(signal).toHaveJSProperty('value', 'R14tg');
 });
 
@@ -32,12 +32,12 @@ test('le type propose signal et courant, et le formulaire tient en entier dans l
     const table = page.locator('.group-table').first();
     const largeurs = await table.evaluate(t => [t.getBoundingClientRect().width, t.closest('.group-table-container')!.clientWidth]);
     expect(largeurs[0]).toBeLessThanOrEqual(largeurs[1]);
-    // Groupe 3 : V, courant TD_TàG saisi, signal vide → B propose R13b et garde TD_TàG.
+    // Groupe 3 : V, courant TD_TàG saisi, signal resté à R11v → B propose R13b et garde TD_TàG.
     const ligne = table.locator('tbody tr').nth(2);
     await ligne.locator('.input-type').selectOption('B');
     await expect(signalDuGroupe(page, 3)).toHaveJSProperty('value', 'R13b');
     await expect(ligne.locator('.input-courant')).toHaveValue('TD_TàG');
-    // Groupe 1 : V vide de signal → P propose R12 et impose Piéton.
+    // Groupe 1 : V, signal resté à R11v → P propose R12 et impose Piéton.
     const premiere = table.locator('tbody tr').first();
     await premiere.locator('.input-type').selectOption('P');
     await expect(signalDuGroupe(page, 1)).toHaveJSProperty('value', 'R12');
@@ -64,7 +64,7 @@ test('le type propose signal et courant, et le formulaire tient en entier dans l
 test('les infobulles Formulaire sont cochées par défaut et leur désactivation reste mémorisée', async ({ page }) => {
     await ouvrirExemple(page);
     const signal = signalDuGroupe(page, 1);
-    await expect(signal).toHaveAttribute('title', /Signal lumineux de circulation/);
+    await expect(signal).toHaveAttribute('title', 'Signal tricolore circulaire, vert sur le feu du bas');
     await signal.click();
     const liste = page.getByRole('listbox');
     const option = liste.getByRole('option', { name: 'R14tg Signal tricolore directionnel, tourne-à-gauche', exact: true });
