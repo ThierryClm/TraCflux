@@ -1185,6 +1185,25 @@ body.blue-night-mode .conflict-list {
     text-decoration: underline;
 }
 
+/* Renvois de l'aide vers une section ou un menu */
+.help-lien {
+    color: #4ecdc4;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.help-lien:hover {
+    text-decoration-style: solid;
+}
+
+/* Sans barre de menus à ouvrir (module Onde verte), le renvoi reste un texte. */
+.help-content.sans-menu .help-lien-menu {
+    color: inherit;
+    text-decoration: none;
+    pointer-events: none;
+}
+
 /* Bouton flottant « retour au sommaire » dans l'aide */
 .help-back-to-top {
     position: sticky;

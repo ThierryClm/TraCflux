@@ -255,3 +255,20 @@
         line-height: 1.15;
     }
 }
+
+/* Entrée visée par un renvoi de l'aide en ligne */
+.menu-item.menu-repere {
+    outline: 2px solid #4ecdc4;
+    outline-offset: -2px;
+    animation: repere-menu 0.8s ease-in-out 3;
+}
+
+@keyframes repere-menu {
+    50% { background: rgba(78, 205, 196, 0.35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-item.menu-repere {
+        animation: none;
+    }
+}

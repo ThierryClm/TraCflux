@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import RechercheAide from './RechercheAide';
+import { allerAuMenu, menuAccessible } from '../utils/renvoiMenu';
 
 /**
  * Aide en ligne (menu Aide) — contenu partagé entre App.tsx et GreenWavePage.tsx.
@@ -18,7 +20,19 @@ export interface HelpContentProps {
     initialAnchor?: string | null;
     /** Case « Page principale » de Mise en page → Infobulles. */
     tooltipsEnabled?: boolean;
+    /** Referme l'aide affichée dans la page, qui recouvrirait le menu demandé. */
+    onFermer?: () => void;
 }
+
+/** Renvoi vers une section de l'aide, désignée par son titre. */
+const VoirSection = ({ titre, children }: { titre: string; children?: ReactNode }) => (
+    <a href="#" className="help-lien" data-aide-section={titre}>{children ?? titre}</a>
+);
+
+/** Renvoi vers la barre de menus : « Menu → Sous-menu → Entrée ». */
+const VoirMenu = ({ chemin }: { chemin: string }) => (
+    <a href="#" className="help-lien help-lien-menu" data-aide-menu={chemin}>{chemin}</a>
+);
 
 /** Entrée du sommaire : un chapitre (h3) et ses sections (h4). */
 interface ChapitreAide {
@@ -27,7 +41,7 @@ interface ChapitreAide {
     sections: { id: string; title: string }[];
 }
 
-const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpContentProps) => {
+const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }: HelpContentProps) => {
     const helpContentRef = useRef<HTMLDivElement>(null);
     const [helpToc, setHelpToc] = useState<ChapitreAide[]>([]);
     // L'aide peut vivre dans une fenêtre détachée : ses ancres se cherchent
@@ -67,8 +81,24 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
         return () => clearTimeout(t);
     }, [initialAnchor]);
 
+    // Les renvois du texte passent par ce seul écouteur : un élément d'une fenêtre
+    // détachée n'est pas un Element de l'application, d'où `closest` sans instanceof.
+    const surClicRenvoi = (e: MouseEvent<HTMLDivElement>) => {
+        const lien = (e.target as Element).closest<HTMLElement>('[data-aide-section], [data-aide-menu]');
+        if (!lien) return;
+        e.preventDefault();
+        const { aideSection, aideMenu } = lien.dataset;
+        if (aideSection) {
+            const titres = helpContentRef.current?.querySelectorAll<HTMLHeadingElement>('h3, h4') ?? [];
+            const cible = [...titres].find(titre => titre.textContent?.trim() === aideSection);
+            if (cible) aller(cible.id);
+        } else if (aideMenu && allerAuMenu(aideMenu)) {
+            onFermer?.();
+        }
+    };
+
     return (
-        <div className="help-content" ref={helpContentRef}>
+        <div className={`help-content${menuAccessible() ? '' : ' sans-menu'}`} ref={helpContentRef} onClick={surClicRenvoi}>
             <RechercheAide racine={helpContentRef} tooltipsEnabled={tooltipsEnabled} />
             {helpToc.length > 0 && (
                 <nav id="help-sommaire" className="help-toc" style={{ background: '#2a2a2a', border: '1px solid #444', borderRadius: '6px', padding: '12px 16px', marginBottom: '20px' }}>
@@ -123,14 +153,15 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Onglets PF — la multiprogrammation :</strong> Gérez plusieurs plans de feux (PF1, PF2...). Chaque PF est un <em>programme complet et indépendant</em> du même carrefour (pointe du matin, pointe du soir, heure creuse, nuit, événementiel…) : cycle, durées de vert, offsets, matrice intervert et micro-régulation lui sont propres. Le basculement réel entre programmes (calendrier, trafic) reste assuré par le contrôleur sur le terrain ; TraCflux sert à les concevoir et les analyser.
                         <ul>
                             <li><em>Ajouter :</em> Cliquez sur le bouton "+" pour créer un nouveau plan de feux vierge.</li>
-                            <li><em>Dupliquer :</em> Via le menu Diagramme → Dupliquer, crée un nouvel onglet avec une copie du plan actuel.</li>
+                            <li><em>Dupliquer :</em> Via le menu <VoirMenu chemin="Diagramme → Dupliquer" />, crée un nouvel onglet avec une copie du plan actuel.</li>
                             <li><em>Renommer :</em> Double-cliquez sur un onglet PF pour modifier son nom.</li>
                             <li><em>Réordonner :</em> Glissez-déposez un onglet PF pour modifier l'ordre des plans de feux.</li>
-                            <li><em>Supprimer :</em> Via le menu Diagramme → Supprimer, supprime l'onglet PF actif (impossible s'il n'en reste qu'un).</li>
+                            <li><em>Supprimer :</em> Via le menu <VoirMenu chemin="Diagramme → Supprimer" />, supprime l'onglet PF actif (impossible s'il n'en reste qu'un).</li>
                         </ul>
                     </li>
                     <li><strong>Indicateur Valider/Validé :</strong> Cliquez sur "Valider" (quand aucun conflit) pour marquer l'onglet PF en vert. Cliquez à nouveau pour annuler la validation.</li>
                     <li><strong>Séparateur ajustable :</strong> La position du séparateur entre le diagramme et les conditions de micro-régulation est sauvegardée avec le projet.</li>
+                    <li><strong>Renvois :</strong> Les liens en couleur du texte mènent à leur destination. Un renvoi vers une section y conduit directement ; un renvoi vers un menu, comme <VoirMenu chemin="Mise en page → Options de contraste" />, déplie ce menu dans la fenêtre principale et signale l'entrée, sans fermer l'aide. Le bouton flottant ↑ ramène au sommaire.</li>
                     <li><strong>Fenêtre de l'aide :</strong> L'aide s'ouvre dans sa propre fenêtre, non modale, comme les fenêtres détachées : on la déplace sur un autre écran et on continue à travailler dans l'application pendant qu'elle reste ouverte. Sa position est retenue d'une ouverture à l'autre ; la redemander la ramène au premier plan. Sur un téléphone, ou si le navigateur bloque les fenêtres, elle s'affiche dans la page.</li>
                     <li><strong>Rechercher dans l'aide :</strong> Saisissez un mot dans le champ en haut de cette fenêtre. Toutes ses occurrences sont surlignées, la courante en orange ; ▲ et ▼ (ou Entrée et Maj+Entrée) passent de l'une à l'autre, et le bouton <em>Chapitres</em> déroule la liste des sections qui contiennent le mot, avec leur nombre d'occurrences. La recherche ignore majuscules et accents : « ecran » trouve « écran ».</li>
                 </ul>
@@ -142,7 +173,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                 <ol>
                     <li><strong>Décrire les groupes de feux</strong> dans le formulaire (onglet <em>Configuration</em>) : nom, type (véhicules, bus, piéton, cycle…), signal, courant et durée de vert minimale. Vous posez ainsi ce qui circule dans le carrefour.</li>
                     <li><strong>Renseigner la matrice des temps interverts</strong> : les temps de dégagement requis entre groupes conflictuels. Une matrice non symétrique ou des cases manquantes sont signalées (fond orange).</li>
-                    <li><strong>Construire le PF1</strong>, le plan de feux de référence (fonctionnement nominal en heure creuse, par exemple) : ajustez offsets et durées de vert dans le diagramme. L'<em>assistant de conception de diagramme</em> (voir « Assistant conception ») peut en proposer une première version à partir des trafics. L'application contrôle en temps réel que les interverts sont respectés (fond rouge en cas de conflit).</li>
+                    <li><strong>Construire le PF1</strong>, le plan de feux de référence (fonctionnement nominal en heure creuse, par exemple) : ajustez offsets et durées de vert dans le diagramme. L'<em>assistant de conception de diagramme</em> (voir « <VoirSection titre="Assistant conception" /> ») peut en proposer une première version à partir des trafics. L'application contrôle en temps réel que les interverts sont respectés (fond rouge en cas de conflit).</li>
                     <li><strong>Vérifier les conflits restants</strong> : la liste sous la matrice indique les paires en violation. Au survol d'une case rouge, une infobulle décrit le problème (recouvrement de verts ou délai insuffisant).</li>
                     <li><strong>Décliner les autres PF</strong> (HPM, HPS, HC, HN, variantes priorité bus…) à partir du PF1 : les différences sont colorées (rouge = augmenté, vert = réduit) et explicitées par infobulle au survol, ce qui rend immédiatement visible ce qui change d'un plan à l'autre.</li>
                     <li><strong>Affiner</strong> : conditions de micro-régulation et scénarios testés en simulation, données trafic, onde verte si plusieurs carrefours sont coordonnés.</li>
@@ -153,7 +184,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
             <section className="help-section">
                 <h4>Mise en page de l'interface et optimisation de l'écran</h4>
 
-                <p>Le menu <strong>Mise en page</strong> regroupe tous les leviers d'adaptation de l'affichage. Deux usages types :</p>
+                <p>Le menu <strong><VoirMenu chemin="Mise en page" /></strong> regroupe tous les leviers d'adaptation de l'affichage. Deux usages types :</p>
 
                 <p><strong>① Optimiser sur petit écran ou en mobilité</strong> (ordinateur portable, sur le terrain, dans le train). L'objectif est de donner un maximum de place au diagramme en mono-fenêtre :</p>
                 <ul>
@@ -173,7 +204,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li>Cas d'usage : la <em>matrice intervert</em> visible en permanence pendant le réglage du diagramme ; l'<em>image du carrefour</em> partagée en visio ou posée sur un second écran lors d'une présentation ; les <em>remarques</em> (notes du présentateur) sur l'écran annexe.</li>
                     <li><strong>Zoom indépendant</strong> dans chaque fenêtre détachée (Ctrl + molette) sans toucher à la fenêtre principale — pratique pour un grand écran ou une fenêtre partagée en visio.</li>
                     <li>Chaque projet <strong>mémorise sa configuration de détachements</strong> et la restaure à l'ouverture.</li>
-                    <li><strong>Des fenêtres solidaires, dans les deux sens :</strong> une fenêtre détachée n'est pas une copie figée. Survolez une flèche sur le plan du carrefour envoyé au second écran : la ligne du groupe s'allume dans le diagramme resté sur l'écran principal, en même temps que sa ligne dans le formulaire et dans les données trafic. Survolez une ligne du diagramme : ce sont les flèches du second écran qui s'allument (voir « Survol et mise en relation »). Le second écran devient un prolongement du plan de travail plutôt qu'un rangement.</li>
+                    <li><strong>Des fenêtres solidaires, dans les deux sens :</strong> une fenêtre détachée n'est pas une copie figée. Survolez une flèche sur le plan du carrefour envoyé au second écran : la ligne du groupe s'allume dans le diagramme resté sur l'écran principal, en même temps que sa ligne dans le formulaire et dans les données trafic. Survolez une ligne du diagramme : ce sont les flèches du second écran qui s'allument (voir « <VoirSection titre="Survol et mise en relation" /> »). Le second écran devient un prolongement du plan de travail plutôt qu'un rangement.</li>
                 </ul>
 
                 <p>Le détail de chaque option figure ci-dessous.</p>
@@ -192,7 +223,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Espace de travail propre au nouveau projet :</strong> L'ouverture d'un nouveau projet (ou d'un ancien projet sans options enregistrées) ferme automatiquement toutes les fenêtres détachées. Vous détachez ensuite uniquement ce dont vous avez besoin pour ce projet.</li>
                     <li><strong>Sous-menus persistants :</strong> Les sous-menus <em>Mise en page</em> et <em>Détachements</em> restent ouverts après chaque clic sur une option, ce qui facilite le réglage de plusieurs cases à la suite.</li>
                     <li><strong>Fenêtres détachées au premier plan :</strong> Lorsque vous cliquez dans la fenêtre principale, les fenêtres détachées passent momentanément derrière. Elles remontent automatiquement au premier plan environ une seconde plus tard, sans voler le focus : tant qu'un champ de saisie ou une liste déroulante est en cours d'utilisation, elles attendent, et la liste ouverte le reste. Elles reviennent une fois que vous avez cliqué ailleurs. Le réglage vaut aussi pour une liste ouverte dans une fenêtre détachée, sur l'écran principal comme sur un second écran.</li>
-                    <li><strong>Fenêtre détachée hors écran :</strong> Après un changement de poste ou la déconnexion d'un écran secondaire, décochez puis recochez la fenêtre concernée dans le menu <strong>Mise en page → Détachements</strong> : elle réapparaîtra centrée sur l'écran principal.</li>
+                    <li><strong>Fenêtre détachée hors écran :</strong> Après un changement de poste ou la déconnexion d'un écran secondaire, décochez puis recochez la fenêtre concernée dans le menu <strong><VoirMenu chemin="Mise en page → Détachement" /></strong> : elle réapparaîtra centrée sur l'écran principal.</li>
                     <li><strong>Popups bloquées par le navigateur :</strong> Les navigateurs n'autorisent qu'une seule fenêtre détachée à la fois lors de l'ouverture d'un projet contenant plusieurs détachements. Pour les autoriser toutes en une fois, ajoutez le site à la liste des popups autorisés :
                         <ul>
                             <li><strong>Chrome / Edge / Brave :</strong> cliquez sur l'icône <em>popup bloqué</em> qui apparaît dans la barre d'adresse, puis choisissez « Toujours autoriser les popups depuis ce site ». Alternative : <code>chrome://settings/content/popups</code> → ajouter l'URL du site dans <em>« Sites autorisés à envoyer des popups »</em>.</li>
@@ -201,11 +232,11 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                         Une fois autorisées, plus aucun message de blocage n'apparaîtra et toutes les fenêtres détachées s'ouvriront simultanément à l'ouverture d'un projet.
                     </li>
                     <li><strong>Largeur dynamique du panneau de configuration :</strong> Lorsque le nom des groupes de feux est masqué, ce panneau libère 160 px supplémentaires pour le diagramme.</li>
-                    <li><strong>Remarques du diagramme :</strong> Le menu <strong>Mise en page → Détachements</strong> permet d'ouvrir le champ Remarques du plan de feu actif dans une fenêtre séparée, déplaçable sur un second écran. Pratique lors d'une projection : le diagramme reste visible sur l'écran principal pendant que vous gardez vos notes sur un écran annexe pour commenter la présentation. L'option est grisée tant que la case <em>Remarques du diagramme</em> n'est pas cochée dans le menu Mise en page (impossible de détacher un champ masqué).</li>
+                    <li><strong>Remarques du diagramme :</strong> Le menu <strong><VoirMenu chemin="Mise en page → Détachement" /></strong> permet d'ouvrir le champ Remarques du plan de feu actif dans une fenêtre séparée, déplaçable sur un second écran. Pratique lors d'une projection : le diagramme reste visible sur l'écran principal pendant que vous gardez vos notes sur un écran annexe pour commenter la présentation. L'option est grisée tant que la case <em>Remarques du diagramme</em> n'est pas cochée dans le menu Mise en page (impossible de détacher un champ masqué).</li>
                     <li><strong>Zoom indépendant dans chaque fenêtre détachée :</strong> Chaque popup (Formulaire, Matrice, Trafic, Conditions micro, Variables micro, Image, Remarques) accepte le zoom natif du navigateur sans affecter la fenêtre principale. Utilisez <strong>Ctrl + molette de la souris</strong> pour zoomer/dézoomer, ou <strong>Ctrl++</strong> / <strong>Ctrl+-</strong>, et <strong>Ctrl+0</strong> pour revenir à 100 %. Pratique pour optimiser la lecture sur un grand écran ou dans une fenêtre partagée en visio, sans modifier la mise en page de l'application principale. Selon le navigateur, le niveau de zoom peut être mémorisé d'une session à l'autre.</li>
                     <li><strong>Confirmation à la fermeture :</strong> Si le projet a été modifié sans être sauvegardé, le navigateur affiche une confirmation avant de fermer l'onglet ou la fenêtre.</li>
-                    <li><strong>Verrouillage de la saisie par section :</strong> Le menu <strong>Mise en page → Verrouillage saisie...</strong> propose sept cases : <em>Propriétés</em>, <em>Configuration</em>, <em>Matrice</em>, <em>Trafic</em>, <em>Diagramme</em>, <em>Conditions de micro-régulation</em> et <em>Variables micro</em>. Une section cochée garde ses valeurs lisibles mais non modifiables : ses champs passent en lecture seule, ses listes et cases sont désactivées, y compris dans les fenêtres détachées. Très utile sur smartphone ou tablette, où toucher un champ pour faire défiler ouvre le clavier ou une liste de choix. Le réglage est enregistré avec le projet et retrouvé à son ouverture ; un nouveau projet part sans verrou. Décochez pour saisir à nouveau.</li>
-                    <li><strong>Désactivation des infobulles par section :</strong> Le menu <strong>Mise en page → Infobulles</strong> ouvre un sous-menu de onze cases, à cocher individuellement :
+                    <li><strong>Verrouillage de la saisie par section :</strong> Le menu <strong><VoirMenu chemin="Mise en page → Verrouillage saisie..." /></strong> propose sept cases : <em>Propriétés</em>, <em>Configuration</em>, <em>Matrice</em>, <em>Trafic</em>, <em>Diagramme</em>, <em>Conditions de micro-régulation</em> et <em>Variables micro</em>. Une section cochée garde ses valeurs lisibles mais non modifiables : ses champs passent en lecture seule, ses listes et cases sont désactivées, y compris dans les fenêtres détachées. Très utile sur smartphone ou tablette, où toucher un champ pour faire défiler ouvre le clavier ou une liste de choix. Le réglage est enregistré avec le projet et retrouvé à son ouverture ; un nouveau projet part sans verrou. Décochez pour saisir à nouveau.</li>
+                    <li><strong>Désactivation des infobulles par section :</strong> Le menu <strong><VoirMenu chemin="Mise en page → Infobulles" /></strong> ouvre un sous-menu de onze cases, à cocher individuellement :
                         <ul>
                             <li><em>Menu</em> : les commandes de la barre de menus ;</li>
                             <li><em>Page principale</em> : en-tête du projet, onglets des plans de feu, liste des conflits, comparateur de capacité, aide en ligne et fenêtres de dialogue ;</li>
@@ -225,7 +256,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
 
             <section className="help-section">
                 <h4>Options de contraste</h4>
-                <p>Le menu Préférences → Options de contraste permet de choisir parmi 7 thèmes de couleurs pour l'interface :</p>
+                <p>Le menu <VoirMenu chemin="Mise en page → Options de contraste" /> permet de choisir parmi 7 thèmes de couleurs pour l'interface :</p>
                 <ul>
                     <li><strong>Blanc sur fond noir :</strong> Thème par défaut, texte clair sur fond sombre. Adapté au travail prolongé en environnement peu éclairé.</li>
                     <li><strong>Noir sur fond blanc :</strong> Thème clair, texte noir sur fond blanc. Proche du rendu à l'impression.</li>
@@ -254,7 +285,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                             <li><em>PP :</em> Priorité piéton</li>
                         </ul>
                     </li>
-                    <li><strong>Signal :</strong> Signal lumineux de circulation du groupe, choisi dans la liste de l'ISR (livre 1, 6e partie, art. 109-3), rangée par famille : tricolores circulaires R11v / R11j, piétons R12 / R12m / R12pps, modaux R13, directionnels R14, anticipation R15 / R16, transports en commun R17 / R18, cycles R19, contrôle d'accès R22 / R23, arrêt R24 / R25, et le panneau A13b lumineux devant un passage piéton (art. 110-2). La liste se limite aux signaux du type choisi : V → R11, R14, R16, R22 ; B → R13b, R13bj, R15b, R17, R18 ; CY → R12m, R13c, R19 ; P → R12, R12m, R12pps ; FL et PP → A13b ; sans type, toute la liste. Chaque choix montre son code et le même pictogramme que dans l'image du carrefour, sur ordinateur comme sur téléphone. La désignation complète apparaît uniquement dans l'infobulle : au survol sur ordinateur ou par un appui prolongé sur téléphone, sans choisir le signal. Touchez ailleurs ou faites défiler pour fermer cette bulle. Ces infobulles sont activées par défaut et se règlent par <em>Mise en page → Infobulles → Formulaire</em>. Au choix du type, le signal et le courant sont proposés s'ils sont vides : V → R11v et TD, P → R12 et Piéton, CY → R13c et Cycle, B → R13b et TD, FL et PP → A13b ; un choix fait à la main est conservé s'il figure dans la liste du nouveau type. Facultatif ; repris dans le Formulaire du dossier imprimé.</li>
+                    <li><strong>Signal :</strong> Signal lumineux de circulation du groupe, choisi dans la liste de l'ISR (livre 1, 6e partie, art. 109-3), rangée par famille : tricolores circulaires R11v / R11j, piétons R12 / R12m / R12pps, modaux R13, directionnels R14, anticipation R15 / R16, transports en commun R17 / R18, cycles R19, contrôle d'accès R22 / R23, arrêt R24 / R25, et le panneau A13b lumineux devant un passage piéton (art. 110-2). La liste se limite aux signaux du type choisi : V → R11, R14, R16, R22 ; B → R13b, R13bj, R15b, R17, R18 ; CY → R12m, R13c, R19 ; P → R12, R12m, R12pps ; FL et PP → A13b ; sans type, toute la liste. Chaque choix montre son code et le même pictogramme que dans l'image du carrefour, sur ordinateur comme sur téléphone. La désignation complète apparaît uniquement dans l'infobulle : au survol sur ordinateur ou par un appui prolongé sur téléphone, sans choisir le signal. Touchez ailleurs ou faites défiler pour fermer cette bulle. Ces infobulles sont activées par défaut et se règlent par <em><VoirMenu chemin="Mise en page → Infobulles → Formulaire" /></em>. Au choix du type, le signal et le courant sont proposés s'ils sont vides : V → R11v et TD, P → R12 et Piéton, CY → R13c et Cycle, B → R13b et TD, FL et PP → A13b ; un choix fait à la main est conservé s'il figure dans la liste du nouveau type. Facultatif ; repris dans le Formulaire du dossier imprimé.</li>
                     <li><strong>Courant :</strong> Mouvement de trafic associé au groupe.
                         <ul>
                             <li><em>TD :</em> Tout droit</li>
@@ -467,7 +498,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Actions glissables :</strong> Les overlays d'actions peuvent aussi être redimensionnés par glisser-déposer</li>
                     <li><strong>Zoom :</strong> Utilisez le curseur dans l'en-tête</li>
                     <li><strong>Dépendances :</strong> Affichez les flèches de dégagement avec le bouton "Dépendance"</li>
-                    <li><strong>Surbrillance :</strong> Survolez une action dans le tableau ou le diagramme pour la mettre en évidence (voir <em>Survol et mise en relation</em> ci-dessous)</li>
+                    <li><strong>Surbrillance :</strong> Survolez une action dans le tableau ou le diagramme pour la mettre en évidence (voir <em><VoirSection titre="Survol et mise en relation" /></em> ci-dessous)</li>
                 </ul>
             </section>
 
@@ -497,7 +528,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Réduire :</strong> Réduit la plage de temps dans le cycle à une position donnée</li>
                     <li><strong>Déplacer un groupe :</strong> Déplace un groupe vers une nouvelle position. <em>Cette action synchronise automatiquement les données (diagramme, matrice, actions, données de trafic) dans tous les plans de feux.</em> La fenêtre reste ouverte après chaque déplacement pour enchaîner plusieurs opérations ; seuls la croix ou le bouton Annuler la ferment.</li>
                     <li><strong>Intégrer un bi-Carrefour :</strong> Permet de séparer visuellement le carrefour en deux zones en désignant un groupe de feu de séparation. Une ligne blanche horizontale et verticale apparaît dans la matrice des temps interverts (onglet Configuration et onglet Matrice), ainsi qu'une ligne blanche de séparation dans le diagramme du plan de feu. Le menu bascule ensuite en « Rétablir en uni-carrefour » pour supprimer la séparation. Cette option est sauvegardée avec le projet.</li>
-                    <li><strong>Assistant conception :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase, puis le placement des groupes associés, les adaptatifs verticaux, les fermetures anticipées et les points de repos bus (voir la section du même nom)</li>
+                    <li><strong>Assistant conception :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase, puis le placement des groupes associés, les adaptatifs verticaux, les fermetures anticipées et les points de repos bus (voir la <VoirSection titre="Assistant conception">section du même nom</VoirSection>)</li>
                     <li><strong>Options :</strong> Affiche la légende visuelle des actions</li>
                 </ul>
             </section>
@@ -536,7 +567,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Réglages :</strong> Tant que la case est cochée, les réglages sont grisés, pour tous les groupes : rotation, zoom, longueur, retour, groupe et suppression ne s'appliquent qu'aux flèches, et le double-clic ne tourne plus rien. Les noms des groupes sont masqués et leur case est grisée. Décochez Signal pour tout retrouver, avec les mêmes valeurs. Le signal reste à l'endroit et se déplace comme la flèche. Il prend la moitié du zoom de la flèche pour laisser voir le plan ; sur les traversées piétonnes et cycles, sa taille est fixe, à 0,8 sur ce même réglage.</li>
                 </ul>
 
-                <p>Le survol d'une flèche l'entoure d'un halo et met en évidence le groupe partout ailleurs — diagramme, formulaire, données Trafic. Voir <em>Survol et mise en relation</em>.</p>
+                <p>Le survol d'une flèche l'entoure d'un halo et met en évidence le groupe partout ailleurs — diagramme, formulaire, données Trafic. Voir <em><VoirSection titre="Survol et mise en relation" /></em>.</p>
             </section>
 
             <section className="help-section">
@@ -568,7 +599,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
 
                 <p><strong>Commentaires et Remarques</strong></p>
                 <ul>
-                    <li><strong>+</strong> et <strong>−</strong> : Colorent le texte sélectionné en vert ou en rouge (voir les sections Commentaires et Remarques)</li>
+                    <li><strong>+</strong> et <strong>−</strong> : Colorent le texte sélectionné en vert ou en rouge (voir les sections <VoirSection titre="Commentaires" /> et <VoirSection titre="Remarques" />)</li>
                     <li><strong>▲</strong> et <strong>▼</strong> : Agrandissent ou réduisent le texte sélectionné dans les Remarques</li>
                 </ul>
 
@@ -584,7 +615,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Ctrl + molette</strong> (ou <strong>Ctrl +</strong> / <strong>Ctrl −</strong>) <strong>:</strong> Zoom du navigateur — agrandit toute l'interface, textes et champs compris. S'applique indépendamment dans chaque fenêtre détachée. À ne pas confondre avec la <em>Dilatation du diagramme</em>, qui étire l'échelle des temps sans changer la taille des textes.</li>
                 </ul>
 
-                <p>L'élément actif au clavier est toujours signalé par un contour visible, dont la couleur suit le thème choisi dans <em>Mise en page → Options de contraste</em>.</p>
+                <p>L'élément actif au clavier est toujours signalé par un contour visible, dont la couleur suit le thème choisi dans <em><VoirMenu chemin="Mise en page → Options de contraste" /></em>.</p>
             </section>
 
             <section className="help-section">
@@ -594,8 +625,8 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Coloration du texte :</strong> Sélectionnez du texte puis appuyez sur <span style={{color: '#4CAF50'}}>+</span> (vert) ou <span style={{color: '#F44336'}}>−</span> (rouge).</li>
                     <li><strong>Coloration de toute la ligne :</strong> Sans sélection, <span style={{color: '#4CAF50'}}>+</span> ou <span style={{color: '#F44336'}}>−</span> colore tout le contenu.</li>
                     <li><strong>Basculer en blanc :</strong> Si une ligne entière est déjà colorée, appuyez à nouveau sur <span style={{color: '#4CAF50'}}>+</span> ou <span style={{color: '#F44336'}}>−</span> pour retirer la couleur.</li>
-                    <li><strong>Affichage :</strong> Les commentaires sont affichés dans la colonne dédiée du diagramme. L'option <em>Mise en page → Commentaires du diagramme</em> permet de les masquer globalement.</li>
-                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Commentaires</em> de chaque plan de feu les ajoute en texte simple, une ligne « GF x : » par groupe commenté. Voir <em>Impression du dossier</em>.</li>
+                    <li><strong>Affichage :</strong> Les commentaires sont affichés dans la colonne dédiée du diagramme. L'option <em><VoirMenu chemin="Mise en page → Commentaires du diagramme" /></em> permet de les masquer globalement.</li>
+                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Commentaires</em> de chaque plan de feu les ajoute en texte simple, une ligne « GF x : » par groupe commenté. Voir <em><VoirSection titre="Impression du dossier" /></em>.</li>
                 </ul>
             </section>
 
@@ -607,8 +638,8 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Taille du texte :</strong> Sélectionnez du texte puis appuyez sur <strong>▲</strong> (agrandir) ou <strong>▼</strong> (réduire). Utile pour hiérarchiser les informations (titre plus grand, détails plus petits).</li>
                     <li><strong>Mise en forme conservée :</strong> Si vous collez depuis un traitement de texte (Word, LibreOffice...), la mise en forme (taille de police, couleurs) est préservée.</li>
                     <li><strong>Longueur :</strong> jusqu'à 1 000 caractères par plan de feu, quel que soit le nombre de groupes. Sauts de ligne, ponctuation et mise en forme sont conservés ; au-delà de la hauteur du diagramme, la zone défile. Arrivée à la limite, la saisie s'arrête ; un collage trop long est réduit à la place restante.</li>
-                    <li><strong>Affichage :</strong> Les remarques sont affichées dans une zone dédiée à droite du diagramme. L'option <em>Mise en page → Remarques du diagramme</em> permet de les masquer globalement.</li>
-                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Remarques</em> de chaque plan de feu les ajoute en texte simple, avec leurs sauts de ligne. Voir <em>Impression du dossier</em>.</li>
+                    <li><strong>Affichage :</strong> Les remarques sont affichées dans une zone dédiée à droite du diagramme. L'option <em><VoirMenu chemin="Mise en page → Remarques du diagramme" /></em> permet de les masquer globalement.</li>
+                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Remarques</em> de chaque plan de feu les ajoute en texte simple, avec leurs sauts de ligne. Voir <em><VoirSection titre="Impression du dossier" /></em>.</li>
                 </ul>
             </section>
 
@@ -661,7 +692,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Conflits simulés :</strong> Le tableau des conflits se met à jour selon les temps de vert simulés. Les groupes réduits à un vert nul sont exclus des conflits. Le survol d'un conflit affiche une flèche rouge pointillée dans le diagramme depuis les positions simulées.</li>
                     <li><strong>Données trafic :</strong> Les données V.Utile, Cap.U, Retard et File d'attente sont toujours affichées. Les valeurs inhibées par les actions cochées apparaissent en grisé.</li>
                     <li><strong>Tout coché / Tout décoché</strong> (en tête de la liste <em>Scénario</em>) : Scénarios fixes qui cochent ou décochent toutes les actions rejouées. Un plan sans scénario choisi affiche celui qui correspond à ses cases.</li>
-                    <li><strong>Impression des scénarios :</strong> Les scénarios enregistrés de tous les plans de feu s'impriment dans le dossier (case <em>Scénarios</em>), que l'onglet Simulation soit ouvert ou non. Seule la version enregistrée s'imprime : enregistre tes modifications avant. Voir « Impression du dossier », plus bas.</li>
+                    <li><strong>Impression des scénarios :</strong> Les scénarios enregistrés de tous les plans de feu s'impriment dans le dossier (case <em>Scénarios</em>), que l'onglet Simulation soit ouvert ou non. Seule la version enregistrée s'imprime : enregistre tes modifications avant. Voir « <VoirSection titre="Impression du dossier" /> », plus bas.</li>
                 </ul>
                 <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Construire et justifier un scénario</h5>
                 <p>Un scénario (« escamotage bus phase 1 », « priorité bus seule », « priorité bus + ouverture anticipée »…) est l'unité de travail pour proposer une évolution et la défendre devant un maître d'ouvrage. La démarche tient en six temps :</p>
@@ -670,17 +701,17 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Ouvrir l'onglet Simulation et cocher une seule action.</strong> C'est la précaution qui fait gagner du temps : l'effet d'un escamotage seul se lit d'un coup d'œil, celui de quatre actions combinées se discute pendant une heure. Le diagramme passe en lecture seule et se redessine.</li>
                     <li><strong>Lire le cycle simulé</strong>, affiché en tête du diagramme avec son écart au cycle nominal, par exemple <code>122 s (−15 s)</code>. C'est souvent le premier argument : ce que l'action rend comme temps, et à qui.</li>
                     <li><strong>Vérifier les conflits</strong> listés sous les actions. Un escamotage coché prend en charge le dégagement du couple de groupes qu'il nomme : ce conflit-là disparaît de la liste, ce qui est normal. Les autres sont à traiter.</li>
-                    <li><strong>Mesurer l'effet sur la capacité</strong> dans le tableau des données de trafic, sous le panneau : les groupes dont une action supprime le vert (escamotage de phase, fermeture anticipée, adaptatif vertical) n'affichent plus de capacité. Le jeu de trafic affiché (pointe du matin, du soir…) se choisit dans ce tableau. Le menu <em>Diagramme → Capacité des plans de feu</em> met côte à côte plans de feu et scénarios, à trafic égal si vous le demandez.</li>
+                    <li><strong>Mesurer l'effet sur la capacité</strong> dans le tableau des données de trafic, sous le panneau : les groupes dont une action supprime le vert (escamotage de phase, fermeture anticipée, adaptatif vertical) n'affichent plus de capacité. Le jeu de trafic affiché (pointe du matin, du soir…) se choisit dans ce tableau. Le menu <em><VoirMenu chemin="Diagramme → Capacité des plans de feu" /></em> met côte à côte plans de feu et scénarios, à trafic égal si vous le demandez.</li>
                     <li><strong>Enregistrer le scénario</strong> depuis la liste <em>Scénario</em>, sous un nom parlant, puis recommencer pour chaque variante.</li>
                 </ol>
-                <p><strong>Le livrable :</strong> dans <em>Fichier → Imprimer le projet…</em>, la case <em>Scénarios</em> liste les scénarios enregistrés de chaque plan, à cocher un par un. Pour chaque plan, un tableau comparatif met les scénarios cochés côte à côte, le plan nominal en première ligne : actions, cycle simulé, conflits, courant dimensionnant, degré de saturation et réserve. Suit chaque scénario : son diagramme recalculé, titré de son nom et de son cycle simulé, avec au choix la liste des actions (celles écartées restant visibles en gris), les conflits, les données de trafic et la réserve de capacité. De quoi montrer ce qui a été retenu, ce qui a été écarté et ce que cela change. L'impression se prépare dans un onglet à part : l'application reste utilisable pendant que la boîte d'impression est ouverte.</p>
+                <p><strong>Le livrable :</strong> dans <em><VoirMenu chemin="Fichier → Imprimer le projet…" /></em>, la case <em>Scénarios</em> liste les scénarios enregistrés de chaque plan, à cocher un par un. Pour chaque plan, un tableau comparatif met les scénarios cochés côte à côte, le plan nominal en première ligne : actions, cycle simulé, conflits, courant dimensionnant, degré de saturation et réserve. Suit chaque scénario : son diagramme recalculé, titré de son nom et de son cycle simulé, avec au choix la liste des actions (celles écartées restant visibles en gris), les conflits, les données de trafic et la réserve de capacité. De quoi montrer ce qui a été retenu, ce qui a été écarté et ce que cela change. L'impression se prépare dans un onglet à part : l'application reste utilisable pendant que la boîte d'impression est ouverte.</p>
             </section>
 
             <section className="help-section">
                 <h4>Assistant conception</h4>
-                <p>L'<strong>assistant de conception de diagramme</strong> sert à <strong>dégrossir rapidement un plan de feux</strong> à partir des trafics. En quelques minutes, il pose une base cohérente et chiffrée — chemin critique, durée de cycle, répartition des verts, placement des groupes, premières conditions de micro-régulation — que l'on affine ensuite plutôt que de partir d'une page blanche. Le menu <strong>Diagramme → Nouveau plan de feu…</strong> crée un plan vierge (verts, débuts et fins vides, sans micro-régulation) et invite à lui associer un jeu de trafic, ou à en saisir un dans l'onglet <em>Trafic</em>.</p>
+                <p>L'<strong>assistant de conception de diagramme</strong> sert à <strong>dégrossir rapidement un plan de feux</strong> à partir des trafics. En quelques minutes, il pose une base cohérente et chiffrée — chemin critique, durée de cycle, répartition des verts, placement des groupes, premières conditions de micro-régulation — que l'on affine ensuite plutôt que de partir d'une page blanche. Le menu <strong><VoirMenu chemin="Diagramme → Nouveau plan de feu…" /></strong> crée un plan vierge (verts, débuts et fins vides, sans micro-régulation) et invite à lui associer un jeu de trafic, ou à en saisir un dans l'onglet <em>Trafic</em>.</p>
                 <p>Sur le carrefour du TD « croix avec couloir bus d'approche », l'assistant produit en un clic un diagramme complet, <strong>sans aucun conflit</strong> avec la matrice. Les groupes sans vert n'étant pas comptés dans les conflits, un plan en cours de construction n'est pas couvert d'alertes. Ce qu'il apporte surtout : <strong>la rigueur et le temps</strong>. Les calculs fastidieux et les vérifications mécaniques sont faits, chaque proposition est justifiée, et l'on peut consacrer son énergie aux vrais choix de conception.</p>
-                <p>Le menu <strong>Diagramme → Assistant conception…</strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
+                <p>Le menu <strong><VoirMenu chemin="Diagramme → Assistant conception…" /></strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
                 <ul>
                     <li><strong>Phasage :</strong> choisissez le nombre de phases (2 à 6), puis, dans l'ordre du cycle, le <strong>groupe déterminant</strong> de chaque phase : son courant le plus chargé.</li>
                     <li><strong>Chemin critique proposé :</strong> si le diagramme est déjà renseigné (et qu'aucun phasage n'est enregistré pour le plan), le tableau est pré-rempli : phases lues sur le diagramme, groupe à la plus forte capacité utilisée dans chaque phase (pour une phase de piétons, la traversée la plus défavorable) et dégagements effectifs entre phases. C'est une règle générale, pas une certitude : vérifiez et corrigez si besoin. Le bouton <em>Relire le diagramme</em> refait la détection.</li>
@@ -712,13 +743,13 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
 
             <section className="help-section">
                 <h4>Capacité des plans de feu et scénarios</h4>
-                <p>Le menu <strong>Diagramme → Capacité des plans de feu…</strong> (disponible dès qu'il existe au moins deux plans de feu) ouvre, dans une <strong>fenêtre déplaçable et non modale</strong> (qui peut rester ouverte pendant que vous travaillez, voire sur un second écran), un tableau comparatif du <strong>vert utile</strong> et de la <strong>capacité utilisée</strong> entre plusieurs PF. Objectif : repérer d'un coup d'œil quel programme absorbe le mieux le trafic et où chaque PF arrive à saturation.</p>
+                <p>Le menu <strong><VoirMenu chemin="Diagramme → Capacité des plans de feu…" /></strong> (disponible dès qu'il existe au moins deux plans de feu) ouvre, dans une <strong>fenêtre déplaçable et non modale</strong> (qui peut rester ouverte pendant que vous travaillez, voire sur un second écran), un tableau comparatif du <strong>vert utile</strong> et de la <strong>capacité utilisée</strong> entre plusieurs PF. Objectif : repérer d'un coup d'œil quel programme absorbe le mieux le trafic et où chaque PF arrive à saturation.</p>
                 <ul>
                     <li><strong>Plans de feu et scénarios :</strong> la liste déroulante propose les plans de feu à cocher et, en retrait sous chacun, ses scénarios enregistrés dans l'onglet Simulation. Un plan s'évalue à ses valeurs nominales ; un scénario, sur le diagramme simulé de ses actions (cycle simulé, verts recalculés). On peut ainsi aligner les programmes de la journée (pointe, heure creuse, nuit), plusieurs versions d'un diagramme, ou un plan et ses variantes de micro-régulation. Un plan dont le jeu de trafic est vide est grisé, ses scénarios aussi ; avec un jeu unique appliqué à tous, tous redeviennent disponibles.</li>
                     <li><strong>Jeu de données trafic :</strong> deux modes. <em>« Jeu associé à chaque PF »</em> — chaque PF utilise son propre jeu de trafic. <em>Un jeu unique</em> (HPM, HPS, HC…) — le même trafic est appliqué à tous les PF cochés, ce qui isole l'effet du plan à trafic égal. Les jeux sans aucune donnée saisie apparaissent grisés et ne sont pas sélectionnables.</li>
                     <li><strong>Lecture du tableau :</strong> une ligne par groupe de feu VL, une colonne par plan ou scénario affichant Trafic, V.Utile et Cap.U. La case <em>Afficher le V.Utile</em> masque ou rétablit la colonne V.Utile. Lorsque toutes les colonnes partagent le même trafic, une seule colonne Trafic est affichée au début pour éviter la répétition. La capacité utilisée est colorée selon les seuils habituels (vert &lt; 76 %, orange ≤ 85 %, rouge ≤ 100 %, noir &gt; 100 %).</li>
                     <li><strong>Valeurs nominales :</strong> chaque PF est évalué avec son propre vert et son propre cycle, sans les actions de micro-régulation — c'est le sens d'une comparaison entre programmes. Seules les secondes lucarnes comptent dans le vert, pour retrouver les valeurs du tableau Trafic.</li>
-                    <li><strong>Dossier imprimé :</strong> la case <em>Capacité des plans de feu et scénarios</em> de <em>Fichier → Imprimer le projet…</em> ajoute le tableau en fin de dossier, tel que réglé dans cette fenêtre (plans, scénarios, jeu de trafic, V.Utile). Ces réglages sont enregistrés avec le projet.</li>
+                    <li><strong>Dossier imprimé :</strong> la case <em>Capacité des plans de feu et scénarios</em> de <em><VoirMenu chemin="Fichier → Imprimer le projet…" /></em> ajoute le tableau en fin de dossier, tel que réglé dans cette fenêtre (plans, scénarios, jeu de trafic, V.Utile). Ces réglages sont enregistrés avec le projet.</li>
                     <li><strong>Exporter (PNG) :</strong> le bouton génère une image du tableau, la télécharge et la copie dans le presse-papiers, prête à coller dans un rapport ou un courriel (couleurs comprises).</li>
                 </ul>
             </section>
@@ -743,12 +774,12 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                 <h4>Sauvegarde et projets</h4>
                 <ul>
                     <li><strong>Sauvegarde automatique :</strong> Les données sont sauvegardées automatiquement dans le navigateur (local storage)</li>
-                    <li><strong>Nouveau projet :</strong> Menu Fichier → Nouveau projet réinitialise l'application (actif uniquement si le projet a été modifié)</li>
-                    <li><strong>Ouvrir un projet :</strong> Menu Fichier → Ouvrir un projet permet de charger un fichier JSON depuis le disque. Les répertoires récents sont proposés en sous-menu.</li>
-                    <li><strong>Restaurer un projet récent :</strong> Menu Fichier → Restaurer un projet récent… recharge un projet sauvegardé automatiquement dans le navigateur. Le bouton <strong>i</strong> de la fenêtre rappelle qu'il s'agit des dernières versions enregistrées sur ce poste : vérifiez qu'un projet partagé n'a pas été modifié entre-temps par un autre utilisateur.</li>
-                    <li><strong>Sauvegarder :</strong> Menu Fichier → Sauvegarder exporte le projet au format JSON sur le disque. Les répertoires récents sont proposés en sous-menu.</li>
+                    <li><strong>Nouveau projet :</strong> Menu <VoirMenu chemin="Fichier → Nouveau projet" /> réinitialise l'application (actif uniquement si le projet a été modifié)</li>
+                    <li><strong>Ouvrir un projet :</strong> Menu <VoirMenu chemin="Fichier → Ouvrir un projet" /> permet de charger un fichier JSON depuis le disque. Les répertoires récents sont proposés en sous-menu.</li>
+                    <li><strong>Restaurer un projet récent :</strong> Menu <VoirMenu chemin="Fichier → Restaurer un projet récent…" /> recharge un projet sauvegardé automatiquement dans le navigateur. Le bouton <strong>i</strong> de la fenêtre rappelle qu'il s'agit des dernières versions enregistrées sur ce poste : vérifiez qu'un projet partagé n'a pas été modifié entre-temps par un autre utilisateur.</li>
+                    <li><strong>Sauvegarder :</strong> Menu <VoirMenu chemin="Fichier → Sauvegarder" /> exporte le projet au format JSON sur le disque. Les répertoires récents sont proposés en sous-menu.</li>
                     <li><strong>Firefox, Safari et Brave :</strong> Ces navigateurs n'ont pas les fenêtres Ouvrir / Enregistrer de Chrome et Edge (Brave les désactive pour protéger la vie privée). <em>Ouvrir un projet</em> passe par le sélecteur de fichier classique, et <em>Sauvegarder</em> télécharge le fichier JSON sous le nom du projet, dans le dossier des téléchargements — sauf si le navigateur est réglé pour demander où enregistrer (Firefox : Paramètres → Général → Fichiers et applications ; Brave : Paramètres → Téléchargements). Les répertoires récents n'y sont pas proposés.</li>
-                    <li><strong>Importer Excel :</strong> Menu Fichier → Importer Excel charge les données depuis un fichier Excel (.xlsx). Les répertoires récents sont proposés en sous-menu.</li>
+                    <li><strong>Importer Excel :</strong> Menu <VoirMenu chemin="Fichier → Importer → Projet Excel..." /> charge les données depuis un fichier Excel (.xlsx). Les répertoires récents sont proposés en sous-menu.</li>
                 </ul>
                 <h5 style={{ marginTop: '15px', marginBottom: '10px', color: '#aaa' }}>Sécurité de la sauvegarde</h5>
                 <p>L'application inclut des protections contre la perte de données :</p>
@@ -763,14 +794,14 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
 
             <section className="help-section">
                 <h4>Interopérabilité</h4>
-                <p>Menu Fichier → <strong>Interopérabilité…</strong> — axe d'évolution envisagé pour échanger des données de programmation de carrefours à feux avec d'autres systèmes, qu'ils soient propriétaires ou ouverts.</p>
+                <p>Les menus <VoirMenu chemin="Fichier → Importer" /> et <VoirMenu chemin="Fichier → Exporter" /> portent l'axe d'évolution envisagé pour échanger des données de programmation de carrefours à feux avec d'autres systèmes, qu'ils soient propriétaires ou ouverts.</p>
                 <p>L'objectif à terme est de faciliter la reprise et la restitution de plans de feux entre TraCflux et les principaux environnements du marché, afin d'éviter les ressaisies et de fluidifier le travail des traficiens. Cette capacité d'interopérabilité constitue un potentiel important de l'outil et un levier d'ouverture vers l'écosystème existant.</p>
-                <p><em>Cette fonctionnalité n'est pas opérationnelle dans la présente version : elle est présentée à titre d'orientation produit.</em> Seule exception, à l'état d'ébauche : la reprise des projets DiagFeux, décrite dans <em>Import DiagFeux</em>.</p>
+                <p><em>Cette fonctionnalité n'est pas opérationnelle dans la présente version : elle est présentée à titre d'orientation produit.</em> Seule exception, à l'état d'ébauche : la reprise des projets DiagFeux, décrite dans <em><VoirSection titre="Import DiagFeux" /></em>.</p>
             </section>
 
             <section className="help-section">
                 <h4>Liens externes</h4>
-                <p>Menu Fichier → Liens externes permet de créer des raccourcis vers des fichiers ou URLs associés au projet :</p>
+                <p>Menu <VoirMenu chemin="Fichier → Liens externes" /> permet de créer des raccourcis vers des fichiers ou URLs associés au projet :</p>
                 <ul>
                     <li><strong>Ajouter un lien :</strong> Renseignez un nom et un chemin (fichier local ou URL)</li>
                     <li><strong>Format du chemin :</strong>
@@ -788,7 +819,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
 
             <section className="help-section">
                 <h4>Impression du dossier</h4>
-                <p>Le menu Fichier → <strong>Imprimer le dossier...</strong> ouvre un dialog de sélection des sections à inclure dans le dossier imprimé, et du format de page.</p>
+                <p>Le menu <strong><VoirMenu chemin="Fichier → Imprimer le projet..." /></strong> ouvre un dialog de sélection des sections à inclure dans le dossier imprimé, et du format de page.</p>
                 <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Format de page : paysage ou portrait</h5>
                 <p>Le sélecteur se trouve en tête du dialog. Le <strong>paysage</strong> est la valeur par défaut : c'est lui qui donne au diagramme la largeur qu'exige un cycle long. Le <strong>portrait</strong> offre 190 mm utiles au lieu de 277, mais 240 mm de hauteur au lieu de 148 — plus favorable aux pages de tableaux. Le format retenu est mémorisé avec le projet.</p>
                 <p>Le choix se fait sur la durée du cycle, par une règle simple. Chaque format a un <strong>cycle de référence</strong> : 120 secondes en paysage, 80 en portrait. En deçà de ce seuil, une seconde vaut toujours la même largeur, quel que soit le plan de feu — deux plans de durées différentes restent donc comparables à la règle. Au-delà, le diagramme est comprimé pour tenir dans la page.</p>
@@ -862,7 +893,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
 
             <section className="help-section">
                 <h4>Export en PNG</h4>
-                <p>Le menu Fichier → <strong>Exporter en PNG...</strong> propose un sous-menu permettant de capturer indépendamment sept vues de l'application :</p>
+                <p>Le menu <strong><VoirMenu chemin="Fichier → Exporter en PNG" /></strong> propose un sous-menu permettant de capturer indépendamment sept vues de l'application :</p>
                 <ul>
                     <li><strong>Formulaire :</strong> le tableau des groupes (nom, type, courant, durées, vert minimum) tel qu'affiché dans l'onglet Configuration</li>
                     <li><strong>Diagramme :</strong> le diagramme temporel du plan de feu actif (sans les fenêtres latérales commentaires/remarques, qui sont masquées dans le PNG)</li>
@@ -887,7 +918,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
 
             <section className="help-section">
                 <h4>Import DiagFeux</h4>
-                <p>Le menu <strong>Fichier → Importer → Projet DiagFeux (.dfe)</strong> reprend une étude réalisée avec DiagFeux, le logiciel du CERTU (aujourd'hui Cerema), pour éviter de la ressaisir. Cette fonction reste une <strong>ébauche</strong> : elle n'a pas encore été confrontée à un vrai fichier <code>.dfe</code>. Le résultat est une base de reprise à vérifier, pas une conversion fidèle.</p>
+                <p>Le menu <strong><VoirMenu chemin="Fichier → Importer → Projet DiagFeux (.dfe)" /></strong> reprend une étude réalisée avec DiagFeux, le logiciel du CERTU (aujourd'hui Cerema), pour éviter de la ressaisir. Cette fonction reste une <strong>ébauche</strong> : elle n'a pas encore été confrontée à un vrai fichier <code>.dfe</code>. Le résultat est une base de reprise à vérifier, pas une conversion fidèle.</p>
                 <ol>
                     <li><strong>Choisir le fichier.</strong> Une confirmation rappelle cette réserve et, si un projet est ouvert, qu'il sera remplacé : enregistrez-le avant.</li>
                     <li><strong>Lire les points à vérifier.</strong> Une fenêtre liste, à la fin de l'import, ce qui demande un contrôle ou n'a pas été repris.</li>

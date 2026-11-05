@@ -13,6 +13,8 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 - **Diagramme** : la flèche du haut des points de repos, synchros BTS et instants Co est logée dans la
   barre des secondes. Elle reste visible au défilement vertical, et se survole et se glisse comme avant.
+- **Aide en ligne : renvois cliquables.** Un renvoi vers une section y conduit, un renvoi vers un menu
+  déplie ce menu dans la fenêtre principale et signale l'entrée visée, sans fermer l'aide.
 - **Aide en ligne** : nouvelle section *Import DiagFeux* ; fenêtres détachées, flèches des repères,
   survol de l'image, impression des commentaires et remarques, et capacité mises à jour.
 
@@ -22,6 +24,10 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   d'utilisation, dans la fenêtre principale comme dans une fenêtre détachée.
 - **Image du carrefour** : une flèche ne réagit au survol que sur son tracé, et non dans le carré qui
   l'entoure, qui recouvrait ses voisines et gardait le focus. La fenêtre détachée fait de même.
+- **Fenêtres détachées** : leur remontée au premier plan ne retire plus le clavier à un champ de saisie
+  d'une fenêtre détachée, dont la recherche de l'aide.
+- **Aide en ligne** : renvois de menu corrigés (Options de contraste, Détachement, Imprimer le projet,
+  Importer, Interopérabilité).
 - **Infobulle Synchro BTS** : elle indique un instant, sans seconde de fin.
 - **Import DiagFeux** : reprise des plans de fonctionnement dans des onglets distincts, avec leurs
   cycles et matrices ; le scénario définitif est sélectionné à l’ouverture. Les décalages retardent

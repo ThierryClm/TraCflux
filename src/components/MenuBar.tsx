@@ -5,6 +5,7 @@ import type { PermissionFlag } from '../hooks/useAuth';
 import type { ModeAffichage } from '../utils/modeAffichage';
 import type { PrefsInfobulles } from '../hooks/usePreferencesEspaceTravail';
 import { usePrefsVerrou } from '../utils/verrouSaisie';
+import { definirOuvertureMenu, libelleMenu, trouverEntreeMenu } from '../utils/renvoiMenu';
 import './MenuBar.css';
 import { INFOBULLE_ASSISTANT } from '../utils/prerequisAssistant';
 
@@ -41,6 +42,26 @@ interface Menu {
     action?: string;
     items?: ElementMenu[];
 }
+
+/** Où conduit un chemin de l'aide : sous-menus à déplier et entrée à signaler. */
+const resoudreCheminMenu = (menus: Record<string, Menu>, [tete, ...suite]: string[]) => {
+    const trouve = Object.entries(menus).find(([, menu]) => libelleMenu(menu.label) === libelleMenu(tete));
+    if (!trouve) return null;
+    const [cle, menu] = trouve;
+    const sousMenus: string[] = [];
+    let entrees = menu.items ?? [];
+    let cible: string | null = null;
+    for (const libelle of suite) {
+        const entree = trouverEntreeMenu(entrees, libelle);
+        if (!entree) return null;
+        cible = entree.label ?? null;
+        // Une entrée grisée ne se déplie pas : c'est elle que l'on signale.
+        if (entree.disabled) break;
+        if (entree.submenuId) sousMenus.push(entree.submenuId);
+        entrees = entree.submenu ?? [];
+    }
+    return { cle, sousMenus, cible };
+};
 
 /** État de l'application que la barre reflète (coches, entrées grisées). */
 export interface OptionsMenuBar {
@@ -148,6 +169,8 @@ const MenuBar = ({
     // Troisième niveau : un sous-menu ouvert à l'intérieur d'un sous-menu
     // (ex. Diagramme ▸ Options ▸ Style de flèche).
     const [openNestedSubmenu, setOpenNestedSubmenu] = useState<string | null>(null);
+    // Entrée à signaler après un renvoi de l'aide ; `n` relance le signal sur la même entrée.
+    const [repere, setRepere] = useState<{ libelle: string; n: number } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     // Timer pour l'ouverture différée au survol (filtre les passages rapides)
 
@@ -194,6 +217,17 @@ const MenuBar = ({
         setMainOverlayOpen('menubar', !!openMenu);
         return () => setMainOverlayOpen('menubar', false);
     }, [openMenu]);
+
+    // Signale l'entrée visée par l'aide, le temps de la repérer dans le menu ouvert.
+    useEffect(() => {
+        if (!repere) return;
+        const entrees = menuRef.current?.querySelectorAll<HTMLElement>('.menu-item') ?? [];
+        const entree = [...entrees].reverse().find(el => libelleMenu(el.textContent ?? '') === libelleMenu(repere.libelle));
+        entree?.classList.add('menu-repere');
+        entree?.scrollIntoView?.({ block: 'nearest' });
+        const t = setTimeout(() => entree?.classList.remove('menu-repere'), 2500);
+        return () => { clearTimeout(t); entree?.classList.remove('menu-repere'); };
+    }, [repere]);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -665,6 +699,22 @@ const MenuBar = ({
     };
 
     // Render submenu item (for Options submenu)
+    // L'aide en ligne ouvre le menu à l'entrée dont elle parle.
+    const menusRef = useRef(menus);
+    menusRef.current = menus;
+    useEffect(() => {
+        definirOuvertureMenu((chemin) => {
+            const resolu = resoudreCheminMenu(menusRef.current, chemin);
+            if (!resolu) return false;
+            setOpenMenu(resolu.cle);
+            setOpenSubmenu(resolu.sousMenus[0] ?? null);
+            setOpenNestedSubmenu(resolu.sousMenus[1] ?? null);
+            setRepere(resolu.cible ? { libelle: resolu.cible, n: Date.now() } : null);
+            return true;
+        });
+        return () => definirOuvertureMenu(null);
+    }, []);
+
     const renderSubmenuItem = (subItem: ElementMenu, subIdx: number): ReactElement => {
         if (subItem.type === 'separator') {
             return <div key={subIdx} className="menu-separator" />;
