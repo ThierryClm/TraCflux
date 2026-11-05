@@ -191,7 +191,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Sauvegarde des options de mise en page dans le projet :</strong> Les états des cases <em>Affichage des paramètres</em>, <em>Commentaires du diagramme</em>, <em>Remarques du diagramme</em> et <em>Description des conditions micro</em> sont enregistrés avec le projet et restaurés à l'ouverture.</li>
                     <li><strong>Espace de travail propre au nouveau projet :</strong> L'ouverture d'un nouveau projet (ou d'un ancien projet sans options enregistrées) ferme automatiquement toutes les fenêtres détachées. Vous détachez ensuite uniquement ce dont vous avez besoin pour ce projet.</li>
                     <li><strong>Sous-menus persistants :</strong> Les sous-menus <em>Mise en page</em> et <em>Détachements</em> restent ouverts après chaque clic sur une option, ce qui facilite le réglage de plusieurs cases à la suite.</li>
-                    <li><strong>Fenêtres détachées au premier plan :</strong> Lorsque vous cliquez dans la fenêtre principale, les fenêtres détachées passent momentanément derrière. Elles remontent automatiquement au premier plan après environ une seconde d'inactivité, sans voler le focus pendant la frappe.</li>
+                    <li><strong>Fenêtres détachées au premier plan :</strong> Lorsque vous cliquez dans la fenêtre principale, les fenêtres détachées passent momentanément derrière. Elles remontent automatiquement au premier plan environ une seconde plus tard, sans voler le focus : tant qu'un champ de saisie ou une liste déroulante est en cours d'utilisation, elles attendent, et la liste ouverte le reste. Elles reviennent une fois que vous avez cliqué ailleurs. Le réglage vaut aussi pour une liste ouverte dans une fenêtre détachée, sur l'écran principal comme sur un second écran.</li>
                     <li><strong>Fenêtre détachée hors écran :</strong> Après un changement de poste ou la déconnexion d'un écran secondaire, décochez puis recochez la fenêtre concernée dans le menu <strong>Mise en page → Détachements</strong> : elle réapparaîtra centrée sur l'écran principal.</li>
                     <li><strong>Popups bloquées par le navigateur :</strong> Les navigateurs n'autorisent qu'une seule fenêtre détachée à la fois lors de l'ouverture d'un projet contenant plusieurs détachements. Pour les autoriser toutes en une fois, ajoutez le site à la liste des popups autorisés :
                         <ul>
@@ -337,6 +337,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Point de repos :</strong> Point de repos dans le cycle. Si Plage 1/2 non renseignées, s'applique à tous les groupes. À sa création, la Description reçoit « attente maxi 10 secondes » : le nombre, en violet, est la durée du repos appliquée en simulation, modifiable à la main (30 s au plus). Le nombre est lu juste après « maxi » ou « max » (« maxi 15'' »), ou juste avant (« 12'' max »). Si la colonne Description était masquée, elle passe en <em>Automatique</em> pour montrer le texte proposé.</li>
                     <li><strong>Synchro BTS :</strong> Synchronisation avec le système BTS. Si Plage 1/2 non renseignées, s'applique à tous les groupes.</li>
                 </ul>
+                <p><strong>Flèches des repères :</strong> un Point de repos, une Synchro BTS ou un Instant Co se dessine par deux flèches verticales à son instant. La flèche du haut est logée dans la barre des secondes : elle reste visible quand les lignes du diagramme défilent, quelle que soit la plage. La flèche du bas se place sous le dernier groupe de la plage. L'une comme l'autre se survolent pour afficher la seconde dans l'infobulle et se glissent pour déplacer l'instant.</p>
                 <p><strong>Variables DIASER (Priorité Bus).</strong> Les actions de micro-régulation dédiées à la priorité bus s'appuient sur les variables définies par la norme <strong>DIASER</strong>, protocole d'échange standard entre le contrôleur de carrefour et les véhicules de transport en commun. Elles sont saisies dans les colonnes <code>Action_Micro</code> et <code>Description</code>.</p>
 
                 <h5 style={{ marginTop: '20px', marginBottom: '10px', color: '#aaa' }}>Légende des symboles</h5>
@@ -481,6 +482,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                 </ul>
                 <p>Sur le plan du carrefour, la flèche survolée est entourée d'un halo qui pulse doucement. Sa couleur s'adapte au fond de l'image : <strong>magenta sur un plan clair</strong>, <strong>blanc sur une vue aérienne sombre</strong>. Ce n'est pas un défaut d'affichage si elle change en passant d'un carrefour à l'autre — un halo blanc serait invisible sur un plan au trait, une couleur vive moins franche sur une photo.</p>
                 <p><strong>Ces liens franchissent les fenêtres détachées, dans les deux sens.</strong> Le plan du carrefour posé sur un second écran réagit au survol du diagramme resté sur le premier, et réciproquement. Il en va de même du miroir du diagramme, du formulaire et des données Trafic : une fenêtre détachée n'est pas une copie figée, elle reste solidaire du reste.</p>
+                <p><strong>Une flèche ne réagit que sur son tracé</strong>, avec quelques pixels de marge pour la viser facilement, quelles que soient sa taille et son orientation. Le carré vide qui l'entoure laisse la souris atteindre les flèches voisines : passer d'une flèche à l'autre déplace aussitôt la mise en évidence, même sur un plan dense. Il en va de même dans la fenêtre détachée et, avec la case <em>Signal</em>, sur le feu dessiné. Là où deux flèches se croisent, celle du dessus répond.</p>
                 <p><em>Si votre système est réglé sur « mouvement réduit », le halo reste affiché mais ne pulse pas.</em></p>
             </section>
 
@@ -524,8 +526,8 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     </li>
                     <li><strong>Mode simulation :</strong> Les flèches suivent le temps de la simulation en cours</li>
                     <li><strong>Escamotage :</strong> Quand un escamotage est actif, la flèche du groupe cible passe à l'orange puis au rouge pendant la zone de coupure</li>
-                    <li><strong>Déplacement au clavier :</strong> Sélectionnez une flèche en cliquant dessus, puis utilisez les touches fléchées du clavier (gauche, droite, haut, bas) pour la déplacer point par point. Le focus doit être sur l'image du carrefour (ne fonctionne pas quand l'image est détachée).</li>
-                    <li><strong>Glisser-déposer :</strong> Cliquez et maintenez sur une flèche pour la déplacer. La flèche suit le mouvement de la souris sans se recentrer sur le point de clic.</li>
+                    <li><strong>Déplacement au clavier :</strong> Sélectionnez une flèche en cliquant sur son tracé, puis utilisez les touches fléchées du clavier (gauche, droite, haut, bas) pour la déplacer point par point. Le focus doit être sur l'image du carrefour (ne fonctionne pas quand l'image est détachée).</li>
+                    <li><strong>Glisser-déposer :</strong> Cliquez et maintenez sur le tracé d'une flèche pour la déplacer. La flèche suit le mouvement de la souris sans se recentrer sur le point de clic. Un clic à côté du tracé compte comme un clic sur l'image.</li>
                 </ul>
                 <p><strong>Case Signal :</strong> Cochée, chaque groupe dont le champ <em>Signal</em> du formulaire est renseigné montre, à la place de sa flèche, un feu de ce signal tel qu'il apparaît sur le terrain, d'après les figures de l'ISR (livre 1, 6e partie). L'image détachée fait de même ; un groupe sans signal garde sa flèche et les bulles de phasage ne changent pas. Le numéro de groupe passe au coin haut droit du feu. La case est grisée tant qu'aucun groupe n'a de signal renseigné.</p>
                 <ul>
@@ -593,7 +595,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Coloration de toute la ligne :</strong> Sans sélection, <span style={{color: '#4CAF50'}}>+</span> ou <span style={{color: '#F44336'}}>−</span> colore tout le contenu.</li>
                     <li><strong>Basculer en blanc :</strong> Si une ligne entière est déjà colorée, appuyez à nouveau sur <span style={{color: '#4CAF50'}}>+</span> ou <span style={{color: '#F44336'}}>−</span> pour retirer la couleur.</li>
                     <li><strong>Affichage :</strong> Les commentaires sont affichés dans la colonne dédiée du diagramme. L'option <em>Mise en page → Commentaires du diagramme</em> permet de les masquer globalement.</li>
-                    <li><strong>Impression :</strong> Les commentaires figurent dans l'export du dossier complet.</li>
+                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Commentaires</em> de chaque plan de feu les ajoute en texte simple, une ligne « GF x : » par groupe commenté. Voir <em>Impression du dossier</em>.</li>
                 </ul>
             </section>
 
@@ -606,7 +608,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Mise en forme conservée :</strong> Si vous collez depuis un traitement de texte (Word, LibreOffice...), la mise en forme (taille de police, couleurs) est préservée.</li>
                     <li><strong>Longueur :</strong> jusqu'à 1 000 caractères par plan de feu, quel que soit le nombre de groupes. Sauts de ligne, ponctuation et mise en forme sont conservés ; au-delà de la hauteur du diagramme, la zone défile. Arrivée à la limite, la saisie s'arrête ; un collage trop long est réduit à la place restante.</li>
                     <li><strong>Affichage :</strong> Les remarques sont affichées dans une zone dédiée à droite du diagramme. L'option <em>Mise en page → Remarques du diagramme</em> permet de les masquer globalement.</li>
-                    <li><strong>Impression :</strong> Les remarques du PF actif figurent dans l'export du dossier complet.</li>
+                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Remarques</em> de chaque plan de feu les ajoute en texte simple, avec leurs sauts de ligne. Voir <em>Impression du dossier</em>.</li>
                 </ul>
             </section>
 
@@ -715,7 +717,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li><strong>Plans de feu et scénarios :</strong> la liste déroulante propose les plans de feu à cocher et, en retrait sous chacun, ses scénarios enregistrés dans l'onglet Simulation. Un plan s'évalue à ses valeurs nominales ; un scénario, sur le diagramme simulé de ses actions (cycle simulé, verts recalculés). On peut ainsi aligner les programmes de la journée (pointe, heure creuse, nuit), plusieurs versions d'un diagramme, ou un plan et ses variantes de micro-régulation. Un plan dont le jeu de trafic est vide est grisé, ses scénarios aussi ; avec un jeu unique appliqué à tous, tous redeviennent disponibles.</li>
                     <li><strong>Jeu de données trafic :</strong> deux modes. <em>« Jeu associé à chaque PF »</em> — chaque PF utilise son propre jeu de trafic. <em>Un jeu unique</em> (HPM, HPS, HC…) — le même trafic est appliqué à tous les PF cochés, ce qui isole l'effet du plan à trafic égal. Les jeux sans aucune donnée saisie apparaissent grisés et ne sont pas sélectionnables.</li>
                     <li><strong>Lecture du tableau :</strong> une ligne par groupe de feu VL, une colonne par plan ou scénario affichant Trafic, V.Utile et Cap.U. La case <em>Afficher le V.Utile</em> masque ou rétablit la colonne V.Utile. Lorsque toutes les colonnes partagent le même trafic, une seule colonne Trafic est affichée au début pour éviter la répétition. La capacité utilisée est colorée selon les seuils habituels (vert &lt; 76 %, orange ≤ 85 %, rouge ≤ 100 %, noir &gt; 100 %).</li>
-                    <li><strong>Valeurs nominales :</strong> chaque PF est évalué avec son propre vert et son propre cycle, sans les actions de micro-régulation — c'est le sens d'une comparaison entre programmes.</li>
+                    <li><strong>Valeurs nominales :</strong> chaque PF est évalué avec son propre vert et son propre cycle, sans les actions de micro-régulation — c'est le sens d'une comparaison entre programmes. Seules les secondes lucarnes comptent dans le vert, pour retrouver les valeurs du tableau Trafic.</li>
                     <li><strong>Dossier imprimé :</strong> la case <em>Capacité des plans de feu et scénarios</em> de <em>Fichier → Imprimer le projet…</em> ajoute le tableau en fin de dossier, tel que réglé dans cette fenêtre (plans, scénarios, jeu de trafic, V.Utile). Ces réglages sont enregistrés avec le projet.</li>
                     <li><strong>Exporter (PNG) :</strong> le bouton génère une image du tableau, la télécharge et la copie dans le presse-papiers, prête à coller dans un rapport ou un courriel (couleurs comprises).</li>
                 </ul>
@@ -763,7 +765,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                 <h4>Interopérabilité</h4>
                 <p>Menu Fichier → <strong>Interopérabilité…</strong> — axe d'évolution envisagé pour échanger des données de programmation de carrefours à feux avec d'autres systèmes, qu'ils soient propriétaires ou ouverts.</p>
                 <p>L'objectif à terme est de faciliter la reprise et la restitution de plans de feux entre TraCflux et les principaux environnements du marché, afin d'éviter les ressaisies et de fluidifier le travail des traficiens. Cette capacité d'interopérabilité constitue un potentiel important de l'outil et un levier d'ouverture vers l'écosystème existant.</p>
-                <p><em>Cette fonctionnalité n'est pas opérationnelle dans la présente version : elle est présentée à titre d'orientation produit.</em></p>
+                <p><em>Cette fonctionnalité n'est pas opérationnelle dans la présente version : elle est présentée à titre d'orientation produit.</em> Seule exception, à l'état d'ébauche : la reprise des projets DiagFeux, décrite dans <em>Import DiagFeux</em>.</p>
             </section>
 
             <section className="help-section">
@@ -881,6 +883,23 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true }: HelpConte
                     <li>📋 <strong>Copié dans le presse-papiers</strong> — un simple <kbd>Ctrl+V</kbd> dans Word, PowerPoint, un mail ou tout outil graphique colle directement l'image sans passer par le fichier</li>
                 </ul>
                 <p>Un toast de confirmation indique le nom du fichier et le statut du presse-papiers. Si la copie dans le presse-papiers échoue (Safari, contexte HTTP non sécurisé, autorisation refusée), le téléchargement reste opérationnel et le toast le signale.</p>
+            </section>
+
+            <section className="help-section">
+                <h4>Import DiagFeux</h4>
+                <p>Le menu <strong>Fichier → Importer → Projet DiagFeux (.dfe)</strong> reprend une étude réalisée avec DiagFeux, le logiciel du CERTU (aujourd'hui Cerema), pour éviter de la ressaisir. Cette fonction reste une <strong>ébauche</strong> : elle n'a pas encore été confrontée à un vrai fichier <code>.dfe</code>. Le résultat est une base de reprise à vérifier, pas une conversion fidèle.</p>
+                <ol>
+                    <li><strong>Choisir le fichier.</strong> Une confirmation rappelle cette réserve et, si un projet est ouvert, qu'il sera remplacé : enregistrez-le avant.</li>
+                    <li><strong>Lire les points à vérifier.</strong> Une fenêtre liste, à la fin de l'import, ce qui demande un contrôle ou n'a pas été repris.</li>
+                    <li><strong>Contrôler le projet.</strong> Les décalages et les dégagements du fichier sont conservés tels quels : les conflits éventuels s'affichent dans TraCflux et restent à traiter.</li>
+                </ol>
+                <ul>
+                    <li><strong>Repris :</strong> les groupes, avec leur type déduit du signal ; les plans de fonctionnement et leur cycle, chacun dans son onglet, jusqu'à 15, le scénario définitif étant affiché à l'ouverture ; les décalages et les durées de vert ; les matrices des temps interverts ; les propriétés du carrefour et les dates.</li>
+                    <li><strong>Trafics :</strong> les volumes dont l'affectation à un groupe est certaine sont agrégés par groupe, sans compter deux fois un courant partagé. Les autres, notamment en mode tableur, sont conservés dans les commentaires du projet.</li>
+                    <li><strong>Phasage :</strong> chaque groupe devient indépendant. Une ligne peut rester verte sur deux phases consécutives, y compris à cheval sur la fin du cycle. Les ouvertures disjointes, ou une présence sur toutes les phases, sont refusées lorsqu'elles ne peuvent pas être converties fidèlement.</li>
+                    <li><strong>Verts minimaux :</strong> ils sont communs à tous les plans dans TraCflux. S'ils diffèrent entre scénarios, le maximum est retenu et les valeurs sources figurent dans les remarques des plans.</li>
+                    <li><strong>Non repris :</strong> la géométrie (branches, voies, îlots, passages piétons, fond de plan). Chargez une image dans <em>Image du carrefour</em> et placez-y les flèches des groupes.</li>
+                </ul>
             </section>
 
             <section className="help-section">
