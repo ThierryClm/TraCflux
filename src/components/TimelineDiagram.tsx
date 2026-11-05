@@ -19,6 +19,7 @@ import IncrustationEscamotageGroupe from './timeline/incrustations/IncrustationE
 import IncrustationSignalAideConduite from './timeline/incrustations/IncrustationSignalAideConduite';
 import IncrustationControleDeFlot from './timeline/incrustations/IncrustationControleDeFlot';
 import FlechesPointDeRepos from './timeline/incrustations/FlechesPointDeRepos';
+import FlechesRegleActions from './timeline/incrustations/FlechesRegleActions';
 import FlechesSynchroBts from './timeline/incrustations/FlechesSynchroBts';
 import FlechesInstantCo from './timeline/incrustations/FlechesInstantCo';
 import BarrePrioritePietons from './timeline/incrustations/BarrePrioritePietons';
@@ -667,6 +668,14 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                             simulationResult={simulationResult}
                             timeWindow={TIME_WINDOW}
                             tooltipsEnabled={tooltipsEnabled}
+                            reperesRegle={(
+                                <FlechesRegleActions
+                                    ctx={contexteIncrustations}
+                                    instantCoActions={instantCoActions}
+                                    pointReposActions={pointReposActions}
+                                    synchroBtsActions={synchroBtsActions}
+                                />
+                            )}
                         />
 
                         {/* Rows */}

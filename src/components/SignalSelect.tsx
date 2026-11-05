@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
 import SignalModule from './SignalModule';
+import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { famillesPourType, libelleSignalIsr, signalAdmis } from '../utils/signauxIsr';
 import { ROUGE_SIGNAL } from '../utils/aspectSignal';
 import { usePrefsVerrou } from '../utils/verrouSaisie';
@@ -131,6 +132,12 @@ const SignalSelect = ({ value, type, courant, label, title, tooltipsEnabled = tr
         fermer();
         bouton.current?.focus({ preventScroll: true });
     };
+
+    // Une fenêtre détachée remontée passerait devant la liste déployée.
+    useEffect(() => {
+        setMainOverlayOpen(id, ouvert);
+        return () => setMainOverlayOpen(id, false);
+    }, [id, ouvert]);
 
     useLayoutEffect(() => {
         if (!ouvert) return;

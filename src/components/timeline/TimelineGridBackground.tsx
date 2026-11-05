@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import type { Groupe, Matrice } from '../../types/projet';
 import EmptyState from '../EmptyState';
 import type { TimelineSimulationResult } from './timelineTypes';
@@ -44,6 +44,8 @@ interface TimelineGridBackgroundProps {
     simulationResult: TimelineSimulationResult | null;
     timeWindow: number;
     tooltipsEnabled: boolean;
+    /** Repères logés dans la barre des secondes : ils ne défilent pas avec les lignes. */
+    reperesRegle?: ReactNode;
 }
 
 const TimelineGridBackground = ({
@@ -56,7 +58,8 @@ const TimelineGridBackground = ({
     simulationCurrentTime,
     simulationResult,
     timeWindow,
-    tooltipsEnabled
+    tooltipsEnabled,
+    reperesRegle
 }: TimelineGridBackgroundProps) => {
     const overlayHeight = rulerHeight + 1 + groups.length * rowTotalHeight + 30;
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
@@ -86,6 +89,7 @@ const TimelineGridBackground = ({
                         title={tip(`Animation en cours — ${Math.floor(playbackTime)}s / ${timeWindow}s`)}
                     />
                 )}
+                {reperesRegle}
             </div>
 
             {simulationResult?.restPoints?.map((restPoint, index) => (
