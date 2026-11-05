@@ -72,7 +72,7 @@ describe("Renvois de l'aide", () => {
         const onFermer = vi.fn();
         const { container } = render(
             <>
-                <MenuBar hasPermission={() => true} layoutOptions={OPTIONS} onAction={() => {}} />
+                <MenuBar hasPermission={() => true} hasActiveProject={false} layoutOptions={OPTIONS} onAction={() => {}} />
                 <HelpContent onFermer={onFermer} />
             </>
         );
