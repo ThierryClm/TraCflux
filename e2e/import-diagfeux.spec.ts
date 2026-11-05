@@ -29,7 +29,7 @@ test('l’import DiagFeux affiche les types et signaux, et garde les cycles en c
     for (const [i, type, signal] of [[0, 'V', 'R11v'], [1, 'B', 'R13b'], [2, 'P', 'R12']] as const) {
         await expect(rows.nth(i).locator('select').first()).toHaveValue(type);
         await expect(rows.nth(i).locator('select').first().locator('option:checked')).toHaveText(type);
-        await expect(page.getByRole('combobox', { name: `Signal du groupe ${i + 1}`, exact: true })).toHaveText(signal);
+        await expect(page.getByRole('combobox', { name: `Signal du groupe ${i + 1}`, exact: true })).toHaveJSProperty('value', signal);
     }
     const cycle = page.locator('.cycle-input-label input').first();
     await expect(cycle).toHaveValue('80');
