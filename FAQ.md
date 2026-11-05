@@ -60,26 +60,26 @@ L'entrée existe : **Fichier → Importer → Projet DiagFeux (.dfe)**. Elle por
 
 **Ce qui manque, et c'est l'essentiel.** Cet importateur **n'a jamais rencontré un fichier `.dfe` réel**. Il a été développé contre une spécification, pas contre des données. Or une spécification décrit ce qui est permis, pas ce que les fichiers contiennent vraiment : versions successives du logiciel, champs laissés vides, conventions propres à chaque bureau d'études. Tant que cette confrontation n'a pas eu lieu, le résultat doit être tenu pour une **base de reprise à vérifier**, et non pour une conversion fidèle.
 
-**Vous pouvez débloquer cette étape.** Si vous disposez d'un projet DiagFeux, même anonymisé, que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) : un seul fichier réel fait passer cette fonction de l'ébauche à l'outil. C'est aujourd'hui le seul point de blocage.
+**Vous pouvez débloquer cette étape.** Si vous disposez d'un projet DiagFeux, même anonymisé, que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) : un fichier réel permettra de vérifier la conversion au-delà des jeux d’essai fictifs.
 
 **Ce que l'importateur sait lire**, d'après le schéma :
 
-- les **groupes de feux** (lignes de feux), avec la distinction véhicules / piétons ;
+- les **groupes de feux** (lignes de feux), avec le type déduit du signal (véhicules, piétons, bus, tramways, cycles) ;
 - leurs **décalages** et **durées de vert**, déduits de la séquence de phases (et des décalages d'ouverture / fermeture) ;
 - la **matrice des temps d'intervert** — reconstituée selon la règle de DiagFeux : *rouge de dégagement + temps de jaune* ;
-- le **cycle** ;
+- les **plans de fonctionnement** et leur **cycle**, jusqu’à 15 onglets ; un scénario sans plan de fonctionnement est repris sous forme de plan de base, identifié comme tel ;
 - les **propriétés** du carrefour : commune, identifiant, contrôleur (fabricant et type), situation en ou hors agglomération, auteur de l'étude, dates et commentaires.
 
-Le **phasage** de DiagFeux est converti vers le modèle de TraCflux, où **chaque groupe reste indépendant** — une conversion toujours possible, le second modèle étant un surensemble du premier. Le plan importé **respecte par construction tous les interverts** : il arrive donc sans conflit.
+Le **phasage** de DiagFeux est converti vers le modèle de TraCflux, où **chaque groupe reste indépendant**. Les plans de fonctionnement fournissent les durées réelles ; leur plan de base fournit les minima et les contraintes. Une ligne peut rester verte sur deux phases consécutives, y compris à cheval sur la fin du cycle. Les ouvertures disjointes ou une présence sur toutes les phases sont refusées lorsqu’elles ne peuvent pas être converties fidèlement. Les décalages et les dégagements du fichier sont conservés : les éventuels conflits restent à vérifier dans TraCflux.
 
-**Ce qui n'est pas repris :** la **géométrie** (branches, voies, îlots, passages piétons, fond de plan DXF). TraCflux n'utilise pas de modèle géométrique : il s'appuie sur une **image de fond** (photo aérienne, plan CAO ou schéma) sur laquelle vous positionnez les flèches des groupes. Les **matrices de trafic** origine-destination ne sont pas encore agrégées automatiquement.
+**Ce qui n'est pas repris :** la **géométrie** (branches, voies, îlots, passages piétons, fond de plan DXF). TraCflux n'utilise pas de modèle géométrique : il s'appuie sur une **image de fond** (photo aérienne, plan CAO ou schéma) sur laquelle vous positionnez les flèches des groupes. Les **matrices de trafic** origine-destination sont agrégées lorsque les trajectoires permettent une affectation certaine. Un courant partagé entre plusieurs groupes n’est pas compté deux fois. Les volumes sans affectation certaine, notamment en mode tableur, sont conservés dans les commentaires du projet. Les verts minimaux étant partagés entre les plans dans TraCflux, le maximum est retenu s’ils diffèrent entre scénarios ; les valeurs sources figurent dans les remarques des plans.
 
-À l'import, TraCflux affiche la liste de ce qui a été converti ou approximé.
+À l'import, TraCflux affiche les points à vérifier et les données non reprises.
 
 **Les trois objectifs de finalisation**, par ordre d'importance :
 
 1. **La validation sur fichiers réels** — la seule qui conditionne les autres, et qui ne dépend que de la mise à disposition d'un `.dfe`.
-2. **Les matrices de trafic origine-destination**, lues mais pas encore agrégées vers les données de trafic de TraCflux.
+2. **Les affectations de trafic ambiguës**, qui demandent encore une reprise manuelle à partir des matrices conservées.
 3. **L'export vers DiagFeux**, dans l'autre sens, qui n'est pas commencé. L'import vise à prolonger l'usage d'un patrimoine existant, pas à maintenir un aller-retour entre deux outils dont l'un n'est plus maintenu.
 
 ### Qu'est-ce que DiagFeux, et pourquoi TraCflux l'importe-t-il ?

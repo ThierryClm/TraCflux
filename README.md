@@ -77,7 +77,7 @@ L'assistant s'ouvre dans une fenêtre détachée, que l'on pose sur un autre éc
 
 > ⚠️ **Fonctionnalité en objectif de développement.** L'importateur est construit à partir du schéma XML officiel et de la documentation de DiagFeux, et testé sur des jeux d'essai construits pour cela. Il **n'a pas encore été confronté à un fichier `.dfe` réel**. Si vous disposez d'un projet DiagFeux (même anonymisé) que vous pouvez partager, [ouvrez une issue](https://github.com/ThierryClm/TraCflux/issues) — cela accélérera directement la mise au point.
 
-**DiagFeux**, le logiciel de conception de diagrammes de feux du CERTU (aujourd'hui Cerema), **n'est plus maintenu**. TraCflux permet d'importer ses projets (`.dfe`) — groupes, décalages, verts, matrice d'interverts, propriétés.
+**DiagFeux**, le logiciel de conception de diagrammes de feux du CERTU (aujourd'hui Cerema), **n'est plus maintenu**. TraCflux permet d'importer ses projets (`.dfe`) — groupes et signaux, plans de fonctionnement et cycles, décalages, verts, matrices d’interverts, propriétés et trafics dont l’affectation aux groupes est certaine.
 
 Les bureaux d'études et collectivités disposant d'anciennes études DiagFeux peuvent ainsi **les reprendre plutôt que de les ressaisir** : **Fichier → Importer → Projet DiagFeux (.dfe)**.
 
