@@ -6,6 +6,7 @@ import type { ModeAffichage } from '../utils/modeAffichage';
 import type { PrefsInfobulles } from '../hooks/usePreferencesEspaceTravail';
 import { usePrefsVerrou } from '../utils/verrouSaisie';
 import { definirOuvertureMenu, libelleMenu, trouverEntreeMenu } from '../utils/renvoiMenu';
+import { toast } from '../utils/toast';
 import './MenuBar.css';
 import { INFOBULLE_ASSISTANT } from '../utils/prerequisAssistant';
 
@@ -706,6 +707,10 @@ const MenuBar = ({
         definirOuvertureMenu((chemin) => {
             const resolu = resoudreCheminMenu(menusRef.current, chemin);
             if (!resolu) return false;
+            if (menusRef.current[resolu.cle].disabled) {
+                toast.info(`Le menu ${chemin[0]} s'active une fois un projet ouvert.`);
+                return false;
+            }
             setOpenMenu(resolu.cle);
             setOpenSubmenu(resolu.sousMenus[0] ?? null);
             setOpenNestedSubmenu(resolu.sousMenus[1] ?? null);

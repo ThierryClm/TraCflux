@@ -4,10 +4,11 @@
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { ouvrirMenu } from './aide';
+import { ouvrirExemple, ouvrirMenu } from './aide';
 
 const ouvrirAide = async (page: Page): Promise<Page> => {
-    await page.goto('/');
+    // Un projet ouvert : les menus Mise en page et Diagramme sont sinon inactifs.
+    await ouvrirExemple(page);
     const item = page.locator('.menu-bar').getByText('Aide', { exact: true });
     await ouvrirMenu(page, 'A propos', item);
     const nouvelle = page.context().waitForEvent('page');

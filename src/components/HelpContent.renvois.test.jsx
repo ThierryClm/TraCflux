@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import HelpContent from './HelpContent';
 import MenuBar from './MenuBar';
 import { allerAuMenu } from '../utils/renvoiMenu';
+import { toast } from '../utils/toast';
 
 const OPTIONS = { tooltipPrefs: {}, toastPrefs: {} };
 
@@ -64,6 +65,21 @@ describe("Renvois de l'aide", () => {
         const { container } = dessiner({ onFermer });
         fireEvent.click(renvoi(container, 'data-aide-menu', 'Mise en page → Options de contraste'));
         expect(onFermer).toHaveBeenCalled();
+    });
+
+    it('sans projet, annonce que le menu est inactif et laisse l\'aide ouverte', () => {
+        const info = vi.spyOn(toast, 'info');
+        const onFermer = vi.fn();
+        const { container } = render(
+            <>
+                <MenuBar hasPermission={() => true} layoutOptions={OPTIONS} onAction={() => {}} />
+                <HelpContent onFermer={onFermer} />
+            </>
+        );
+        fireEvent.click(renvoi(container, 'data-aide-menu', 'Mise en page → Options de contraste'));
+        expect(info).toHaveBeenCalledWith(expect.stringContaining('Mise en page'));
+        expect(onFermer).not.toHaveBeenCalled();
+        expect(container.querySelector('.menu-repere')).toBeNull();
     });
 
     it('reste un simple texte sans barre de menus', () => {
