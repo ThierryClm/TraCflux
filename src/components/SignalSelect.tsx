@@ -1,10 +1,9 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import SignalModule from './SignalModule';
+import VignetteSignal from './VignetteSignal';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import { famillesPourType, libelleSignalIsr, signalAdmis } from '../utils/signauxIsr';
-import { ROUGE_SIGNAL } from '../utils/aspectSignal';
 import { usePrefsVerrou } from '../utils/verrouSaisie';
 import './SignalSelect.css';
 
@@ -18,14 +17,6 @@ interface SignalSelectProps {
     disabled?: boolean;
     onChange: (code: string) => void;
 }
-
-/** Le même module que sur le carrefour, allumé et immobile pour l'identifier. */
-const VignetteSignal = ({ code, courant }: { code: string; courant?: string }) => (
-    <span className="signal-select-icon" aria-hidden="true">
-        <SignalModule code={code} courant={courant} couleur={code === 'R24' || code === 'R25' ? ROUGE_SIGNAL : 'rgb(0, 255, 0)'}
-            temps={0} enLecture={false} a13bAllume />
-    </span>
-);
 
 interface SignalOptionProps {
     code: string;

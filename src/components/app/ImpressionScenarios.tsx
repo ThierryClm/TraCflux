@@ -175,6 +175,7 @@ const ScenarioImprime = ({
                                 globalTime={0}
                                 onGroupClick={() => {}}
                                 pixelsPerSecond={simPPS}
+                                flechesBasAuPied
                                 conflicts={[]}
                                 conflictMatrix={conflictMatrix}
                                 updateGroupParams={() => {}}

@@ -66,6 +66,11 @@ describe.each([
         expect(Number(traits[0].getAttribute('y1'))).toBeGreaterThan(50 + 1 + 3 * 31);
     });
 
+    it('à l\'impression, descend la flèche du bas sous le diagramme, quelle que soit la plage', () => {
+        const { container } = dessiner([action(nom, 1, 2)], { flechesBasAuPied: true });
+        expect(Number(container.querySelector(`${flecheBas} line`).getAttribute('y2'))).toBe(50 + 1 + 4 * 31 + 2);
+    });
+
     it('allume le survol et lance le glissement depuis la barre', () => {
         const survol = vi.fn();
         const debut = vi.fn();

@@ -18,6 +18,9 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 - **Aide en ligne** : nouvelle section *Import DiagFeux* ; fenêtres détachées, flèches des repères,
   survol de l'image, impression des commentaires et remarques, et capacité mises à jour.
 
+- **Dossier imprimé** : le champ Signal du Formulaire montre le pictogramme du signal à côté de son code,
+  et les flèches du bas des points de repos, synchros BTS et instants Co se placent sous le diagramme.
+
 ### Corrigé
 
 - **Fenêtres détachées** : leur remontée au premier plan ne referme plus une liste déroulante en cours

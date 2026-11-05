@@ -14,6 +14,8 @@ export interface ContexteIncrustations {
     cycleLength: number;
     effectiveCycleLength: number;
     RULER_HEIGHT: number;
+    /** Impression : flèches du bas sous le diagramme, et non sous la plage. */
+    flechesBasAuPied?: boolean;
     ROW_HEIGHT: number;
     ROW_TOTAL_HEIGHT: number;
     svgHeight: number;

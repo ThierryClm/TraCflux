@@ -4,7 +4,7 @@ import PrintPreviewModal from './PrintPreviewModal';
 
 /** Dossier : les commentaires des groupes, une ligne « GF x : » chacun, et les remarques du plan. */
 const groupes = [1, 2, 3].map(id => ({
-    id, name: `G${id}`, type: 'VL', courant: 'TD', minGreen: 5, laneCoef: 1,
+    id, name: `G${id}`, type: 'VL', courant: 'TD', minGreen: 5, laneCoef: 1, signal: id === 1 ? 'R11v' : '',
     comment: id === 2 ? '<span style="color: #4CAF50">Boucle à remplacer</span>' : '',
     offset: (id - 1) * 20, durations: { green: 15, orange: 3, red: 42 }
 }));
@@ -30,6 +30,16 @@ const apercu = (dossierSections) => render(
 );
 
 const lignes = (container) => [...container.querySelectorAll('.print-commentaire-ligne')].map(d => d.textContent);
+
+describe('Dossier : formulaire', () => {
+    it('montre le pictogramme du signal à côté de son code, rien sans signal', () => {
+        const { container } = apercu({ formulaire: true });
+        const cases = [...container.querySelectorAll('.print-form-signal')];
+        expect(cases.map(c => c.textContent)).toEqual(['R11v', '', '']);
+        expect(cases[0].querySelector('svg')).toHaveAttribute('aria-label', 'Signal R11v');
+        expect(cases[1].querySelector('svg')).toBeNull();
+    });
+});
 
 describe('Dossier : commentaires et remarques des plans de feu', () => {
     it('une ligne « GF x : » par groupe commenté, propre à chaque plan', () => {
