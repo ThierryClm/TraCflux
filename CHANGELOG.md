@@ -7,6 +7,19 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [Non publié]
+
+### Corrigé
+
+- **Import DiagFeux** : reprise des plans de fonctionnement dans des onglets distincts, avec leurs
+  cycles et matrices ; le scénario définitif est sélectionné à l’ouverture. Les décalages retardent
+  l’ouverture et avancent la fermeture ; les lignes sur deux phases consécutives gardent leur vert.
+  Les zéros sans incompatibilité ne créent plus de contraintes dans la matrice.
+- **Import DiagFeux** : types déduits du signal, jaunes et verts minimaux du plan repris, dates
+  converties pour le formulaire. Les trafics à affectation certaine sont agrégés par groupe ; les
+  matrices sources restent dans les commentaires. Les cas non convertibles sont signalés ou refusés.
+  La validation sur un vrai fichier `.dfe` reste à faire.
+
 ## [1.5.9] — 2026-11-04
 
 ### Ajouté
