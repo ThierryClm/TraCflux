@@ -89,7 +89,7 @@ describe('diagfeuxImporter — import valide', () => {
 
     it('crée un groupe par ligne de feux (nom = ID DiagFeux)', () => {
         expect(state.groups.map(g => g.name)).toEqual(['1', '2']);
-        expect(state.groups.every(g => g.type === 'VL')).toBe(true);
+        expect(state.groups.every(g => g.type === 'V')).toBe(true);
     });
 
     it('cycle = somme des durées de phases', () => {
@@ -126,16 +126,16 @@ describe('diagfeuxImporter — import valide', () => {
 });
 
 describe('diagfeuxImporter — décalages ouverture/fermeture', () => {
-    it('DécalageOuvre avance l\'ouverture (et resserre le vert de l\'antagoniste)', () => {
+    it('DécalageOuvre retarde l\'ouverture et DécalageFerme avance la fermeture', () => {
         const xml = SAMPLE.replace(
             '<IDLigneFeux>2</IDLigneFeux>',
             '<IDLigneFeux DécalageOuvre="2" DécalageFerme="1">2</IDLigneFeux>'
         );
         const { state } = parseDiagfeux(xml);
-        // Ligne 2 ouvre 2 s plus tôt : offset 38
-        expect(state.groups[1].offset).toBe(38);
-        // Ligne 1 doit donc fermer 8 s avant 38 -> vert 30 (au lieu de 32)
-        expect(state.groups[0].durations.green).toBe(30);
+        // Ligne 2 ouvre à 42 ; la fermeture de 1 reste indépendante de ce retard.
+        expect(state.groups[1].offset).toBe(42);
+        expect(state.groups[0].durations.green).toBe(32);
+        expect(state.groups[1].durations.green).toBe(8);
     });
 });
 
@@ -143,7 +143,7 @@ describe('diagfeuxImporter — lignes piétonnes', () => {
     const { state, warnings } = parseDiagfeux(SAMPLE_PIETON);
 
     it('détecte le piéton par le préfixe « P » (guide : Fx véhicule, Px piéton)', () => {
-        expect(state.groups[0].type).toBe('VL');
+        expect(state.groups[0].type).toBe('V');
         expect(state.groups[1].type).toBe('P');
         expect(state.groups[1].courant).toBe('Piéton');
     });
