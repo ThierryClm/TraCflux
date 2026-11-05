@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
+import avecPriseSurvol from '../utils/priseFleche';
 import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
@@ -275,7 +276,7 @@ const useFloatingImageRenderer = ({
                                         <div className="arrow-symbol" style={{ transform: signal ? `scale(${echelleSignal(scale, courant)})` : `rotate(${rotation}deg) scale(${scale})` }}>
                                             {signal ? (
                                                 <SignalModule code={signal} couleur={arrowColor} temps={activeTime} enLecture={isPlayingSimulation} a13bAllume={ppAllume} courant={courant} />
-                                            ) : renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, ppAllume)}
+                                            ) : avecPriseSurvol(renderFloatingArrowSVG(courant, arrowColor, arrowLength, turnLength, ppAllume), scale * floatingZoom)}
                                         </div>
                                         {showNames && group?.name && (
                                             // Contre-échelle : l'étiquette garde sa taille à l'écran quel que

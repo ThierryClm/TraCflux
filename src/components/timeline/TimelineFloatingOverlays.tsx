@@ -64,7 +64,8 @@ const ActionTooltip = ({ actionData, actionTooltip, microVariableNames, secondes
     const deb = simulees ? simulees.deb : parseInt(String(action.deb ?? ''), 10) || 0;
     const fin = simulees ? simulees.fin : parseInt(String(action.fin ?? ''), 10) || 0;
     const isPointInTime = action.action === 'Point de repos'
-        || action.action === 'Instant Co' || action.action === 'Instant CO';
+        || action.action === 'Instant Co' || action.action === 'Instant CO'
+        || action.action === 'Synchro BTS';
     const glissementGroups = action.action === 'Fermeture anticipée'
         ? [action.actGf1, action.actGf1Gf2, action.actGf1Gf3, action.actGf1Gf4]
             .map((value) => (value == null ? '' : value.toString().replace(/[^0-9]/g, '').trim()))
