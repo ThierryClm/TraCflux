@@ -33,7 +33,10 @@ const avecPriseSurvol = (
     echelle: number
 ): ReactElement<SVGProps<SVGSVGElement>> => {
     const epaisseur = EPAISSEUR_PRISE_PX / (PX_PAR_UNITE * (echelle || 1));
-    return cloneElement(fleche, undefined, ...Children.toArray(fleche.props.children), ...doublures(fleche.props.children, epaisseur));
+    // Numérotées à plat : les branches d'un <g> reprennent les mêmes clés d'un groupe à l'autre.
+    const prises = doublures(fleche.props.children, epaisseur)
+        .map((doublure, i) => cloneElement(doublure as ReactElement, { key: `prise-${i}` }));
+    return cloneElement(fleche, undefined, ...Children.toArray(fleche.props.children), ...prises);
 };
 
 export default avecPriseSurvol;

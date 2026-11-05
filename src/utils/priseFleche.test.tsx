@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import avecPriseSurvol from './priseFleche';
 import renderArrowSVG from './renderArrowSVG';
 
@@ -13,6 +13,13 @@ describe('avecPriseSurvol', () => {
         const traits = prises('TD');
         expect(traits.map(trait => trait.tagName)).toEqual(['line', 'polyline']);
         traits.forEach(trait => expect(trait.getAttribute('stroke')).toBe('transparent'));
+    });
+
+    it('donne aux doublures des clés distinctes de celles du tracé', () => {
+        const erreur = vi.spyOn(console, 'error').mockImplementation(() => {});
+        prises('TD_G_D');
+        expect(erreur).not.toHaveBeenCalled();
+        erreur.mockRestore();
     });
 
     it('garde le tracé visible intact', () => {
