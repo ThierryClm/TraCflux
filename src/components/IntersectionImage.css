@@ -227,6 +227,29 @@
     transform: translateX(-50%);
 }
 
+/* Survol au plus près du tracé : le cadre du marqueur et du symbole, agrandi
+   avec la flèche, couvrirait ses voisines. Le trait, sa doublure et l'étiquette
+   restent seuls sensibles ; les événements remontent au marqueur. */
+.intersection-image-area .arrow-marker,
+.floating-arrow-marker {
+    pointer-events: none;
+}
+
+.arrow-marker .arrow-symbol svg *,
+.floating-arrow-marker .arrow-symbol svg * {
+    pointer-events: visiblePainted;
+}
+
+.arrow-marker .arrow-symbol svg .fleche-prise,
+.floating-arrow-marker .arrow-symbol svg .fleche-prise {
+    pointer-events: stroke;
+}
+
+.arrow-marker .arrow-label,
+.floating-arrow-marker .arrow-label {
+    pointer-events: auto;
+}
+
 /* For side labels (Piéton/Cycle) */
 .arrow-marker.side-label .arrow-label,
 .floating-arrow-marker.side-label .arrow-label {

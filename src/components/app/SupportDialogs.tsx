@@ -117,7 +117,7 @@ export default function SupportDialogs({ model }: SupportDialogsProps) {
 
             {/* Modal Aide en ligne */}
             <Modal isOpen={helpModal} onClose={() => setHelpModal(false)} title="Aide - TraCflux" className="modal-wide">
-                <HelpContent initialAnchor={helpAnchor} tooltipsEnabled={tooltipPrefs.main} />
+                <HelpContent initialAnchor={helpAnchor} tooltipsEnabled={tooltipPrefs.main} onFermer={() => setHelpModal(false)} />
             </Modal>
 
             {/* Comparateur de capacité : rendu dans une fenêtre détachée

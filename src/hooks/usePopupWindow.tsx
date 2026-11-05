@@ -202,13 +202,14 @@ const popupFlushers = new Set<() => void>(); // fn() par popup : applique le con
 // Champ de SAISIE texte/nombre où le focus et le curseur doivent être préservés.
 // On exclut range (curseurs de recadrage), checkbox/radio, boutons, color, file…
 // qui n'ont pas de curseur de texte et gagnent à se mettre à jour en direct.
+const TYPES_SANS_CURSEUR = ['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file'];
+
 const isFieldEl = (el: Element | null): boolean => {
     if (!(el instanceof HTMLElement)) return false;
     if (el.isContentEditable) return true;
     if (el instanceof HTMLTextAreaElement) return true;
     if (el instanceof HTMLInputElement) {
-        const t = (el.type || 'text').toLowerCase();
-        return !['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file'].includes(t);
+        return !TYPES_SANS_CURSEUR.includes((el.type || 'text').toLowerCase());
     }
     return false;
 };
@@ -217,20 +218,26 @@ const flushAllPopups = () => {
     popupFlushers.forEach(fn => { try { fn(); } catch { /* ignore */ } });
 };
 
-// Liste déroulante en cours d'usage dans la fenêtre active : remonter une popup
-// la replierait. Le test porte sur la balise, `instanceof` échouant sur un
-// élément de popup, et n'entre pas dans isFieldEl : une liste garde le focus
-// après le choix, son rendu ne doit pas attendre qu'on la quitte.
-const isListeEnCours = (doc: Document) => doc.activeElement?.tagName === 'SELECT' && doc.hasFocus();
+// Contrôle en cours d'usage dans la fenêtre active : remonter une popup replierait
+// une liste et retirerait un instant le clavier à un champ. Le test porte sur la
+// balise, `instanceof` échouant sur un élément de popup, et reste distinct de
+// isFieldEl : une liste garde le focus après le choix, et le rendu d'une popup
+// ne doit pas attendre qu'on la quitte.
+const isControleEnCours = (doc: Document) => {
+    if (!doc.hasFocus()) return false;
+    const el = doc.activeElement as HTMLElement | null;
+    if (el?.tagName === 'SELECT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable) return true;
+    return el?.tagName === 'INPUT' && !TYPES_SANS_CURSEUR.includes((el as HTMLInputElement).type.toLowerCase());
+};
 
 // Un champ de saisie ou une liste sont-ils en cours d'usage (fenêtre principale
 // ou popup) ? Sert à suspendre la remontée des popups au premier plan (qui
 // volerait leur focus) tant qu'on s'en sert.
 const isEditingAnyField = () => {
-    if (isFieldEl(document.activeElement) || isListeEnCours(document)) return true;
+    if (isFieldEl(document.activeElement) || isControleEnCours(document)) return true;
     for (const p of openPopups) {
         try {
-            if (!p.closed && (isFieldEl(p.document.activeElement) || isListeEnCours(p.document))) return true;
+            if (!p.closed && isControleEnCours(p.document)) return true;
         } catch { /* closed */ }
     }
     return false;

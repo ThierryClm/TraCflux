@@ -47,6 +47,15 @@ describe('TimelineFloatingOverlays', () => {
         expect(screen.getByText('glissement sur GF2 et GF3')).toBeInTheDocument();
     });
 
+    it("présente une synchro BTS comme un instant, sans seconde de fin", () => {
+        renderOverlays({
+            actionData: [{ id: 6, action: 'Synchro BTS', deb: '40', fin: '' }],
+            actionTooltip: { actionId: 6, showMicro: false, x: 0, y: 0 }
+        });
+
+        expect(screen.getByText('seconde 40')).toBeInTheDocument();
+    });
+
     it('affiche les variables micro enrichies après temporisation', () => {
         renderOverlays({
             actionData: [{ id: 7, action: 'Action', deb: '2', fin: '4', micro: 'SI CAPTEUR ALORS' }],

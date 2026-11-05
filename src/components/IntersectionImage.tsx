@@ -4,6 +4,7 @@ import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { compressImageDataUrl, dataUrlBytes, formatBytes, ALERT_ABOVE_BYTES } from '../utils/imageCompressor';
 import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
+import avecPriseSurvol from '../utils/priseFleche';
 import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
@@ -895,7 +896,7 @@ const IntersectionImage = ({
                                     >
                                         {signal ? (
                                             <SignalModule code={signal} couleur={arrowColor} temps={displayedTime} enLecture={!!isPlaying} a13bAllume={ppAllume} courant={groupInfo.courant} />
-                                        ) : renderArrowSVG(groupInfo.courant, arrowColor, arrowLength, turnLength, ppAllume)}
+                                        ) : avecPriseSurvol(renderArrowSVG(groupInfo.courant, arrowColor, arrowLength, turnLength, ppAllume), scale)}
                                     </div>
                                     {showGroupNames && !showSignals && groupInfo.name && (
                                         <span className="arrow-label">

@@ -73,6 +73,16 @@ describe('usePopupWindow — remontée des fenêtres et listes déroulantes', ()
         select.remove();
     });
 
+    it('laisse le clavier à un champ de la fenêtre détachée', () => {
+        fenetreActive(popup.document, true);
+        const champ = popup.document.body.appendChild(popup.document.createElement('input'));
+        champ.type = 'search';
+        champ.focus();
+        bringAllPopupsToFront(popup);
+        expect(focusPopup).not.toHaveBeenCalled();
+        champ.remove();
+    });
+
     it('ignore une liste restée sélectionnée dans une fenêtre qui n\'est plus active', () => {
         fenetreActive(document, false);
         selectPrincipal.focus();

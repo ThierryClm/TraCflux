@@ -490,6 +490,16 @@ body.sepia-mode .help-toc a {
     color: #1976d2 !important;
 }
 
+body.light-mode .help-lien,
+body.sepia-mode .help-lien {
+    color: #1976d2;
+}
+
+body.light-mode .help-content.sans-menu .help-lien-menu,
+body.sepia-mode .help-content.sans-menu .help-lien-menu {
+    color: inherit;
+}
+
 body.light-mode .help-toc ul li a,
 body.sepia-mode .help-toc ul li a {
     color: #444 !important;
