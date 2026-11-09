@@ -43,6 +43,8 @@ body.light-mode .welcome-screen .welcome-hint strong { color: #555; }
 }
 
 .header-inputs {
+    min-width: 0;
+    flex: 0 1 auto;
     display: flex;
     gap: 1rem;
     align-items: center;
@@ -54,7 +56,9 @@ body.light-mode .welcome-screen .welcome-hint strong { color: #555; }
     border-bottom: 1px solid #555;
     color: white;
     font-size: 0.95rem;
-    width: 40ch;
+    width: 60ch;
+    max-width: 100%;
+    min-width: 0;
     font-weight: bold;
 }
 

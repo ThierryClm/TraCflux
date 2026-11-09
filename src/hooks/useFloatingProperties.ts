@@ -16,6 +16,7 @@ const useFloatingProperties = (activePFName = '') => {
 
     const propertiesPopup = usePopupWindow({
         geometryKey: 'properties',
+        sectionVerrou: 'proprietes',
         isOpen: showFloatingProperties,
         onClose: () => setShowFloatingProperties(false),
         title: popupTitle,

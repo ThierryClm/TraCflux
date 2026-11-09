@@ -12,11 +12,12 @@ const useFloatingMatrix = (groupCount: number, activePFName = '', verrouillee = 
     }, [showFloatingMatrix]);
 
     const pf = activePFName.trim();
-    const contexte = [pf, verrouillee ? 'Verrouillé' : ''].filter(Boolean).join(' · ');
-    const popupTitle = contexte ? `Matrice intervert — ${contexte}` : 'Matrice intervert';
+    const popupTitle = pf ? `Matrice intervert — ${pf}` : 'Matrice intervert';
 
     const matrixPopup = usePopupWindow({
         geometryKey: 'matrix',
+        sectionVerrou: 'matrice',
+        verrouille: verrouillee,
         isOpen: showFloatingMatrix,
         onClose: () => setShowFloatingMatrix(false),
         title: popupTitle,

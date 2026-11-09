@@ -12,6 +12,7 @@ import type { SimulationResult } from '../../simulation';
 import type { ConflictInfo, HoveredConflict } from '../ConflictList';
 import type { ProjectProperties } from '../PropertiesPanel';
 import { LARGEUR_CONFIGURATION } from '../../hooks/useUILayout';
+import { MentionVerrou, ZoneVerrouSaisie } from '../../utils/verrouSaisie';
 
 type ActiveTab = 'properties' | 'config' | 'matrix' | 'traffic';
 type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
@@ -222,9 +223,9 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                     overflow: 'hidden'
                 }}>
                     {phasageBulleEnabled ? (
-                        <div className="phasage-bulle-sidebar">
+                        <ZoneVerrouSaisie section="phasages"><div className="phasage-bulle-sidebar">
                             <div className="sidebar-header">
-                                <h3>Groupe de feux</h3>
+                                <h3>Groupe de feux <MentionVerrou section="phasages" /></h3>
                                 <p className="sidebar-subtitle">Sélectionnez les groupes à afficher</p>
                             </div>
                             <div className="phasage-group-list">
@@ -271,7 +272,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                     Tout décocher
                                 </button>
                             </div>
-                        </div>
+                        </div></ZoneVerrouSaisie>
                     ) : simulationEnabled ? (
                         <>
                             <SimulationPanel

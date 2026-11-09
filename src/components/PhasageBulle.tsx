@@ -4,9 +4,14 @@ import { getEllipseConfig, computeBubbleBox, ARROW_OUTER_OFFSET, planFrameForBub
 import type { ActionMicro, FlecheCarrefour, Groupe } from '../types/projet';
 import type { SimulationResult } from '../simulation';
 import './PhasageBulle.css';
+import { MentionVerrou, ZoneVerrouSaisie } from '../utils/verrouSaisie';
 
 /** Unité des longueurs émises : pixels à l'écran, millimètres sur la feuille. */
 export type UniteLongueur = 'px' | 'mm';
+
+// Référence stable : un changement de verrou ne doit pas relancer sans fin
+// la synchronisation des instants quand aucun tableau n'est fourni.
+const INSTANTS_INITIAUX = [0, 0, 0, 0, 0, 0];
 
 export interface PhasageBulleProps {
     groups: Groupe[];
@@ -48,7 +53,7 @@ const PhasageBulle = ({
     selectedActions = [],
     intersectionName = '',
     planName = '',
-    initialTimes = [0, 0, 0, 0, 0, 0],
+    initialTimes = INSTANTS_INITIAUX,
     initialCount = 4,
     hoveredGroupId = null,
     setHoveredGroupId = () => {},
@@ -593,10 +598,10 @@ const PhasageBulle = ({
     };
 
     return (
-        <div className="phasage-bulle-container">
+        <ZoneVerrouSaisie section="phasages"><div className="phasage-bulle-container">
             <div className="phasage-bulle-header">
                 <div className="phasage-title-section">
-                    <h3>Phasage bulle</h3>
+                    <h3>Phasage bulle <MentionVerrou section="phasages" /></h3>
                     {(planName || intersectionName) && (
                         <span className="phasage-plan-name">
                             {planName && intersectionName
@@ -710,7 +715,7 @@ const PhasageBulle = ({
                     })}
                 </svg>
             </div>
-        </div>
+        </div></ZoneVerrouSaisie>
     );
 };
 

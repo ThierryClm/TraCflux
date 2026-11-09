@@ -16,6 +16,7 @@ const useFloatingForm = (groupCount: number, activePFName = '') => {
 
     const formPopup = usePopupWindow({
         geometryKey: 'form',
+        sectionVerrou: 'configuration',
         isOpen: showFloatingForm,
         onClose: () => setShowFloatingForm(false),
         title: popupTitle,

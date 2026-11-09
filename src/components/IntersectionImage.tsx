@@ -14,6 +14,7 @@ import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/pro
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
 import './IntersectionImage.css';
+import { lirePrefsVerrou, ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 
 export interface IntersectionImageProps {
     groups: Groupe[];
@@ -62,9 +63,9 @@ const IntersectionImage = ({
     groups,
     imageData,
     imageFondClair = true,
-    onImageChange,
+    onImageChange: onImageChangeProp,
     arrows,
-    onArrowsChange,
+    onArrowsChange: onArrowsChangeProp,
     cycleLength,
     simulationResult,
     // Animation state (lifted to parent)
@@ -95,14 +96,19 @@ const IntersectionImage = ({
     intersectionName,
     // Image brightness/contrast (persisted with project)
     imageBrightness = 100,
-    setImageBrightness,
+    setImageBrightness: setImageBrightnessProp,
     imageContrast = 100,
-    setImageContrast,
+    setImageContrast: setImageContrastProp,
     // Cases numéros / noms / flèches / signal (persistées avec le projet)
     displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true, showSignals: false },
-    onDisplayOptionChange,
+    onDisplayOptionChange: onDisplayOptionChangeProp,
     tooltipsEnabled = true
 }: IntersectionImageProps) => {
+    const onImageChange = useCallback((data: string) => { if (!lirePrefsVerrou().image) onImageChangeProp(data); }, [onImageChangeProp]);
+    const onArrowsChange = useCallback((next: FlecheCarrefour[]) => { if (!lirePrefsVerrou().image) onArrowsChangeProp(next); }, [onArrowsChangeProp]);
+    const onDisplayOptionChange = (option: IntersectionDisplayOption, value: boolean) => { if (!lirePrefsVerrou().image) onDisplayOptionChangeProp?.(option, value); };
+    const setImageBrightness = setImageBrightnessProp && ((value: number) => { if (!lirePrefsVerrou().image) setImageBrightnessProp(value); });
+    const setImageContrast = setImageContrastProp && ((value: number) => { if (!lirePrefsVerrou().image) setImageContrastProp(value); });
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const fileInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -774,14 +780,15 @@ const IntersectionImage = ({
         });
     }, [isPlaying, playbackSpeed, setCurrentTime]);
 
-    return (
+    return (<ZoneVerrouSaisie section="image">
         <div className="intersection-image-container">
             <div className="intersection-header">
-                <h3>Image du carrefour{intersectionName ? ` — ${intersectionName}` : ''}</h3>
+                <h3>Image du carrefour{intersectionName ? ` — ${intersectionName}` : ''} <MentionVerrou section="image" /></h3>
                 <div className="intersection-controls">
                     {imageData && onShowFloatingImage && (
                         <button
                             className="upload-btn floating-btn"
+                            data-verrou-autorise
                             onClick={onShowFloatingImage}
                             title={tip('Ouvrir dans une fenêtre séparée')}
                         >
@@ -976,7 +983,7 @@ const IntersectionImage = ({
                         <fieldset className="arrow-editor" disabled={showSignals}>
                             <h4>Modifier la flèche</h4>
                             {/* Ces réglages décrivent la flèche : la vue Signal ne les montre pas. */}
-                            {showSignals && <p className="arrow-editor-note">Réglages inactifs tant que la case Signal est cochée.</p>}
+                            {showSignals && <p className="arrow-editor-note">Réglages inactifs tant que la case Signaux est cochée.</p>}
                             {/* Apply to all same type option */}
                             <label className="checkbox-option apply-all-option">
                                 <input
@@ -1201,7 +1208,7 @@ const IntersectionImage = ({
                                 disabled={!signalDisponible}
                                 onChange={(e) => setShowSignals(e.target.checked)}
                             />
-                            <span>Signal</span>
+                            <span>Signaux</span>
                         </label>
                     </div>
                     {imageData && setImageBrightness && (
@@ -1239,7 +1246,7 @@ const IntersectionImage = ({
                 <p className="hint">Glissez pour déplacer. Double-clic pour tourner de 45°.</p>
             )}
         </div>
-    );
+    </ZoneVerrouSaisie>);
 };
 
 export default IntersectionImage;

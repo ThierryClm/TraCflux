@@ -14,6 +14,7 @@ import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
 import { entier } from '../utils/entier';
+import { nomsALaSauvegarde, nomsALOuverture } from '../utils/nomsProjet';
 import type { AlertFunction } from '../components/ConfirmProvider';
 import type { LargeursColonnes } from '../components/ActionTable';
 import { safeLocalStorage, ensureLocalStorageSpace } from './trafficLight/stockageLocal';
@@ -297,7 +298,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             currentProjectNameRef.current = name;
             setProjectName(name);
             // Restaurer le nom du carrefour depuis les données (indépendant du nom du projet)
-            if (data.intersectionName) setIntersectionName(data.intersectionName);
+            setIntersectionName(nomsALOuverture(name, data.intersectionName).intersectionName);
 
             // Migrate and validate groups structure for old projects
             if (data.groups) {
@@ -440,7 +441,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             currentProjectNameRef.current = loadedProjectName;
             setProjectName(loadedProjectName);
             // Restaurer le nom du carrefour (indépendant du nom du projet)
-            setIntersectionName(state.intersectionName || "Nouveau Carrefour");
+            setIntersectionName(state.intersectionName?.trim() ? state.intersectionName : loadedProjectName || '');
 
             // Toujours mettre à jour les groupes (avec valeur par défaut si absent)
             if (state.groups && Array.isArray(state.groups) && state.groups.length > 0) {
@@ -798,6 +799,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             return false;
         }
 
+        const noms = nomsALaSauvegarde(getFullStateRef.current(), name);
+        if (!intersectionName.trim() && !currentProjectNameRef.current) setIntersectionName(noms.intersectionName);
         currentProjectNameRef.current = name;
         setProjectName(name);
         // Payload canonique (getFullState) + métadonnées de sauvegarde. Une
@@ -806,7 +809,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         const nowIso = new Date().toISOString();
         const projectData = {
             ...getFullStateRef.current(),
-            projectName: name,
+            ...noms,
             projectProperties: { ...projectProperties, dateModification: nowIso },
             savedAt: nowIso
             // Note: simulation state is NOT saved with project (per user request)

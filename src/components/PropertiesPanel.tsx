@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import './PropertiesPanel.css';
 import { LOGO_APP } from '../utils/logoApp';
-import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 
 const PHASE_OPTIONS = [
     { value: '', label: '--' },
@@ -22,6 +22,7 @@ export interface ProjectProperties {
     controleur: string;
     programme: string;
     horsAgglomeration: boolean;
+    carrefourCoordonne: boolean;
     moa: string;
     moe: string;
     bureauEtudes: string;
@@ -129,7 +130,7 @@ const PropertiesPanel = ({ intersectionName, setIntersectionName, projectPropert
     return (<ZoneVerrouSaisie section="proprietes">
         <div className="properties-panel">
             <h3 className="properties-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                Propriétés du projet
+                Propriétés du projet <MentionVerrou section="proprietes" />
                 {onDetach && (
                     <button
                         className="detach-btn"
@@ -191,6 +192,13 @@ const PropertiesPanel = ({ intersectionName, setIntersectionName, projectPropert
                         title={tip('Hors agglomération : le temps de jaune des groupes VL et Bus passe à 5 secondes')}
                         style={{ width: '18px', height: '18px', flex: '0 0 auto', cursor: 'pointer', accentColor: '#3498db' }}
                     />
+                </div>
+                <div className="property-field">
+                    <label htmlFor="carrefourCoordonne">Carrefour coordonné</label>
+                    <input type="checkbox" id="carrefourCoordonne"
+                        checked={!!projectProperties.carrefourCoordonne}
+                        onChange={(e) => updateProjectProperty('carrefourCoordonne', e.target.checked)}
+                        style={{ width: '18px', height: '18px', flex: '0 0 auto', cursor: 'pointer', accentColor: '#3498db' }} />
                 </div>
                 <div className="property-field">
                     <label>Numéro de dossier</label>

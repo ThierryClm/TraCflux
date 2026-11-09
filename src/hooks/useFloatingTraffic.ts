@@ -16,6 +16,7 @@ const useFloatingTraffic = (groupCount: number, activePFName = '') => {
 
     const trafficPopup = usePopupWindow({
         geometryKey: 'traffic',
+        sectionVerrou: 'trafic',
         isOpen: showFloatingTraffic,
         onClose: () => setShowFloatingTraffic(false),
         title: popupTitle,

@@ -2,7 +2,7 @@
  * Mise en page → Verrouillage saisie : une section cochée garde ses valeurs
  * lisibles mais non modifiables (pas de clavier sur smartphone).
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { ouvrirExemple } from './aide';
 
 const cocher = async (page: Page, section: string) => {
@@ -17,8 +17,23 @@ const cocher = async (page: Page, section: string) => {
     }
     await sousMenu.hover();
     await sousMenu.locator('.submenu-dropdown').getByText(new RegExp(`^✓?${section}$`)).click();
-    await page.keyboard.press('Escape');
-    await page.mouse.click(900, 1050);
+    // Les cases du menu le gardent ouvert. Le refermer par son bouton :
+    // y=1050 était hors du viewport (900 px) et Firefox ne recevait pas
+    // le clic extérieur, laissant le menu recouvrir la simulation.
+    await miseEnPage.click();
+    await page.mouse.move(900, 700);
+    await expect(page.locator('.menu-bar .menu-dropdown')).toHaveCount(0);
+};
+
+const deplacer = async (page: Page, poignee: Locator) => {
+    await poignee.scrollIntoViewIfNeeded();
+    const position = await poignee.boundingBox();
+    expect(position).not.toBeNull();
+    const x = position!.x + position!.width / 2, y = position!.y + position!.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 18, y, { steps: 6 });
+    await page.mouse.up();
 };
 
 test('verrouiller la configuration et le diagramme : champs en lecture seule, le reste modifiable', async ({ page }) => {
@@ -29,7 +44,15 @@ test('verrouiller la configuration et le diagramme : champs en lecture seule, le
     await cocher(page, 'Configuration');
     await cocher(page, 'Diagramme');
     await expect(nom).toHaveAttribute('readonly');
+    await expect(page.locator('.group-table-title .mention-verrou')).toHaveText('(verrouillé)');
+    await expect(page.locator('.diagram-title .mention-verrou')).toHaveText('(verrouillé)');
     await expect(page.locator('.group-table select').first()).toBeDisabled();
+    const ligne = page.locator('.group-table tbody tr').first();
+    for (const classe of ['.input-name-cell', '.input-type', '.input-courant', '.input-mini', '.input-yellow', '.signal-select-trigger']) {
+        await expect(ligne.locator(classe)).toHaveCSS('cursor', 'not-allowed');
+    }
+    await expect(ligne.locator('select').first()).toHaveCSS('appearance', 'none');
+    await expect(ligne.locator('.signal-select-chevron')).toHaveCount(0);
     await expect(cycle).toHaveAttribute('readonly');
     // La valeur ne change pas à la frappe.
     const avant = await cycle.inputValue();
@@ -40,6 +63,7 @@ test('verrouiller la configuration et le diagramme : champs en lecture seule, le
     await cocher(page, 'Conditions de micro-régulation');
     await cocher(page, 'Variables micro');
     await expect(page.locator('.action-table select').first()).toBeDisabled();
+    await expect(page.locator('.action-table select').first()).toHaveCSS('appearance', 'none');
     await expect(page.locator('.action-table textarea').first()).toHaveAttribute('readonly');
     await expect(page.locator('.custom-field-input').first()).toHaveAttribute('readonly');
     // La matrice, non cochée, reste modifiable.
@@ -50,5 +74,143 @@ test('verrouiller la configuration et le diagramme : champs en lecture seule, le
     await cocher(page, 'Configuration');
     await cocher(page, 'Diagramme');
     await expect(page.locator('.group-table input').first()).not.toHaveAttribute('readonly');
+    await expect(ligne.locator('select').first()).not.toHaveCSS('appearance', 'none');
+    await expect(ligne.locator('.signal-select-chevron')).toBeVisible();
+    await expect(ligne.locator('.input-name-cell')).not.toHaveCSS('cursor', 'not-allowed');
     await expect(page.locator('.cycle-input-label input').first()).not.toHaveAttribute('readonly');
+});
+
+test('diagramme verrouillé : les glissements des groupes et des actions ne modifient plus le plan', async ({ page }) => {
+    await ouvrirExemple(page);
+    const valeurs = () => page.locator('.timeline-sidebar input, .action-table input').evaluateAll(champs =>
+        champs.map(champ => (champ as HTMLInputElement).value));
+    const avant = await valeurs();
+    await cocher(page, 'Diagramme');
+    await deplacer(page, page.locator('.timeline-container .drag-handle-end').first());
+    await deplacer(page, page.locator('.timeline-container .action-drag-handle').first());
+    expect(await valeurs()).toEqual(avant);
+    await expect(page.locator('.timeline-container')).not.toHaveClass(/dragging/);
+    // La consultation et le détachement du diagramme restent proposés.
+    await expect(page.locator('.diagram-detach-btn')).toBeEnabled();
+    await cocher(page, 'Diagramme');
+    await deplacer(page, page.locator('.timeline-container .drag-handle-end').first());
+    await expect.poll(valeurs).not.toEqual(avant);
+});
+
+
+test('Trafic : la mention remplace le filtre et suit le verrou dans une fenêtre déjà détachée', async ({ page, context }) => {
+    await ouvrirExemple(page);
+    await page.locator('.tab-btn', { hasText: /^Trafic$/ }).click();
+    const trafic = page.locator('.traffic-table-container');
+    const ouverte = context.waitForEvent('page');
+    await trafic.locator('.detach-btn').click();
+    const fenetre = await ouverte;
+    await expect(fenetre.locator('.traffic-table-container')).toBeVisible();
+    await fenetre.getByRole('checkbox', { name: 'Tous les Grp' }).check();
+    const largeur = await fenetre.evaluate(() => innerWidth);
+    await cocher(page, 'Trafic');
+    await expect(fenetre).toHaveTitle(/Données trafic \(verrouillé\)/);
+    await expect(fenetre.locator('.traffic-header .mention-verrou')).toHaveText('(verrouillé)');
+    await expect(fenetre.getByRole('checkbox', { name: 'Tous les Grp' })).toHaveCount(0);
+    await expect(fenetre.locator('select').first()).toHaveCSS('appearance', 'none');
+    await expect(fenetre.locator('select').first()).toHaveCSS('cursor', 'not-allowed');
+    expect(await fenetre.evaluate(() => innerWidth)).toBe(largeur);
+    await cocher(page, 'Trafic');
+    await expect(fenetre).not.toHaveTitle(/verrouillé/);
+    await expect(fenetre.getByRole('checkbox', { name: 'Tous les Grp' })).toBeChecked();
+});
+
+
+test('Scénarios : le choix reste accessible, les commandes et les cases restent verrouillées', async ({ page }) => {
+    await ouvrirExemple(page);
+    await page.locator('.simulation-tab').click();
+    const panneau = page.locator('.simulation-panel');
+    const choix = panneau.locator('.simulation-scenario-select');
+    const cases = panneau.locator('input[type=checkbox]');
+    const etat = () => cases.evaluateAll(elements => elements.map(e => (e as HTMLInputElement).checked));
+    const avant = await etat();
+    // Un scénario enregistré, en plus des deux choix fixes.
+    await panneau.locator('.simulation-item input').first().click();
+    const enregistre = await etat();
+    await panneau.getByRole('button', { name: 'Enregistrer…' }).click();
+    await panneau.getByPlaceholder(/Escamotage bus/).fill('Essai verrou');
+    await panneau.getByRole('button', { name: 'Créer', exact: true }).click();
+    await choix.click();
+    await panneau.getByRole('option', { name: /Tout décoché/ }).click();
+    expect(await etat()).toEqual(avant);
+    await choix.click();
+    await expect(panneau.getByRole('listbox')).toBeVisible();
+    await cocher(page, 'Scénarios');
+    await expect(panneau.locator('.mention-verrou')).toHaveText('(verrouillé)');
+    await expect(panneau.getByRole('listbox')).toHaveCount(0);
+    await expect(choix).toBeEnabled();
+    await expect(panneau.locator('.simulation-scenario-fleche')).toBeVisible();
+    await expect(panneau.getByRole('button', { name: 'Enregistrer…' })).toBeDisabled();
+    for (let i = 0; i < await cases.count(); i++) await expect(cases.nth(i)).toBeDisabled();
+    // Clic physique sur le libellé : locator.click() suit son association
+    // avec la case et attendrait qu'elle soit activée, alors qu'on teste
+    // précisément son refus de modifier le scénario.
+    const libelle = panneau.locator('.simulation-item').first();
+    await libelle.scrollIntoViewIfNeeded();
+    const position = await libelle.boundingBox();
+    expect(position).not.toBeNull();
+    await page.mouse.click(position!.x + position!.width / 2, position!.y + position!.height / 2);
+    expect(await etat()).toEqual(avant);
+    await choix.click();
+    await expect(panneau.getByRole('button', { name: '+ Nouveau scénario…' })).toBeDisabled();
+    await panneau.getByRole('option', { name: /Essai verrou/ }).click();
+    expect(await etat()).toEqual(enregistre);
+    for (let i = 0; i < await cases.count(); i++) await expect(cases.nth(i)).toBeDisabled();
+    await choix.click();
+    await panneau.getByRole('option', { name: /Tout décoché/ }).click();
+    expect(await etat()).toEqual(avant);
+    // Déb et Fin sont calculés en simulation, même sans verrou Diagramme.
+    const horaires = page.locator('.timeline-sidebar .input-time-sm[type="text"]');
+    await expect(horaires.first()).toBeVisible();
+    for (let i = 0; i < await horaires.count(); i++) {
+        await expect(horaires.nth(i)).toBeDisabled();
+        await expect(horaires.nth(i)).toHaveCSS('cursor', 'not-allowed');
+    }
+    await cocher(page, 'Scénarios');
+    await expect(choix).toBeEnabled();
+    await expect(panneau.locator('.simulation-scenario-fleche')).toBeVisible();
+    expect(await etat()).toEqual(avant);
+    await panneau.locator('.simulation-item input').first().click();
+    await expect.poll(etat).not.toEqual(avant);
+});
+
+test('Phasages bulles : groupes, phases, instants et curseurs partagent un verrou indépendant', async ({ page }) => {
+    await ouvrirExemple(page);
+    await cocher(page, 'Phasages bulles');
+    await page.locator('.phasage-tab').click();
+    const groupes = page.locator('.phasage-bulle-sidebar');
+    const panneau = page.locator('.phasage-config-panel');
+    const bulles = page.locator('.phasage-bulle-container');
+    await expect(bulles.locator('.mention-verrou')).toHaveText('(verrouillé)');
+    await expect(groupes.locator('.mention-verrou')).toHaveText('(verrouillé)');
+    await expect(groupes.getByRole('button', { name: 'Tout décocher' })).toBeDisabled();
+    await expect(groupes.getByRole('checkbox').first()).toBeDisabled();
+    await expect(panneau.locator('select')).toBeDisabled();
+    await expect(panneau.locator('select')).toHaveCSS('appearance', 'none');
+    await expect(panneau.locator('input').first()).toHaveAttribute('readonly');
+    await expect(panneau.getByRole('button', { name: 'OK' })).toBeDisabled();
+    const curseurs = bulles.getByRole('slider');
+    for (let i = 0; i < await curseurs.count(); i++) await expect(curseurs.nth(i)).toBeDisabled();
+    const valeur = await curseurs.first().inputValue();
+    await cocher(page, 'Phasages bulles');
+    await expect(panneau.locator('select')).toBeEnabled();
+    await panneau.locator('select').selectOption('3');
+    await panneau.locator('input').first().fill('17');
+    await panneau.getByRole('button', { name: 'OK' }).click();
+    await expect(bulles.locator('.phase-bubble')).toHaveCount(3);
+    await expect(bulles.locator('.phase-time-display').first()).toHaveText('Seconde 17');
+    await groupes.getByRole('button', { name: 'Tout décocher' }).click();
+    await expect(groupes.locator('input:checked')).toHaveCount(0);
+    await expect(curseurs.first()).toBeEnabled();
+    await curseurs.first().focus();
+    await curseurs.first().press('ArrowRight');
+    await expect(curseurs.first()).not.toHaveValue(valeur);
+    // Le verrou des scénarios reste indépendant de celui du phasage.
+    await page.locator('.simulation-tab').click();
+    await expect(page.locator('.simulation-scenario-select')).toBeEnabled();
 });

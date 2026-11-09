@@ -8,7 +8,7 @@ import { tokenizeMicroText } from '../utils/microVariables';
 import { DESCRIPTION_REPOS_DEFAUT, decouperDescription } from '../simulation/dureeRepos';
 import type { ActionMicro } from '../types/projet';
 import { ligneActionRemplie } from '../utils/pfHelpers';
-import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 import './ActionTable.css';
 
 /** Champ modifiable d'une condition de micro-régulation. */
@@ -270,6 +270,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
     // Popup windows
     const conditionsPopup = usePopupWindow({
         geometryKey: 'conditions',
+        sectionVerrou: 'conditions',
         isOpen: showFloatingConditions,
         onClose: () => setShowFloatingConditions(false),
         title: 'Conditions de micro-régulation',
@@ -281,6 +282,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
 
     const variablesPopup = usePopupWindow({
         geometryKey: 'variables',
+        sectionVerrou: 'variables',
         isOpen: showFloatingVariables,
         onClose: () => setShowFloatingVariables(false),
         title: 'Variables micro',
@@ -585,7 +587,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             {!showFloatingConditions && (
                 <>
                     <div className="action-table-title-row">
-                        <h3 className="action-table-title">Conditions de micro-régulation</h3>
+                        <h3 className="action-table-title">Conditions de micro-régulation <MentionVerrou section="conditions" /></h3>
                         <button className="detach-btn" onClick={handleDetach} title={tip("Ouvrir dans une fenêtre séparée")}>Détacher</button>
                         {addConditionButton}
                     </div>
@@ -610,7 +612,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
                     padding: variablesHeight < 20 && !showFloatingConditions ? '0' : undefined
                 }}>
                     <div className="variables-micro-header">
-                        <h3>Variables micro</h3>
+                        <h3>Variables micro <MentionVerrou section="variables" /></h3>
                         <button className="detach-btn" onClick={handleDetachVariables} title={tip("Ouvrir dans une fenêtre séparée")}>Détacher</button>
                     </div>
                     <div className="variables-micro-scroll" style={{ overflow: variablesHeight < 50 && !showFloatingConditions ? 'hidden' : 'auto' }}>

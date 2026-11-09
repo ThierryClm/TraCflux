@@ -1,3 +1,4 @@
+import { positionAccoladeFermeture, type ZoneAccolade } from '../positionAccoladeFermeture';
 import type { ContexteIncrustations } from './contexteIncrustations';
 import type { SimulatedGroup, SimulationResult } from '../../../simulation/types';
 import type { ActionMicro } from '../../../types/projet';
@@ -6,6 +7,7 @@ import type { GroupId } from '../timelineSimulation';
 
 interface FlechesFermetureAnticipeeProps {
     ctx: ContexteIncrustations;
+    braceZoneRanges?: ZoneAccolade[];
     doesGroupWrap: (groupId: GroupId) => boolean;
     fermetureActions: ActionMicro[];
     getGroupEndPos: (groupId: GroupId) => number | null;
@@ -16,24 +18,19 @@ interface FlechesFermetureAnticipeeProps {
 }
 
 /** Flèches des fermetures anticipées, du groupe source vers les groupes visés. */
-const FlechesFermetureAnticipee = ({ ctx, doesGroupWrap, fermetureActions, getGroupEndPos, getGroupRowY, getGroupStartPos, getSimulatedGroup, simulationResult }: FlechesFermetureAnticipeeProps) => {
-    const { groups, pixelsPerSecond, effectiveCycleLength, svgHeight, totalWidth, getShiftedActionPosition } = ctx;
+const FlechesFermetureAnticipee = ({ ctx, braceZoneRanges = [], doesGroupWrap, fermetureActions, getGroupEndPos, getGroupRowY, getGroupStartPos, getSimulatedGroup, simulationResult }: FlechesFermetureAnticipeeProps) => {
+    const { groups, pixelsPerSecond, effectiveCycleLength, svgHeight, totalWidth } = ctx;
 
     return (
         <>
             {/* Fermeture anticipée arrows */}
             {fermetureActions.map((action, idx) => {
                 const sourceGf = entier(action.gf?.toString().replace(/[Gg]/g, '').trim()) || 0;
-                const origDeb = entier(action.deb) || 0;
-                const fin = entier(action.fin) || 0;
 
-                // Check if overlay is hidden (e.g. within AV zone)
-                if (simulationResult) {
-                    const shifted = getShiftedActionPosition(origDeb, fin, sourceGf, 'Fermeture anticipée');
-                    if (shifted.hidden) return null;
-                    // Also hide if effective duration is 0
-                    if (shifted.deb === shifted.fin) return null;
-                }
+                const source = groups.find(g => g.id === sourceGf);
+                if (!source) return null;
+                const accolade = positionAccoladeFermeture(action, source, ctx, simulationResult, braceZoneRanges);
+                if (accolade.hidden || accolade.deb === accolade.fin) return null;
 
                 // Get target groups from ActGF1, ActGF2, ActGF3, ActGF4
                 const targets = [];
@@ -106,9 +103,8 @@ const FlechesFermetureAnticipee = ({ ctx, doesGroupWrap, fermetureActions, getGr
                     const targetY = getGroupRowY(targetGf);
                     if (sourceY === null || targetY === null) return null;
                     if (sourceEnd === null || targetPos === null) return null;
-                    // Use the group's actual end position (already accounts for simulation)
-                    // This ensures the arrow follows the group's green bar end, not just the action's fin value
-                    const sourceX = sourceEnd * pixelsPerSecond;
+                    // La flèche part de la fin de l’accolade, calculée comme celle affichée sur la ligne.
+                    const sourceX = accolade.fin * pixelsPerSecond;
                     const targetX = targetPos * pixelsPerSecond;
                     const cycleEndX = effectiveCycleLength * pixelsPerSecond;
 
@@ -149,14 +145,14 @@ const FlechesFermetureAnticipee = ({ ctx, doesGroupWrap, fermetureActions, getGr
                                     x1={sourceX}
                                     y1={sourceY}
                                     x2={cycleEndX}
-                                    y2={sourceY + (targetY - sourceY) * ((cycleEndX - sourceX) / (cycleEndX - sourceX + targetX))}
+                                    y2={sourceY + (targetY - sourceY) * ((cycleEndX - sourceX) / ((cycleEndX - sourceX + targetX) || 1))}
                                     stroke="#ff0000"
                                     strokeWidth="1.5"
                                 />
                                 {/* Second segment: from start of cycle to target */}
                                 <line
                                     x1={0}
-                                    y1={sourceY + (targetY - sourceY) * ((cycleEndX - sourceX) / (cycleEndX - sourceX + targetX))}
+                                    y1={sourceY + (targetY - sourceY) * ((cycleEndX - sourceX) / ((cycleEndX - sourceX + targetX) || 1))}
                                     x2={targetX}
                                     y2={targetY}
                                     stroke="#ff0000"

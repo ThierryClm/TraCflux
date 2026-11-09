@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { act, render, fireEvent } from '@testing-library/react';
 import TimelineDiagram from './TimelineDiagram';
+import { definirPrefsVerrou } from '../utils/verrouSaisie';
+
+afterEach(() => { act(() => definirPrefsVerrou()); });
 
 /**
  * Le contrat de lecture seule — celui du miroir détaché.
@@ -82,6 +85,31 @@ describe('Diagramme — contrat de lecture seule', () => {
     it('le survol reste actif : une incrustation s\'allume comme ailleurs', () => {
         const { container } = dessiner({ readOnly: true, hoveredActionId: 3 });
         expect(container.querySelectorAll('.adaptatif-overlay.highlighted').length).toBeGreaterThan(0);
+    });
+
+    it.each(['.drag-handle', '.action-drag-handle'])('le verrou du menu bloque %s et le déverrouillage rend le déplacement', selecteur => {
+        const updateGroupParams = vi.fn(), updateActionRow = vi.fn(), onDetach = vi.fn();
+        const { container, startDrag } = dessiner({ updateGroupParams, updateActionRow, onDetach });
+        act(() => definirPrefsVerrou({ diagramme: true }));
+        const poignee = container.querySelector(selecteur);
+        expect(poignee).not.toBeNull();
+        fireEvent.mouseDown(poignee, { clientX: 20 });
+        fireEvent.mouseMove(document, { clientX: 38 });
+        fireEvent.mouseUp(document);
+        expect(startDrag).not.toHaveBeenCalled();
+        expect(updateGroupParams).not.toHaveBeenCalled();
+        expect(updateActionRow).not.toHaveBeenCalled();
+        // Le verrou ne retire ni le champ cycle ni la commande de détachement.
+        expect(container.querySelector('.cycle-input-label input')).toHaveAttribute('readonly');
+        fireEvent.click(container.querySelector('.diagram-detach-btn'));
+        expect(onDetach).toHaveBeenCalledOnce();
+
+        act(() => definirPrefsVerrou());
+        fireEvent.mouseDown(poignee, { clientX: 20 });
+        fireEvent.mouseMove(document, { clientX: 38 });
+        fireEvent.mouseUp(document);
+        expect(startDrag).toHaveBeenCalledOnce();
+        expect(updateGroupParams.mock.calls.length + updateActionRow.mock.calls.length).toBeGreaterThan(0);
     });
 });
 

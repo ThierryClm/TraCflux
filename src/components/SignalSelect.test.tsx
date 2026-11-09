@@ -151,14 +151,17 @@ describe('SignalSelect — navigation et verrouillage', () => {
         const onChange = vi.fn();
         render(<SignalSelect {...props} onChange={onChange} />);
         const { champ } = ouvrir();
+        expect(champ.querySelector('.signal-select-chevron')).not.toBeNull();
         act(() => definirPrefsVerrou({ configuration: true }));
         expect(champ).toBeDisabled();
+        expect(champ.querySelector('.signal-select-chevron')).toBeNull();
         expect(screen.queryByRole('listbox')).toBeNull();
         fireEvent.click(champ);
         expect(screen.queryByRole('listbox')).toBeNull();
         expect(onChange).not.toHaveBeenCalled();
         act(() => definirPrefsVerrou());
         expect(champ).not.toBeDisabled();
+        expect(champ.querySelector('.signal-select-chevron')).not.toBeNull();
         expect(screen.queryByRole('listbox')).toBeNull();
     });
 

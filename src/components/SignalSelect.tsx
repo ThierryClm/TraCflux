@@ -213,7 +213,7 @@ const SignalSelect = ({ value, type, courant, label, title, tooltipsEnabled = tr
             onClick={() => ouvert ? fermer() : ouvrir()} onKeyDown={auClavier}
             onBlur={() => fermer()}>
             <VignetteSignal code={value} courant={courant} /><span className="signal-select-code">{value || '—'}</span>
-            <span className="signal-select-chevron" aria-hidden="true">▾</span>
+            {!verrouille && <span className="signal-select-chevron" aria-hidden="true">▾</span>}
         </button>
         {ouvert && documentCible && createPortal(
             <div ref={liste} id={id} role="listbox" aria-label={label} className="signal-select-list" style={position}>

@@ -264,7 +264,7 @@ export const useTimelineDrag = ({
     }, [actionData, readOnly, startDrag]);
 
     const handleDragMove = useCallback((event: MouseEvent) => {
-        if (!dragState) return;
+        if (readOnly || !dragState) return;
         const deltaSeconds = Math.round((event.clientX - dragState.initialMouseX) / pixelsPerSecond);
 
         if (dragState.actionId !== undefined && updateActionRow) {
@@ -296,10 +296,10 @@ export const useTimelineDrag = ({
             mouseX: event.clientX,
             mouseY: event.clientY
         } : null);
-    }, [cycleLength, dragState, pixelsPerSecond, updateActionRow]);
+    }, [cycleLength, dragState, pixelsPerSecond, readOnly, updateActionRow]);
 
     const handleDragEnd = useCallback(() => {
-        if (dragState?.deltaSeconds !== undefined && dragState.deltaSeconds !== 0) {
+        if (!readOnly && dragState?.deltaSeconds !== undefined && dragState.deltaSeconds !== 0) {
             const deltaSeconds = dragState.deltaSeconds;
 
             if (dragState.actionId === undefined && dragState.type === 'start') {
@@ -348,7 +348,16 @@ export const useTimelineDrag = ({
 
         endDrag?.();
         setDragState(null);
-    }, [cycleLength, dragState, endDrag, groups, updateActionRow, updateGroupParams]);
+    }, [cycleLength, dragState, endDrag, groups, readOnly, updateActionRow, updateGroupParams]);
+
+    // Un verrou posé pendant un déplacement doit aussi terminer le geste,
+    // sans appliquer sa position provisoire au prochain relâchement.
+    useEffect(() => {
+        if (readOnly && dragState) {
+            endDrag?.();
+            setDragState(null);
+        }
+    }, [readOnly, dragState, endDrag]);
 
     useEffect(() => {
         if (!dragState) return undefined;

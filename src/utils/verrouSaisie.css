@@ -1,0 +1,24 @@
+/* Même indication de lecture seule dans les fenêtres intégrées et détachées.
+   Les commandes de consultation (détacher, défiler…) gardent leur curseur. */
+.zone-verrou-saisie.verrouillee input[readonly],
+.zone-verrou-saisie.verrouillee textarea[readonly],
+.zone-verrou-saisie.verrouillee :disabled,
+.zone-verrou-saisie.verrouillee [data-verrou-saisie="editable"] {
+    cursor: not-allowed !important;
+}
+
+.zone-verrou-saisie.verrouillee .simulation-item,
+.zone-verrou-saisie.verrouillee .phasage-group-item {
+    cursor: not-allowed;
+}
+
+/* Une liste verrouillée se lit comme une valeur, sans invitation à l'ouvrir. */
+.zone-verrou-saisie.verrouillee select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: none;
+}
+
+.zone-verrou-saisie.verrouillee input[list]::-webkit-calendar-picker-indicator {
+    display: none !important;
+}

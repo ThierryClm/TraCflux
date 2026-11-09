@@ -16,7 +16,8 @@ interface ConfirmOptions {
 interface ProjectHeaderProps {
     project: {
         projectName: string | null;
-        setProjectName: (value: string) => void;
+        intersectionName: string;
+        setIntersectionName: (value: string) => void;
         isDirty: boolean;
         projectNameInputRef: RefObject<HTMLInputElement | null>;
     };
@@ -73,7 +74,7 @@ function ProjectHeader({
     example,
     readOnly,
 }: ProjectHeaderProps) {
-    const { projectName, setProjectName, isDirty, projectNameInputRef } = project;
+    const { intersectionName, setIntersectionName, isDirty, projectNameInputRef } = project;
     const { groups, groupCountInput, setGroupCountInput, setGroupCount, askConfirm } = groupCount;
     const { undo, redo, canUndo, canRedo } = history;
     const { showDependencies, setShowDependencies, dependencyGap, setDependencyGap, conflicts } = dependencies;
@@ -106,10 +107,12 @@ function ProjectHeader({
                         ref={projectNameInputRef}
                         className="input-name"
                         type="text"
-                        value={projectName || ''}
-                        onChange={(e) => setProjectName(e.currentTarget.value)}
-                        placeholder="Nom du projet"
-                        title={tip("Nom du projet (utilisé pour la sauvegarde)")}
+                        value={intersectionName}
+                        onChange={(e) => setIntersectionName(e.currentTarget.value)}
+                        placeholder="Nom du carrefour"
+                        aria-label="Nom du carrefour"
+                        size={60}
+                        title={tip("Nom du carrefour — indépendant du nom du fichier JSON")}
                     />
                     {isDirty && (
                         <span

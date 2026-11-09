@@ -188,7 +188,7 @@ export interface OptionsMiseEnPage {
     /** Image du carrefour : signal ISR à la place de la flèche, si le champ Signal est renseigné. */
     showImageSignals?: boolean;
     /** Sections dont la saisie est verrouillée (Mise en page → Verrouillage saisie). */
-    verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables', boolean>>;
+    verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image' | 'scenarios' | 'phasages', boolean>>;
 }
 
 /** Un projet enregistré, tel que getFullState le produit. */
@@ -219,7 +219,7 @@ export interface Projet {
     capacityCompareScenarios?: string[];
     /** Colonne V.Utile affichée dans le comparateur (vrai par défaut). */
     capacityCompareVUtile?: boolean;
-    projectProperties?: Record<string, unknown>;
+    projectProperties?: Record<string, unknown> & { carrefourCoordonne?: boolean };
     /** Cases cochées de la boîte « Imprimer le projet ». */
     dossierSections?: Record<string, boolean>;
     diagramHeight?: number | null;

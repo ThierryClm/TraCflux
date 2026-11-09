@@ -35,8 +35,8 @@ const actions = [
 
 const matrice = groupes.map(() => groupes.map(() => ''));
 
-const accoladeDuGf4 = (cochees) => {
-    const simulationResult = calculateSimulatedDiagram(groupes, actions, cochees, 70, matrice);
+const accoladeDuGf4 = (cochees, actionsADessiner = actions) => {
+    const simulationResult = calculateSimulatedDiagram(groupes, actionsADessiner, cochees, 70, matrice);
     const { container } = render(
         <TimelineDiagram
             groups={groupes}
@@ -44,7 +44,7 @@ const accoladeDuGf4 = (cochees) => {
             pixelsPerSecond={PPS}
             conflicts={[]}
             conflictMatrix={matrice}
-            actionData={actions}
+            actionData={actionsADessiner}
             simulationResult={simulationResult}
             simulationFilter={new Set(cochees)}
             cycleLengthInput="70"
@@ -60,16 +60,38 @@ const accoladeDuGf4 = (cochees) => {
     );
     const ligne = container.querySelectorAll('.timeline-row-track')[3];
     const accolade = ligne.querySelector('.brace-marker');
+    if (!accolade) return { accolade: false, fleche: !!container.querySelector('.fermeture-arrow') };
     const debut = parseFloat(accolade.style.left) / PPS;
-    return { debut, fin: debut + parseFloat(accolade.style.width) / PPS };
+    return { debut, fin: debut + parseFloat(accolade.style.width) / PPS,
+        origineFleche: Number(container.querySelector('.fermeture-arrow line')?.getAttribute('x1')) / PPS };
 };
 
 describe('Accolade de fermeture anticipée et adaptatif vertical partiel', () => {
     it("sans simulation, l'accolade est à sa place", () => {
-        expect(accoladeDuGf4([])).toEqual({ debut: 16, fin: 28 });
+        expect(accoladeDuGf4([])).toMatchObject({ debut: 16, fin: 28 });
     });
 
     it("recule de la durée de l'adaptatif quand elle est après la zone", () => {
-        expect(accoladeDuGf4([1])).toEqual({ debut: 12, fin: 24 });
+        expect(accoladeDuGf4([1])).toMatchObject({ debut: 12, fin: 24 });
     });
+});
+
+
+describe('flèche Action GF attachée à l’accolade', () => {
+    it.each([{ cochees: [], finAttendue: 26 }, { cochees: [1], finAttendue: 22 }])('suit la fin de l’accolade : $cochees', ({ cochees, finAttendue }) => {
+        const donnees = [actions[0], { ...actions[1], fin: '26' }];
+        const { fin, origineFleche } = accoladeDuGf4(cochees, donnees);
+        expect(origineFleche).toBe(fin);
+        expect(fin).toBe(finAttendue);
+    });
+});
+
+
+it.each([{ cochees: [2] }, { cochees: [1, 2] }])('ne laisse pas de flèche quand la fermeture sélectionnée masque l’accolade : $cochees', ({ cochees }) => {
+    expect(accoladeDuGf4(cochees, [actions[0], { ...actions[1], fin: '26' }])).toEqual({ accolade: false, fleche: false });
+});
+
+
+it('ne dessine pas de flèche pour une accolade invalide couvrant presque tout le cycle', () => {
+    expect(accoladeDuGf4([], [{ ...actions[1], deb: '0', fin: '69' }])).toEqual({ accolade: false, fleche: false });
 });
