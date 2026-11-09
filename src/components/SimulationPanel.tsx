@@ -122,8 +122,8 @@ const SimulationPanel = ({
     const [titre, setTitre] = useState('');
     const zoneScenarioRef = useRef<HTMLDivElement>(null);
 
-    // Un menu ou dialogue déjà ouvert ne doit pas permettre de contourner
-    // le verrou, ni réapparaître lorsqu'on le retire.
+    // Fermer les commandes déjà ouvertes quand on pose le verrou.
+    // Le choix d'un scénario reste ensuite disponible.
     useEffect(() => {
         if (verrouille) {
             setMenuOuvert(false);
@@ -157,6 +157,7 @@ const SimulationPanel = ({
     }, [menuOuvert]);
 
     const ouvrir = (d: Dialogue) => {
+        if (verrouille && d.type !== 'quitter') return;
         setMenuOuvert(false);
         setTitre(d.type === 'enregistrer' ? nomActif : '');
         setDialogue(d);
@@ -258,8 +259,8 @@ const SimulationPanel = ({
         () => conflitsSimules(rawConflicts, actionData, selectedActions),
         [rawConflicts, actionData, selectedActions]);
 
-    return (<ZoneVerrouSaisie section="scenarios">
-        <div className="simulation-panel">
+    return (<div className="simulation-panel">
+        <ZoneVerrouSaisie section="scenarios">
             <div className="simulation-header">
                 {/* Le cycle simulé, à côté du titre : un cadre à lui seul
                     prenait une ligne du panneau. */}
@@ -293,19 +294,22 @@ const SimulationPanel = ({
                 <span className="simulation-scenario-label">Scénario</span>
                 <button
                     type="button"
+                    data-verrou-autorise
                     className={`simulation-scenario-select${scenarioActif ? '' : ' sans-titre'}`}
                     aria-haspopup="listbox"
                     aria-expanded={menuOuvert}
                     onClick={() => setMenuOuvert(o => !o)}
                     // Modifié, l'infobulle dit quoi faire des cases changées — sans
                     // ligne sous le champ, qui décalait la liste des actions.
-                    title={tip(modifie
+                    title={tip(verrouille
+                        ? 'Choisir un scénario. Les cases et les commandes de modification sont verrouillées.'
+                        : modifie
                         ? (fixe ? `« ${nomActif} » modifié — Enregistrer… en fait un nouveau scénario` : `« ${nomActif} » modifié depuis le dernier enregistrement — Enregistrer… le met à jour`)
                         : "Choisir, créer ou modifier un scénario. Les scénarios sont enregistrés avec le plan de feu ; celui choisi titre la section Simulation du dossier imprimé.")}
                 >
                     <span className="simulation-scenario-nom">{scenarioActif ? scenarioActif.nom : 'Sans titre'}</span>
                     {modifie && <span className="simulation-scenario-modifie" aria-label="modifié">●</span>}
-                    {!verrouille && <span className="simulation-scenario-fleche">{menuOuvert ? '▴' : '▾'}</span>}
+                    <span className="simulation-scenario-fleche">{menuOuvert ? '▴' : '▾'}</span>
                 </button>
                 {menuOuvert && (
                     <div className="simulation-scenario-menu" role="listbox">
@@ -314,6 +318,7 @@ const SimulationPanel = ({
                                 key={sc.nom}
                                 type="button"
                                 role="option"
+                                data-verrou-autorise
                                 aria-selected={sc.nom === nomActif}
                                 className={`scenario-ligne fixe${sc.nom === nomActif ? ' choisi' : ''}`}
                                 onClick={() => choisirLigne(sc.nom)}
@@ -329,6 +334,7 @@ const SimulationPanel = ({
                                 key={sc.nom}
                                 type="button"
                                 role="option"
+                                data-verrou-autorise
                                 aria-selected={sc.nom === nomActif}
                                 className={`scenario-ligne${sc.nom === nomActif ? ' choisi' : ''}`}
                                 onClick={() => choisirLigne(sc.nom)}
@@ -445,6 +451,7 @@ const SimulationPanel = ({
             )}
 
 
+        </ZoneVerrouSaisie>
             <Modal
                 isOpen={!!dialogue}
                 onClose={fermer}
@@ -508,7 +515,9 @@ const SimulationPanel = ({
                     {dialogue?.type === 'quitter' && (
                         <>
                             <p className="scenario-dialog-texte">
-                                {dialogue.vers === nomActif
+                                {verrouille
+                                    ? `Les cases de « ${nomActif} » ont été modifiées. Abandonner ces modifications pour ouvrir « ${dialogue.vers} » ?`
+                                    : dialogue.vers === nomActif
                                     ? `« ${nomActif} » a été modifié. Garder ces modifications, ou revenir à « ${nomActif} » ?`
                                     : fixe
                                         ? `« ${nomActif} » a été modifié. Ces cases ne s'enregistrent que sous un nouveau scénario : le créer avant d'ouvrir « ${dialogue.vers} » ?`
@@ -528,7 +537,7 @@ const SimulationPanel = ({
                                         : `Ouvre « ${dialogue.vers} » sans enregistrer : les modifications de « ${nomActif} » sont perdues${fixe ? '' : ', sa version enregistrée reste intacte'}.`)}>
                                     Abandonner
                                 </button>
-                                {fixe ? (
+                                {!verrouille && (fixe ? (
                                     <button type="button" className="scenario-btn principal" autoFocus
                                         onClick={() => ouvrir({ type: 'nouveau', puis: dialogue.vers === nomActif ? undefined : dialogue.vers })}
                                         title={tip(`Enregistre ces cases sous un nouveau titre${dialogue.vers === nomActif ? '' : `, puis ouvre « ${dialogue.vers} »`}.`)}>
@@ -542,14 +551,13 @@ const SimulationPanel = ({
                                             : `Enregistre les modifications dans « ${nomActif} », puis ouvre « ${dialogue.vers} ».`)}>
                                         Enregistrer
                                     </button>
-                                )}
+                                ))}
                             </div>
                         </>
                     )}
                 </div>
             </Modal>
-        </div>
-    </ZoneVerrouSaisie>);
+    </div>);
 };
 
 export default SimulationPanel;

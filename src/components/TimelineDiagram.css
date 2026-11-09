@@ -188,6 +188,13 @@
     border-color: #666;
 }
 
+/* Les horaires simulés sont calculés : Déb/Fin restent en consultation,
+   même lorsque le choix du scénario est accessible. */
+.timeline-sidebar .input-time-sm:disabled,
+.timeline-sidebar .input-da:disabled {
+    cursor: not-allowed;
+}
+
 .input-da {
     width: 20px;
     background: #333;

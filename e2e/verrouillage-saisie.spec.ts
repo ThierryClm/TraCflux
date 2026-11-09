@@ -117,7 +117,7 @@ test('Trafic : la mention remplace le filtre et suit le verrou dans une fenêtre
 });
 
 
-test('Scénarios : le verrou fige le choix, les commandes et les cases sans perdre leur état', async ({ page }) => {
+test('Scénarios : le choix reste accessible, les commandes et les cases restent verrouillées', async ({ page }) => {
     await ouvrirExemple(page);
     await page.locator('.simulation-tab').click();
     const panneau = page.locator('.simulation-panel');
@@ -125,13 +125,22 @@ test('Scénarios : le verrou fige le choix, les commandes et les cases sans perd
     const cases = panneau.locator('input[type=checkbox]');
     const etat = () => cases.evaluateAll(elements => elements.map(e => (e as HTMLInputElement).checked));
     const avant = await etat();
+    // Un scénario enregistré, en plus des deux choix fixes.
+    await panneau.locator('.simulation-item input').first().click();
+    const enregistre = await etat();
+    await panneau.getByRole('button', { name: 'Enregistrer…' }).click();
+    await panneau.getByPlaceholder(/Escamotage bus/).fill('Essai verrou');
+    await panneau.getByRole('button', { name: 'Créer', exact: true }).click();
+    await choix.click();
+    await panneau.getByRole('option', { name: /Tout décoché/ }).click();
+    expect(await etat()).toEqual(avant);
     await choix.click();
     await expect(panneau.getByRole('listbox')).toBeVisible();
     await cocher(page, 'Scénarios');
     await expect(panneau.locator('.mention-verrou')).toHaveText('(verrouillé)');
     await expect(panneau.getByRole('listbox')).toHaveCount(0);
-    await expect(choix).toBeDisabled();
-    await expect(panneau.locator('.simulation-scenario-fleche')).toHaveCount(0);
+    await expect(choix).toBeEnabled();
+    await expect(panneau.locator('.simulation-scenario-fleche')).toBeVisible();
     await expect(panneau.getByRole('button', { name: 'Enregistrer…' })).toBeDisabled();
     for (let i = 0; i < await cases.count(); i++) await expect(cases.nth(i)).toBeDisabled();
     // Clic physique sur le libellé : locator.click() suit son association
@@ -143,6 +152,21 @@ test('Scénarios : le verrou fige le choix, les commandes et les cases sans perd
     expect(position).not.toBeNull();
     await page.mouse.click(position!.x + position!.width / 2, position!.y + position!.height / 2);
     expect(await etat()).toEqual(avant);
+    await choix.click();
+    await expect(panneau.getByRole('button', { name: '+ Nouveau scénario…' })).toBeDisabled();
+    await panneau.getByRole('option', { name: /Essai verrou/ }).click();
+    expect(await etat()).toEqual(enregistre);
+    for (let i = 0; i < await cases.count(); i++) await expect(cases.nth(i)).toBeDisabled();
+    await choix.click();
+    await panneau.getByRole('option', { name: /Tout décoché/ }).click();
+    expect(await etat()).toEqual(avant);
+    // Déb et Fin sont calculés en simulation, même sans verrou Diagramme.
+    const horaires = page.locator('.timeline-sidebar .input-time-sm[type="text"]');
+    await expect(horaires.first()).toBeVisible();
+    for (let i = 0; i < await horaires.count(); i++) {
+        await expect(horaires.nth(i)).toBeDisabled();
+        await expect(horaires.nth(i)).toHaveCSS('cursor', 'not-allowed');
+    }
     await cocher(page, 'Scénarios');
     await expect(choix).toBeEnabled();
     await expect(panneau.locator('.simulation-scenario-fleche')).toBeVisible();
