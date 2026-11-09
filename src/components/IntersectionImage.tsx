@@ -14,7 +14,7 @@ import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/pro
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
 import './IntersectionImage.css';
-import { lirePrefsVerrou, ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { lirePrefsVerrou, ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 
 export interface IntersectionImageProps {
     groups: Groupe[];
@@ -783,7 +783,7 @@ const IntersectionImage = ({
     return (<ZoneVerrouSaisie section="image">
         <div className="intersection-image-container">
             <div className="intersection-header">
-                <h3>Image du carrefour{intersectionName ? ` — ${intersectionName}` : ''}</h3>
+                <h3>Image du carrefour{intersectionName ? ` — ${intersectionName}` : ''} <MentionVerrou section="image" /></h3>
                 <div className="intersection-controls">
                     {imageData && onShowFloatingImage && (
                         <button

@@ -12,7 +12,7 @@ import {
 } from '../utils/matrixDelayConflict';
 import './IntergreenMatrix.css';
 import './NumericInput.css';
-import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 
 // Input component with local state for intermediate values during typing
 interface MatrixInputProps {
@@ -375,14 +375,8 @@ const IntergreenMatrix = ({ conflictMatrix, setMatrixValue, groups, cycleLength,
             {!titreEnBandeau && (
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     Matrice des temps interverts
-                    {locked && (
-                        <span
-                            style={{ color: '#aaa', fontWeight: 'normal', fontSize: '0.85em' }}
-                            title={tip("La matrice est en lecture seule. Décochez « Verrouiller les matrices » dans le menu Diagramme pour la modifier.")}
-                        >
-                            (Verrouillé)
-                        </span>
-                    )}
+                    <MentionVerrou section="matrice" verrouille={locked}
+                        title={tip("La matrice est en lecture seule. Vérifiez « Verrouiller les matrices » dans Diagramme et « Verrouillage saisie » dans Mise en page.")} />
                     {onDetach && (
                         <button
                             className="detach-btn"

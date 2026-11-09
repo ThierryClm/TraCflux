@@ -1,4 +1,4 @@
-import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 import { useEffect } from 'react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
@@ -171,6 +171,7 @@ const useFloatingImageRenderer = ({
                     >
                         ✂
                     </button>
+                    <MentionVerrou section="image" />
                 </div>
                 {showCropControls && (
                     <div className="floating-crop-controls">

@@ -3,7 +3,7 @@ import NumericInput from './NumericInput';
 import EmptyState from './EmptyState';
 import type { Groupe, TypeGroupe } from '../types/projet';
 import './GroupTable.css';
-import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 import { libelleSignalIsr, signalAdmis, typeFormulaire } from '../utils/signauxIsr';
 import SignalSelect from './SignalSelect';
 
@@ -88,7 +88,7 @@ const GroupTable = ({ groups, updateGroupParams, cycleLength, showGroupNames = t
             {/* En fenêtre détachée, le bandeau porte déjà ce titre. */}
             {!titreEnBandeau && (
                 <h3 className="group-table-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    Formulaire
+                    Formulaire <MentionVerrou section="configuration" />
                     {onDetach && (
                         <button
                             className="detach-btn"

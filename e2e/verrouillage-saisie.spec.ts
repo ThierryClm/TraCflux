@@ -29,6 +29,8 @@ test('verrouiller la configuration et le diagramme : champs en lecture seule, le
     await cocher(page, 'Configuration');
     await cocher(page, 'Diagramme');
     await expect(nom).toHaveAttribute('readonly');
+    await expect(page.locator('.group-table-title .mention-verrou')).toHaveText('(verrouillé)');
+    await expect(page.locator('.diagram-title .mention-verrou')).toHaveText('(verrouillé)');
     await expect(page.locator('.group-table select').first()).toBeDisabled();
     await expect(cycle).toHaveAttribute('readonly');
     // La valeur ne change pas à la frappe.
@@ -51,4 +53,25 @@ test('verrouiller la configuration et le diagramme : champs en lecture seule, le
     await cocher(page, 'Diagramme');
     await expect(page.locator('.group-table input').first()).not.toHaveAttribute('readonly');
     await expect(page.locator('.cycle-input-label input').first()).not.toHaveAttribute('readonly');
+});
+
+
+test('Trafic : la mention remplace le filtre et suit le verrou dans une fenêtre déjà détachée', async ({ page, context }) => {
+    await ouvrirExemple(page);
+    await page.locator('.tab-btn', { hasText: /^Trafic$/ }).click();
+    const trafic = page.locator('.traffic-table-container');
+    const ouverte = context.waitForEvent('page');
+    await trafic.locator('.detach-btn').click();
+    const fenetre = await ouverte;
+    await expect(fenetre.locator('.traffic-table-container')).toBeVisible();
+    await fenetre.getByRole('checkbox', { name: 'Tous les Grp' }).check();
+    const largeur = await fenetre.evaluate(() => innerWidth);
+    await cocher(page, 'Trafic');
+    await expect(fenetre).toHaveTitle(/Données trafic \(verrouillé\)/);
+    await expect(fenetre.locator('.traffic-header .mention-verrou')).toHaveText('(verrouillé)');
+    await expect(fenetre.getByRole('checkbox', { name: 'Tous les Grp' })).toHaveCount(0);
+    expect(await fenetre.evaluate(() => innerWidth)).toBe(largeur);
+    await cocher(page, 'Trafic');
+    await expect(fenetre).not.toHaveTitle(/verrouillé/);
+    await expect(fenetre.getByRole('checkbox', { name: 'Tous les Grp' })).toBeChecked();
 });

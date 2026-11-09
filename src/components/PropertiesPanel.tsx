@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import './PropertiesPanel.css';
 import { LOGO_APP } from '../utils/logoApp';
-import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 
 const PHASE_OPTIONS = [
     { value: '', label: '--' },
@@ -130,7 +130,7 @@ const PropertiesPanel = ({ intersectionName, setIntersectionName, projectPropert
     return (<ZoneVerrouSaisie section="proprietes">
         <div className="properties-panel">
             <h3 className="properties-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                Propriétés du projet
+                Propriétés du projet <MentionVerrou section="proprietes" />
                 {onDetach && (
                     <button
                         className="detach-btn"

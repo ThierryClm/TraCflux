@@ -1,6 +1,7 @@
 import React, { type ChangeEvent } from 'react';
 import CustomTooltip from '../CustomTooltip';
 import NumericInput from '../NumericInput';
+import { MentionVerrou } from '../../utils/verrouSaisie';
 import type { TimelineSimulationResult } from './timelineTypes';
 
 interface TimelineHeaderProps {
@@ -59,6 +60,7 @@ const TimelineHeader = ({
     return (
         <h3 className="diagram-title">
             <span>Diagramme{planName ? ` : simulation du plan de feu ${planName}` : (activePFName ? ` - ${activePFName}` : '')}</span>
+            <MentionVerrou section="diagramme" />
             {setCycleLengthInput && (
                 (planName || readOnly) ? (
                     <span style={{ marginLeft: '50px', fontSize: '14px', fontWeight: 'normal' }}>

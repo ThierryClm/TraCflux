@@ -5,6 +5,7 @@ import type { Root } from 'react-dom/client';
 import { isFilePickerActive } from '../utils/filePicker';
 import { toast } from '../utils/toast';
 import { placerSansEscamotage } from '../utils/popupPlacement';
+import { usePrefsVerrou, type SectionVerrou } from '../utils/verrouSaisie';
 
 /**
  * Shared registry of all open popup windows.
@@ -53,6 +54,8 @@ interface PopupWindowOptions {
     contentSize?: PopupContentSize | null;
     geometryKey?: string | null;
     showTitleBanner?: boolean;
+    sectionVerrou?: SectionVerrou;
+    verrouille?: boolean;
 }
 
 export interface PopupWindowHandle {
@@ -410,13 +413,19 @@ const ecrireBandeau = (popup: Window, titre: string) => {
 const usePopupWindow = ({
     isOpen,
     onClose,
-    title,
+    title: titreSansVerrou,
     width,
     height,
     contentSize = null,
     geometryKey = null,
-    showTitleBanner = true
+    showTitleBanner = true,
+    sectionVerrou,
+    verrouille = false
 }: PopupWindowOptions): PopupWindowHandle => {
+    const prefs = usePrefsVerrou();
+    // Devant le PF : la mention reste dans le nom du bandeau, même si le contexte est tronqué.
+    const title = verrouille || (sectionVerrou && prefs[sectionVerrou])
+        ? titreSansVerrou.replace(/(?= — )|$/, ' (verrouillé)') : titreSansVerrou;
     const bannerHeight = showTitleBanner ? BANDEAU_HAUTEUR : 0;
     const popupRef = useRef<Window | null>(null);
     const [popupOpen, setPopupOpen] = useState(false);

@@ -11,6 +11,9 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Modifié
 
+- **Verrouillage de la saisie** : mention « (verrouillé) » dans les titres, y compris des fenêtres
+  détachées. Dans Trafic, elle remplace « Tous les Grp » et le filtre est conservé au déverrouillage.
+
 - **Projet** : le titre de l’en-tête et le nom du carrefour des propriétés sont synchronisés,
   indépendamment du nom du fichier JSON. Champ de titre élargi à 60 caractères.
 - **Propriétés** : case « Carrefour coordonné » sous « Hors agglomération », décochée par défaut.

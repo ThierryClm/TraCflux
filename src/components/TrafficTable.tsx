@@ -7,7 +7,7 @@ import type { PlanSuppressionJeu } from '../utils/trafficHelpers';
 import type { ActionMicro, Groupe } from '../types/projet';
 import type { SimulationResult } from '../simulation';
 import './TrafficTable.css';
-import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { ZoneVerrouSaisie, MentionVerrou, usePrefsVerrou } from '../utils/verrouSaisie';
 
 interface TrafficData {
     trafficVol?: number | string;
@@ -73,6 +73,7 @@ const TrafficTable = ({
     tooltipsEnabled = true
 }: TrafficTableProps) => {
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
+    const verrouille = usePrefsVerrou().trafic;
     const showAlert = useAlert();
     const confirmer = useConfirm();
     const [showPasteDropdown, setShowPasteDropdown] = useState(false);
@@ -352,14 +353,14 @@ const TrafficTable = ({
                         </button>
                     )}
                 </h3>
-                <label className="traffic-all-groups-checkbox">
+                {verrouille ? <MentionVerrou section="trafic" /> : <label className="traffic-all-groups-checkbox">
                     <input
                         type="checkbox"
                         checked={showAllGroups}
                         onChange={(e) => setShowAllGroups(e.target.checked)}
                     />
                     Tous les Grp
-                </label>
+                </label>}
                 <div className="traffic-dataset-group" onMouseEnter={handleDatasetMouseEnter} onMouseLeave={handleDatasetMouseLeave}>
                     <span
                         className="traffic-dataset-label"

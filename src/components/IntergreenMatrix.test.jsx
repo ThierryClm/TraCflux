@@ -163,7 +163,7 @@ describe('IntergreenMatrix — saisie', () => {
     it('verrouillée : valeurs en lecture seule et mention « Verrouillé »', () => {
         renderMatrix({ locked: true });
         expect(screen.queryAllByRole('textbox')).toHaveLength(0);
-        expect(screen.getByText('(Verrouillé)')).toBeInTheDocument();
+        expect(screen.getByText('(verrouillé)')).toBeInTheDocument();
         expect(caseMatrice(1, 2)).toHaveTextContent('5');
     });
 });

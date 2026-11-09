@@ -55,6 +55,16 @@ const sAbonner = (f: () => void) => {
 
 export const usePrefsVerrou = (): PrefsVerrou => useSyncExternalStore(sAbonner, lirePrefsVerrou, lirePrefsVerrou);
 
+/** Mention partagée par les titres des sections, dans toutes les racines React. */
+export const MentionVerrou = ({ section, verrouille = false, title }: {
+    section: SectionVerrou; verrouille?: boolean; title?: string;
+}) => {
+    const prefs = usePrefsVerrou();
+    if (!prefs[section] && !verrouille) return null;
+    return <span className="mention-verrou" title={title}
+        style={{ color: '#aaa', fontWeight: 'normal', fontSize: '0.85em', whiteSpace: 'nowrap' }}>(verrouillé)</span>;
+};
+
 // Marque posée sur les contrôles verrouillés ici, pour ne rendre au
 // déverrouillage que ce que le verrou a pris (un champ déjà désactivé par
 // l'application le reste).

@@ -690,6 +690,7 @@ function App() {
     // et un `const` n'est pas accessible avant son initialisation.
     const diagramPopup = usePopupWindow({
         geometryKey: 'diagram',
+        sectionVerrou: 'diagramme',
         isOpen: showFloatingDiagram,
         onClose: () => setShowFloatingDiagram(false),
         // Le miroir n'affiche plus sa ligne de titre : elle est ici, donc
