@@ -17,8 +17,12 @@ const cocher = async (page: Page, section: string) => {
     }
     await sousMenu.hover();
     await sousMenu.locator('.submenu-dropdown').getByText(new RegExp(`^✓?${section}$`)).click();
-    await page.keyboard.press('Escape');
-    await page.mouse.click(900, 1050);
+    // Les cases du menu le gardent ouvert. Le refermer par son bouton :
+    // y=1050 était hors du viewport (900 px) et Firefox ne recevait pas
+    // le clic extérieur, laissant le menu recouvrir la simulation.
+    await miseEnPage.click();
+    await page.mouse.move(900, 700);
+    await expect(page.locator('.menu-bar .menu-dropdown')).toHaveCount(0);
 };
 
 const deplacer = async (page: Page, poignee: Locator) => {
