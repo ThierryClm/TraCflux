@@ -134,8 +134,14 @@ test('Scénarios : le verrou fige le choix, les commandes et les cases sans perd
     await expect(panneau.locator('.simulation-scenario-fleche')).toHaveCount(0);
     await expect(panneau.getByRole('button', { name: 'Enregistrer…' })).toBeDisabled();
     for (let i = 0; i < await cases.count(); i++) await expect(cases.nth(i)).toBeDisabled();
-    // Cliquer le libellé d'une action ne contourne pas la case désactivée.
-    await panneau.locator('.simulation-item').first().click();
+    // Clic physique sur le libellé : locator.click() suit son association
+    // avec la case et attendrait qu'elle soit activée, alors qu'on teste
+    // précisément son refus de modifier le scénario.
+    const libelle = panneau.locator('.simulation-item').first();
+    await libelle.scrollIntoViewIfNeeded();
+    const position = await libelle.boundingBox();
+    expect(position).not.toBeNull();
+    await page.mouse.click(position!.x + position!.width / 2, position!.y + position!.height / 2);
     expect(await etat()).toEqual(avant);
     await cocher(page, 'Scénarios');
     await expect(choix).toBeEnabled();
