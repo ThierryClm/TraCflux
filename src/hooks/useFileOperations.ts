@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { nomsALOuverture, nomsALaSauvegarde, nomFichierSuggere } from '../utils/nomsProjet';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { safeShowOpenFilePicker, safeShowSaveFilePicker } from '../utils/filePicker';
 import { writeTextToFileHandle } from '../utils/writeFileHandle';
@@ -210,8 +211,8 @@ const useFileOperations = ({
             // Charger les données du projet
             const projName = file.name.replace(/\.json$/i, '');
             loadFullState({
-                projectName: projName,
-                ...data
+                ...data,
+                ...nomsALOuverture(file.name, data.intersectionName)
             });
 
             // Active l'interface principale (sortie de l'écran d'accueil).
@@ -395,8 +396,8 @@ const useFileOperations = ({
 
             const projName = file.name.replace(/\.json$/i, '');
             loadFullState({
-                projectName: projName,
-                ...data
+                ...data,
+                ...nomsALOuverture(file.name, data.intersectionName)
             });
 
             // Mémoriser le chemin du projet
@@ -505,7 +506,7 @@ const useFileOperations = ({
 
         try {
             const options: FilePickerOptionsLike = {
-                suggestedName: `${projectName || 'projet'}.json`,
+                suggestedName: nomFichierSuggere(projectName, getFullState().intersectionName),
                 types: [{
                     description: 'Fichier Projet JSON',
                     accept: { 'application/json': ['.json'] }
@@ -527,7 +528,7 @@ const useFileOperations = ({
             // Ces sept clés étaient recopiées ici, dans les deux chemins
             // d'enregistrement : c'est cette duplication qui faisait diverger le
             // fichier et le cache dès qu'un réglage n'était ajouté qu'à un endroit.
-            const projectData = { ...fullState };
+            const projectData = { ...fullState, ...nomsALaSauvegarde(fullState, fileHandle.name) };
 
             // Écrire le fichier
             const jsonContent = JSON.stringify(projectData, null, 2);
@@ -563,12 +564,12 @@ const useFileOperations = ({
 
             // Mettre à jour le nom du projet
             const savedName = fileHandle.name.replace(/\.json$/i, '');
-            setIntersectionName(savedName);
+            if (!fullState.intersectionName?.trim() && !fullState.projectName) setIntersectionName(projectData.intersectionName);
 
             // Mémoriser le chemin du projet
             setCurrentProjectPath(fileHandle.name);
             setProjectModified(true); // active "Nouveau projet" dans le menu
-            projectModifiedSkipRef.current = true; // absorbe setIntersectionName(savedName)
+            projectModifiedSkipRef.current = true; // absorbe l’initialisation éventuelle du titre
             setHasUnsavedChanges(false); // projet sauvegardé, pas de modifications
 
             // Sauvegarder aussi dans localStorage pour cohérence
@@ -600,7 +601,7 @@ const useFileOperations = ({
             if (!dirInfo) return;
 
             const options: FilePickerOptionsLike = {
-                suggestedName: `${projectName || 'projet'}.json`,
+                suggestedName: nomFichierSuggere(projectName, getFullState().intersectionName),
                 types: [{
                     description: 'Fichier Projet JSON',
                     accept: { 'application/json': ['.json'] }
@@ -623,7 +624,7 @@ const useFileOperations = ({
             // Ces sept clés étaient recopiées ici, dans les deux chemins
             // d'enregistrement : c'est cette duplication qui faisait diverger le
             // fichier et le cache dès qu'un réglage n'était ajouté qu'à un endroit.
-            const projectData = { ...fullState };
+            const projectData = { ...fullState, ...nomsALaSauvegarde(fullState, fileHandle.name) };
 
             // Écrire le fichier
             const jsonContent = JSON.stringify(projectData, null, 2);
@@ -658,12 +659,12 @@ const useFileOperations = ({
 
             // Mettre à jour le nom du projet
             const savedName = fileHandle.name.replace(/\.json$/i, '');
-            setIntersectionName(savedName);
+            if (!fullState.intersectionName?.trim() && !fullState.projectName) setIntersectionName(projectData.intersectionName);
 
             // Mémoriser le chemin du projet
             setCurrentProjectPath(fileHandle.name);
             setProjectModified(true); // active "Nouveau projet" dans le menu
-            projectModifiedSkipRef.current = true; // absorbe setIntersectionName(savedName)
+            projectModifiedSkipRef.current = true; // absorbe l’initialisation éventuelle du titre
             setHasUnsavedChanges(false); // projet sauvegardé, pas de modifications
 
             // Sauvegarder aussi dans localStorage pour cohérence

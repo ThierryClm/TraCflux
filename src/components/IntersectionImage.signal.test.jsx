@@ -82,7 +82,7 @@ describe('IntersectionImage — case Signal', () => {
                 displayOptions={{ showGroupNumbers: true, showGroupNames: true, showArrows: false, showSignals: true }}
             />
         );
-        const caseSignal = screen.getByRole('checkbox', { name: 'Signal' });
+        const caseSignal = screen.getByRole('checkbox', { name: 'Signaux' });
         expect(caseSignal.disabled).toBe(true);
         expect(caseSignal.checked).toBe(false);
         expect(caseSignal.closest('label').title).toMatch(/Aucun signal renseigné/);
@@ -128,7 +128,7 @@ describe('IntersectionImage — case Signal', () => {
     it('la case enregistre le choix', () => {
         const onDisplayOptionChange = vi.fn();
         renderImage({ showSignals: false, onDisplayOptionChange });
-        fireEvent.click(screen.getByRole('checkbox', { name: 'Signal' }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Signaux' }));
         expect(onDisplayOptionChange).toHaveBeenCalledWith('showSignals', true);
     });
 

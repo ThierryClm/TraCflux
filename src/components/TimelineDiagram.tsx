@@ -713,6 +713,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                         />
 
                         <FlechesFermetureAnticipee
+                            braceZoneRanges={braceZoneRanges}
                             ctx={contexteIncrustations}
                             doesGroupWrap={doesGroupWrap}
                             fermetureActions={fermetureActions}

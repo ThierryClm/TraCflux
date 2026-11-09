@@ -7,7 +7,7 @@ import type { ActionMicro, Durees, Groupe, JeuTrafic, Matrice, PlanDeFeu, Projet
 
 export const DEFAULT_PROJECT_PROPERTIES = {
     commune: '', idCommune: '', idCarrefour: '', controleur: '', programme: '',
-    horsAgglomeration: false,
+    horsAgglomeration: false, carrefourCoordonne: false,
     moa: '', moe: '', bureauEtudes: '', auteur: '',
     logoMoa: '', logoMoe: '',
     dateCreation: '', dateModification: '', numeroDossier: '', phaseEtude: '', commentaires: ''

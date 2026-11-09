@@ -1,3 +1,4 @@
+import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
 import { useEffect } from 'react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
@@ -156,7 +157,7 @@ const useFloatingImageRenderer = ({
         };
 
         floatingImagePopup.renderToPopup(
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <ZoneVerrouSaisie section="image"><div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ padding: '6px 12px', background: '#2a2a2a', borderBottom: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     <div className="floating-zoom-control">
                         <button className="floating-zoom-btn" onClick={() => setFloatingZoom(z => Math.max(0.3, z - 0.1))} title={tip('Réduire')}>−</button>
@@ -299,7 +300,7 @@ const useFloatingImageRenderer = ({
                         </div>
                     </div>
                 </div>
-            </div>
+            </div></ZoneVerrouSaisie>
         );
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
         intersectionArrows, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,

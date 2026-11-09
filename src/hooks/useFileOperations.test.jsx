@@ -196,3 +196,32 @@ describe('Fichier projet — ce qui est écrit', () => {
         expect(saveProject).toHaveBeenCalledWith('Repli');
     });
 });
+
+
+describe('Fichier et carrefour : noms indépendants', () => {
+    it.each(['handleSaveFileWithPicker', 'handleSaveFileToRecentDir'])(
+        '%s propose le nom du fichier existant et préserve le titre', async (chemin) => {
+            const ecrit = interceptantLEcriture();
+            const props = proprietes();
+            const { result } = renderHook(() => useFileOperations(props));
+            await act(async () => { await result.current[chemin](0); });
+            expect(window.showSaveFilePicker.mock.calls[0][0].suggestedName).toBe('Essai.json');
+            expect(JSON.parse(ecrit.contenu)).toMatchObject({ projectName: 'Essai', intersectionName: 'Carrefour témoin' });
+            expect(props.setIntersectionName).not.toHaveBeenCalled();
+        }
+    );
+
+    it('Enregistrer sous change le nom de la sauvegarde dans le JSON, sans renommer le carrefour', async () => {
+        let contenu;
+        window.showSaveFilePicker = vi.fn(async () => ({
+            name: 'Copie.json',
+            createWritable: async () => ({ write: async c => { contenu = c; }, close: async () => {} })
+        }));
+        const props = proprietes();
+        const { result } = renderHook(() => useFileOperations(props));
+        await act(async () => { await result.current.handleSaveFileWithPicker(); });
+        expect(JSON.parse(contenu)).toMatchObject({ projectName: 'Copie', intersectionName: 'Carrefour témoin' });
+        expect(props.saveProject).toHaveBeenCalledWith('Copie');
+        expect(props.setIntersectionName).not.toHaveBeenCalled();
+    });
+});

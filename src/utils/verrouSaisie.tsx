@@ -13,13 +13,13 @@
  * n'atteindrait pas.
  */
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, SyntheticEvent } from 'react';
 
-export type SectionVerrou = 'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables';
+export type SectionVerrou = 'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image';
 export type PrefsVerrou = Record<SectionVerrou, boolean>;
 
-export const SECTIONS_VERROU: SectionVerrou[] = ['proprietes', 'configuration', 'matrice', 'trafic', 'diagramme', 'conditions', 'variables'];
-const AUCUN: PrefsVerrou = { proprietes: false, configuration: false, matrice: false, trafic: false, diagramme: false, conditions: false, variables: false };
+export const SECTIONS_VERROU: SectionVerrou[] = ['proprietes', 'configuration', 'matrice', 'trafic', 'diagramme', 'conditions', 'variables', 'image'];
+const AUCUN: PrefsVerrou = { proprietes: false, configuration: false, matrice: false, trafic: false, diagramme: false, conditions: false, variables: false, image: false };
 
 let etat: PrefsVerrou = AUCUN;
 const abonnes = new Set<() => void>();
@@ -62,7 +62,10 @@ const MARQUE = 'data-verrou-saisie';
 const TEXTE = 'input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=range]), textarea';
 const A_DESACTIVER = 'select, input[type=checkbox], input[type=radio], input[type=range]';
 
-const verrouiller = (racine: HTMLElement) => {
+const verrouiller = (racine: HTMLElement, image = false) => {
+    if (image) racine.querySelectorAll<HTMLButtonElement>('button:not([data-verrou-autorise])').forEach(el => {
+        if (!el.disabled) { el.disabled = true; el.setAttribute(MARQUE, 'desactive'); }
+    });
     racine.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(TEXTE).forEach(el => {
         if (!el.readOnly) { el.readOnly = true; el.setAttribute(MARQUE, 'lecture'); }
     });
@@ -96,14 +99,20 @@ export const ZoneVerrouSaisie = ({ section, children }: { section: SectionVerrou
         const racine = ref.current;
         if (!racine) return;
         if (!verrouille) { deverrouiller(racine); return; }
-        verrouiller(racine);
+        verrouiller(racine, section === 'image');
         // React peut ajouter des lignes ou réactiver un champ : on reverrouille.
-        const obs = new MutationObserver(() => verrouiller(racine));
+        const obs = new MutationObserver(() => verrouiller(racine, section === 'image'));
         obs.observe(racine, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled', 'readonly', 'contenteditable'] });
         return () => obs.disconnect();
-    }, [verrouille]);
+    }, [verrouille, section]);
+    const bloquerImage = (e: SyntheticEvent) => {
+        if (section !== 'image' || !lirePrefsVerrou().image) return;
+        if ((e.target as Element | null)?.closest?.('[data-verrou-autorise]')) return;
+        e.preventDefault(); e.stopPropagation();
+    };
     return (
-        <div ref={ref} className={`zone-verrou-saisie${verrouille ? ' verrouillee' : ''}`} data-section={section}
+        <div onMouseDownCapture={bloquerImage} onDoubleClickCapture={bloquerImage}
+            onDropCapture={bloquerImage} onDragOverCapture={bloquerImage} onPasteCapture={bloquerImage} ref={ref} className={`zone-verrou-saisie${verrouille ? ' verrouillee' : ''}`} data-section={section}
             style={{ display: 'contents' }}>
             {children}
         </div>

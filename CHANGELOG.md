@@ -11,6 +11,13 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Modifié
 
+- **Projet** : le titre de l’en-tête et le nom du carrefour des propriétés sont synchronisés,
+  indépendamment du nom du fichier JSON. Champ de titre élargi à 60 caractères.
+- **Propriétés** : case « Carrefour coordonné » sous « Hors agglomération », décochée par défaut.
+- **Image du carrefour** : survol plus visible dans le diagramme et le Formulaire ; case « Signaux ».
+  Ajout du verrouillage de l’image, des flèches et des options dans Mise en page → Verrouillage saisie,
+  y compris dans la fenêtre détachée ; le survol reste disponible.
+
 - **Diagramme** : la flèche du haut des points de repos, synchros BTS et instants Co est logée dans la
   barre des secondes. Elle reste visible au défilement vertical, et se survole et se glisse comme avant.
 - **Aide en ligne : renvois cliquables.** Un renvoi vers une section y conduit, un renvoi vers un menu
@@ -24,6 +31,11 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   et les flèches du bas des points de repos, synchros BTS et instants Co se placent sous le diagramme.
 
 ### Corrigé
+
+- **Action GF** : les flèches rouges des fermetures anticipées partent de la fin de l’accolade,
+  y compris après les décalages de simulation et à l’export.
+- **Sauvegarde** : enregistrer ou ouvrir un JSON conserve son nom de carrefour ; « Enregistrer sous »
+  met à jour le nom de sauvegarde sans modifier ce titre.
 
 - **Fenêtres détachées** : leur remontée au premier plan ne referme plus une liste déroulante en cours
   d'utilisation, dans la fenêtre principale comme dans une fenêtre détachée.

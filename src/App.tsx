@@ -221,7 +221,6 @@ function App() {
         projectProperties,
         updateProjectProperty,
         projectName,
-        setProjectName,
         appCommunes,
         appMoaLogos,
         appMoeLogos
@@ -480,7 +479,7 @@ function App() {
             return;
         }
         const prefix = isDirty ? '* ' : '';
-        const name = projectName || intersectionName;
+        const name = intersectionName || projectName;
         document.title = `${prefix}${name} — Diagramme de Feux`;
     }, [hasActiveProject, projectName, intersectionName, isDirty]);
 
@@ -1495,6 +1494,7 @@ function App() {
             case 'verrouSaisie:diagramme':     basculerVerrou('diagramme');     break;
             case 'verrouSaisie:conditions':    basculerVerrou('conditions');    break;
             case 'verrouSaisie:variables':     basculerVerrou('variables');     break;
+            case 'verrouSaisie:image':         basculerVerrou('image');         break;
             case 'toggleTooltipsMenu':    setTooltipPref('menu');    break;
             case 'toggleTooltipsMain':    setTooltipPref('main');    break;
             case 'toggleTooltipsConfig':  setTooltipPref('config');  break;
@@ -2336,7 +2336,7 @@ function App() {
             />
             {hasActiveProject && (<>
             <ProjectHeader
-                project={{ projectName, setProjectName, isDirty, projectNameInputRef }}
+                project={{ projectName, intersectionName, setIntersectionName, isDirty, projectNameInputRef }}
                 groupCount={{ groups, groupCountInput, setGroupCountInput, setGroupCount, askConfirm }}
                 history={{ undo, redo, canUndo, canRedo }}
                 dependencies={{
