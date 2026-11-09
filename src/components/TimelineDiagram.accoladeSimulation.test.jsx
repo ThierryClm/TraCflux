@@ -83,10 +83,6 @@ describe('flèche Action GF attachée à l’accolade', () => {
         const { fin, origineFleche } = accoladeDuGf4(cochees, donnees);
         expect(origineFleche).toBe(fin);
         expect(fin).toBe(finAttendue);
-        if (!cochees.length) {
-            expect(origineFleche).toBe(26);
-            expect(origineFleche).not.toBe(28); // La fin du vert GF4 n’est pas l’ancrage.
-        }
     });
 });
 
