@@ -93,6 +93,29 @@ describe('useTimelineDrag', () => {
         expect(props.endDrag).toHaveBeenCalledOnce();
     });
 
+    it.each(['groupe', 'action'])('interrompt un déplacement de %s quand le verrou est posé', genre => {
+        const props = createProps({ actionData: [{ id: 4, action: 'Point de repos', deb: '10', fin: '' }] });
+        const { result, rerender } = renderHook(options => useTimelineDrag(options), { initialProps: props });
+        act(() => {
+            if (genre === 'groupe') result.current.handleDragStart(dragEvent(20), 1, 'start', 10);
+            else result.current.handleActionDragStart(dragEvent(20), 4, 'deb', 10);
+        });
+        act(() => document.dispatchEvent(new MouseEvent('mousemove', { clientX: 26 })));
+        props.updateActionRow.mockClear();
+        rerender({ ...props, readOnly: true });
+        expect(result.current.dragState).toBeNull();
+        act(() => document.dispatchEvent(new MouseEvent('mousemove', { clientX: 40 })));
+        act(() => document.dispatchEvent(new MouseEvent('mouseup')));
+        expect(props.updateGroupParams).not.toHaveBeenCalled();
+        expect(props.updateActionRow).not.toHaveBeenCalled();
+        expect(props.endDrag).toHaveBeenCalledOnce();
+        // Le relâchement suivant ne réapplique pas le geste annulé.
+        rerender(props);
+        act(() => document.dispatchEvent(new MouseEvent('mouseup')));
+        expect(props.updateGroupParams).not.toHaveBeenCalled();
+        expect(props.endDrag).toHaveBeenCalledOnce();
+    });
+
     it('déplace une action en temps réel avec retour de cycle', () => {
         const props = createProps({
             actionData: [{ id: 4, action: 'Point de repos', deb: '58', fin: '' }]

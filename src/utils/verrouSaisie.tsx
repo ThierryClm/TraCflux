@@ -14,6 +14,7 @@
  */
 import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { ReactNode, SyntheticEvent } from 'react';
+import './verrouSaisie.css';
 
 export type SectionVerrou = 'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image';
 export type PrefsVerrou = Record<SectionVerrou, boolean>;

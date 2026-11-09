@@ -37,7 +37,7 @@ import type { TrafficConflict } from '../utils/conflictUtils';
 import type { ParametresGroupe } from '../hooks/useTrafficLight';
 import type { TimelineActionTooltip } from './timeline/timelineTypes';
 import './TimelineDiagram.css';
-import { ZoneVerrouSaisie } from '../utils/verrouSaisie';
+import { usePrefsVerrou, ZoneVerrouSaisie } from '../utils/verrouSaisie';
 import { ROUGE_TEXTE, VERT_TEXTE, vertFluo } from '../utils/couleursTexte';
 
 /** Vert utile survolé dans le tableau de capacité, à reporter sur la barre du groupe. */
@@ -110,6 +110,9 @@ export interface TimelineDiagramProps {
 
 const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId = () => {}, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, actionTooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, flechesBasAuPied = false, titreEnBandeau = false }: TimelineDiagramProps) => {
     const { names: microVariableNames } = useMicroVariables();
+    // Le verrou de saisie interdit les déplacements comme le miroir en lecture
+    // seule, sans retirer le champ cycle ni les commandes de présentation.
+    const saisieVerrouillee = usePrefsVerrou().diagramme || readOnly;
     // Case « Diagramme » de Mise en page → Infobulles.
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -281,7 +284,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
         groups,
         onDragConflicts,
         pixelsPerSecond,
-        readOnly,
+        readOnly: saisieVerrouillee,
         startDrag,
         updateActionRow,
         updateGroupParams
@@ -589,7 +592,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
 
     return (<ZoneVerrouSaisie section="diagramme">
         <div
-            className={`timeline-container ${dragState ? 'dragging' : ''}${readOnly ? ' read-only' : ''}${scrollable ? ' scrollable' : ''}`}
+            className={`timeline-container ${dragState ? 'dragging' : ''}${saisieVerrouillee ? ' read-only' : ''}${scrollable ? ' scrollable' : ''}`}
             ref={containerRef}
             onMouseEnter={() => setIsMouseInDiagram(true)}
             onMouseMove={suivreCurseur}
