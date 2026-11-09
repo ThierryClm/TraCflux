@@ -8,13 +8,15 @@ import { expect, test } from '@playwright/test';
 import { entreesGrisees, ouvrirExemple, projetEnCache, projetExemple, restaurer } from './aide';
 
 test('Sauvegarder est grisé sur l\'exemple, et redevient actif sur un projet restauré', async ({ page, context }) => {
-    await projetEnCache(context, 'Mon carrefour', projetExemple());
+    await projetEnCache(context, 'Mon carrefour', { ...projetExemple(), intersectionName: 'Carrefour restauré' });
     await ouvrirExemple(page);
     expect(await entreesGrisees(page)).toContain('Sauvegarder');
 
     await restaurer(page, 'Mon carrefour');
     // Sans ^ : sur une machine chargée, un projet tout juste restauré peut
     // prendre l'astérisque « modifié » (défaut connu, à corriger à part).
-    await expect(page).toHaveTitle(/Mon carrefour/);
+    // Le titre du carrefour est distinct du nom de sa sauvegarde.
+    await expect(page).toHaveTitle(/Carrefour restauré/);
+    await expect(page.getByRole('textbox', { name: 'Nom du carrefour', exact: true })).toHaveValue('Carrefour restauré');
     expect(await entreesGrisees(page)).not.toContain('Sauvegarder');
 });
