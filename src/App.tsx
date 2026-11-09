@@ -1496,6 +1496,8 @@ function App() {
             case 'verrouSaisie:conditions':    basculerVerrou('conditions');    break;
             case 'verrouSaisie:variables':     basculerVerrou('variables');     break;
             case 'verrouSaisie:image':         basculerVerrou('image');         break;
+            case 'verrouSaisie:scenarios':     basculerVerrou('scenarios');     break;
+            case 'verrouSaisie:phasages':      basculerVerrou('phasages');      break;
             case 'toggleTooltipsMenu':    setTooltipPref('menu');    break;
             case 'toggleTooltipsMain':    setTooltipPref('main');    break;
             case 'toggleTooltipsConfig':  setTooltipPref('config');  break;

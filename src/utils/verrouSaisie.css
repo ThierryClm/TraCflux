@@ -7,6 +7,11 @@
     cursor: not-allowed !important;
 }
 
+.zone-verrou-saisie.verrouillee .simulation-item,
+.zone-verrou-saisie.verrouillee .phasage-group-item {
+    cursor: not-allowed;
+}
+
 /* Une liste verrouillée se lit comme une valeur, sans invitation à l'ouvrir. */
 .zone-verrou-saisie.verrouillee select {
     appearance: none;

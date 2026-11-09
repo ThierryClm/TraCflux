@@ -1,6 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import WorkspaceSidebar from './WorkspaceSidebar';
+import userEvent from '@testing-library/user-event';
+import { definirPrefsVerrou } from '../../utils/verrouSaisie';
+
+afterEach(() => act(() => definirPrefsVerrou()));
 
 vi.mock('../SimulationPanel', () => ({ default: () => <div data-testid="simulation-panel" /> }));
 vi.mock('../TrafficTable', () => ({ default: () => <div data-testid="traffic-table" /> }));
@@ -156,4 +160,25 @@ describe('WorkspaceSidebar', () => {
         rerender(<WorkspaceSidebar model={{ ...inverse, activeTab: 'properties' }} />);
         expect(screen.getByTestId('properties-panel')).toHaveAttribute('data-infobulles', 'true');
     });
+});
+
+it('verrouille les groupes du phasage, conserve le survol et respecte les groupes sans flèche au déverrouillage', async () => {
+    const user = userEvent.setup();
+    const model = buildModel({ phasageBulleEnabled: true });
+    const { container } = render(<WorkspaceSidebar model={model} />);
+    act(() => definirPrefsVerrou({ phasages: true }));
+    const cases = screen.getAllByRole('checkbox');
+    for (const champ of cases) expect(champ).toBeDisabled();
+    await user.click(screen.getByText('Tout décocher'));
+    expect(model.setPhasageBulleVisibleGroups).not.toHaveBeenCalled();
+    fireEvent.mouseEnter(container.querySelector('.phasage-group-item'));
+    expect(model.setHoveredPhasageGroupId).toHaveBeenCalledWith(1);
+    act(() => definirPrefsVerrou());
+    expect(cases[0]).toBeEnabled();
+    expect(cases[1]).toBeDisabled();
+    expect(cases[2]).toBeEnabled();
+    fireEvent.click(cases[0]);
+    expect(model.togglePhasageBulleGroup).toHaveBeenCalledWith(1);
+    fireEvent.click(screen.getByText('Tout décocher'));
+    expect(model.setPhasageBulleVisibleGroups).toHaveBeenCalledWith(new Set());
 });

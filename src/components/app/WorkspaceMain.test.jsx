@@ -1,6 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import WorkspaceMain from './WorkspaceMain';
+import userEvent from '@testing-library/user-event';
+import { definirPrefsVerrou } from '../../utils/verrouSaisie';
+
+afterEach(() => act(() => definirPrefsVerrou()));
 
 vi.mock('../TimelineDiagram', () => ({ default: () => <div data-testid="timeline" /> }));
 vi.mock('../PhasageBulle', () => ({ default: () => <div data-testid="phasage" /> }));
@@ -98,4 +102,23 @@ describe('WorkspaceMain', () => {
 
         expect(model.openFloatingImage).toHaveBeenCalledTimes(1);
     });
+});
+
+it('le verrou Phasages couvre le panneau des phases, des instants et sa validation', async () => {
+    const user = userEvent.setup();
+    const model = buildModel({ phasageBulleEnabled: true, phasageBulleModal: true });
+    const { container } = render(<WorkspaceMain model={model} />);
+    const panneau = container.querySelector('.phasage-config-panel');
+    act(() => definirPrefsVerrou({ phasages: true }));
+    expect(panneau.querySelector('select')).toBeDisabled();
+    for (const champ of panneau.querySelectorAll('input')) expect(champ).toHaveAttribute('readonly');
+    expect(screen.getByRole('button', { name: 'OK' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'OK' }));
+    expect(model.setBrouillonPhasage).not.toHaveBeenCalled();
+    act(() => definirPrefsVerrou());
+    expect(panneau.querySelector('select')).toBeEnabled();
+    for (const champ of panneau.querySelectorAll('input')) expect(champ).not.toHaveAttribute('readonly');
+    expect(screen.getByRole('button', { name: 'OK' })).toBeEnabled();
+    fireEvent.change(panneau.querySelector('select'), { target: { value: '3' } });
+    expect(model.setBrouillonPhasage).toHaveBeenCalledOnce();
 });

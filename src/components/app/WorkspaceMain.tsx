@@ -10,6 +10,7 @@ import ActionTable from '../ActionTable';
 import type { ActionTableProps } from '../ActionTable';
 import { toast } from '../../utils/toast';
 import { ECRAN_MOBILE } from '../../utils/ecranMobile';
+import { ZoneVerrouSaisie } from '../../utils/verrouSaisie';
 import type {
     CSSProperties,
     Dispatch,
@@ -416,7 +417,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 onBubbleRatioChange={setPhasageBubbleRatio}
                             />
                             {/* Panneau de configuration flottant en haut à gauche */}
-                            {phasageBulleModal && (
+                            <ZoneVerrouSaisie section="phasages">{phasageBulleModal && (
                                 <div className="phasage-config-panel">
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85em' }}>
@@ -528,7 +529,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                         </button>
                                     </div>
                                 </div>
-                            )}
+                            )}</ZoneVerrouSaisie>
                         </div>
                         <div style={{ display: simulationEnabled && !phasageBulleEnabled ? 'contents' : 'none' }}>
                             <IntersectionImage

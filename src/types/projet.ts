@@ -188,7 +188,7 @@ export interface OptionsMiseEnPage {
     /** Image du carrefour : signal ISR à la place de la flèche, si le champ Signal est renseigné. */
     showImageSignals?: boolean;
     /** Sections dont la saisie est verrouillée (Mise en page → Verrouillage saisie). */
-    verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image', boolean>>;
+    verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image' | 'scenarios' | 'phasages', boolean>>;
 }
 
 /** Un projet enregistré, tel que getFullState le produit. */

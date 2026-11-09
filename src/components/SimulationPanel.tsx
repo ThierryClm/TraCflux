@@ -8,6 +8,7 @@ import type { ActionMicro, Groupe, Matrice, ScenarioSimulation } from '../types/
 import Modal from './Modal';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import './SimulationPanel.css';
+import { MentionVerrou, usePrefsVerrou, ZoneVerrouSaisie } from '../utils/verrouSaisie';
 
 interface HoveredConflict {
     from: number;
@@ -72,6 +73,7 @@ const SimulationPanel = ({
     onSupprimerScenario = rien,
     tooltipsEnabled = true
 }: SimulationPanelProps) => {
+    const verrouille = usePrefsVerrou().scenarios;
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const contientSynchroBts = actionData.some(action =>
         action.action === 'Synchro BTS' && action.deb !== '' && action.deb != null &&
@@ -119,6 +121,15 @@ const SimulationPanel = ({
     const [dialogue, setDialogue] = useState<Dialogue | null>(null);
     const [titre, setTitre] = useState('');
     const zoneScenarioRef = useRef<HTMLDivElement>(null);
+
+    // Un menu ou dialogue déjà ouvert ne doit pas permettre de contourner
+    // le verrou, ni réapparaître lorsqu'on le retire.
+    useEffect(() => {
+        if (verrouille) {
+            setMenuOuvert(false);
+            setDialogue(null);
+        }
+    }, [verrouille]);
 
     // La liste se referme au clic ailleurs ou sur Échap.
     // Le panneau disparaît (onglet quitté) sans recevoir la fin du survol :
@@ -247,13 +258,13 @@ const SimulationPanel = ({
         () => conflitsSimules(rawConflicts, actionData, selectedActions),
         [rawConflicts, actionData, selectedActions]);
 
-    return (
+    return (<ZoneVerrouSaisie section="scenarios">
         <div className="simulation-panel">
             <div className="simulation-header">
                 {/* Le cycle simulé, à côté du titre : un cadre à lui seul
                     prenait une ligne du panneau. */}
                 <h3>
-                    Simulation
+                    Simulation{verrouille && ' '}<MentionVerrou section="scenarios" />
                     <span className="simulation-cycle" title={tip('Cycle simulé, et écart au cycle du plan')}>
                         {' · '}<span className="sim-info-value">{simulatedCycleLength}s</span>
                         {simulatedCycleLength !== cycleLength && (
@@ -294,7 +305,7 @@ const SimulationPanel = ({
                 >
                     <span className="simulation-scenario-nom">{scenarioActif ? scenarioActif.nom : 'Sans titre'}</span>
                     {modifie && <span className="simulation-scenario-modifie" aria-label="modifié">●</span>}
-                    <span className="simulation-scenario-fleche">{menuOuvert ? '▴' : '▾'}</span>
+                    {!verrouille && <span className="simulation-scenario-fleche">{menuOuvert ? '▴' : '▾'}</span>}
                 </button>
                 {menuOuvert && (
                     <div className="simulation-scenario-menu" role="listbox">
@@ -538,7 +549,7 @@ const SimulationPanel = ({
                 </div>
             </Modal>
         </div>
-    );
+    </ZoneVerrouSaisie>);
 };
 
 export default SimulationPanel;

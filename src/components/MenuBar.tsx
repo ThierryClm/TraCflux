@@ -554,7 +554,9 @@ const MenuBar = ({
                         { label: 'Diagramme',     action: 'verrouSaisie:diagramme',     checked: verrou.diagramme,     keepSubmenuOpen: true },
                         { label: 'Conditions de micro-régulation', action: 'verrouSaisie:conditions', checked: verrou.conditions, keepSubmenuOpen: true },
                         { label: 'Variables micro', action: 'verrouSaisie:variables', checked: verrou.variables, keepSubmenuOpen: true },
-                        { label: 'Image du carrefour', action: 'verrouSaisie:image', checked: verrou.image, keepSubmenuOpen: true }
+                        { label: 'Image du carrefour', action: 'verrouSaisie:image', checked: verrou.image, keepSubmenuOpen: true },
+                        { label: 'Scénarios', action: 'verrouSaisie:scenarios', checked: verrou.scenarios, keepSubmenuOpen: true },
+                        { label: 'Phasages bulles', action: 'verrouSaisie:phasages', checked: verrou.phasages, keepSubmenuOpen: true }
                     ]
                 },
                 {

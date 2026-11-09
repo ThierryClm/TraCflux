@@ -115,3 +115,68 @@ test('Trafic : la mention remplace le filtre et suit le verrou dans une fenêtre
     await expect(fenetre).not.toHaveTitle(/verrouillé/);
     await expect(fenetre.getByRole('checkbox', { name: 'Tous les Grp' })).toBeChecked();
 });
+
+
+test('Scénarios : le verrou fige le choix, les commandes et les cases sans perdre leur état', async ({ page }) => {
+    await ouvrirExemple(page);
+    await page.locator('.simulation-tab').click();
+    const panneau = page.locator('.simulation-panel');
+    const choix = panneau.locator('.simulation-scenario-select');
+    const cases = panneau.locator('input[type=checkbox]');
+    const etat = () => cases.evaluateAll(elements => elements.map(e => (e as HTMLInputElement).checked));
+    const avant = await etat();
+    await choix.click();
+    await expect(panneau.getByRole('listbox')).toBeVisible();
+    await cocher(page, 'Scénarios');
+    await expect(panneau.locator('.mention-verrou')).toHaveText('(verrouillé)');
+    await expect(panneau.getByRole('listbox')).toHaveCount(0);
+    await expect(choix).toBeDisabled();
+    await expect(panneau.locator('.simulation-scenario-fleche')).toHaveCount(0);
+    await expect(panneau.getByRole('button', { name: 'Enregistrer…' })).toBeDisabled();
+    for (let i = 0; i < await cases.count(); i++) await expect(cases.nth(i)).toBeDisabled();
+    // Cliquer le libellé d'une action ne contourne pas la case désactivée.
+    await panneau.locator('.simulation-item').first().click();
+    expect(await etat()).toEqual(avant);
+    await cocher(page, 'Scénarios');
+    await expect(choix).toBeEnabled();
+    await expect(panneau.locator('.simulation-scenario-fleche')).toBeVisible();
+    expect(await etat()).toEqual(avant);
+    await panneau.locator('.simulation-item input').first().click();
+    await expect.poll(etat).not.toEqual(avant);
+});
+
+test('Phasages bulles : groupes, phases, instants et curseurs partagent un verrou indépendant', async ({ page }) => {
+    await ouvrirExemple(page);
+    await cocher(page, 'Phasages bulles');
+    await page.locator('.phasage-tab').click();
+    const groupes = page.locator('.phasage-bulle-sidebar');
+    const panneau = page.locator('.phasage-config-panel');
+    const bulles = page.locator('.phasage-bulle-container');
+    await expect(bulles.locator('.mention-verrou')).toHaveText('(verrouillé)');
+    await expect(groupes.locator('.mention-verrou')).toHaveText('(verrouillé)');
+    await expect(groupes.getByRole('button', { name: 'Tout décocher' })).toBeDisabled();
+    await expect(groupes.getByRole('checkbox').first()).toBeDisabled();
+    await expect(panneau.locator('select')).toBeDisabled();
+    await expect(panneau.locator('select')).toHaveCSS('appearance', 'none');
+    await expect(panneau.locator('input').first()).toHaveAttribute('readonly');
+    await expect(panneau.getByRole('button', { name: 'OK' })).toBeDisabled();
+    const curseurs = bulles.getByRole('slider');
+    for (let i = 0; i < await curseurs.count(); i++) await expect(curseurs.nth(i)).toBeDisabled();
+    const valeur = await curseurs.first().inputValue();
+    await cocher(page, 'Phasages bulles');
+    await expect(panneau.locator('select')).toBeEnabled();
+    await panneau.locator('select').selectOption('3');
+    await panneau.locator('input').first().fill('17');
+    await panneau.getByRole('button', { name: 'OK' }).click();
+    await expect(bulles.locator('.phase-bubble')).toHaveCount(3);
+    await expect(bulles.locator('.phase-time-display').first()).toHaveText('Seconde 17');
+    await groupes.getByRole('button', { name: 'Tout décocher' }).click();
+    await expect(groupes.locator('input:checked')).toHaveCount(0);
+    await expect(curseurs.first()).toBeEnabled();
+    await curseurs.first().focus();
+    await curseurs.first().press('ArrowRight');
+    await expect(curseurs.first()).not.toHaveValue(valeur);
+    // Le verrou des scénarios reste indépendant de celui du phasage.
+    await page.locator('.simulation-tab').click();
+    await expect(page.locator('.simulation-scenario-select')).toBeEnabled();
+});

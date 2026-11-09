@@ -47,6 +47,9 @@ describe('verrouillage de la saisie par section', () => {
         // Ouverture d'un autre projet : son verrouillage remplace le précédent.
         act(() => definirPrefsVerrou({ matrice: true, inconnu: true, trafic: 'oui' }));
         expect(lirePrefsVerrou()).toMatchObject({ matrice: true, trafic: false, conditions: false, variables: false });
+        act(() => definirPrefsVerrou({ scenarios: true, phasages: true }));
+        expect(prefsVerrouAEnregistrer()).toEqual({ scenarios: true, phasages: true });
+        expect(lirePrefsVerrou().matrice).toBe(false);
         // Nouveau projet : rien de verrouillé.
         act(() => definirPrefsVerrou());
         expect(prefsVerrouAEnregistrer()).toBeUndefined();
