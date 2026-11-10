@@ -31,7 +31,7 @@ import LoginModal from './components/LoginModal';
 import UserManagerModal from './components/UserManagerModal';
 import ExternalLinksModal from './components/ExternalLinksModal';
 import PropertiesPanel from './components/PropertiesPanel';
-import { calculateSimulatedDiagram, sectionsScenariosInitiales } from './simulation';
+import { calculateSimulatedDiagram, scenariosDuPlan, sectionsScenariosInitiales } from './simulation';
 import usePopupWindow from './hooks/usePopupWindow';
 import useAideDetachee from './hooks/useAideDetachee';
 import useFloatingLegend from './hooks/useFloatingLegend';
@@ -172,6 +172,7 @@ function App() {
         simulationName,
         simulationScenarios,
         choisirScenarioSimulation,
+        choisirScenarioDuPlan,
         creerScenarioSimulation,
         enregistrerScenarioSimulation,
         supprimerScenarioSimulation,
@@ -509,6 +510,17 @@ function App() {
 
     // Nom du PF actif, repris dans le titre de chaque fenêtre détachée.
     const activePFName = pfTabs.find(pf => pf.id === activePFId)?.name || '';
+
+    // Scénarios enregistrés de chaque plan de feu, listés dans le menu
+    // Diagramme ▸ Scénarios. Les scénarios fixes (« Tout coché »…) n'y sont
+    // pas : ils se déduisent des cases, ils ne sont pas préparés.
+    const scenariosPlansMenu = useMemo(
+        () => pfTabs.map(pf => ({
+            id: pf.id,
+            nom: pf.name,
+            scenarios: scenariosDuPlan(pf).map(sc => sc.nom)
+        })),
+        [pfTabs]);
 
     // Floating matrix state
     const {
@@ -1220,6 +1232,21 @@ function App() {
 
     // Menu action handler
     const handleMenuAction = async (action: string) => {
+        // Diagramme ▸ Scénarios : « scenario:<id du plan>:<nom> ». Le plan de
+        // feu qui porte le scénario devient actif, le scénario est ouvert et
+        // la simulation s'affiche, sans quoi le choix resterait invisible.
+        if (action.startsWith('scenario:')) {
+            const [, idPlan, ...reste] = action.split(':');
+            const nom = reste.join(':');
+            const id = Number(idPlan);
+            if (nom && pfTabs.some(pf => pf.id === id)) {
+                setActivePFId(id);
+                choisirScenarioDuPlan(id, nom);
+                setSimulationEnabled(true);
+                toast.success(`Scénario « ${nom} » ouvert`);
+            }
+            return;
+        }
         switch (action) {
             case 'new': {
                 // Confirmation uniquement s'il y a des modifications à perdre.
@@ -2332,6 +2359,7 @@ function App() {
                     traficRenseigne={traficRenseigne}
                     assistantPret={prerequisAssistant.pret}
                     assistantBlocage={prerequisAssistant.message}
+                    scenariosPlans={scenariosPlansMenu}
                 />
             <WelcomeScreen
                 hasActiveProject={hasActiveProject}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import type { PermissionFlag } from '../hooks/useAuth';
@@ -141,6 +141,15 @@ export interface MenuBarProps {
     traficRenseigne?: boolean;
     assistantPret?: boolean;
     assistantBlocage?: string;
+    /** Scénarios enregistrés, plan de feu par plan de feu (menu Diagramme ▸ Scénarios). */
+    scenariosPlans?: PlanScenariosMenu[];
+}
+
+/** Scénarios enregistrés d'un plan de feu, pour le menu Diagramme ▸ Scénarios. */
+export interface PlanScenariosMenu {
+    id: number;
+    nom: string;
+    scenarios: string[];
 }
 
 const MenuBar = ({
@@ -163,7 +172,8 @@ const MenuBar = ({
     pfCount = 0,
     traficRenseigne = false,
     assistantPret = false,
-    assistantBlocage = ''
+    assistantBlocage = '',
+    scenariosPlans = []
 }: MenuBarProps) => {
     const tip = (texte: string | undefined) => layoutOptions.tooltipPrefs?.menu !== false ? texte : undefined;
     const [openMenu, setOpenMenu] = useState<string | null>(initialOpenMenu);
@@ -313,6 +323,20 @@ const MenuBar = ({
             }))
         ] : [])
     ];
+
+    // Scénarios enregistrés de tous les plans de feu. Le sous-menu les liste
+    // plan par plan ; il reste grisé tant qu'aucun plan n'en a enregistré,
+    // puisqu'il n'y aurait rien à proposer. Le nom du plan ne paraît que
+    // lorsqu'il y en a plusieurs : sinon c'est du bruit.
+    const scenariosEnregistres = useMemo<ElementMenu[]>(() => {
+        const plans = scenariosPlans.filter(p => p.scenarios.length > 0);
+        const plusieursPlans = plans.length > 1;
+        return plans.flatMap(plan => plan.scenarios.map(nom => ({
+            label: plusieursPlans ? `${plan.nom} — ${nom}` : nom,
+            action: `scenario:${plan.id}:${nom}`,
+            title: `Ouvrir « ${nom} » dans le plan de feu ${plan.nom} et rendre ce plan actif`
+        })));
+    }, [scenariosPlans]);
 
     const menus: Record<string, Menu> = {
         fichier: {
@@ -639,6 +663,20 @@ const MenuBar = ({
                     action: 'cycleSuggestion',
                     disabled: !traficRenseigne || !assistantPret,
                     title: [INFOBULLE_ASSISTANT, assistantBlocage, !traficRenseigne ? 'Renseignez le trafic du plan de feu (onglet Trafic).' : ''].filter(Boolean).join('\n\n')
+                },
+                {
+                    // Accès direct aux scénarios de simulation préparés, sans
+                    // passer par l'onglet Simulation. Grisé par défaut : tant
+                    // qu'aucun plan de feu n'a de scénario enregistré, il n'y
+                    // a rien à lister.
+                    label: 'Scénarios',
+                    type: 'submenu',
+                    submenuId: 'scenariosEnregistres',
+                    disabled: scenariosEnregistres.length === 0,
+                    title: scenariosEnregistres.length === 0
+                        ? 'Aucun scénario enregistré : créez-en un dans l’onglet Simulation (Enregistrer…), il apparaîtra ici.'
+                        : 'Choisir un scénario préparé ; le plan de feu qui le porte devient le plan actif.',
+                    submenu: scenariosEnregistres
                 },
                 {
                     label: 'Capacité des plans de feu...',
