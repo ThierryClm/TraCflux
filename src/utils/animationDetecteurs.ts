@@ -99,6 +99,17 @@ const dureeService = (
 const nombreImpulsions = (service: number, intervalle: number): number =>
     service > 0 ? Math.max(0, Math.floor(service / intervalle) + 1) : 0;
 
+/** Le courant est-il saturé (demande au moins égale à la capacité du vert) ? */
+const estSature = (
+    traffic: number,
+    coefficient: number,
+    cycle: number,
+    dureeVert: number
+): boolean => {
+    const vUtile = calculateVUtile(traffic, coefficient, cycle) ?? 0;
+    return dureeVert > 0 && vUtile >= dureeVert - 0.01;
+};
+
 const contexteCouleur = (ctx: ContexteAnimation) => ({
     groups: ctx.groups,
     simulationResult: ctx.simulationResult,
@@ -286,6 +297,7 @@ const intervallesEloignee = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
     const fileM = calculateQueueLength(traffic, coefficient, dureeVertNominale, cycle) ?? 0;
     const couverte = distance > 0 && fileM >= distance;
     const service = dureeService(traffic, coefficient, cycle, dureeVertNominale);
+    const sature = estSature(traffic, coefficient, cycle, dureeVertNominale);
     const resultat: Intervalle[] = [];
 
     for (const vert of verts) {
@@ -304,7 +316,9 @@ const intervallesEloignee = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
         }
     }
 
-    if (couverte) resultat.push(...intervallesRouge(verts, cycle));
+    // Courant saturé : la file ne se vide pas, la boucle reste occupée pendant
+    // le rouge, même si le calcul de file ne la recouvre pas encore.
+    if (couverte || sature) resultat.push(...intervallesRouge(verts, cycle));
     return resultat;
 };
 
@@ -354,6 +368,11 @@ const intervallesComptage = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
         const distance = repere ? distanceMetres(detecteur.position, repere, ctx.pixelsParMetre) : 0;
         const verts = intervallesVert(groupId, ctx);
         const intervalle = intervallePassage(coefficient);
+        const dureeVertNominale = Math.max(
+            groupe.durations?.green || 0,
+            ...verts.map(v => v.fin - v.debut)
+        );
+        const sature = estSature(traffic, coefficient, cycle, dureeVertNominale);
 
         for (const vert of verts) {
             const dureeVert = Math.max(0, vert.fin - vert.debut);
@@ -366,6 +385,10 @@ const intervallesComptage = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
                 occupation
             );
         }
+
+        // Courant saturé : les véhicules continuent de se présenter, la boucle
+        // de comptage reste occupée pendant le rouge.
+        if (sature) resultat.push(...intervallesRouge(verts, cycle));
     }
     return resultat;
 };

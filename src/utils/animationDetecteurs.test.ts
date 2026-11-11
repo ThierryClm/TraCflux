@@ -162,6 +162,7 @@ describe('boucle de comptage', () => {
         const ctx = contexte({
             groups: [groupe({ id: 1 }), groupe({ id: 2, name: 'Sud', offset: 45 })],
             arrows: [fleche(1, 20, 50), fleche(2, 30, 50)],
+            getTrafficData: (groupId: number) => ({ trafficVol: groupId === 1 ? 300 : 150 }),
             pixelsParMetre: 12
         });
         const boucle = detecteur({ categorie: 'boucleComptage', position: { x: 25, y: 50 }, gf: null });
@@ -169,5 +170,41 @@ describe('boucle de comptage', () => {
         expect(estDetecteurOccupe(boucle, 45.4, ctx)).toBe(true);
         expect(estDetecteurOccupe(boucle, 0.4, ctx)).toBe(true);
         expect(estDetecteurOccupe(boucle, 40, ctx)).toBe(false);
+    });
+
+    it('reste allumée pendant le rouge quand le groupe compté est saturé', () => {
+        // GF8 de l'exemple : vert 19–35 sur un cycle de 100 s, 303 véh/h,
+        // coefficient 0,85 → 101 % de capacité, la file ne se vide pas.
+        const ctx = contexte({
+            cycleLength: 100,
+            groups: [groupe({
+                id: 8,
+                name: 'Rue PESTRE',
+                offset: 81,
+                laneCoef: 0.85,
+                durations: { green: 16, orange: 3, red: 81 }
+            })],
+            arrows: [fleche(8, 20, 50)],
+            getTrafficData: () => ({ trafficVol: 303 })
+        });
+        const boucle = detecteur({ categorie: 'boucleComptage', position: { x: 25, y: 50 }, gf: null });
+        expect(estDetecteurOccupe(boucle, 50, ctx)).toBe(true);
+    });
+
+    it('s’éteint pendant le rouge quand le groupe compté n’est pas saturé', () => {
+        const ctx = contexte({
+            cycleLength: 100,
+            groups: [groupe({
+                id: 8,
+                name: 'Rue PESTRE',
+                offset: 81,
+                laneCoef: 0.85,
+                durations: { green: 16, orange: 3, red: 81 }
+            })],
+            arrows: [fleche(8, 20, 50)],
+            getTrafficData: () => ({ trafficVol: 100 })
+        });
+        const boucle = detecteur({ categorie: 'boucleComptage', position: { x: 25, y: 50 }, gf: null });
+        expect(estDetecteurOccupe(boucle, 50, ctx)).toBe(false);
     });
 });
