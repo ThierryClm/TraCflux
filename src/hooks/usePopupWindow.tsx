@@ -376,6 +376,13 @@ function installMainListener() {
 // le masque pour retrouver un contenu jointif avec le haut de sa fenêtre.
 const BANDEAU_HAUTEUR = 28;
 
+// Épaisseur du cadre qui entoure une fenêtre détachée. Le bandeau dit où la
+// fenêtre commence ; ce cadre dit où elle s'arrête, sur les quatre côtés. Huit
+// pixels : à trois, il se lisait comme un liseré décoratif et deux fenêtres
+// sombres posées côte à côte se confondaient encore. Il entre dans le calcul de
+// la hauteur du contenu, sans quoi la fenêtre gagne une barre de défilement.
+const CADRE_EPAISSEUR = 8;
+
 // Coupe « Données trafic — VRM_Prio » en deux. Le tiret cadratin sépare le nom
 // de la fenêtre du contexte (plan de feu, carrefour) ; sans lui, tout le titre
 // reste à gauche.
@@ -746,19 +753,25 @@ const usePopupWindow = ({
                         background: linear-gradient(#9a9a9a, #868686);
                         border-bottom-color: #6f6f6f;
                     }
-                    /* Le cadre de pourtour fait, sur les trois autres côtés, ce que
-                       le bandeau fait en haut : dire où la fenêtre s'arrête. Trois
-                       pixels et non un, dans le gris du bandeau : à un pixel et en
-                       gris sombre, il se confondait avec le fond de l'écran
-                       principal, qui est sombre lui aussi. */
+                    /* Le cadre fait le tour de la fenêtre, bandeau compris, dans le
+                       gris du bandeau. Ses quatre côtés n'ont pas la même teinte :
+                       clair en haut et à gauche, sombre en bas et à droite, comme
+                       une fenêtre éclairée d'en haut — c'est ce biseau qui donne le
+                       relief, une ombre portée n'ayant pas de place dans une fenêtre
+                       plein écran. Un trait sombre de un pixel, à l'intérieur, sépare
+                       le cadre du contenu. */
                     body {
-                        box-shadow: inset 0 0 0 3px #6b6b6b;
+                        box-sizing: border-box;
+                        border: ${CADRE_EPAISSEUR}px solid;
+                        border-color: #8a8a8a #5a5a5a #3f3f3f #7a7a7a;
+                        box-shadow: inset 0 0 0 1px #2b2b2b;
                     }
                     body.light-mode, body.sepia-mode {
-                        box-shadow: inset 0 0 0 3px #8a8a8a;
+                        border-color: #a3a3a3 #7d7d7d #5c5c5c #949494;
+                        box-shadow: inset 0 0 0 1px #575757;
                     }
                     #popup-root {
-                        height: calc(100vh - ${bannerHeight}px);
+                        height: calc(100vh - ${bannerHeight}px - ${2 * CADRE_EPAISSEUR}px);
                         display: flex;
                         flex-direction: column;
                     }
