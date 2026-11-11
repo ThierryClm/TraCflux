@@ -45,7 +45,9 @@ describe('dessin des symboles', () => {
         const rect = container.querySelector('rect');
         expect(rect).not.toBeNull();
         expect(rect?.getAttribute('rx')).toBeNull();
-        expect(rect?.getAttribute('stroke-dasharray')).toBe('6 4');
+        expect(rect?.getAttribute('stroke-dasharray')).toBe('4 3');
+        expect(rect?.getAttribute('stroke')).toBe('#000000');
+        expect(rect?.getAttribute('stroke-width')).toBe('1');
         expect(rect?.getAttribute('fill')).toBe('none');
     });
 
@@ -56,7 +58,9 @@ describe('dessin des symboles', () => {
 
     it('dessine le bouton poussoir dans un cercle avec une main', () => {
         const { container } = render(<div>{renderDetecteurSVG(detecteur({ categorie: 'boutonPoussoir' }), 10)}</div>);
-        expect(container.querySelector('circle')).not.toBeNull();
+        const cercle = container.querySelector('circle');
+        expect(cercle).not.toBeNull();
+        expect(cercle?.getAttribute('stroke')).toBe('#000000');
         expect(container.querySelectorAll('path').length).toBeGreaterThan(0);
     });
 });

@@ -37,6 +37,10 @@ export const estCategorieDetecteur = (valeur: unknown): valeur is CategorieDetec
 export const estBoutonPoussoir = (categorie: CategorieDetecteur): boolean =>
     categorie === 'boutonPoussoir';
 
+/** Les trois catégories dessinées en boucle (rectangle pointillé). */
+export const estBoucle = (categorie: CategorieDetecteur): boolean =>
+    categorie === 'bouclePiedFeu' || categorie === 'boucleEloignee' || categorie === 'boucleComptage';
+
 /** Une boucle a une longueur, un radar une portée ; le bouton n'a pas de dimension. */
 export const dimensionSaisissable = (categorie: CategorieDetecteur): boolean =>
     !estBoutonPoussoir(categorie);

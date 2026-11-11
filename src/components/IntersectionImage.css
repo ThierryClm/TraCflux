@@ -1099,6 +1099,13 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     pointer-events: none;
 }
 
+/* Le nom d'une boucle se lit au centre du rectangle, en noir sur fond clair. */
+.detecteur-label.dans-boucle {
+    color: #000;
+    background: rgba(255, 255, 255, 0.72);
+    font-weight: 600;
+}
+
 .detecteur-placement-hint {
     position: absolute;
     top: 8px;

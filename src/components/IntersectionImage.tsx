@@ -11,7 +11,7 @@ import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable 
 import { demarrerHorloge } from '../utils/horlogeLecture';
 import SignalModule from './SignalModule';
 import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
-import { dimensionSaisissable, LIBELLE_CATEGORIE } from '../utils/detecteurs';
+import { dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE } from '../utils/detecteurs';
 import { renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
@@ -1055,8 +1055,10 @@ const IntersectionImage = ({
                                         {renderDetecteurSVG(detecteur, pixelsParMetreAffiche)}
                                     </div>
                                     <span
-                                        className="detecteur-label"
-                                        style={{ top: taille.hauteur / 2 + 4 }}
+                                        className={`detecteur-label ${estBoucle(detecteur.categorie) ? 'dans-boucle' : ''}`}
+                                        style={estBoucle(detecteur.categorie)
+                                            ? { top: 0, transform: 'translate(-50%, -50%)' }
+                                            : { top: taille.hauteur / 2 + 4 }}
                                     >
                                         {detecteur.nom}
                                     </span>

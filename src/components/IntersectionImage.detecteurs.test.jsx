@@ -67,7 +67,9 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(marqueur).not.toBeNull();
         expect(marqueur.style.left).toBe('25%');
         expect(marqueur.style.top).toBe('40%');
-        expect(screen.getByText('Boucle nord')).toBeInTheDocument();
+        const etiquette = screen.getByText('Boucle nord');
+        expect(etiquette).toHaveClass('dans-boucle');
+        expect(etiquette).toHaveStyle({ top: '0px' });
         const symbole = container.querySelector('.detecteur-symbol');
         expect(symbole.style.width).toBe('10px');
         expect(symbole.style.height).toBe('50px');

@@ -6,7 +6,7 @@ export const COULEUR_DETECTEUR: Record<CategorieDetecteur, string> = {
     boucleEloignee: '#9575cd',
     boucleComptage: '#66bb6a',
     radar: '#ffa726',
-    boutonPoussoir: '#ffd54f'
+    boutonPoussoir: '#000000'
 };
 
 /** Le radar et le bouton poussoir gardent une taille fixe à l'écran. */
@@ -66,7 +66,7 @@ export const renderDetecteurSVG = (detecteur: Detecteur, pixelsParMetre: number)
     if (detecteur.categorie === 'boutonPoussoir') {
         return (
             <svg width={largeur} height={hauteur} viewBox="0 0 26 26" aria-hidden="true">
-                <circle cx="13" cy="13" r="11" fill={couleur} fillOpacity="0.2" stroke={couleur} strokeWidth="2" />
+                <circle cx="13" cy="13" r="11" fill={couleur} fillOpacity="0.18" stroke={couleur} strokeWidth="2" />
                 {/* Pictogramme de main, simplifié pour rester lisible à 26 px. */}
                 <path
                     d="M9 14 v-3 a1.2 1.2 0 0 1 2.4 0 v2 M11.4 13 V9.2 a1.2 1.2 0 0 1 2.4 0 V13 M13.8 13 V10 a1.2 1.2 0 0 1 2.4 0 v4 M16.2 14 v-1.8 a1.2 1.2 0 0 1 2.4 0 V16 c0 3.2-2.4 5.4-5.4 5.4 h-1 c-2.6 0-4.4-1.8-4.4-4.4 v-2.4 l-1.2-1.2 a1.2 1.2 0 0 1 1.7-1.7 L9 13"
@@ -89,9 +89,9 @@ export const renderDetecteurSVG = (detecteur: Detecteur, pixelsParMetre: number)
                 width={Math.max(1, largeur - 2)}
                 height={Math.max(1, hauteur - 2)}
                 fill="none"
-                stroke={couleur}
-                strokeWidth="2"
-                strokeDasharray="6 4"
+                stroke="#000000"
+                strokeWidth="1"
+                strokeDasharray="4 3"
             />
         </svg>
     );
