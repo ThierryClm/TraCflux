@@ -85,7 +85,7 @@ import type { VertUtileSurvole } from './components/TimelineDiagram';
 import SuggestionCycleDialog, { titreSuggestionCycle } from './components/SuggestionCycleDialog';
 import { ECRAN_MOBILE } from './utils/ecranMobile';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
-import { basculerVerrou, definirPrefsVerrou, prefsVerrouAEnregistrer, usePrefsVerrou } from './utils/verrouSaisie';
+import { basculerVerrou, basculerVerrouTout, definirPrefsVerrou, prefsVerrouAEnregistrer, usePrefsVerrou } from './utils/verrouSaisie';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
 interface OptionsExportPng {
@@ -1515,6 +1515,7 @@ function App() {
                 localStorage.setItem('showWrapFlash', String(newVal));
                 break;
             }
+            case 'verrouSaisie:tout':         basculerVerrouTout();            break;
             case 'verrouSaisie:proprietes':    basculerVerrou('proprietes');    break;
             case 'verrouSaisie:configuration': basculerVerrou('configuration'); break;
             case 'verrouSaisie:matrice':       basculerVerrou('matrice');       break;

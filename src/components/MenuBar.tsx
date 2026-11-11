@@ -4,7 +4,7 @@ import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import type { PermissionFlag } from '../hooks/useAuth';
 import type { ModeAffichage } from '../utils/modeAffichage';
 import type { PrefsInfobulles } from '../hooks/usePreferencesEspaceTravail';
-import { usePrefsVerrou } from '../utils/verrouSaisie';
+import { SECTIONS_VERROU, usePrefsVerrou } from '../utils/verrouSaisie';
 import { definirOuvertureMenu, libelleMenu, trouverEntreeMenu } from '../utils/renvoiMenu';
 import { toast } from '../utils/toast';
 import './MenuBar.css';
@@ -178,6 +178,8 @@ const MenuBar = ({
     const tip = (texte: string | undefined) => layoutOptions.tooltipPrefs?.menu !== false ? texte : undefined;
     const [openMenu, setOpenMenu] = useState<string | null>(initialOpenMenu);
     const verrou = usePrefsVerrou();
+    // L'entrée de tête du sous-menu « Verrouillage saisie » bascule avec l'état.
+    const toutVerrouille = SECTIONS_VERROU.every(section => verrou[section]);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     // Troisième niveau : un sous-menu ouvert à l'intérieur d'un sous-menu
     // (ex. Diagramme ▸ Options ▸ Style de flèche).
@@ -483,12 +485,25 @@ const MenuBar = ({
                 { label: 'Affichage des paramètres', action: 'toggleParameters', toggle: true, checked: layoutOptions.showParameters, keepSubmenuOpen: true },
                 /* Les réglages qui ne touchent que le diagramme, réunis sous une
                    même entrée : dispersés dans le menu, ils se confondaient avec
-                   les cases qui concernent toute la page. */
+                   les cases qui concernent toute la page. « Nom des groupes de
+                   feu » y figure aussi, en tête : la variante « dans le
+                   diagramme » se cherche là, mais l'entrée reste aussi au
+                   premier niveau pour la matrice et le formulaire. */
                 {
                     label: 'Diagramme',
                     type: 'submenu',
                     submenuId: 'diagramme',
                     submenu: [
+                        {
+                            label: 'Nom des groupes de feu dans...',
+                            type: 'submenu',
+                            submenuId: 'nomGFdiagramme',
+                            submenu: [
+                                { label: 'le formulaire', action: 'toggleGroupNamesForm', checked: layoutOptions.showGroupNamesForm, keepSubmenuOpen: true },
+                                { label: 'la matrice', action: 'toggleGroupNamesMatrix', checked: layoutOptions.showGroupNamesMatrix, keepSubmenuOpen: true },
+                                { label: 'le diagramme', action: 'toggleGroupNamesDiagram', checked: layoutOptions.showGroupNamesDiagram, keepSubmenuOpen: true }
+                            ]
+                        },
                         {
                             label: 'Commentaires',
                             type: 'submenu',
@@ -510,6 +525,16 @@ const MenuBar = ({
                             ]
                         },
                         {
+                            label: 'Description des conditions micro',
+                            type: 'submenu',
+                            submenuId: 'descriptionConditions',
+                            submenu: [
+                                { label: 'Afficher', action: 'descriptionShow', checked: layoutOptions.descriptionMode === 'afficher', keepSubmenuOpen: true },
+                                { label: 'Masquer', action: 'descriptionHide', checked: layoutOptions.descriptionMode === 'masquer', keepSubmenuOpen: true },
+                                { label: 'Automatique (plans qui en ont)', action: 'descriptionAuto', checked: layoutOptions.descriptionMode === 'auto', keepSubmenuOpen: true }
+                            ]
+                        },
+                        {
                             label: 'Dilatation (zoom)',
                             type: 'submenu',
                             submenuId: 'dilatation',
@@ -517,16 +542,6 @@ const MenuBar = ({
                                 { type: 'slider', label: 'Zoom', min: 4, max: 20, value: pixelsPerSecond, unit: 'px/s', sliderId: 'pixelsPerSecond' }
                             ]
                         }
-                    ]
-                },
-                {
-                    label: 'Description des conditions micro',
-                    type: 'submenu',
-                    submenuId: 'descriptionConditions',
-                    submenu: [
-                        { label: 'Afficher', action: 'descriptionShow', checked: layoutOptions.descriptionMode === 'afficher', keepSubmenuOpen: true },
-                        { label: 'Masquer', action: 'descriptionHide', checked: layoutOptions.descriptionMode === 'masquer', keepSubmenuOpen: true },
-                        { label: 'Automatique (plans qui en ont)', action: 'descriptionAuto', checked: layoutOptions.descriptionMode === 'auto', keepSubmenuOpen: true }
                     ]
                 },
                 { label: 'Panneau Réserve de capacité', action: 'toggleCapacityReserve', toggle: true, checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true },
@@ -581,6 +596,8 @@ const MenuBar = ({
                     type: 'submenu',
                     submenuId: 'verrouSaisie',
                     submenu: [
+                        { label: toutVerrouille ? 'Tout déverrouiller' : 'Tout verrouiller', action: 'verrouSaisie:tout', keepSubmenuOpen: true },
+                        { type: 'separator' },
                         { label: 'Propriétés',    action: 'verrouSaisie:proprietes',    checked: verrou.proprietes,    keepSubmenuOpen: true },
                         { label: 'Configuration', action: 'verrouSaisie:configuration', checked: verrou.configuration, keepSubmenuOpen: true },
                         { label: 'Matrice',       action: 'verrouSaisie:matrice',       checked: verrou.matrice,       keepSubmenuOpen: true },
