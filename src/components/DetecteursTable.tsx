@@ -9,7 +9,8 @@ import {
     dimensionDepuisSaisie,
     dimensionSaisissable,
     dupliquerDetecteur,
-    estBoutonPoussoir
+    LARGEUR_VOIE_REFERENCE_M,
+    normaliserPixelsParMetre
 } from '../utils/detecteurs';
 import type { CategorieDetecteur, Detecteur, Groupe } from '../types/projet';
 import './DetecteursTable.css';
@@ -18,6 +19,9 @@ interface DetecteursTableProps {
     detecteurs: Detecteur[];
     groups: Groupe[];
     onChange: (detecteurs: Detecteur[]) => void;
+    /** Échelle de l'image : pixels par mètre. */
+    pixelsParMetre: number;
+    onPixelsParMetreChange: (valeur: number) => void;
     onDetach?: () => void;
     /** En fenêtre détachée, le bandeau porte déjà le titre. */
     titreEnBandeau?: boolean;
@@ -28,6 +32,8 @@ const DetecteursTable = ({
     detecteurs,
     groups,
     onChange,
+    pixelsParMetre,
+    onPixelsParMetreChange,
     onDetach,
     titreEnBandeau = false
 }: DetecteursTableProps) => {
@@ -80,19 +86,33 @@ const DetecteursTable = ({
                     </h3>
                 )}
 
+                <div className="detecteurs-echelle">
+                    <label>Échelle de l'image : 1 m =</label>
+                    <LocalInput
+                        className="input-pixels-metre"
+                        aria-label="Pixels par mètre"
+                        value={pixelsParMetre}
+                        onCommit={(valeur) => onPixelsParMetreChange(normaliserPixelsParMetre(valeur))}
+                    />
+                    <span>px</span>
+                    <span className="detecteurs-echelle-note">
+                        voie de {LARGEUR_VOIE_REFERENCE_M} m ≈ {Math.round(pixelsParMetre * LARGEUR_VOIE_REFERENCE_M)} px
+                    </span>
+                </div>
+
                 <table className="detecteurs-table">
                     <thead>
                         <tr>
                             <th>Nom</th>
                             <th>Type</th>
-                            <th>Groupe de feu</th>
-                            <th title="Longueur d’une boucle ou portée d’un radar, en mètres">Dimension (m)</th>
+                            <th title="Groupe de feu concerné">GF</th>
+                            <th title="Longueur d’une boucle, en mètres">Dim. (m)</th>
                             <th aria-label="Actions" />
                         </tr>
                     </thead>
                     <tbody>
                         {detecteurs.map(d => {
-                            const sansDimension = estBoutonPoussoir(d.categorie);
+                            const sansDimension = !dimensionSaisissable(d.categorie);
                             return (
                                 <tr key={d.id}>
                                     <td>
@@ -138,7 +158,7 @@ const DetecteursTable = ({
                                         <LocalInput
                                             className="input-dimension-detecteur"
                                             aria-label="Dimension du détecteur"
-                                            value={d.dimension ?? ''}
+                                            value={dimensionSaisissable(d.categorie) ? (d.dimension ?? '') : ''}
                                             onCommit={(valeur) => remplacer(d.id, {
                                                 dimension: dimensionDepuisSaisie(valeur, d.categorie)
                                             })}

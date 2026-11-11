@@ -221,6 +221,8 @@ function App() {
         setExternalLinks,
         detecteurs,
         setDetecteurs,
+        pixelsParMetre,
+        setPixelsParMetre,
         projectProperties,
         updateProjectProperty,
         projectName,
@@ -456,7 +458,7 @@ function App() {
 
     // Track whether project has been modified (for "Nouveau projet" menu)
     const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
-        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, intersectionDisplay, detecteurs,
+        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, intersectionDisplay, detecteurs, pixelsParMetre,
             // Enregistrés dans le projet : les changer est une modification.
             commentsMode, remarksMode, descriptionMode, prefsVerrou]);
 
@@ -984,6 +986,7 @@ function App() {
                 showImageGroupNames: intersectionDisplay.showGroupNames,
                 showImageArrows: intersectionDisplay.showArrows,
                 showImageSignals: intersectionDisplay.showSignals,
+                showImageDetecteurs: intersectionDisplay.showDetecteurs,
                 verrouSaisie: prefsVerrouAEnregistrer(),
                 directoryNames: {
                     open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
@@ -1005,6 +1008,7 @@ function App() {
             setShowImageGroupNames: (v) => setIntersectionDisplayOption('showGroupNames', v),
             setShowImageArrows: (v) => setIntersectionDisplayOption('showArrows', v),
             setShowImageSignals: (v) => setIntersectionDisplayOption('showSignals', v),
+            setShowImageDetecteurs: (v) => setIntersectionDisplayOption('showDetecteurs', v),
             setVerrouSaisie: definirPrefsVerrou
         })
     };
@@ -2030,7 +2034,7 @@ function App() {
         floatingCrop, setFloatingCrop,
         floatingZoom, setFloatingZoom,
         showCropControls, setShowCropControls,
-        intersectionArrows, groups, imageNaturalDims, imageFondClair,
+        intersectionArrows, groups, detecteurs, pixelsParMetre, imageNaturalDims, imageFondClair,
         selectedActions: simulationSelectedActions, conflictMatrix,
         hoveredArrowGroupId, hoveredArrowGroupIds: flechesActionSimulation, setHoveredArrowGroupId, hoveredDiagramTime,
         isPlayingSimulation,
@@ -2390,7 +2394,9 @@ function App() {
             <main className="split-view" ref={splitViewRef}>
                 <WorkspaceSidebar
                     model={{
-                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs, intersectionArrows,
+                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs,
+                        pixelsParMetre, setPixelsParMetre,
+                        intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
                         tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction, compenserBts, setCompenserBts,
                         cycleLength, conflictMatrix, setMatrixValue, hoveredActionId,
@@ -2419,6 +2425,7 @@ function App() {
                         helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
                         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
                         imageFondClair, intersectionArrows, intersectionDisplay, intersectionImage, intersectionName, isPlayingSimulation,
+                        detecteurs, setDetecteurs, pixelsParMetre, setPixelsParMetre,
                         isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
                         phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
                         phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,

@@ -25,7 +25,16 @@ const detecteur = (overrides: Partial<Detecteur> = {}): Detecteur => ({
 
 const Table = ({ initial = [detecteur()] }: { initial?: Detecteur[] }) => {
     const [detecteurs, setDetecteurs] = useState(initial);
-    return <DetecteursTable detecteurs={detecteurs} groups={groupes} onChange={setDetecteurs} />;
+    const [pixelsParMetre, setPixelsParMetre] = useState(12);
+    return (
+        <DetecteursTable
+            detecteurs={detecteurs}
+            groups={groupes}
+            onChange={setDetecteurs}
+            pixelsParMetre={pixelsParMetre}
+            onPixelsParMetreChange={setPixelsParMetre}
+        />
+    );
 };
 
 const rendre = (initial?: Detecteur[]) => render(
@@ -45,7 +54,7 @@ afterEach(() => { act(() => definirPrefsVerrou()); });
 describe('DetecteursTable — affichage', () => {
     it('affiche les quatre colonnes et la ligne enregistrée', () => {
         rendre();
-        expect(screen.getByText('Dimension (m)')).toBeInTheDocument();
+        expect(screen.getByText('Dim. (m)')).toBeInTheDocument();
         expect(nom()).toHaveValue('Boucle entrée');
         expect(type()).toHaveValue('bouclePiedFeu');
         expect(gf()).toHaveValue('1');
@@ -130,6 +139,26 @@ describe('DetecteursTable — duplication et suppression', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
         });
         expect(lignes()).toHaveLength(0);
+    });
+});
+
+describe('DetecteursTable — échelle', () => {
+    it('affiche l’échelle et la largeur de voie de référence', () => {
+        rendre();
+        const echelle = screen.getByLabelText('Pixels par mètre');
+        expect(echelle).toHaveValue('12');
+        expect(screen.getByText(/voie de 7 m ≈ 84 px/)).toBeInTheDocument();
+
+        fireEvent.change(echelle, { target: { value: '10' } });
+        fireEvent.blur(echelle);
+        expect(screen.getByText(/voie de 7 m ≈ 70 px/)).toBeInTheDocument();
+    });
+
+    it('grise et vide la dimension d’un radar', () => {
+        rendre([detecteur({ categorie: 'radar', dimension: 25 })]);
+        expect(dimension()).toBeDisabled();
+        expect(dimension()).toHaveValue('');
+        expect(screen.getAllByTitle(/Un radar n’a pas de dimension/)[0]).toBeInTheDocument();
     });
 });
 

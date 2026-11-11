@@ -58,4 +58,28 @@ describe('détecteurs enregistrés avec le projet', () => {
         act(() => result.current.loadFullState({ projectName: 'Ancien projet' }));
         expect(result.current.detecteurs).toEqual([]);
     });
+
+    it('enregistre l’échelle de l’image avec le projet', async () => {
+        const { result } = renderHook(() => useTrafficLight());
+        expect(result.current.pixelsParMetre).toBe(12);
+
+        act(() => result.current.setPixelsParMetre(18));
+        expect(result.current.getFullState().pixelsParMetre).toBe(18);
+
+        await act(async () => { await result.current.saveProject('Echelle'); });
+        const enregistre = JSON.parse(localStorage.getItem('traffic_project_Echelle'));
+        expect(enregistre.pixelsParMetre).toBe(18);
+    });
+
+    it('relit l’échelle d’un fichier et repart du défaut si elle manque', () => {
+        const { result } = renderHook(() => useTrafficLight());
+        act(() => result.current.loadFullState({ projectName: 'Avec echelle', pixelsParMetre: 21 }));
+        expect(result.current.pixelsParMetre).toBe(21);
+
+        act(() => result.current.loadFullState({ projectName: 'Ancien projet' }));
+        expect(result.current.pixelsParMetre).toBe(12);
+
+        act(() => result.current.loadFullState({ projectName: 'Abime', pixelsParMetre: 'beaucoup' }));
+        expect(result.current.pixelsParMetre).toBe(12);
+    });
 });

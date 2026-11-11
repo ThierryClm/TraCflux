@@ -7,7 +7,11 @@ import {
     dimensionParDefaut,
     dimensionSaisissable,
     dupliquerDetecteur,
-    normaliserDetecteurs
+    normaliserDetecteurs,
+    normaliserPixelsParMetre,
+    PIXELS_PAR_METRE_DEFAUT,
+    PIXELS_PAR_METRE_MAX,
+    PIXELS_PAR_METRE_MIN
 } from './detecteurs';
 import type { Detecteur } from '../types/projet';
 
@@ -37,18 +41,34 @@ describe('catégories et dimensions', () => {
         expect(dimensionParDefaut('radar')).toBeNull();
     });
 
-    it('ne saisit pas de dimension pour un bouton poussoir', () => {
+    it('ne saisit pas de dimension pour un radar ni pour un bouton poussoir', () => {
         expect(dimensionSaisissable('boutonPoussoir')).toBe(false);
-        expect(dimensionSaisissable('radar')).toBe(true);
+        expect(dimensionSaisissable('radar')).toBe(false);
+        expect(dimensionSaisissable('bouclePiedFeu')).toBe(true);
         expect(dimensionDepuisSaisie('12', 'boutonPoussoir')).toBeNull();
+        expect(dimensionDepuisSaisie('12', 'radar')).toBeNull();
     });
 
     it('lit une dimension entière ou décimale, vide ou nulle refusée', () => {
-        expect(dimensionDepuisSaisie('12', 'radar')).toBe(12);
+        expect(dimensionDepuisSaisie('12', 'bouclePiedFeu')).toBe(12);
         expect(dimensionDepuisSaisie('7,5', 'bouclePiedFeu')).toBe(7.5);
         expect(dimensionDepuisSaisie('', 'bouclePiedFeu')).toBeNull();
         expect(dimensionDepuisSaisie('0', 'bouclePiedFeu')).toBeNull();
         expect(dimensionDepuisSaisie('abc', 'bouclePiedFeu')).toBeNull();
+    });
+});
+
+describe('échelle de l’image', () => {
+    it('reprend le défaut quand la valeur manque ou est illisible', () => {
+        expect(normaliserPixelsParMetre(undefined)).toBe(PIXELS_PAR_METRE_DEFAUT);
+        expect(normaliserPixelsParMetre('abc')).toBe(PIXELS_PAR_METRE_DEFAUT);
+        expect(normaliserPixelsParMetre(0)).toBe(PIXELS_PAR_METRE_MIN);
+    });
+
+    it('lit une valeur valide et la borne', () => {
+        expect(normaliserPixelsParMetre(18)).toBe(18);
+        expect(normaliserPixelsParMetre('7,5')).toBe(7.5);
+        expect(normaliserPixelsParMetre(10000)).toBe(PIXELS_PAR_METRE_MAX);
     });
 });
 
@@ -77,6 +97,11 @@ describe('création et changement de type', () => {
         const bouton = changerCategorie(boucle, 'boutonPoussoir');
         expect(bouton.dimension).toBeNull();
         expect(changerCategorie(bouton, 'boucleComptage').dimension).toBe(2);
+    });
+
+    it('efface aussi la dimension en passant au radar', () => {
+        const boucle = detecteur({ categorie: 'bouclePiedFeu', dimension: 9 });
+        expect(changerCategorie(boucle, 'radar').dimension).toBeNull();
     });
 
     it('conserve la longueur saisie entre deux types de boucle', () => {

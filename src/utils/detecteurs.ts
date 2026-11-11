@@ -23,21 +23,33 @@ export const LARGEUR_BOUCLE_M = 1;
 /** Longueur proposée pour une boucle de comptage, posée après le carrefour. */
 export const DIMENSION_COMPTAGE_M = 2;
 
+/** Échelle par défaut de l'image : pixels de l'image pour un mètre. */
+export const PIXELS_PAR_METRE_DEFAUT = 12;
+export const PIXELS_PAR_METRE_MIN = 1;
+export const PIXELS_PAR_METRE_MAX = 500;
+
+/** Largeur de voie moyenne retenue comme référence d'échelle. */
+export const LARGEUR_VOIE_REFERENCE_M = 7;
+
 export const estCategorieDetecteur = (valeur: unknown): valeur is CategorieDetecteur =>
     typeof valeur === 'string' && CATEGORIES_DETECTEUR.some(c => c.valeur === valeur);
 
 export const estBoutonPoussoir = (categorie: CategorieDetecteur): boolean =>
     categorie === 'boutonPoussoir';
 
-/** Une boucle a une longueur, un radar une portée ; le bouton n'a pas de dimension. */
+/** Les trois catégories dessinées en boucle (rectangle pointillé). */
+export const estBoucle = (categorie: CategorieDetecteur): boolean =>
+    categorie === 'bouclePiedFeu' || categorie === 'boucleEloignee' || categorie === 'boucleComptage';
+
+/** Seules les boucles ont une dimension : ni le radar ni le bouton n'en ont. */
 export const dimensionSaisissable = (categorie: CategorieDetecteur): boolean =>
-    !estBoutonPoussoir(categorie);
+    estBoucle(categorie);
 
 export const dimensionParDefaut = (categorie: CategorieDetecteur): number | null =>
     categorie === 'boucleComptage' ? DIMENSION_COMPTAGE_M : null;
 
 export const descriptionDimension = (categorie: CategorieDetecteur): string => {
-    if (categorie === 'radar') return 'Portée du radar, en mètres';
+    if (categorie === 'radar') return 'Un radar n’a pas de dimension : symbole de taille fixe';
     if (estBoutonPoussoir(categorie)) return 'Un bouton poussoir n’a pas de dimension';
     return `Longueur de la boucle, en mètres (largeur ${LARGEUR_BOUCLE_M} m)`;
 };
@@ -50,6 +62,13 @@ const nombreFini = (valeur: unknown): number | null => {
         return Number.isFinite(n) ? n : null;
     }
     return null;
+};
+
+/** Échelle relue d'un projet, bornée ; une valeur absente ou illisible reprend le défaut. */
+export const normaliserPixelsParMetre = (valeur: unknown): number => {
+    const n = nombreFini(valeur);
+    if (n === null) return PIXELS_PAR_METRE_DEFAUT;
+    return Math.min(PIXELS_PAR_METRE_MAX, Math.max(PIXELS_PAR_METRE_MIN, n));
 };
 
 /** Longueur ou portée saisie ; null quand la valeur est vide ou sans objet. */
@@ -103,7 +122,7 @@ export const creerDetecteur = (
 export const changerCategorie = (detecteur: Detecteur, categorie: CategorieDetecteur): Detecteur => {
     if (categorie === detecteur.categorie) return detecteur;
     let dimension = detecteur.dimension;
-    if (estBoutonPoussoir(categorie)) dimension = null;
+    if (!dimensionSaisissable(categorie)) dimension = null;
     else if (dimension === null) dimension = dimensionParDefaut(categorie);
     return { ...detecteur, categorie, dimension };
 };
