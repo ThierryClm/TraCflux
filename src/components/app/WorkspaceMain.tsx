@@ -48,8 +48,6 @@ interface WorkspaceMainModel {
     setDetecteurs: Dispatch<SetStateAction<Detecteur[]>>;
     pixelsParMetre: number;
     setPixelsParMetre: Dispatch<SetStateAction<number>>;
-    detecteurAPlacer: number | null;
-    setDetecteurAPlacer: (id: number | null) => void;
     diagramAreaRef: RefObject<HTMLElement | null>;
     diagramHeight: number | null;
     displayConflicts: TimelineDiagramProps['conflicts'];
@@ -172,7 +170,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
         biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
         cycleLengthInput, cycleSimulationSpeed, dependencyGap, detecteurs, setDetecteurs,
-        pixelsParMetre, setPixelsParMetre, detecteurAPlacer, setDetecteurAPlacer, diagramAreaRef, diagramHeight,
+        pixelsParMetre, setPixelsParMetre, diagramAreaRef, diagramHeight,
         displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
         helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
@@ -549,8 +547,6 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 onDetecteursChange={setDetecteurs}
                                 pixelsParMetre={pixelsParMetre}
                                 onPixelsParMetreChange={setPixelsParMetre}
-                                detecteurAPlacer={detecteurAPlacer}
-                                onPlacementTermine={() => setDetecteurAPlacer(null)}
                                 cycleLength={cycleLength}
                                 simulationResult={simulationResult}
                                 isPlaying={isPlayingSimulation}

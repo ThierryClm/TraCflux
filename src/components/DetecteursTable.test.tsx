@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import ConfirmProvider from './ConfirmProvider';
@@ -23,7 +23,7 @@ const detecteur = (overrides: Partial<Detecteur> = {}): Detecteur => ({
     ...overrides
 });
 
-const Table = ({ initial = [detecteur()], onPlacer }: { initial?: Detecteur[]; onPlacer?: (id: number) => void }) => {
+const Table = ({ initial = [detecteur()] }: { initial?: Detecteur[] }) => {
     const [detecteurs, setDetecteurs] = useState(initial);
     const [pixelsParMetre, setPixelsParMetre] = useState(12);
     return (
@@ -33,7 +33,6 @@ const Table = ({ initial = [detecteur()], onPlacer }: { initial?: Detecteur[]; o
             onChange={setDetecteurs}
             pixelsParMetre={pixelsParMetre}
             onPixelsParMetreChange={setPixelsParMetre}
-            onPlacer={onPlacer}
         />
     );
 };
@@ -43,16 +42,6 @@ const rendre = (initial?: Detecteur[]) => render(
         <Table initial={initial} />
     </ConfirmProvider>
 );
-
-const rendreAvecPlacer = (initial?: Detecteur[]) => {
-    const onPlacer = vi.fn();
-    render(
-        <ConfirmProvider>
-            <Table initial={initial} onPlacer={onPlacer} />
-        </ConfirmProvider>
-    );
-    return { onPlacer };
-};
 
 const nom = (i = 0) => screen.getAllByLabelText('Nom du détecteur')[i];
 const type = (i = 0) => screen.getAllByLabelText('Type du détecteur')[i];
@@ -153,7 +142,7 @@ describe('DetecteursTable — duplication et suppression', () => {
     });
 });
 
-describe('DetecteursTable — échelle et placement', () => {
+describe('DetecteursTable — échelle', () => {
     it('affiche l’échelle et la largeur de voie de référence', () => {
         rendre();
         const echelle = screen.getByLabelText('Pixels par mètre');
@@ -165,16 +154,11 @@ describe('DetecteursTable — échelle et placement', () => {
         expect(screen.getByText(/voie de 7 m ≈ 70 px/)).toBeInTheDocument();
     });
 
-    it('envoie le détecteur au placement sur l’image', () => {
-        const { onPlacer } = rendreAvecPlacer();
-        fireEvent.click(screen.getByTitle('Placer sur l’image'));
-        expect(onPlacer).toHaveBeenCalledWith(1);
-    });
-
-    it('passe au placement juste après un ajout', () => {
-        const { onPlacer } = rendreAvecPlacer([]);
-        fireEvent.click(screen.getByRole('button', { name: /Ajouter un détecteur/ }));
-        expect(onPlacer).toHaveBeenCalledWith(1);
+    it('grise et vide la dimension d’un radar', () => {
+        rendre([detecteur({ categorie: 'radar', dimension: 25 })]);
+        expect(dimension()).toBeDisabled();
+        expect(dimension()).toHaveValue('');
+        expect(screen.getAllByTitle(/Un radar n’a pas de dimension/)[0]).toBeInTheDocument();
     });
 });
 

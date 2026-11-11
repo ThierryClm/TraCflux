@@ -11,8 +11,8 @@ import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable 
 import { demarrerHorloge } from '../utils/horlogeLecture';
 import SignalModule from './SignalModule';
 import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
-import { dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE } from '../utils/detecteurs';
-import { renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
+import { creerDetecteur, dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE } from '../utils/detecteurs';
+import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
 import './IntersectionImage.css';
@@ -32,9 +32,6 @@ export interface IntersectionImageProps {
     /** Échelle du projet : pixels de l'image par mètre. */
     pixelsParMetre?: number;
     onPixelsParMetreChange?: (value: number) => void;
-    /** Détecteur en attente d'un clic de placement sur l'image. */
-    detecteurAPlacer?: number | null;
-    onPlacementTermine?: () => void;
     cycleLength: number;
     simulationResult?: SimulationResult | null;
     // Animation : état tenu par le parent
@@ -81,8 +78,6 @@ const IntersectionImage = ({
     onDetecteursChange: onDetecteursChangeProp,
     pixelsParMetre = 12,
     onPixelsParMetreChange,
-    detecteurAPlacer = null,
-    onPlacementTermine,
     cycleLength,
     simulationResult,
     // Animation state (lifted to parent)
@@ -132,6 +127,7 @@ const IntersectionImage = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedArrow, setSelectedArrow] = useState<number | null>(null);
     const [selectedDetecteur, setSelectedDetecteur] = useState<number | null>(null);
+    const [ajoutDetecteurs, setAjoutDetecteurs] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [showImageMenu, setShowImageMenu] = useState(false);
 
@@ -151,7 +147,21 @@ const IntersectionImage = ({
     const showSignals = displayOptions.showSignals && signalDisponible;
     const setShowGroupNumbers = (value: boolean) => onDisplayOptionChange?.('showGroupNumbers', value);
     const setShowGroupNames = (value: boolean) => onDisplayOptionChange?.('showGroupNames', value);
-    const setShowArrows = (value: boolean) => onDisplayOptionChange?.('showArrows', value);
+    // Les deux modes de placement sont exclusifs ; aucun des deux n'est obligatoire.
+    const setShowArrows = (value: boolean) => {
+        onDisplayOptionChange?.('showArrows', value);
+        if (value) setAjoutDetecteurs(false);
+    };
+    const activerAjoutDetecteurs = (value: boolean) => {
+        setAjoutDetecteurs(value);
+        if (value) {
+            onDisplayOptionChange?.('showArrows', false);
+            onDisplayOptionChange?.('showDetecteurs', true);
+        }
+    };
+    // Le mode détecteur ne vaut que si le mode flèche est fermé : les deux
+    // cases ne peuvent jamais être cochées ensemble.
+    const ajoutDetecteursActif = ajoutDetecteurs && !showArrows;
     const setShowSignals = (value: boolean) => onDisplayOptionChange?.('showSignals', value);
     const setShowDetecteurs = (value: boolean) => onDisplayOptionChange?.('showDetecteurs', value);
 
@@ -159,21 +169,6 @@ const IntersectionImage = ({
     // projet s'entend directement en pixels affichés, sans conversion.
     const pixelsParMetreAffiche = pixelsParMetre;
 
-    // Le bouton « Placer » vient du tableau : on amène l'image à l'écran.
-    useEffect(() => {
-        if (detecteurAPlacer === null) return;
-        containerRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
-    }, [detecteurAPlacer]);
-
-    // Échap annule un placement de détecteur en cours.
-    useEffect(() => {
-        if (detecteurAPlacer === null) return;
-        const surTouche = (e: globalThis.KeyboardEvent) => {
-            if (e.key === 'Escape') onPlacementTermine?.();
-        };
-        window.addEventListener('keydown', surTouche);
-        return () => window.removeEventListener('keydown', surTouche);
-    }, [detecteurAPlacer, onPlacementTermine]);
     const [applyToAllSameType, setApplyToAllSameType] = useState(false);
 
     // Close image menu when clicking outside
@@ -365,14 +360,12 @@ const IntersectionImage = ({
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-        // Un détecteur attend d'être posé : ce clic le place et termine le mode.
-        if (detecteurAPlacer !== null && onDetecteursChange) {
-            onDetecteursChange(detecteurs.map(d =>
-                d.id === detecteurAPlacer ? { ...d, position: { x, y } } : d
-            ));
-            setSelectedDetecteur(detecteurAPlacer);
+        // Mode « Ajouter un détecteur » : ce clic crée le détecteur et le pose.
+        if (ajoutDetecteursActif && onDetecteursChange) {
+            const nouveau = { ...creerDetecteur(detecteurs), position: { x, y } };
+            onDetecteursChange([...detecteurs, nouveau]);
+            setSelectedDetecteur(nouveau.id);
             setSelectedArrow(null);
-            onPlacementTermine?.();
             return;
         }
 
@@ -967,11 +960,6 @@ const IntersectionImage = ({
                             className="intersection-img"
                             style={{ filter: `brightness(${imageBrightness}%) contrast(${imageContrast}%)` }}
                         />
-                        {detecteurAPlacer !== null && (
-                            <div className="detecteur-placement-hint">
-                                Cliquez sur l'image pour placer « {detecteurs.find(d => d.id === detecteurAPlacer)?.nom || 'ce détecteur'} » — Échap pour annuler.
-                            </div>
-                        )}
                         {arrows.map(arrow => {
                             const groupInfo = getGroupInfo(arrow.groupId);
                             const rotation = arrow.rotation || 0;
@@ -1027,10 +1015,11 @@ const IntersectionImage = ({
                             if (!detecteur.position) return null;
                             const taille = tailleDetecteur(detecteur, pixelsParMetreAffiche);
                             const selectionne = selectedDetecteur === detecteur.id;
+                            const dansBoucle = etiquetteDansBoucle(detecteur, taille);
                             return (
                                 <div
                                     key={`detecteur-${detecteur.id}`}
-                                    className={`detecteur-marker ${selectionne ? 'selected' : ''} ${detecteurAPlacer === detecteur.id ? 'en-placement' : ''}`}
+                                    className={`detecteur-marker ${selectionne ? 'selected' : ''}`}
                                     style={{ left: `${detecteur.position.x}%`, top: `${detecteur.position.y}%` }}
                                     onMouseDown={(e) => handleDetecteurMouseDown(e, detecteur.id)}
                                     onClick={(e) => {
@@ -1055,10 +1044,12 @@ const IntersectionImage = ({
                                         {renderDetecteurSVG(detecteur, pixelsParMetreAffiche)}
                                     </div>
                                     <span
-                                        className={`detecteur-label ${estBoucle(detecteur.categorie) ? 'dans-boucle' : ''}`}
-                                        style={estBoucle(detecteur.categorie)
+                                        className={`detecteur-label ${dansBoucle ? 'dans-boucle' : ''} ${estBoucle(detecteur.categorie) && !dansBoucle ? 'au-dessus' : ''}`}
+                                        style={dansBoucle
                                             ? { top: 0, transform: 'translate(-50%, -50%)' }
-                                            : { top: taille.hauteur / 2 + 4 }}
+                                            : estBoucle(detecteur.categorie)
+                                                ? { top: -(taille.hauteur / 2) - 6 }
+                                                : { top: taille.hauteur / 2 + 4 }}
                                     >
                                         {detecteur.nom}
                                     </span>
@@ -1406,6 +1397,14 @@ const IntersectionImage = ({
                                 onChange={(e) => setShowArrows(e.target.checked)}
                             />
                             <span>Ajouter un courant de circulation</span>
+                        </label>
+                        <label className="checkbox-option">
+                            <input
+                                type="checkbox"
+                                checked={ajoutDetecteursActif}
+                                onChange={(e) => activerAjoutDetecteurs(e.target.checked)}
+                            />
+                            <span>Ajouter un détecteur</span>
                         </label>
                         <label className="checkbox-option">
                             <input

@@ -41,15 +41,15 @@ export const estBoutonPoussoir = (categorie: CategorieDetecteur): boolean =>
 export const estBoucle = (categorie: CategorieDetecteur): boolean =>
     categorie === 'bouclePiedFeu' || categorie === 'boucleEloignee' || categorie === 'boucleComptage';
 
-/** Une boucle a une longueur, un radar une portée ; le bouton n'a pas de dimension. */
+/** Seules les boucles ont une dimension : ni le radar ni le bouton n'en ont. */
 export const dimensionSaisissable = (categorie: CategorieDetecteur): boolean =>
-    !estBoutonPoussoir(categorie);
+    estBoucle(categorie);
 
 export const dimensionParDefaut = (categorie: CategorieDetecteur): number | null =>
     categorie === 'boucleComptage' ? DIMENSION_COMPTAGE_M : null;
 
 export const descriptionDimension = (categorie: CategorieDetecteur): string => {
-    if (categorie === 'radar') return 'Portée du radar, en mètres';
+    if (categorie === 'radar') return 'Un radar n’a pas de dimension : symbole de taille fixe';
     if (estBoutonPoussoir(categorie)) return 'Un bouton poussoir n’a pas de dimension';
     return `Longueur de la boucle, en mètres (largeur ${LARGEUR_BOUCLE_M} m)`;
 };
@@ -122,7 +122,7 @@ export const creerDetecteur = (
 export const changerCategorie = (detecteur: Detecteur, categorie: CategorieDetecteur): Detecteur => {
     if (categorie === detecteur.categorie) return detecteur;
     let dimension = detecteur.dimension;
-    if (estBoutonPoussoir(categorie)) dimension = null;
+    if (!dimensionSaisissable(categorie)) dimension = null;
     else if (dimension === null) dimension = dimensionParDefaut(categorie);
     return { ...detecteur, categorie, dimension };
 };

@@ -9,7 +9,6 @@ import {
     dimensionDepuisSaisie,
     dimensionSaisissable,
     dupliquerDetecteur,
-    estBoutonPoussoir,
     LARGEUR_VOIE_REFERENCE_M,
     normaliserPixelsParMetre
 } from '../utils/detecteurs';
@@ -23,9 +22,6 @@ interface DetecteursTableProps {
     /** Échelle de l'image : pixels par mètre. */
     pixelsParMetre: number;
     onPixelsParMetreChange: (valeur: number) => void;
-    /** Détecteur en attente de placement sur l'image. */
-    detecteurAPlacer?: number | null;
-    onPlacer?: (id: number) => void;
     onDetach?: () => void;
     /** En fenêtre détachée, le bandeau porte déjà le titre. */
     titreEnBandeau?: boolean;
@@ -38,8 +34,6 @@ const DetecteursTable = ({
     onChange,
     pixelsParMetre,
     onPixelsParMetreChange,
-    detecteurAPlacer = null,
-    onPlacer,
     onDetach,
     titreEnBandeau = false
 }: DetecteursTableProps) => {
@@ -50,11 +44,7 @@ const DetecteursTable = ({
     };
 
     const ajouter = () => {
-        const nouveau = creerDetecteur(detecteurs);
-        onChange([...detecteurs, nouveau]);
-        // Un détecteur neuf n'a pas encore de place : on passe directement au
-        // placement sur l'image, comme le veut la saisie à la main.
-        onPlacer?.(nouveau.id);
+        onChange([...detecteurs, creerDetecteur(detecteurs)]);
     };
 
     const dupliquer = (id: number) => {
@@ -116,14 +106,13 @@ const DetecteursTable = ({
                             <th>Nom</th>
                             <th>Type</th>
                             <th title="Groupe de feu concerné">GF</th>
-                            <th title="Longueur d’une boucle ou portée d’un radar, en mètres">Dim. (m)</th>
-                            <th>Image</th>
+                            <th title="Longueur d’une boucle, en mètres">Dim. (m)</th>
                             <th aria-label="Actions" />
                         </tr>
                     </thead>
                     <tbody>
                         {detecteurs.map(d => {
-                            const sansDimension = estBoutonPoussoir(d.categorie);
+                            const sansDimension = !dimensionSaisissable(d.categorie);
                             return (
                                 <tr key={d.id}>
                                     <td>
@@ -169,7 +158,7 @@ const DetecteursTable = ({
                                         <LocalInput
                                             className="input-dimension-detecteur"
                                             aria-label="Dimension du détecteur"
-                                            value={d.dimension ?? ''}
+                                            value={dimensionSaisissable(d.categorie) ? (d.dimension ?? '') : ''}
                                             onCommit={(valeur) => remplacer(d.id, {
                                                 dimension: dimensionDepuisSaisie(valeur, d.categorie)
                                             })}
@@ -177,16 +166,6 @@ const DetecteursTable = ({
                                             placeholder={sansDimension ? '—' : ''}
                                             title={descriptionDimension(d.categorie)}
                                         />
-                                    </td>
-                                    <td className="col-image">
-                                        <button
-                                            className={`btn-placer-detecteur ${d.position ? 'place' : ''} ${detecteurAPlacer === d.id ? 'actif' : ''}`}
-                                            onClick={() => onPlacer?.(d.id)}
-                                            disabled={!onPlacer}
-                                            title={d.position ? 'Repositionner sur l’image' : 'Placer sur l’image'}
-                                        >
-                                            Placer
-                                        </button>
                                     </td>
                                     <td className="col-actions">
                                         <button

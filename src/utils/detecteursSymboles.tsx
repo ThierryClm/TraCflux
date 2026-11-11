@@ -1,16 +1,17 @@
 import type { CategorieDetecteur, Detecteur } from '../types/projet';
+import { estBoucle } from './detecteurs';
 
 /** Couleur de chaque catégorie de détecteur sur l'image. */
 export const COULEUR_DETECTEUR: Record<CategorieDetecteur, string> = {
     bouclePiedFeu: '#4fc3f7',
     boucleEloignee: '#9575cd',
     boucleComptage: '#66bb6a',
-    radar: '#ffa726',
+    radar: '#000000',
     boutonPoussoir: '#000000'
 };
 
 /** Le radar et le bouton poussoir gardent une taille fixe à l'écran. */
-export const TAILLE_RADAR = 40;
+export const TAILLE_RADAR = 28;
 export const TAILLE_BOUTON = 26;
 
 /** Longueur de boucle retenue pour le dessin quand la dimension est vide. */
@@ -35,6 +36,10 @@ export const tailleDetecteur = (detecteur: Detecteur, pixelsParMetre: number): T
         hauteur: Math.max(8, longueurM * pixelsParMetre)
     };
 };
+
+/** Le nom tient-il dans la boucle, ou faut-il le poser juste au-dessus ? */
+export const etiquetteDansBoucle = (detecteur: Detecteur, taille: TailleDetecteur): boolean =>
+    estBoucle(detecteur.categorie) && taille.hauteur >= 40;
 
 /**
  * Dessin SVG du symbole, centré dans une boîte de la taille calculée.

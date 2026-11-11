@@ -67,11 +67,10 @@
     line-height: 1.15;
 }
 
-.detecteurs-table th:nth-child(2) { width: 116px; }
-.detecteurs-table th:nth-child(3) { width: 104px; }
-.detecteurs-table th:nth-child(4) { width: 56px; }
-.detecteurs-table th:nth-child(5) { width: 58px; }
-.detecteurs-table th:nth-child(6) { width: 44px; }
+.detecteurs-table th:nth-child(2) { width: 124px; }
+.detecteurs-table th:nth-child(3) { width: 110px; }
+.detecteurs-table th:nth-child(4) { width: 64px; }
+.detecteurs-table th:nth-child(5) { width: 44px; }
 
 .detecteurs-table td {
     padding: 2px 3px;
@@ -104,32 +103,6 @@
 .detecteurs-table .col-actions {
     text-align: right;
     white-space: nowrap;
-}
-
-.btn-placer-detecteur {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    color: #ccc;
-    border-radius: 3px;
-    padding: 2px 5px;
-    cursor: pointer;
-    font-size: 0.75em;
-}
-
-.btn-placer-detecteur.place {
-    color: #81c784;
-    border-color: #3d6b41;
-}
-
-.btn-placer-detecteur.actif {
-    background: #35506b;
-    border-color: #64b5f6;
-    color: #fff;
-}
-
-.btn-placer-detecteur:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
 }
 
 .btn-dupliquer-detecteur,

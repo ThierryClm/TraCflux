@@ -41,14 +41,16 @@ describe('catégories et dimensions', () => {
         expect(dimensionParDefaut('radar')).toBeNull();
     });
 
-    it('ne saisit pas de dimension pour un bouton poussoir', () => {
+    it('ne saisit pas de dimension pour un radar ni pour un bouton poussoir', () => {
         expect(dimensionSaisissable('boutonPoussoir')).toBe(false);
-        expect(dimensionSaisissable('radar')).toBe(true);
+        expect(dimensionSaisissable('radar')).toBe(false);
+        expect(dimensionSaisissable('bouclePiedFeu')).toBe(true);
         expect(dimensionDepuisSaisie('12', 'boutonPoussoir')).toBeNull();
+        expect(dimensionDepuisSaisie('12', 'radar')).toBeNull();
     });
 
     it('lit une dimension entière ou décimale, vide ou nulle refusée', () => {
-        expect(dimensionDepuisSaisie('12', 'radar')).toBe(12);
+        expect(dimensionDepuisSaisie('12', 'bouclePiedFeu')).toBe(12);
         expect(dimensionDepuisSaisie('7,5', 'bouclePiedFeu')).toBe(7.5);
         expect(dimensionDepuisSaisie('', 'bouclePiedFeu')).toBeNull();
         expect(dimensionDepuisSaisie('0', 'bouclePiedFeu')).toBeNull();
@@ -95,6 +97,11 @@ describe('création et changement de type', () => {
         const bouton = changerCategorie(boucle, 'boutonPoussoir');
         expect(bouton.dimension).toBeNull();
         expect(changerCategorie(bouton, 'boucleComptage').dimension).toBe(2);
+    });
+
+    it('efface aussi la dimension en passant au radar', () => {
+        const boucle = detecteur({ categorie: 'bouclePiedFeu', dimension: 9 });
+        expect(changerCategorie(boucle, 'radar').dimension).toBeNull();
     });
 
     it('conserve la longueur saisie entre deux types de boucle', () => {

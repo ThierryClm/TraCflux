@@ -1077,15 +1077,6 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     filter: drop-shadow(0 0 3px #fff);
 }
 
-.detecteur-marker.en-placement .detecteur-symbol {
-    animation: detecteur-pulse 1s ease-in-out infinite alternate;
-}
-
-@keyframes detecteur-pulse {
-    from { opacity: 1; }
-    to { opacity: 0.5; }
-}
-
 .detecteur-label {
     position: absolute;
     left: 0;
@@ -1099,26 +1090,12 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     pointer-events: none;
 }
 
-/* Le nom d'une boucle se lit au centre du rectangle, en noir sur fond clair. */
-.detecteur-label.dans-boucle {
+/* Le nom d'une boucle se lit dans le rectangle s'il y tient, sinon juste au-dessus. */
+.detecteur-label.dans-boucle,
+.detecteur-label.au-dessus {
     color: #000;
     background: rgba(255, 255, 255, 0.72);
     font-weight: 600;
-}
-
-.detecteur-placement-hint {
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.82);
-    color: #fff;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    z-index: 30;
-    pointer-events: none;
-    white-space: nowrap;
 }
 
 .detecteur-editor .detecteur-editor-value {

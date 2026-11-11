@@ -8,7 +8,7 @@ import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import SignalModule from '../components/SignalModule';
 import type { ActionMicro, Detecteur, Groupe, Matrice } from '../types/projet';
-import { renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
+import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import { estBoucle } from '../utils/detecteurs';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
 import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
@@ -307,6 +307,7 @@ const useFloatingImageRenderer = ({
                             {intersectionDisplay.showDetecteurs && detecteurs.map(detecteur => {
                                 if (!detecteur.position) return null;
                                 const taille = tailleDetecteur(detecteur, pixelsParMetre);
+                                const dansBoucle = etiquetteDansBoucle(detecteur, taille);
                                 return (
                                     <div
                                         key={`fdet-${detecteur.id}`}
@@ -324,10 +325,12 @@ const useFloatingImageRenderer = ({
                                             {renderDetecteurSVG(detecteur, pixelsParMetre)}
                                         </div>
                                         <span
-                                            className={`detecteur-label ${estBoucle(detecteur.categorie) ? 'dans-boucle' : ''}`}
-                                            style={estBoucle(detecteur.categorie)
+                                            className={`detecteur-label ${dansBoucle ? 'dans-boucle' : ''} ${estBoucle(detecteur.categorie) && !dansBoucle ? 'au-dessus' : ''}`}
+                                            style={dansBoucle
                                                 ? { top: 0, transform: 'translate(-50%, -50%)' }
-                                                : { top: taille.hauteur / 2 + 4 }}
+                                                : estBoucle(detecteur.categorie)
+                                                    ? { top: -(taille.hauteur / 2) - 6 }
+                                                    : { top: taille.hauteur / 2 + 4 }}
                                         >
                                             {detecteur.nom}
                                         </span>

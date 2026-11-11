@@ -456,14 +456,6 @@ function App() {
     // Verrouillage de la saisie : enregistré avec le projet (cf. champsProjetRef).
     const prefsVerrou = usePrefsVerrou();
 
-    // Détecteur en attente de placement sur l'image (bouton « Placer » du tableau).
-    const [detecteurAPlacer, setDetecteurAPlacer] = useState<number | null>(null);
-    useEffect(() => {
-        if (detecteurAPlacer !== null && !detecteurs.some(d => d.id === detecteurAPlacer)) {
-            setDetecteurAPlacer(null);
-        }
-    }, [detecteurs, detecteurAPlacer]);
-
     // Track whether project has been modified (for "Nouveau projet" menu)
     const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
         useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, intersectionDisplay, detecteurs, pixelsParMetre,
@@ -2403,15 +2395,7 @@ function App() {
                 <WorkspaceSidebar
                     model={{
                         sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs,
-                        pixelsParMetre, setPixelsParMetre, detecteurAPlacer,
-                        // Placer un détecteur affiche l'image (onglet Simulation), seul endroit où on le pose.
-                        setDetecteurAPlacer: (id) => {
-                            setDetecteurAPlacer(id);
-                            if (id !== null) {
-                                setSimulationEnabled(true);
-                                setPhasageBulleEnabled(false);
-                            }
-                        },
+                        pixelsParMetre, setPixelsParMetre,
                         intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
                         tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction, compenserBts, setCompenserBts,
@@ -2441,7 +2425,7 @@ function App() {
                         helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
                         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
                         imageFondClair, intersectionArrows, intersectionDisplay, intersectionImage, intersectionName, isPlayingSimulation,
-                        detecteurs, setDetecteurs, pixelsParMetre, setPixelsParMetre, detecteurAPlacer, setDetecteurAPlacer,
+                        detecteurs, setDetecteurs, pixelsParMetre, setPixelsParMetre,
                         isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
                         phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
                         phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,

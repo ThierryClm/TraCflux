@@ -25,10 +25,10 @@ const DETECTEUR = {
 
 const rendre = ({
     detecteurs = [DETECTEUR],
-    detecteurAPlacer = null,
     showDetecteurs = true,
+    showArrows = false,
     onDetecteursChange = vi.fn(),
-    onPlacementTermine = vi.fn(),
+    onDisplayOptionChange = vi.fn(),
     pixelsParMetre = 10
 } = {}) => {
     const result = render(
@@ -41,8 +41,6 @@ const rendre = ({
             detecteurs={detecteurs}
             onDetecteursChange={onDetecteursChange}
             pixelsParMetre={pixelsParMetre}
-            detecteurAPlacer={detecteurAPlacer}
-            onPlacementTermine={onPlacementTermine}
             cycleLength={60}
             isPlaying={false}
             setIsPlaying={vi.fn()}
@@ -51,13 +49,13 @@ const rendre = ({
             actionData={[]}
             selectedActions={[]}
             conflictMatrix={[]}
-            displayOptions={{ showGroupNumbers: false, showGroupNames: false, showArrows: false, showSignals: false, showDetecteurs }}
-            onDisplayOptionChange={vi.fn()}
+            displayOptions={{ showGroupNumbers: false, showGroupNames: false, showArrows, showSignals: false, showDetecteurs }}
+            onDisplayOptionChange={onDisplayOptionChange}
         />
     );
     const area = result.container.querySelector('.intersection-image-area');
     area.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100 });
-    return { ...result, area, onDetecteursChange, onPlacementTermine };
+    return { ...result, area, onDetecteursChange, onDisplayOptionChange };
 };
 
 describe('IntersectionImage — calque des détecteurs', () => {
@@ -75,21 +73,42 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(symbole.style.height).toBe('50px');
     });
 
+    it('pose le nom juste au-dessus d’une boucle courte', () => {
+        rendre({ detecteurs: [{ ...DETECTEUR, dimension: 2 }] });
+        const etiquette = screen.getByText('Boucle nord');
+        expect(etiquette).toHaveClass('au-dessus');
+        expect(etiquette).not.toHaveClass('dans-boucle');
+        expect(etiquette.style.top).toBe('-16px');
+    });
+
     it('masque tout le calque quand la case Détecteurs est décochée', () => {
         const { container } = rendre({ showDetecteurs: false });
         expect(container.querySelector('.detecteur-marker')).toBeNull();
     });
 
-    it('place le détecteur au clic quand il attend sa position', () => {
-        const { area, onDetecteursChange, onPlacementTermine } = rendre({ detecteurAPlacer: 7 });
-        expect(screen.getByText(/Cliquez sur l'image pour placer/)).toBeInTheDocument();
-
+    it('ajoute un détecteur au clic quand la case est cochée', () => {
+        const { area, onDetecteursChange } = rendre({ detecteurs: [] });
+        fireEvent.click(screen.getByLabelText('Ajouter un détecteur'));
         fireEvent.click(area, { clientX: 50, clientY: 75 });
 
         expect(onDetecteursChange).toHaveBeenCalledWith([
-            expect.objectContaining({ id: 7, position: { x: 25, y: 75 } })
+            expect.objectContaining({
+                nom: 'Détecteur 1',
+                categorie: 'bouclePiedFeu',
+                position: { x: 25, y: 75 }
+            })
         ]);
-        expect(onPlacementTermine).toHaveBeenCalled();
+    });
+
+    it('rend les deux modes de placement exclusifs', () => {
+        const { onDisplayOptionChange } = rendre({ detecteurs: [] });
+        const ajout = screen.getByLabelText('Ajouter un détecteur');
+        fireEvent.click(ajout);
+        expect(ajout).toBeChecked();
+
+        fireEvent.click(screen.getByLabelText('Ajouter un courant de circulation'));
+        expect(ajout).not.toBeChecked();
+        expect(onDisplayOptionChange).toHaveBeenCalledWith('showArrows', true);
     });
 
     it('sélectionne le détecteur et tourne le symbole depuis l’éditeur', () => {
