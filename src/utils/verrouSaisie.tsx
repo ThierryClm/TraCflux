@@ -33,6 +33,14 @@ export const lirePrefsVerrou = (): PrefsVerrou => etat;
 
 export const basculerVerrou = (section: SectionVerrou) => publier({ ...etat, [section]: !etat[section] });
 
+/** Toutes les sections d'un coup : verrouille s'il en reste une ouverte, sinon déverrouille. */
+export const basculerVerrouTout = () => {
+    const toutVerrouille = SECTIONS_VERROU.every(k => etat[k]);
+    const suivant = { ...AUCUN };
+    SECTIONS_VERROU.forEach(k => { suivant[k] = !toutVerrouille; });
+    publier(suivant);
+};
+
 /**
  * Pose le verrouillage enregistré dans un projet (sections absentes ou
  * valeurs illisibles : déverrouillées). Sans argument : tout déverrouillé.
