@@ -45,7 +45,7 @@ export const etiquetteDansBoucle = (detecteur: Detecteur, taille: TailleDetecteu
  * Dessin SVG du symbole, centré dans une boîte de la taille calculée.
  * La rotation est appliquée par le conteneur, comme pour les flèches.
  */
-export const renderDetecteurSVG = (detecteur: Detecteur, pixelsParMetre: number) => {
+export const renderDetecteurSVG = (detecteur: Detecteur, pixelsParMetre: number, occupe = false) => {
     const couleur = COULEUR_DETECTEUR[detecteur.categorie];
     const { largeur, hauteur } = tailleDetecteur(detecteur, pixelsParMetre);
 
@@ -86,8 +86,17 @@ export const renderDetecteurSVG = (detecteur: Detecteur, pixelsParMetre: number)
     }
 
     // Boucle : rectangle à coins carrés, trait pointillé, largeur 1 m.
+    // Occupée, elle se remplit d'un orange transparent ; le contour reste noir.
     return (
         <svg width={largeur} height={hauteur} viewBox={`0 0 ${largeur} ${hauteur}`} aria-hidden="true">
+            <rect
+                x="1"
+                y="1"
+                width={Math.max(1, largeur - 2)}
+                height={Math.max(1, hauteur - 2)}
+                fill={occupe ? 'rgba(255, 152, 0, 0.45)' : 'none'}
+                stroke="none"
+            />
             <rect
                 x="1"
                 y="1"

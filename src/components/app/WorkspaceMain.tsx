@@ -48,6 +48,7 @@ interface WorkspaceMainModel {
     setDetecteurs: Dispatch<SetStateAction<Detecteur[]>>;
     pixelsParMetre: number;
     setPixelsParMetre: Dispatch<SetStateAction<number>>;
+    getTrafficData: (groupId: number) => { trafficVol?: number | string } | undefined;
     diagramAreaRef: RefObject<HTMLElement | null>;
     diagramHeight: number | null;
     displayConflicts: TimelineDiagramProps['conflicts'];
@@ -170,7 +171,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
         biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
         cycleLengthInput, cycleSimulationSpeed, dependencyGap, detecteurs, setDetecteurs,
-        pixelsParMetre, setPixelsParMetre, diagramAreaRef, diagramHeight,
+        pixelsParMetre, setPixelsParMetre, getTrafficData, diagramAreaRef, diagramHeight,
         displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
         helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
@@ -547,6 +548,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 onDetecteursChange={setDetecteurs}
                                 pixelsParMetre={pixelsParMetre}
                                 onPixelsParMetreChange={setPixelsParMetre}
+                                getTrafficData={getTrafficData}
                                 cycleLength={cycleLength}
                                 simulationResult={simulationResult}
                                 isPlaying={isPlayingSimulation}
