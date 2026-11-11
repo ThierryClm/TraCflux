@@ -494,16 +494,10 @@ const MenuBar = ({
                     type: 'submenu',
                     submenuId: 'diagramme',
                     submenu: [
-                        {
-                            label: 'Nom des groupes de feu dans...',
-                            type: 'submenu',
-                            submenuId: 'nomGFdiagramme',
-                            submenu: [
-                                { label: 'le formulaire', action: 'toggleGroupNamesForm', checked: layoutOptions.showGroupNamesForm, keepSubmenuOpen: true },
-                                { label: 'la matrice', action: 'toggleGroupNamesMatrix', checked: layoutOptions.showGroupNamesMatrix, keepSubmenuOpen: true },
-                                { label: 'le diagramme', action: 'toggleGroupNamesDiagram', checked: layoutOptions.showGroupNamesDiagram, keepSubmenuOpen: true }
-                            ]
-                        },
+                        /* Une simple case ici : dans ce groupe, seul l'affichage
+                           dans le diagramme compte. Les trois sections restent
+                           réglables ensemble depuis l'entrée de premier niveau. */
+                        { label: 'Nom des groupes de feu', action: 'toggleGroupNamesDiagram', checked: layoutOptions.showGroupNamesDiagram, keepSubmenuOpen: true },
                         {
                             label: 'Commentaires',
                             type: 'submenu',

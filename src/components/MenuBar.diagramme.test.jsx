@@ -63,7 +63,7 @@ describe('MenuBar — Mise en page ▸ Diagramme', () => {
         const entrees = within(groupe.querySelector('.submenu-dropdown')).getAllByRole('button')
             .map(b => b.textContent.replace('▶', '').trim());
         expect(entrees).toEqual([
-            'Nom des groupes de feu dans...',
+            'Nom des groupes de feu',
             'Commentaires',
             'Remarques',
             'Description des conditions micro',
@@ -85,12 +85,18 @@ describe('MenuBar — Mise en page ▸ Diagramme', () => {
         expect(tete).toContain('Nom des groupes de feu dans...');
     });
 
-    it('garde le nom des groupes au premier niveau, en double', () => {
+    it('garde le nom des groupes au premier niveau, et une case simple dans Diagramme', () => {
         vi.useFakeTimers();
-        render(<MenuBar layoutOptions={{ showGroupNamesDiagram: true }} />);
-        ouvrirDiagramme();
-        const occurrences = screen.getAllByRole('button', { name: /^Nom des groupes de feu/ });
-        expect(occurrences).toHaveLength(2);
+        const onAction = vi.fn();
+        render(<MenuBar onAction={onAction} layoutOptions={{ showGroupNamesDiagram: true }} />);
+        const groupe = ouvrirDiagramme();
+        // L'entrée d'origine (trois sections) et la case du groupe Diagramme.
+        expect(screen.getAllByRole('button', { name: /Nom des groupes de feu/ })).toHaveLength(2);
+        const caseDiagramme = within(groupe.querySelector('.submenu-dropdown'))
+            .getByRole('button', { name: /Nom des groupes de feu/ });
+        expect(caseDiagramme).toHaveClass('checked');
+        fireEvent.click(caseDiagramme);
+        expect(onAction).toHaveBeenCalledWith('toggleGroupNamesDiagram');
     });
 
     it('garde le choix des commentaires dans le troisième niveau', () => {
