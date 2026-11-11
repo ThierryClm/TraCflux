@@ -13,12 +13,11 @@ afterEach(() => {
 });
 
 /**
- * La barre a déjà un menu « Diagramme » ; l'entrée du même nom vit dans le
- * déroulant de « Mise en page ». Les recherches sont donc cadrées sur ce
- * déroulant, sans quoi deux boutons répondent.
+ * La barre a déjà un menu « Diagramme » ; les entrées du même nom vivent dans
+ * le déroulant de « Mise en page ». Les recherches sont donc cadrées dessus.
  */
 const trouverDepliantMiseEnPage = () => [...document.querySelectorAll('.menu-dropdown')]
-    .find(d => d.textContent.includes('Affichage des paramètres'));
+    .find(d => d.textContent.includes('Détachement'));
 
 /** Ouvre le menu Mise en page ; un second clic le refermerait, donc on réutilise. */
 const menuMiseEnPage = () => {
@@ -31,16 +30,7 @@ const menuMiseEnPage = () => {
 const boutonDuMenu = (libelle) =>
     within(menuMiseEnPage()).getByRole('button', { name: new RegExp(`^${libelle}`) });
 
-/** Ouvre Mise en page, puis déplie son entrée Diagramme. */
-const ouvrirDiagramme = () => {
-    const menu = menuMiseEnPage();
-    const entree = within(menu).getByRole('button', { name: /^Diagramme/ }).closest('.menu-item-with-submenu');
-    fireEvent.mouseEnter(entree);
-    act(() => vi.runAllTimers());
-    return entree;
-};
-
-/** Déplie une entrée de second niveau (Commentaires, Remarques, Dilatation). */
+/** Déplie une entrée de premier niveau (Configuration, Diagramme, Matrice…). */
 const deplier = (libelle) => {
     const entree = boutonDuMenu(libelle).closest('.menu-item-with-submenu');
     fireEvent.mouseEnter(entree);
@@ -48,22 +38,32 @@ const deplier = (libelle) => {
     return entree;
 };
 
-describe('MenuBar — Mise en page ▸ Diagramme', () => {
-    it('suit Affichage des paramètres et regroupe les trois réglages du diagramme', () => {
+const libellesDe = (entree) => within(entree.querySelector('.submenu-dropdown')).getAllByRole('button')
+    .map(b => b.textContent.replace(/[✓▶]/g, '').trim());
+
+describe('MenuBar — Mise en page, trois groupes', () => {
+    it('s’ouvre sur Configuration, puis Diagramme, puis Matrice', () => {
         vi.useFakeTimers();
         render(<MenuBar />);
         const menu = menuMiseEnPage();
-        const libelles = within(menu).getAllByRole('button')
-            .map(b => b.textContent.replace('✓', '').replace('▶', '').trim());
-        const index = libelles.indexOf('Diagramme');
-        expect(index).toBeGreaterThan(-1);
-        expect(libelles[index - 1]).toBe('Affichage des paramètres');
+        const tete = within(menu).getAllByRole('button')
+            .map(b => b.textContent.replace(/[✓▶]/g, '').trim());
+        expect(tete.slice(0, 3)).toEqual(['Configuration', 'Diagramme', 'Matrice']);
+    });
 
-        const groupe = ouvrirDiagramme();
-        const entrees = within(groupe.querySelector('.submenu-dropdown')).getAllByRole('button')
-            .map(b => b.textContent.replace('▶', '').trim());
-        expect(entrees).toEqual([
-            'Nom des groupes de feu',
+    it('range Affichage, Nom des GFx du formulaire et Réserve de capacité dans Configuration', () => {
+        vi.useFakeTimers();
+        render(<MenuBar />);
+        const configuration = deplier('Configuration');
+        expect(libellesDe(configuration)).toEqual(['Affichage', 'Nom des GFx', 'Réserve de capacité']);
+    });
+
+    it('garde Nom des GFx du diagramme dans Diagramme, devant les autres réglages', () => {
+        vi.useFakeTimers();
+        render(<MenuBar />);
+        const diagramme = deplier('Diagramme');
+        expect(libellesDe(diagramme)).toEqual([
+            'Nom des GFx',
             'Commentaires',
             'Remarques',
             'Description des conditions micro',
@@ -71,60 +71,66 @@ describe('MenuBar — Mise en page ▸ Diagramme', () => {
         ]);
     });
 
-    it('ne les laisse plus en tête du menu Mise en page, sauf le nom des groupes', () => {
+    it('place Matrice après Diagramme, au-dessus du séparateur', () => {
+        vi.useFakeTimers();
+        render(<MenuBar />);
+        const menu = menuMiseEnPage();
+        const enfants = [...menu.children].map(el => el.className.includes('menu-separator')
+            ? '—'
+            : el.textContent.replace(/[✓▶]/g, '').trim());
+        expect(enfants).toEqual([
+            'Configuration', 'Diagramme', 'Matrice', '—',
+            'Détachement', '—',
+            'Options de contraste', 'Verrouillage saisie...', 'Infobulles', 'Notifications'
+        ]);
+    });
+
+    it('ne garde plus l’ancien sous-menu à trois sections', () => {
         vi.useFakeTimers();
         render(<MenuBar />);
         const menu = menuMiseEnPage();
         const tete = within(menu).getAllByRole('button')
             .map(b => b.textContent.replace(/[✓▶]/g, '').trim());
-        expect(tete).not.toContain('Commentaires du diagramme');
-        expect(tete).not.toContain('Remarques du diagramme');
-        expect(tete).not.toContain('Dilatation du diagramme');
-        expect(tete).not.toContain('Description des conditions micro');
-        // Le nom des groupes reste au premier niveau, et se retrouve aussi dans Diagramme.
-        expect(tete).toContain('Nom des groupes de feu dans...');
+        expect(tete).not.toContain('Nom des groupes de feu dans...');
+        expect(tete).not.toContain('Affichage des paramètres');
+        expect(tete).not.toContain('Panneau Réserve de capacité');
     });
 
-    it('garde le nom des groupes au premier niveau, et une case simple dans Diagramme', () => {
+    it('donne à chaque case Nom des GFx la section qu’elle commande', () => {
         vi.useFakeTimers();
         const onAction = vi.fn();
-        render(<MenuBar onAction={onAction} layoutOptions={{ showGroupNamesDiagram: true }} />);
-        const groupe = ouvrirDiagramme();
-        // L'entrée d'origine (trois sections) et la case du groupe Diagramme.
-        expect(screen.getAllByRole('button', { name: /Nom des groupes de feu/ })).toHaveLength(2);
-        const caseDiagramme = within(groupe.querySelector('.submenu-dropdown'))
-            .getByRole('button', { name: /Nom des groupes de feu/ });
-        expect(caseDiagramme).toHaveClass('checked');
-        fireEvent.click(caseDiagramme);
-        expect(onAction).toHaveBeenCalledWith('toggleGroupNamesDiagram');
+        render(<MenuBar onAction={onAction} />);
+
+        const configuration = deplier('Configuration');
+        fireEvent.click(within(configuration.querySelector('.submenu-dropdown')).getByRole('button', { name: /Nom des GFx/ }));
+        expect(onAction).toHaveBeenLastCalledWith('toggleGroupNamesForm');
+
+        const diagramme = deplier('Diagramme');
+        fireEvent.click(within(diagramme.querySelector('.submenu-dropdown')).getByRole('button', { name: /Nom des GFx/ }));
+        expect(onAction).toHaveBeenLastCalledWith('toggleGroupNamesDiagram');
+
+        const matrice = deplier('Matrice');
+        fireEvent.click(within(matrice.querySelector('.submenu-dropdown')).getByRole('button', { name: /Nom des GFx/ }));
+        expect(onAction).toHaveBeenLastCalledWith('toggleGroupNamesMatrix');
     });
 
-    it('garde le choix des commentaires dans le troisième niveau', () => {
-        vi.useFakeTimers();
-        const onAction = vi.fn();
-        render(<MenuBar onAction={onAction} layoutOptions={{ commentsMode: 'auto' }} />);
-        ouvrirDiagramme();
-        deplier('Commentaires');
-        fireEvent.click(screen.getByRole('button', { name: 'Masquer' }));
-        expect(onAction).toHaveBeenCalledWith('commentsHide');
-    });
-
-    it('garde le curseur de dilatation dans le troisième niveau', () => {
+    it('garde le curseur de dilatation au troisième niveau', () => {
         vi.useFakeTimers();
         const onPixelsPerSecondChange = vi.fn();
         render(<MenuBar pixelsPerSecond={10} onPixelsPerSecondChange={onPixelsPerSecondChange} />);
-        ouvrirDiagramme();
-        deplier('Dilatation');
-        const curseur = screen.getByRole('slider');
-        fireEvent.change(curseur, { target: { value: '14' } });
+        const diagramme = deplier('Diagramme');
+        const dilatation = within(diagramme.querySelector('.submenu-dropdown'))
+            .getByRole('button', { name: /^Dilatation/ }).closest('.menu-item-with-submenu');
+        fireEvent.mouseEnter(dilatation);
+        act(() => vi.runAllTimers());
+        fireEvent.change(screen.getByRole('slider'), { target: { value: '14' } });
         expect(onPixelsPerSecondChange).toHaveBeenCalledWith(14);
     });
 });
 
 describe('MenuBar — Mise en page ▸ Verrouillage saisie', () => {
     const ouvrirVerrouillage = () => {
-        const menu = menuMiseEnPage();
-        const entree = within(menu).getByRole('button', { name: /^Verrouillage saisie/ }).closest('.menu-item-with-submenu');
+        const entree = boutonDuMenu('Verrouillage saisie').closest('.menu-item-with-submenu');
         fireEvent.mouseEnter(entree);
         act(() => vi.runAllTimers());
         return entree;

@@ -482,22 +482,26 @@ const MenuBar = ({
             label: 'Mise en page',
             disabled: !hasActiveProject,
             items: [
-                { label: 'Affichage des paramètres', action: 'toggleParameters', toggle: true, checked: layoutOptions.showParameters, keepSubmenuOpen: true },
-                /* Les réglages qui ne touchent que le diagramme, réunis sous une
-                   même entrée : dispersés dans le menu, ils se confondaient avec
-                   les cases qui concernent toute la page. « Nom des groupes de
-                   feu » y figure aussi, en tête : la variante « dans le
-                   diagramme » se cherche là, mais l'entrée reste aussi au
-                   premier niveau pour la matrice et le formulaire. */
+                /* Trois groupes, un par partie de la fenêtre : configuration
+                   générale, diagramme, matrice. Chacun porte sa case « Nom des
+                   GFx », qui ne vaut que pour lui — l'ancien sous-menu à trois
+                   sections obligeait à choisir section par section. */
+                {
+                    label: 'Configuration',
+                    type: 'submenu',
+                    submenuId: 'configuration',
+                    submenu: [
+                        { label: 'Affichage', action: 'toggleParameters', checked: layoutOptions.showParameters, keepSubmenuOpen: true },
+                        { label: 'Nom des GFx', action: 'toggleGroupNamesForm', checked: layoutOptions.showGroupNamesForm, keepSubmenuOpen: true },
+                        { label: 'Réserve de capacité', action: 'toggleCapacityReserve', checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true }
+                    ]
+                },
                 {
                     label: 'Diagramme',
                     type: 'submenu',
                     submenuId: 'diagramme',
                     submenu: [
-                        /* Une simple case ici : dans ce groupe, seul l'affichage
-                           dans le diagramme compte. Les trois sections restent
-                           réglables ensemble depuis l'entrée de premier niveau. */
-                        { label: 'Nom des groupes de feu', action: 'toggleGroupNamesDiagram', checked: layoutOptions.showGroupNamesDiagram, keepSubmenuOpen: true },
+                        { label: 'Nom des GFx', action: 'toggleGroupNamesDiagram', checked: layoutOptions.showGroupNamesDiagram, keepSubmenuOpen: true },
                         {
                             label: 'Commentaires',
                             type: 'submenu',
@@ -538,18 +542,15 @@ const MenuBar = ({
                         }
                     ]
                 },
-                { label: 'Panneau Réserve de capacité', action: 'toggleCapacityReserve', toggle: true, checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true },
-                { type: 'separator' },
                 {
-                    label: 'Nom des groupes de feu dans...',
+                    label: 'Matrice',
                     type: 'submenu',
-                    submenuId: 'nomGF',
+                    submenuId: 'matrice',
                     submenu: [
-                        { label: 'le formulaire', action: 'toggleGroupNamesForm', checked: layoutOptions.showGroupNamesForm, keepSubmenuOpen: true },
-                        { label: 'la matrice', action: 'toggleGroupNamesMatrix', checked: layoutOptions.showGroupNamesMatrix, keepSubmenuOpen: true },
-                        { label: 'le diagramme', action: 'toggleGroupNamesDiagram', checked: layoutOptions.showGroupNamesDiagram, keepSubmenuOpen: true }
+                        { label: 'Nom des GFx', action: 'toggleGroupNamesMatrix', checked: layoutOptions.showGroupNamesMatrix, keepSubmenuOpen: true }
                     ]
                 },
+                { type: 'separator' },
                 {
                     label: 'Détachement',
                     type: 'submenu',
