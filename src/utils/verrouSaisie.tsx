@@ -16,11 +16,11 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import type { ReactNode, SyntheticEvent } from 'react';
 import './verrouSaisie.css';
 
-export type SectionVerrou = 'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image' | 'scenarios' | 'phasages';
+export type SectionVerrou = 'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image' | 'scenarios' | 'phasages' | 'detecteurs';
 export type PrefsVerrou = Record<SectionVerrou, boolean>;
 
-export const SECTIONS_VERROU: SectionVerrou[] = ['proprietes', 'configuration', 'matrice', 'trafic', 'diagramme', 'conditions', 'variables', 'image', 'scenarios', 'phasages'];
-const AUCUN: PrefsVerrou = { proprietes: false, configuration: false, matrice: false, trafic: false, diagramme: false, conditions: false, variables: false, image: false, scenarios: false, phasages: false };
+export const SECTIONS_VERROU: SectionVerrou[] = ['proprietes', 'configuration', 'matrice', 'trafic', 'diagramme', 'conditions', 'variables', 'image', 'scenarios', 'phasages', 'detecteurs'];
+const AUCUN: PrefsVerrou = { proprietes: false, configuration: false, matrice: false, trafic: false, diagramme: false, conditions: false, variables: false, image: false, scenarios: false, phasages: false, detecteurs: false };
 
 let etat: PrefsVerrou = AUCUN;
 const abonnes = new Set<() => void>();
@@ -113,7 +113,8 @@ const deverrouiller = (racine: HTMLElement) => {
  */
 export const ZoneVerrouSaisie = ({ section, children }: { section: SectionVerrou; children: ReactNode }) => {
     const verrouille = usePrefsVerrou()[section];
-    const boutons = section === 'image' || section === 'scenarios' || section === 'phasages';
+    // Les sections dont les actions (ajout, suppression) sont des boutons.
+    const boutons = section === 'image' || section === 'scenarios' || section === 'phasages' || section === 'detecteurs';
     const ref = useRef<HTMLDivElement>(null);
     useLayoutEffect(() => {
         const racine = ref.current;

@@ -14,6 +14,7 @@ import { isExampleSession } from '../utils/exampleMode';
 import { isReadOnlyStamped } from '../utils/dossierLock';
 import { toast } from '../utils/toast';
 import { entier } from '../utils/entier';
+import { normaliserDetecteurs } from '../utils/detecteurs';
 import { nomsALaSauvegarde, nomsALOuverture } from '../utils/nomsProjet';
 import type { AlertFunction } from '../components/ConfirmProvider';
 import type { LargeursColonnes } from '../components/ActionTable';
@@ -39,6 +40,7 @@ export type {
 import type {
     ActionMicro,
     CaseMatrice,
+    Detecteur,
     FlecheCarrefour,
     Groupe,
     LienExterne,
@@ -87,6 +89,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     // Bornes a la restauration : Desc 100-350, Micro 300-700, Abrv 38-75.
     const [actionColWidths, setActionColWidths] = useState<LargeursColonnes>({ description: 160, micro: 420, abrv: 38 });
     const [externalLinks, setExternalLinks] = useState<LienExterne[]>([]);
+    // Détecteurs de terrain, communs à tous les plans de feux du carrefour.
+    const [detecteurs, setDetecteurs] = useState<Detecteur[]>([]);
     // Sélection mémorisée du comparateur de capacité (fenêtre « Comparer la
     // capacité des plans de feu ») : liste d'id de PF cochés (null = tous par
     // défaut) et jeu de trafic choisi ('__per_pf__' = jeu associé à chaque PF).
@@ -364,6 +368,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
             setMatricesLocked(data.matricesLocked === true);
             setActionColWidths(largeursColonnesBornees(data.actionColWidths));
             setExternalLinks(data.externalLinks && Array.isArray(data.externalLinks) ? data.externalLinks : []);
+            setDetecteurs(normaliserDetecteurs(data.detecteurs));
 
             // Rendre à leurs modules les champs qui ne vivent pas ici — les
             // cases d'impression du dossier, par exemple. getFullState les
@@ -554,6 +559,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
                 setExternalLinks([]);
             }
 
+            // Détecteurs : absents d'un projet antérieur au module.
+            setDetecteurs(normaliserDetecteurs(state.detecteurs));
+
             return true;
         } catch (e) {
             console.error("Load full state failed", e);
@@ -604,6 +612,9 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         // Reset external links
         setExternalLinks([]);
 
+        // Reset détecteurs
+        setDetecteurs([]);
+
         // Reset sélection du comparateur de capacité (tous cochés par défaut)
         setCapacityCompareSelection(null);
         setCapacityCompareDataset('__per_pf__');
@@ -632,6 +643,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         activePFId,
         intersectionImage,
         intersectionArrows,
+        detecteurs,
         imageBrightness,
         imageContrast,
         trafficDatasets,
@@ -1174,7 +1186,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
                 clearTimeout(autoSaveTimerRef.current);
             }
         };
-    }, [groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, intersectionName, projectProperties, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, customTrafficDatasetNames, pfTrafficDatasetMap, externalLinks, matricesLocked, actionColWidths]);
+    }, [groups, cycleLength, conflictMatrix, pfTabs, activePFId, intersectionImage, intersectionArrows, detecteurs, imageBrightness, imageContrast, trafficDatasets, activeTrafficDataset, dependencyGap, biCarrefourSeparator, intersectionName, projectProperties, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, customTrafficDatasetNames, pfTrafficDatasetMap, externalLinks, matricesLocked, actionColWidths]);
 
     const {
         updateTrafficData, getTrafficData, copyTrafficDataset, addCustomTrafficDataset,
@@ -1513,6 +1525,8 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         setActionColWidths,
         externalLinks,
         setExternalLinks,
+        detecteurs,
+        setDetecteurs,
         capacityCompareSelection,
         setCapacityCompareSelection,
         capacityCompareDataset,
