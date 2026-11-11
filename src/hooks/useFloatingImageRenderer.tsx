@@ -7,7 +7,8 @@ import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import SignalModule from '../components/SignalModule';
-import type { ActionMicro, Groupe, Matrice } from '../types/projet';
+import type { ActionMicro, Detecteur, Groupe, Matrice } from '../types/projet';
+import { renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
 import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
 
@@ -36,6 +37,8 @@ interface FloatingImageRendererOptions {
     showCropControls: boolean;
     setShowCropControls: Dispatch<SetStateAction<boolean>>;
     intersectionArrows: IntersectionArrow[];
+    detecteurs: Detecteur[];
+    pixelsParMetre: number;
     groups: Groupe[];
     imageNaturalDims: ImageDimensions;
     imageFondClair?: boolean;
@@ -71,6 +74,8 @@ const useFloatingImageRenderer = ({
     floatingZoom, setFloatingZoom,
     showCropControls, setShowCropControls,
     intersectionArrows,
+    detecteurs,
+    pixelsParMetre,
     groups,
     imageNaturalDims,
     imageFondClair = true,
@@ -298,17 +303,43 @@ const useFloatingImageRenderer = ({
                                     </div>
                                 );
                             })}
+                            {intersectionDisplay.showDetecteurs && detecteurs.map(detecteur => {
+                                if (!detecteur.position) return null;
+                                const taille = tailleDetecteur(detecteur, pixelsParMetre);
+                                return (
+                                    <div
+                                        key={`fdet-${detecteur.id}`}
+                                        className="detecteur-marker"
+                                        style={{ left: `${detecteur.position.x}%`, top: `${detecteur.position.y}%` }}
+                                    >
+                                        <div
+                                            className="detecteur-symbol"
+                                            style={{
+                                                width: taille.largeur,
+                                                height: taille.hauteur,
+                                                transform: `translate(-50%, -50%) rotate(${detecteur.orientation || 0}deg)`
+                                            }}
+                                        >
+                                            {renderDetecteurSVG(detecteur, pixelsParMetre)}
+                                        </div>
+                                        <span className="detecteur-label" style={{ top: taille.hauteur / 2 + 4 }}>
+                                            {detecteur.nom}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
             </div></ZoneVerrouSaisie>
         );
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
-        intersectionArrows, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
+        intersectionArrows, detecteurs, pixelsParMetre, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
         selectedActions, conflictMatrix,
         isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast,
-        intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames, intersectionDisplay.showSignals, tooltipsEnabled, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+        intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames, intersectionDisplay.showSignals,
+        intersectionDisplay.showDetecteurs, tooltipsEnabled, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 
 export default useFloatingImageRenderer;

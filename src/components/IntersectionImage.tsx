@@ -10,7 +10,9 @@ import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefau
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import { demarrerHorloge } from '../utils/horlogeLecture';
 import SignalModule from './SignalModule';
-import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
+import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
+import { dimensionSaisissable, LIBELLE_CATEGORIE } from '../utils/detecteurs';
+import { renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
 import './IntersectionImage.css';
@@ -24,6 +26,15 @@ export interface IntersectionImageProps {
     onImageChange: (dataUrl: string) => void;
     arrows: FlecheCarrefour[];
     onArrowsChange: (arrows: FlecheCarrefour[]) => void;
+    /** Détecteurs de terrain et leur calque sur l'image. */
+    detecteurs?: Detecteur[];
+    onDetecteursChange?: (detecteurs: Detecteur[]) => void;
+    /** Échelle du projet : pixels de l'image par mètre. */
+    pixelsParMetre?: number;
+    onPixelsParMetreChange?: (value: number) => void;
+    /** Détecteur en attente d'un clic de placement sur l'image. */
+    detecteurAPlacer?: number | null;
+    onPlacementTermine?: () => void;
     cycleLength: number;
     simulationResult?: SimulationResult | null;
     // Animation : état tenu par le parent
@@ -66,6 +77,12 @@ const IntersectionImage = ({
     onImageChange: onImageChangeProp,
     arrows,
     onArrowsChange: onArrowsChangeProp,
+    detecteurs = [],
+    onDetecteursChange: onDetecteursChangeProp,
+    pixelsParMetre = 12,
+    onPixelsParMetreChange,
+    detecteurAPlacer = null,
+    onPlacementTermine,
     cycleLength,
     simulationResult,
     // Animation state (lifted to parent)
@@ -100,12 +117,13 @@ const IntersectionImage = ({
     imageContrast = 100,
     setImageContrast: setImageContrastProp,
     // Cases numéros / noms / flèches / signal (persistées avec le projet)
-    displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true, showSignals: false },
+    displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true, showSignals: false, showDetecteurs: true },
     onDisplayOptionChange: onDisplayOptionChangeProp,
     tooltipsEnabled = true
 }: IntersectionImageProps) => {
     const onImageChange = useCallback((data: string) => { if (!lirePrefsVerrou().image) onImageChangeProp(data); }, [onImageChangeProp]);
     const onArrowsChange = useCallback((next: FlecheCarrefour[]) => { if (!lirePrefsVerrou().image) onArrowsChangeProp(next); }, [onArrowsChangeProp]);
+    const onDetecteursChange = useCallback((next: Detecteur[]) => { if (!lirePrefsVerrou().image) onDetecteursChangeProp?.(next); }, [onDetecteursChangeProp]);
     const onDisplayOptionChange = (option: IntersectionDisplayOption, value: boolean) => { if (!lirePrefsVerrou().image) onDisplayOptionChangeProp?.(option, value); };
     const setImageBrightness = setImageBrightnessProp && ((value: number) => { if (!lirePrefsVerrou().image) setImageBrightnessProp(value); });
     const setImageContrast = setImageContrastProp && ((value: number) => { if (!lirePrefsVerrou().image) setImageContrastProp(value); });
@@ -113,6 +131,7 @@ const IntersectionImage = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedArrow, setSelectedArrow] = useState<number | null>(null);
+    const [selectedDetecteur, setSelectedDetecteur] = useState<number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [showImageMenu, setShowImageMenu] = useState(false);
 
@@ -125,7 +144,7 @@ const IntersectionImage = ({
     const imageMenuRef = useRef<HTMLDivElement>(null);
 
     // Cases d'affichage : enregistrées avec le projet (useIntersectionDisplayOptions).
-    const { showGroupNumbers, showGroupNames, showArrows } = displayOptions;
+    const { showGroupNumbers, showGroupNames, showArrows, showDetecteurs } = displayOptions;
     // Sans signal renseigné, la case est grisée et ne pèse sur rien d'autre ; son
     // choix reste mémorisé pour le jour où un signal sera saisi.
     const signalDisponible = auMoinsUnSignal(groups);
@@ -134,6 +153,27 @@ const IntersectionImage = ({
     const setShowGroupNames = (value: boolean) => onDisplayOptionChange?.('showGroupNames', value);
     const setShowArrows = (value: boolean) => onDisplayOptionChange?.('showArrows', value);
     const setShowSignals = (value: boolean) => onDisplayOptionChange?.('showSignals', value);
+    const setShowDetecteurs = (value: boolean) => onDisplayOptionChange?.('showDetecteurs', value);
+
+    // L'image est affichée dans une boîte fixe de 750 × 530 : l'échelle du
+    // projet s'entend directement en pixels affichés, sans conversion.
+    const pixelsParMetreAffiche = pixelsParMetre;
+
+    // Le bouton « Placer » vient du tableau : on amène l'image à l'écran.
+    useEffect(() => {
+        if (detecteurAPlacer === null) return;
+        containerRef.current?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    }, [detecteurAPlacer]);
+
+    // Échap annule un placement de détecteur en cours.
+    useEffect(() => {
+        if (detecteurAPlacer === null) return;
+        const surTouche = (e: globalThis.KeyboardEvent) => {
+            if (e.key === 'Escape') onPlacementTermine?.();
+        };
+        window.addEventListener('keydown', surTouche);
+        return () => window.removeEventListener('keydown', surTouche);
+    }, [detecteurAPlacer, onPlacementTermine]);
     const [applyToAllSameType, setApplyToAllSameType] = useState(false);
 
     // Close image menu when clicking outside
@@ -319,11 +359,24 @@ const IntersectionImage = ({
     // Handle click on image to place arrow
     const handleImageClick = (e: ReactMouseEvent<HTMLDivElement>) => {
         const container = containerRef.current;
-        if (!imageData || isDragging || !showArrows || !container) return;
+        if (!imageData || isDragging || !container) return;
 
         const rect = container.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        // Un détecteur attend d'être posé : ce clic le place et termine le mode.
+        if (detecteurAPlacer !== null && onDetecteursChange) {
+            onDetecteursChange(detecteurs.map(d =>
+                d.id === detecteurAPlacer ? { ...d, position: { x, y } } : d
+            ));
+            setSelectedDetecteur(detecteurAPlacer);
+            setSelectedArrow(null);
+            onPlacementTermine?.();
+            return;
+        }
+
+        if (!showArrows) return;
 
         // Find a group without an arrow yet
         const groupsWithoutArrows = groups.filter(g =>
@@ -406,6 +459,61 @@ const IntersectionImage = ({
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    // Déplacer un détecteur posé sur l'image.
+    const handleDetecteurMouseDown = (e: ReactMouseEvent<HTMLDivElement>, id: number) => {
+        e.stopPropagation();
+        setSelectedDetecteur(id);
+        setSelectedArrow(null);
+        if (lirePrefsVerrou().image) return;
+
+        const container = containerRef.current;
+        const detecteur = detecteurs.find(d => d.id === id);
+        if (!container || !detecteur?.position) return;
+        setIsDragging(true);
+
+        const rect = container.getBoundingClientRect();
+        const offsetX = ((e.clientX - rect.left) / rect.width) * 100 - detecteur.position.x;
+        const offsetY = ((e.clientY - rect.top) / rect.height) * 100 - detecteur.position.y;
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const rectCourant = container.getBoundingClientRect();
+            const x = Math.max(0, Math.min(100, ((moveEvent.clientX - rectCourant.left) / rectCourant.width) * 100 - offsetX));
+            const y = Math.max(0, Math.min(100, ((moveEvent.clientY - rectCourant.top) / rectCourant.height) * 100 - offsetY));
+            onDetecteursChange(detecteurs.map(d =>
+                d.id === id ? { ...d, position: { x, y } } : d
+            ));
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    const tournerDetecteur = (id: number) => {
+        onDetecteursChange(detecteurs.map(d =>
+            d.id === id ? { ...d, orientation: ((d.orientation || 0) + 45) % 360 } : d
+        ));
+    };
+
+    const setDetecteurOrientation = (id: number, valeur: number | string) => {
+        const orientation = ((parseInt(String(valeur), 10) || 0) % 360 + 360) % 360;
+        onDetecteursChange(detecteurs.map(d =>
+            d.id === id ? { ...d, orientation } : d
+        ));
+    };
+
+    const retirerDetecteurDeImage = (id: number) => {
+        onDetecteursChange(detecteurs.map(d =>
+            d.id === id ? { ...d, position: null } : d
+        ));
+        setSelectedDetecteur(null);
     };
 
     // Rotate arrow by 45 degrees
@@ -859,6 +967,11 @@ const IntersectionImage = ({
                             className="intersection-img"
                             style={{ filter: `brightness(${imageBrightness}%) contrast(${imageContrast}%)` }}
                         />
+                        {detecteurAPlacer !== null && (
+                            <div className="detecteur-placement-hint">
+                                Cliquez sur l'image pour placer « {detecteurs.find(d => d.id === detecteurAPlacer)?.nom || 'ce détecteur'} » — Échap pour annuler.
+                            </div>
+                        )}
                         {arrows.map(arrow => {
                             const groupInfo = getGroupInfo(arrow.groupId);
                             const rotation = arrow.rotation || 0;
@@ -907,6 +1020,46 @@ const IntersectionImage = ({
                                             {groupInfo.name}
                                         </span>
                                     )}
+                                </div>
+                            );
+                        })}
+                        {showDetecteurs && detecteurs.map(detecteur => {
+                            if (!detecteur.position) return null;
+                            const taille = tailleDetecteur(detecteur, pixelsParMetreAffiche);
+                            const selectionne = selectedDetecteur === detecteur.id;
+                            return (
+                                <div
+                                    key={`detecteur-${detecteur.id}`}
+                                    className={`detecteur-marker ${selectionne ? 'selected' : ''} ${detecteurAPlacer === detecteur.id ? 'en-placement' : ''}`}
+                                    style={{ left: `${detecteur.position.x}%`, top: `${detecteur.position.y}%` }}
+                                    onMouseDown={(e) => handleDetecteurMouseDown(e, detecteur.id)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedDetecteur(detecteur.id);
+                                        setSelectedArrow(null);
+                                    }}
+                                    onDoubleClick={(e) => {
+                                        e.stopPropagation();
+                                        tournerDetecteur(detecteur.id);
+                                    }}
+                                    title={tip(`${detecteur.nom || 'Détecteur'} — ${LIBELLE_CATEGORIE[detecteur.categorie]} - Double-clic pour tourner`)}
+                                >
+                                    <div
+                                        className="detecteur-symbol"
+                                        style={{
+                                            width: taille.largeur,
+                                            height: taille.hauteur,
+                                            transform: `translate(-50%, -50%) rotate(${detecteur.orientation || 0}deg)`
+                                        }}
+                                    >
+                                        {renderDetecteurSVG(detecteur, pixelsParMetreAffiche)}
+                                    </div>
+                                    <span
+                                        className="detecteur-label"
+                                        style={{ top: taille.hauteur / 2 + 4 }}
+                                    >
+                                        {detecteur.nom}
+                                    </span>
                                 </div>
                             );
                         })}
@@ -976,7 +1129,66 @@ const IntersectionImage = ({
 
                 {/* Right side: Arrow editor */}
                 <div className="intersection-sidebar">
-                    {selectedArrow ? (
+                    {selectedDetecteur ? (() => {
+                        const detecteur = detecteurs.find(d => d.id === selectedDetecteur);
+                        if (!detecteur) return null;
+                        const orientation = detecteur.orientation || 0;
+                        return (
+                            <fieldset className="detecteur-editor">
+                                <h4>Modifier le détecteur</h4>
+                                <div className="editor-row">
+                                    <label>Nom:</label>
+                                    <span className="detecteur-editor-value">{detecteur.nom || 'Sans nom'}</span>
+                                </div>
+                                <div className="editor-row">
+                                    <label>Type:</label>
+                                    <span className="detecteur-editor-value">{LIBELLE_CATEGORIE[detecteur.categorie]}</span>
+                                </div>
+                                <div className="editor-row">
+                                    <label>Rotation:</label>
+                                    <div className="rotation-controls">
+                                        <button
+                                            className="slider-btn minus"
+                                            onClick={() => setDetecteurOrientation(detecteur.id, (orientation - 1 + 360) % 360)}
+                                            title={tip('-1°')}
+                                        >−</button>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="359"
+                                            value={orientation}
+                                            onChange={(e) => setDetecteurOrientation(detecteur.id, e.target.value)}
+                                            className="rotation-slider"
+                                        />
+                                        <button
+                                            className="slider-btn plus"
+                                            onClick={() => setDetecteurOrientation(detecteur.id, (orientation + 1) % 360)}
+                                            title={tip('+1°')}
+                                        >+</button>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="359"
+                                            value={orientation}
+                                            onChange={(e) => setDetecteurOrientation(detecteur.id, e.target.value)}
+                                            className="rotation-input"
+                                        />
+                                        <span className="rotation-unit">°</span>
+                                    </div>
+                                </div>
+                                <p className="detecteur-editor-note">
+                                    {dimensionSaisissable(detecteur.categorie)
+                                        ? detecteur.categorie === 'radar'
+                                            ? `Portée ${detecteur.dimension ?? '—'} m — symbole de taille fixe`
+                                            : `Longueur ${detecteur.dimension ?? '—'} m × largeur 1 m`
+                                        : 'Bouton poussoir — symbole de taille fixe'}
+                                </p>
+                                <button className="delete-arrow-btn" onClick={() => retirerDetecteurDeImage(detecteur.id)}>
+                                    Retirer de l'image
+                                </button>
+                            </fieldset>
+                        );
+                    })() : selectedArrow ? (
                         <fieldset className="arrow-editor" disabled={showSignals}>
                             <h4>Modifier la flèche</h4>
                             {/* Ces réglages décrivent la flèche : la vue Signal ne les montre pas. */}
@@ -1193,6 +1405,14 @@ const IntersectionImage = ({
                             />
                             <span>Ajouter un courant de circulation</span>
                         </label>
+                        <label className="checkbox-option">
+                            <input
+                                type="checkbox"
+                                checked={showDetecteurs}
+                                onChange={(e) => setShowDetecteurs(e.target.checked)}
+                            />
+                            <span>Détecteurs</span>
+                        </label>
                         <label
                             className={`checkbox-option ${signalDisponible ? '' : 'inactive'}`}
                             title={tip(signalDisponible
@@ -1208,6 +1428,29 @@ const IntersectionImage = ({
                             <span>Signaux</span>
                         </label>
                     </div>
+                    {onPixelsParMetreChange && (
+                        <div className="image-filters">
+                            <div className="filter-row">
+                                <label title={tip("Échelle de l'image : nombre de pixels pour un mètre. Une voie fait environ 7 m.")}>Échelle:</label>
+                                <input
+                                    type="range"
+                                    min="2"
+                                    max="40"
+                                    step="1"
+                                    value={pixelsParMetre}
+                                    onChange={(e) => onPixelsParMetreChange(Number(e.target.value))}
+                                    className="filter-slider"
+                                    aria-label="Échelle de l'image"
+                                />
+                                <span className="filter-value">{pixelsParMetre} px/m</span>
+                            </div>
+                            <div className="filter-row">
+                                <span style={{ color: '#888', fontSize: '0.75em' }}>
+                                    voie de 7 m ≈ {Math.round(pixelsParMetre * 7)} px
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     {imageData && setImageBrightness && (
                         <div className="image-filters">
                             <div className="filter-row">

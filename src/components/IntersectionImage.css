@@ -1047,3 +1047,80 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     z-index: 20;
 }
 
+
+/* --- Détecteurs de terrain sur l'image ---------------------------------- */
+
+.detecteur-marker {
+    position: absolute;
+    width: 0;
+    height: 0;
+    z-index: 15;
+}
+
+.detecteur-symbol {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: center;
+    cursor: grab;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.detecteur-symbol svg {
+    display: block;
+}
+
+.detecteur-marker.selected .detecteur-symbol {
+    filter: drop-shadow(0 0 3px #fff);
+}
+
+.detecteur-marker.en-placement .detecteur-symbol {
+    animation: detecteur-pulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes detecteur-pulse {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+}
+
+.detecteur-label {
+    position: absolute;
+    left: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 0.65em;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.62);
+    padding: 0 3px;
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+.detecteur-placement-hint {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.82);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    z-index: 30;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.detecteur-editor .detecteur-editor-value {
+    color: #ddd;
+    font-size: 0.85em;
+}
+
+.detecteur-editor-note {
+    color: #888;
+    font-size: 0.75em;
+    margin: 6px 0;
+}

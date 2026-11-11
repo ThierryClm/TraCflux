@@ -23,6 +23,14 @@ export const LARGEUR_BOUCLE_M = 1;
 /** Longueur proposée pour une boucle de comptage, posée après le carrefour. */
 export const DIMENSION_COMPTAGE_M = 2;
 
+/** Échelle par défaut de l'image : pixels de l'image pour un mètre. */
+export const PIXELS_PAR_METRE_DEFAUT = 12;
+export const PIXELS_PAR_METRE_MIN = 1;
+export const PIXELS_PAR_METRE_MAX = 500;
+
+/** Largeur de voie moyenne retenue comme référence d'échelle. */
+export const LARGEUR_VOIE_REFERENCE_M = 7;
+
 export const estCategorieDetecteur = (valeur: unknown): valeur is CategorieDetecteur =>
     typeof valeur === 'string' && CATEGORIES_DETECTEUR.some(c => c.valeur === valeur);
 
@@ -50,6 +58,13 @@ const nombreFini = (valeur: unknown): number | null => {
         return Number.isFinite(n) ? n : null;
     }
     return null;
+};
+
+/** Échelle relue d'un projet, bornée ; une valeur absente ou illisible reprend le défaut. */
+export const normaliserPixelsParMetre = (valeur: unknown): number => {
+    const n = nombreFini(valeur);
+    if (n === null) return PIXELS_PAR_METRE_DEFAUT;
+    return Math.min(PIXELS_PAR_METRE_MAX, Math.max(PIXELS_PAR_METRE_MIN, n));
 };
 
 /** Longueur ou portée saisie ; null quand la valeur est vide ou sans objet. */

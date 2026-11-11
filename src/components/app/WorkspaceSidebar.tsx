@@ -39,6 +39,10 @@ interface WorkspaceSidebarModel {
     groups: Groupe[];
     detecteurs: Detecteur[];
     setDetecteurs: Dispatch<SetStateAction<Detecteur[]>>;
+    pixelsParMetre: number;
+    setPixelsParMetre: Dispatch<SetStateAction<number>>;
+    detecteurAPlacer: number | null;
+    setDetecteurAPlacer: (id: number | null) => void;
     intersectionArrows: IntersectionArrow[];
     phasageBulleVisibleGroups: Set<number>;
     hoveredPhasageGroupId: number | null;
@@ -137,6 +141,10 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         groups,
         detecteurs,
         setDetecteurs,
+        pixelsParMetre,
+        setPixelsParMetre,
+        detecteurAPlacer,
+        setDetecteurAPlacer,
         intersectionArrows,
         phasageBulleVisibleGroups,
         hoveredPhasageGroupId,
@@ -448,6 +456,10 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                         detecteurs={detecteurs}
                                         groups={groups}
                                         onChange={setDetecteurs}
+                                        pixelsParMetre={pixelsParMetre}
+                                        onPixelsParMetreChange={setPixelsParMetre}
+                                        detecteurAPlacer={detecteurAPlacer}
+                                        onPlacer={setDetecteurAPlacer}
                                     />
                                 </div>
                             )}

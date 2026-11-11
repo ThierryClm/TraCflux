@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import ConfirmProvider from './ConfirmProvider';
@@ -23,9 +23,19 @@ const detecteur = (overrides: Partial<Detecteur> = {}): Detecteur => ({
     ...overrides
 });
 
-const Table = ({ initial = [detecteur()] }: { initial?: Detecteur[] }) => {
+const Table = ({ initial = [detecteur()], onPlacer }: { initial?: Detecteur[]; onPlacer?: (id: number) => void }) => {
     const [detecteurs, setDetecteurs] = useState(initial);
-    return <DetecteursTable detecteurs={detecteurs} groups={groupes} onChange={setDetecteurs} />;
+    const [pixelsParMetre, setPixelsParMetre] = useState(12);
+    return (
+        <DetecteursTable
+            detecteurs={detecteurs}
+            groups={groupes}
+            onChange={setDetecteurs}
+            pixelsParMetre={pixelsParMetre}
+            onPixelsParMetreChange={setPixelsParMetre}
+            onPlacer={onPlacer}
+        />
+    );
 };
 
 const rendre = (initial?: Detecteur[]) => render(
@@ -33,6 +43,16 @@ const rendre = (initial?: Detecteur[]) => render(
         <Table initial={initial} />
     </ConfirmProvider>
 );
+
+const rendreAvecPlacer = (initial?: Detecteur[]) => {
+    const onPlacer = vi.fn();
+    render(
+        <ConfirmProvider>
+            <Table initial={initial} onPlacer={onPlacer} />
+        </ConfirmProvider>
+    );
+    return { onPlacer };
+};
 
 const nom = (i = 0) => screen.getAllByLabelText('Nom du détecteur')[i];
 const type = (i = 0) => screen.getAllByLabelText('Type du détecteur')[i];
@@ -45,7 +65,7 @@ afterEach(() => { act(() => definirPrefsVerrou()); });
 describe('DetecteursTable — affichage', () => {
     it('affiche les quatre colonnes et la ligne enregistrée', () => {
         rendre();
-        expect(screen.getByText('Dimension (m)')).toBeInTheDocument();
+        expect(screen.getByText('Dim. (m)')).toBeInTheDocument();
         expect(nom()).toHaveValue('Boucle entrée');
         expect(type()).toHaveValue('bouclePiedFeu');
         expect(gf()).toHaveValue('1');
@@ -130,6 +150,31 @@ describe('DetecteursTable — duplication et suppression', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
         });
         expect(lignes()).toHaveLength(0);
+    });
+});
+
+describe('DetecteursTable — échelle et placement', () => {
+    it('affiche l’échelle et la largeur de voie de référence', () => {
+        rendre();
+        const echelle = screen.getByLabelText('Pixels par mètre');
+        expect(echelle).toHaveValue('12');
+        expect(screen.getByText(/voie de 7 m ≈ 84 px/)).toBeInTheDocument();
+
+        fireEvent.change(echelle, { target: { value: '10' } });
+        fireEvent.blur(echelle);
+        expect(screen.getByText(/voie de 7 m ≈ 70 px/)).toBeInTheDocument();
+    });
+
+    it('envoie le détecteur au placement sur l’image', () => {
+        const { onPlacer } = rendreAvecPlacer();
+        fireEvent.click(screen.getByTitle('Placer sur l’image'));
+        expect(onPlacer).toHaveBeenCalledWith(1);
+    });
+
+    it('passe au placement juste après un ajout', () => {
+        const { onPlacer } = rendreAvecPlacer([]);
+        fireEvent.click(screen.getByRole('button', { name: /Ajouter un détecteur/ }));
+        expect(onPlacer).toHaveBeenCalledWith(1);
     });
 });
 

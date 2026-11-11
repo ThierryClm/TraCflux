@@ -22,6 +22,33 @@
     margin-left: auto;
 }
 
+.detecteurs-echelle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #333;
+    font-size: 0.78em;
+    color: #aaa;
+    flex-wrap: wrap;
+}
+
+.detecteurs-echelle input {
+    width: 52px;
+    background: #333;
+    border: 1px solid #444;
+    color: white;
+    padding: 2px 4px;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 1em;
+}
+
+.detecteurs-echelle-note {
+    color: #777;
+    font-size: 0.92em;
+}
+
 .detecteurs-table {
     width: 100%;
     border-collapse: collapse;
@@ -36,13 +63,15 @@
     padding: 5px 4px;
     border-bottom: 1px solid #444;
     background: #222;
-    white-space: nowrap;
+    white-space: normal;
+    line-height: 1.15;
 }
 
-.detecteurs-table th:nth-child(2) { width: 132px; }
-.detecteurs-table th:nth-child(3) { width: 118px; }
-.detecteurs-table th:nth-child(4) { width: 76px; }
-.detecteurs-table th:nth-child(5) { width: 52px; }
+.detecteurs-table th:nth-child(2) { width: 116px; }
+.detecteurs-table th:nth-child(3) { width: 104px; }
+.detecteurs-table th:nth-child(4) { width: 56px; }
+.detecteurs-table th:nth-child(5) { width: 58px; }
+.detecteurs-table th:nth-child(6) { width: 44px; }
 
 .detecteurs-table td {
     padding: 2px 3px;
@@ -75,6 +104,32 @@
 .detecteurs-table .col-actions {
     text-align: right;
     white-space: nowrap;
+}
+
+.btn-placer-detecteur {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    color: #ccc;
+    border-radius: 3px;
+    padding: 2px 5px;
+    cursor: pointer;
+    font-size: 0.75em;
+}
+
+.btn-placer-detecteur.place {
+    color: #81c784;
+    border-color: #3d6b41;
+}
+
+.btn-placer-detecteur.actif {
+    background: #35506b;
+    border-color: #64b5f6;
+    color: #fff;
+}
+
+.btn-placer-detecteur:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .btn-dupliquer-detecteur,

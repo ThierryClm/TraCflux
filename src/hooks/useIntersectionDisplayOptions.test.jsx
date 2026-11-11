@@ -8,7 +8,8 @@ describe('useIntersectionDisplayOptions — case Signal', () => {
     it('reste décochée par défaut, à la différence des autres cases', () => {
         const { result } = renderHook(() => useIntersectionDisplayOptions());
         expect(result.current.intersectionDisplay).toEqual({
-            showGroupNumbers: true, showGroupNames: true, showArrows: true, showSignals: false
+            showGroupNumbers: true, showGroupNames: true, showArrows: true, showSignals: false,
+            showDetecteurs: true
         });
     });
 

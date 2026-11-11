@@ -43,6 +43,7 @@ interface LayoutSetters {
     setShowImageGroupNames?: SetterBooleen;
     setShowImageArrows?: SetterBooleen;
     setShowImageSignals?: SetterBooleen;
+    setShowImageDetecteurs?: SetterBooleen;
     setDossierSections?: (sections: Record<string, boolean>) => void;
     /** Verrouillage de la saisie : celui du projet, ou rien de verrouillé. */
     setVerrouSaisie?: (prefs?: OptionsMiseEnPage['verrouSaisie']) => void;
@@ -59,7 +60,8 @@ const DRAPEAUX_MISE_EN_PAGE: (keyof OptionsMiseEnPage)[] = [
     'showFloatingForm', 'showFloatingMatrix', 'showFloatingTraffic',
     'showFloatingImage', 'showFloatingConditions', 'showFloatingVariables',
     'showFloatingRemarks',
-    'showImageGroupNumbers', 'showImageGroupNames', 'showImageArrows', 'showImageSignals'
+    'showImageGroupNumbers', 'showImageGroupNames', 'showImageArrows', 'showImageSignals',
+    'showImageDetecteurs'
 ];
 
 /** Compose les réglages persistants depuis l'état courant de l'application. */
@@ -88,6 +90,7 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
         showImageGroupNames: v.showImageGroupNames,
         showImageArrows: v.showImageArrows,
         showImageSignals: v.showImageSignals,
+        showImageDetecteurs: v.showImageDetecteurs,
         verrouSaisie: v.verrouSaisie
     },
     directoryNames: {
@@ -147,7 +150,8 @@ export const appliquerMiseEnPage = (
         showImageGroupNumbers: s.setShowImageGroupNumbers,
         showImageGroupNames: s.setShowImageGroupNames,
         showImageArrows: s.setShowImageArrows,
-        showImageSignals: s.setShowImageSignals
+        showImageSignals: s.setShowImageSignals,
+        showImageDetecteurs: s.setShowImageDetecteurs
     };
 
     s.setVerrouSaisie?.(data.layoutOptions && typeof data.layoutOptions === 'object' ? data.layoutOptions.verrouSaisie : undefined);

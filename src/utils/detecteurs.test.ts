@@ -7,7 +7,11 @@ import {
     dimensionParDefaut,
     dimensionSaisissable,
     dupliquerDetecteur,
-    normaliserDetecteurs
+    normaliserDetecteurs,
+    normaliserPixelsParMetre,
+    PIXELS_PAR_METRE_DEFAUT,
+    PIXELS_PAR_METRE_MAX,
+    PIXELS_PAR_METRE_MIN
 } from './detecteurs';
 import type { Detecteur } from '../types/projet';
 
@@ -49,6 +53,20 @@ describe('catégories et dimensions', () => {
         expect(dimensionDepuisSaisie('', 'bouclePiedFeu')).toBeNull();
         expect(dimensionDepuisSaisie('0', 'bouclePiedFeu')).toBeNull();
         expect(dimensionDepuisSaisie('abc', 'bouclePiedFeu')).toBeNull();
+    });
+});
+
+describe('échelle de l’image', () => {
+    it('reprend le défaut quand la valeur manque ou est illisible', () => {
+        expect(normaliserPixelsParMetre(undefined)).toBe(PIXELS_PAR_METRE_DEFAUT);
+        expect(normaliserPixelsParMetre('abc')).toBe(PIXELS_PAR_METRE_DEFAUT);
+        expect(normaliserPixelsParMetre(0)).toBe(PIXELS_PAR_METRE_MIN);
+    });
+
+    it('lit une valeur valide et la borne', () => {
+        expect(normaliserPixelsParMetre(18)).toBe(18);
+        expect(normaliserPixelsParMetre('7,5')).toBe(7.5);
+        expect(normaliserPixelsParMetre(10000)).toBe(PIXELS_PAR_METRE_MAX);
     });
 });
 

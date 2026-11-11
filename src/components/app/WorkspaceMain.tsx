@@ -18,7 +18,7 @@ import type {
     RefObject,
     SetStateAction,
 } from 'react';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
+import type { ActionMicro, Detecteur, Groupe, Matrice, PlanDeFeu, FlecheCarrefour } from '../../types/projet';
 import type { SimulationResult } from '../../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../../hooks/useIntersectionDisplayOptions';
 
@@ -44,6 +44,12 @@ interface WorkspaceMainModel {
     cycleLengthInput: string;
     cycleSimulationSpeed: () => void;
     dependencyGap: number;
+    detecteurs: Detecteur[];
+    setDetecteurs: Dispatch<SetStateAction<Detecteur[]>>;
+    pixelsParMetre: number;
+    setPixelsParMetre: Dispatch<SetStateAction<number>>;
+    detecteurAPlacer: number | null;
+    setDetecteurAPlacer: (id: number | null) => void;
     diagramAreaRef: RefObject<HTMLElement | null>;
     diagramHeight: number | null;
     displayConflicts: TimelineDiagramProps['conflicts'];
@@ -165,7 +171,8 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
     const {
         actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
         biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
-        cycleLengthInput, cycleSimulationSpeed, dependencyGap, diagramAreaRef, diagramHeight,
+        cycleLengthInput, cycleSimulationSpeed, dependencyGap, detecteurs, setDetecteurs,
+        pixelsParMetre, setPixelsParMetre, detecteurAPlacer, setDetecteurAPlacer, diagramAreaRef, diagramHeight,
         displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
         helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
@@ -538,6 +545,12 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 onImageChange={setIntersectionImage}
                                 arrows={intersectionArrows}
                                 onArrowsChange={setIntersectionArrows}
+                                detecteurs={detecteurs}
+                                onDetecteursChange={setDetecteurs}
+                                pixelsParMetre={pixelsParMetre}
+                                onPixelsParMetreChange={setPixelsParMetre}
+                                detecteurAPlacer={detecteurAPlacer}
+                                onPlacementTermine={() => setDetecteurAPlacer(null)}
                                 cycleLength={cycleLength}
                                 simulationResult={simulationResult}
                                 isPlaying={isPlayingSimulation}

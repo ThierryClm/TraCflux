@@ -9,7 +9,9 @@ import {
     dimensionDepuisSaisie,
     dimensionSaisissable,
     dupliquerDetecteur,
-    estBoutonPoussoir
+    estBoutonPoussoir,
+    LARGEUR_VOIE_REFERENCE_M,
+    normaliserPixelsParMetre
 } from '../utils/detecteurs';
 import type { CategorieDetecteur, Detecteur, Groupe } from '../types/projet';
 import './DetecteursTable.css';
@@ -18,6 +20,12 @@ interface DetecteursTableProps {
     detecteurs: Detecteur[];
     groups: Groupe[];
     onChange: (detecteurs: Detecteur[]) => void;
+    /** Échelle de l'image : pixels par mètre. */
+    pixelsParMetre: number;
+    onPixelsParMetreChange: (valeur: number) => void;
+    /** Détecteur en attente de placement sur l'image. */
+    detecteurAPlacer?: number | null;
+    onPlacer?: (id: number) => void;
     onDetach?: () => void;
     /** En fenêtre détachée, le bandeau porte déjà le titre. */
     titreEnBandeau?: boolean;
@@ -28,6 +36,10 @@ const DetecteursTable = ({
     detecteurs,
     groups,
     onChange,
+    pixelsParMetre,
+    onPixelsParMetreChange,
+    detecteurAPlacer = null,
+    onPlacer,
     onDetach,
     titreEnBandeau = false
 }: DetecteursTableProps) => {
@@ -38,7 +50,11 @@ const DetecteursTable = ({
     };
 
     const ajouter = () => {
-        onChange([...detecteurs, creerDetecteur(detecteurs)]);
+        const nouveau = creerDetecteur(detecteurs);
+        onChange([...detecteurs, nouveau]);
+        // Un détecteur neuf n'a pas encore de place : on passe directement au
+        // placement sur l'image, comme le veut la saisie à la main.
+        onPlacer?.(nouveau.id);
     };
 
     const dupliquer = (id: number) => {
@@ -80,13 +96,28 @@ const DetecteursTable = ({
                     </h3>
                 )}
 
+                <div className="detecteurs-echelle">
+                    <label>Échelle de l'image : 1 m =</label>
+                    <LocalInput
+                        className="input-pixels-metre"
+                        aria-label="Pixels par mètre"
+                        value={pixelsParMetre}
+                        onCommit={(valeur) => onPixelsParMetreChange(normaliserPixelsParMetre(valeur))}
+                    />
+                    <span>px</span>
+                    <span className="detecteurs-echelle-note">
+                        voie de {LARGEUR_VOIE_REFERENCE_M} m ≈ {Math.round(pixelsParMetre * LARGEUR_VOIE_REFERENCE_M)} px
+                    </span>
+                </div>
+
                 <table className="detecteurs-table">
                     <thead>
                         <tr>
                             <th>Nom</th>
                             <th>Type</th>
-                            <th>Groupe de feu</th>
-                            <th title="Longueur d’une boucle ou portée d’un radar, en mètres">Dimension (m)</th>
+                            <th title="Groupe de feu concerné">GF</th>
+                            <th title="Longueur d’une boucle ou portée d’un radar, en mètres">Dim. (m)</th>
+                            <th>Image</th>
                             <th aria-label="Actions" />
                         </tr>
                     </thead>
@@ -146,6 +177,16 @@ const DetecteursTable = ({
                                             placeholder={sansDimension ? '—' : ''}
                                             title={descriptionDimension(d.categorie)}
                                         />
+                                    </td>
+                                    <td className="col-image">
+                                        <button
+                                            className={`btn-placer-detecteur ${d.position ? 'place' : ''} ${detecteurAPlacer === d.id ? 'actif' : ''}`}
+                                            onClick={() => onPlacer?.(d.id)}
+                                            disabled={!onPlacer}
+                                            title={d.position ? 'Repositionner sur l’image' : 'Placer sur l’image'}
+                                        >
+                                            Placer
+                                        </button>
                                     </td>
                                     <td className="col-actions">
                                         <button

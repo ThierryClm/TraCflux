@@ -219,6 +219,8 @@ export interface OptionsMiseEnPage {
     showImageArrows?: boolean;
     /** Image du carrefour : signal ISR à la place de la flèche, si le champ Signal est renseigné. */
     showImageSignals?: boolean;
+    /** Image du carrefour : afficher le calque des détecteurs. */
+    showImageDetecteurs?: boolean;
     /** Sections dont la saisie est verrouillée (Mise en page → Verrouillage saisie). */
     verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image' | 'scenarios' | 'phasages' | 'detecteurs', boolean>>;
 }
@@ -236,6 +238,8 @@ export interface Projet {
     intersectionArrows?: FlecheCarrefour[];
     /** Détecteurs de terrain du carrefour (onglet Détecteurs). */
     detecteurs?: Detecteur[];
+    /** Échelle de l'image : nombre de pixels de l'image pour un mètre. */
+    pixelsParMetre?: number;
     imageBrightness?: number;
     imageContrast?: number;
     trafficDatasets?: Record<string, JeuTrafic>;
