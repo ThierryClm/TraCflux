@@ -211,7 +211,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
 
     // Infobulles rangées sous d'autres cases que « Page principale » (`tip`) :
     // la réserve de capacité suit « Trafic », l'avertissement de l'onglet
-    // Configuration suit « Configuration ».
+    // Formulaire suit la case « Configuration » des infobulles.
     const tipTrafic = (text: string) => tooltipPrefs.traffic === false ? undefined : text;
     const tipConfig = (text: string) => tooltipPrefs.config === false ? undefined : text;
 
@@ -345,7 +345,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                         setSidebarWidth(LARGEUR_CONFIGURATION);
                                     }}
                                 >
-                                    Configuration
+                                    Formulaire
                                     {groups.length > 0 && groups.every(g => !g.type) && (
                                         <span className="tab-warning-icon" title={tipConfig("Formulaire non renseigné")} role="img" aria-label="Formulaire non renseigné"> ⚠</span>
                                     )}
