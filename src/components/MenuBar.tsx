@@ -481,24 +481,42 @@ const MenuBar = ({
             disabled: !hasActiveProject,
             items: [
                 { label: 'Affichage des paramètres', action: 'toggleParameters', toggle: true, checked: layoutOptions.showParameters, keepSubmenuOpen: true },
+                /* Les réglages qui ne touchent que le diagramme, réunis sous une
+                   même entrée : dispersés dans le menu, ils se confondaient avec
+                   les cases qui concernent toute la page. */
                 {
-                    label: 'Commentaires du diagramme',
+                    label: 'Diagramme',
                     type: 'submenu',
-                    submenuId: 'commentaires',
+                    submenuId: 'diagramme',
                     submenu: [
-                        { label: 'Afficher', action: 'commentsShow', checked: layoutOptions.commentsMode === 'afficher', keepSubmenuOpen: true },
-                        { label: 'Masquer', action: 'commentsHide', checked: layoutOptions.commentsMode === 'masquer', keepSubmenuOpen: true },
-                        { label: 'Automatique (plans qui en ont)', action: 'commentsAuto', checked: layoutOptions.commentsMode === 'auto', keepSubmenuOpen: true }
-                    ]
-                },
-                {
-                    label: 'Remarques du diagramme',
-                    type: 'submenu',
-                    submenuId: 'remarques',
-                    submenu: [
-                        { label: 'Afficher', action: 'remarksShow', checked: layoutOptions.remarksMode === 'afficher', keepSubmenuOpen: true },
-                        { label: 'Masquer', action: 'remarksHide', checked: layoutOptions.remarksMode === 'masquer', keepSubmenuOpen: true },
-                        { label: 'Automatique (plans qui en ont)', action: 'remarksAuto', checked: layoutOptions.remarksMode === 'auto', keepSubmenuOpen: true }
+                        {
+                            label: 'Commentaires',
+                            type: 'submenu',
+                            submenuId: 'commentaires',
+                            submenu: [
+                                { label: 'Afficher', action: 'commentsShow', checked: layoutOptions.commentsMode === 'afficher', keepSubmenuOpen: true },
+                                { label: 'Masquer', action: 'commentsHide', checked: layoutOptions.commentsMode === 'masquer', keepSubmenuOpen: true },
+                                { label: 'Automatique (plans qui en ont)', action: 'commentsAuto', checked: layoutOptions.commentsMode === 'auto', keepSubmenuOpen: true }
+                            ]
+                        },
+                        {
+                            label: 'Remarques',
+                            type: 'submenu',
+                            submenuId: 'remarques',
+                            submenu: [
+                                { label: 'Afficher', action: 'remarksShow', checked: layoutOptions.remarksMode === 'afficher', keepSubmenuOpen: true },
+                                { label: 'Masquer', action: 'remarksHide', checked: layoutOptions.remarksMode === 'masquer', keepSubmenuOpen: true },
+                                { label: 'Automatique (plans qui en ont)', action: 'remarksAuto', checked: layoutOptions.remarksMode === 'auto', keepSubmenuOpen: true }
+                            ]
+                        },
+                        {
+                            label: 'Dilatation (zoom)',
+                            type: 'submenu',
+                            submenuId: 'dilatation',
+                            submenu: [
+                                { type: 'slider', label: 'Zoom', min: 4, max: 20, value: pixelsPerSecond, unit: 'px/s', sliderId: 'pixelsPerSecond' }
+                            ]
+                        }
                     ]
                 },
                 {
@@ -540,14 +558,6 @@ const MenuBar = ({
                         { label: 'Légende', action: 'toggleLegend', checked: layoutOptions.showFloatingLegend, keepSubmenuOpen: true },
                         { label: 'Remarques du diagramme', action: 'toggleFloatingRemarks', checked: layoutOptions.showFloatingRemarks, disabled: !layoutOptions.showRemarks, keepSubmenuOpen: true },
                         { label: 'Image du carrefour', action: 'toggleFloatingImage', checked: layoutOptions.showFloatingImage, disabled: !layoutOptions.hasIntersectionImage, keepSubmenuOpen: true }
-                    ]
-                },
-                {
-                    label: 'Dilatation du diagramme',
-                    type: 'submenu',
-                    submenuId: 'dilatation',
-                    submenu: [
-                        { type: 'slider', label: 'Zoom', min: 4, max: 20, value: pixelsPerSecond, unit: 'px/s', sliderId: 'pixelsPerSecond' }
                     ]
                 },
                 { type: 'separator' },
