@@ -21,6 +21,7 @@ interface LocalInputProps {
     maxLength?: number;
     title?: string;
     selectOnFocus?: boolean;
+    'aria-label'?: string;
 }
 
 /**
@@ -28,7 +29,7 @@ interface LocalInputProps {
  * Commits value to parent only on blur or Enter.
  * This prevents undo from capturing every keystroke.
  */
-const LocalInput = ({ value, onCommit, type = 'text', className, style, readOnly, disabled, onClick, placeholder, maxLength, title, selectOnFocus = false }: LocalInputProps) => {
+const LocalInput = ({ value, onCommit, type = 'text', className, style, readOnly, disabled, onClick, placeholder, maxLength, title, selectOnFocus = false, 'aria-label': ariaLabel }: LocalInputProps) => {
     const [localValue, setLocalValue] = useState(value === undefined || value === null ? '' : String(value));
     const [isEditing, setIsEditing] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -87,6 +88,7 @@ const LocalInput = ({ value, onCommit, type = 'text', className, style, readOnly
             placeholder={placeholder}
             maxLength={maxLength}
             title={title}
+            aria-label={ariaLabel}
         />
     );
 };

@@ -142,6 +142,38 @@ export interface FlecheCarrefour {
     turnLength?: number;
 }
 
+/** Nature d'un détecteur de terrain. */
+export type CategorieDetecteur =
+    | 'bouclePiedFeu'
+    | 'boucleEloignee'
+    | 'boucleComptage'
+    | 'radar'
+    | 'boutonPoussoir';
+
+/** Position d'un symbole sur l'image, en % de ses dimensions. */
+export interface PositionDetecteur {
+    x: number;
+    y: number;
+}
+
+/**
+ * Un détecteur de terrain rattaché à un groupe de feu : boucle, radar ou
+ * bouton poussoir. Plusieurs détecteurs peuvent viser le même groupe.
+ */
+export interface Detecteur {
+    id: number;
+    nom: string;
+    categorie: CategorieDetecteur;
+    /** Groupe de feu concerné ; null quand le détecteur n'en dépend pas. */
+    gf: number | null;
+    /** Longueur d'une boucle ou portée d'un radar, en mètres ; null si sans objet. */
+    dimension: number | null;
+    position?: PositionDetecteur | null;
+    /** Rotation du symbole en degrés ; 0 pointe vers le haut. */
+    orientation?: number;
+    note?: string;
+}
+
 /** Lien vers un document externe au projet (fenêtre « Liens externes »). */
 export interface LienExterne {
     id: number;
@@ -188,7 +220,7 @@ export interface OptionsMiseEnPage {
     /** Image du carrefour : signal ISR à la place de la flèche, si le champ Signal est renseigné. */
     showImageSignals?: boolean;
     /** Sections dont la saisie est verrouillée (Mise en page → Verrouillage saisie). */
-    verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image' | 'scenarios' | 'phasages', boolean>>;
+    verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image' | 'scenarios' | 'phasages' | 'detecteurs', boolean>>;
 }
 
 /** Un projet enregistré, tel que getFullState le produit. */
@@ -202,6 +234,8 @@ export interface Projet {
     activePFId: number;
     intersectionImage?: string | null;
     intersectionArrows?: FlecheCarrefour[];
+    /** Détecteurs de terrain du carrefour (onglet Détecteurs). */
+    detecteurs?: Detecteur[];
     imageBrightness?: number;
     imageContrast?: number;
     trafficDatasets?: Record<string, JeuTrafic>;

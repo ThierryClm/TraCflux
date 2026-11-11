@@ -1,0 +1,123 @@
+.detecteurs-container {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding-bottom: 8px;
+}
+
+.detecteurs-titre {
+    margin: 0;
+    padding: 8px 10px;
+    font-size: 1em;
+    font-weight: bold;
+    color: #fff;
+    background: #222;
+    border-bottom: 1px solid #444;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detecteurs-titre .detach-btn {
+    margin-left: auto;
+}
+
+.detecteurs-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.detecteurs-table th {
+    text-align: left;
+    color: #888;
+    font-weight: normal;
+    font-size: 0.75em;
+    padding: 5px 4px;
+    border-bottom: 1px solid #444;
+    background: #222;
+    white-space: nowrap;
+}
+
+.detecteurs-table th:nth-child(2) { width: 132px; }
+.detecteurs-table th:nth-child(3) { width: 118px; }
+.detecteurs-table th:nth-child(4) { width: 76px; }
+.detecteurs-table th:nth-child(5) { width: 52px; }
+
+.detecteurs-table td {
+    padding: 2px 3px;
+    border-bottom: 1px solid #333;
+    height: 30px;
+    vertical-align: middle;
+}
+
+.detecteurs-table input,
+.detecteurs-table select {
+    width: 100%;
+    box-sizing: border-box;
+    background: #333;
+    border: 1px solid #444;
+    color: white;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+.detecteurs-table input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.detecteurs-table .input-dimension-detecteur {
+    text-align: center;
+}
+
+.detecteurs-table .col-actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.btn-dupliquer-detecteur,
+.btn-supprimer-detecteur {
+    background: none;
+    border: none;
+    color: #9e9e9e;
+    cursor: pointer;
+    font-size: 1em;
+    padding: 0 3px;
+    line-height: 1;
+}
+
+.btn-dupliquer-detecteur:hover { color: #64b5f6; }
+.btn-supprimer-detecteur { color: #ef5350; }
+.btn-supprimer-detecteur:hover { color: #ff867c; }
+
+.btn-ajouter-detecteur {
+    display: block;
+    margin: 8px 10px 4px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    color: #ddd;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.btn-ajouter-detecteur:hover {
+    background: #333;
+    border-color: #555;
+}
+
+.detecteurs-vide {
+    margin: 8px 10px 0;
+    color: #888;
+    font-size: 0.8em;
+}
+
+.detecteurs-note {
+    margin: 6px 10px 2px;
+    color: #888;
+    font-size: 0.72em;
+    line-height: 1.35;
+}

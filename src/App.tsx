@@ -219,6 +219,8 @@ function App() {
         setActionColWidths,
         externalLinks,
         setExternalLinks,
+        detecteurs,
+        setDetecteurs,
         projectProperties,
         updateProjectProperty,
         projectName,
@@ -454,7 +456,7 @@ function App() {
 
     // Track whether project has been modified (for "Nouveau projet" menu)
     const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
-        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, intersectionDisplay,
+        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, intersectionDisplay, detecteurs,
             // Enregistrés dans le projet : les changer est une modification.
             commentsMode, remarksMode, descriptionMode, prefsVerrou]);
 
@@ -1526,6 +1528,7 @@ function App() {
             case 'verrouSaisie:image':         basculerVerrou('image');         break;
             case 'verrouSaisie:scenarios':     basculerVerrou('scenarios');     break;
             case 'verrouSaisie:phasages':      basculerVerrou('phasages');      break;
+            case 'verrouSaisie:detecteurs':    basculerVerrou('detecteurs');    break;
             case 'toggleTooltipsMenu':    setTooltipPref('menu');    break;
             case 'toggleTooltipsMain':    setTooltipPref('main');    break;
             case 'toggleTooltipsConfig':  setTooltipPref('config');  break;
@@ -2387,7 +2390,7 @@ function App() {
             <main className="split-view" ref={splitViewRef}>
                 <WorkspaceSidebar
                     model={{
-                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, intersectionArrows,
+                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs, intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
                         tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction, compenserBts, setCompenserBts,
                         cycleLength, conflictMatrix, setMatrixValue, hoveredActionId,

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-export type OngletInterface = 'properties' | 'config' | 'matrix' | 'traffic';
+export type OngletInterface = 'properties' | 'config' | 'detecteurs' | 'matrix' | 'traffic';
 
 interface EvenementAnnulable {
     preventDefault: () => void;
