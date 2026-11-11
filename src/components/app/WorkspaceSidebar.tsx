@@ -2,11 +2,12 @@ import SimulationPanel from '../SimulationPanel';
 import TrafficTable from '../TrafficTable';
 import PropertiesPanel from '../PropertiesPanel';
 import GroupTable from '../GroupTable';
+import DetecteursTable from '../DetecteursTable';
 import IntergreenMatrix from '../IntergreenMatrix';
 import DiagnosticPanel from '../DiagnosticPanel';
 import ConflictList from '../ConflictList';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import type { ActionMicro, Groupe, Matrice, PlanDeFeu, ScenarioSimulation } from '../../types/projet';
+import type { ActionMicro, Detecteur, Groupe, Matrice, PlanDeFeu, ScenarioSimulation } from '../../types/projet';
 import type { PlanSuppressionJeu } from '../../utils/trafficHelpers';
 import type { SimulationResult } from '../../simulation';
 import type { ConflictInfo, HoveredConflict } from '../ConflictList';
@@ -14,7 +15,7 @@ import type { ProjectProperties } from '../PropertiesPanel';
 import { LARGEUR_CONFIGURATION } from '../../hooks/useUILayout';
 import { MentionVerrou, ZoneVerrouSaisie } from '../../utils/verrouSaisie';
 
-type ActiveTab = 'properties' | 'config' | 'matrix' | 'traffic';
+type ActiveTab = 'properties' | 'config' | 'detecteurs' | 'matrix' | 'traffic';
 type GroupUpdates = Omit<Partial<Groupe>, 'durations'> & {
     durations?: Partial<Groupe['durations']>;
 };
@@ -36,6 +37,8 @@ interface WorkspaceSidebarModel {
     phasageBulleEnabled: boolean;
     sidebarWidth: number;
     groups: Groupe[];
+    detecteurs: Detecteur[];
+    setDetecteurs: Dispatch<SetStateAction<Detecteur[]>>;
     intersectionArrows: IntersectionArrow[];
     phasageBulleVisibleGroups: Set<number>;
     hoveredPhasageGroupId: number | null;
@@ -132,6 +135,8 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         phasageBulleEnabled,
         sidebarWidth,
         groups,
+        detecteurs,
+        setDetecteurs,
         intersectionArrows,
         phasageBulleVisibleGroups,
         hoveredPhasageGroupId,
@@ -351,6 +356,15 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                     )}
                                 </button>
                                 <button
+                                    className={`tab-btn ${activeTab === 'detecteurs' ? 'active' : ''}`}
+                                    onClick={() => {
+                                        setActiveTab('detecteurs');
+                                        setSidebarWidth(560);
+                                    }}
+                                >
+                                    Détecteurs
+                                </button>
+                                <button
                                     className={`tab-btn ${activeTab === 'matrix' ? 'active' : ''}`}
                                     onClick={() => {
                                         setActiveTab('matrix');
@@ -426,6 +440,16 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                         />
                                     </div>
                                 </>
+                            )}
+
+                            {activeTab === 'detecteurs' && (
+                                <div onMouseEnter={() => { helpZoneRef.current = 'detecteurs'; }}>
+                                    <DetecteursTable
+                                        detecteurs={detecteurs}
+                                        groups={groups}
+                                        onChange={setDetecteurs}
+                                    />
+                                </div>
                             )}
 
                             {activeTab === 'matrix' && (

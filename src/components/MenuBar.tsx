@@ -602,7 +602,8 @@ const MenuBar = ({
                         { label: 'Variables micro', action: 'verrouSaisie:variables', checked: verrou.variables, keepSubmenuOpen: true },
                         { label: 'Image du carrefour', action: 'verrouSaisie:image', checked: verrou.image, keepSubmenuOpen: true },
                         { label: 'Scénarios', action: 'verrouSaisie:scenarios', checked: verrou.scenarios, keepSubmenuOpen: true },
-                        { label: 'Phasages bulles', action: 'verrouSaisie:phasages', checked: verrou.phasages, keepSubmenuOpen: true }
+                        { label: 'Phasages bulles', action: 'verrouSaisie:phasages', checked: verrou.phasages, keepSubmenuOpen: true },
+                        { label: 'Détecteurs', action: 'verrouSaisie:detecteurs', checked: verrou.detecteurs, keepSubmenuOpen: true }
                     ]
                 },
                 {
