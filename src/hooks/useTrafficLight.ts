@@ -769,7 +769,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
     // Scénarios de simulation, rangés dans le plan de feu actif.
     const {
         simulationSelectedActions, simulationName, simulationScenarios,
-        choisirScenarioSimulation, creerScenarioSimulation, enregistrerScenarioSimulation,
+        choisirScenarioSimulation, choisirScenarioDuPlan, creerScenarioSimulation, enregistrerScenarioSimulation,
         supprimerScenarioSimulation, toggleSimulationAction
     } = useScenariosSimulation({ pfTabs, setPfTabs, activePFId, isEditLocked });
 
@@ -1592,6 +1592,7 @@ export const useTrafficLight = ({ askConfirm, showAlert, champsProjetRef }: UseT
         simulationName,
         simulationScenarios,
         choisirScenarioSimulation,
+        choisirScenarioDuPlan,
         creerScenarioSimulation,
         enregistrerScenarioSimulation,
         supprimerScenarioSimulation,

@@ -189,6 +189,31 @@ describe('Scénarios multiples — enregistrés avec leur plan de feu', () => {
         const pf2 = sauve.pfTabs.find(pf => pf.id === 2);
         expect(pf2.simulationScenarios === undefined || pf2.simulationScenarios.length === 0).toBe(true);
     }, 15000);
+
+    it("ouvre un scénario d'un autre plan (menu Diagramme ▸ Scénarios) sans toucher au plan affiché", async () => {
+        const result = await monter();
+        await act(async () => {
+            result.current.loadFullState(projetDeuxPlans(
+                result.current.groups, result.current.conflictMatrix));
+        });
+        await act(async () => { await pause(200); });
+
+        await act(async () => { result.current.toggleSimulationAction(3); });
+        await act(async () => { result.current.creerScenarioSimulation('Nuit'); });
+        await act(async () => { result.current.setActivePFId(2); });
+        await act(async () => { await pause(150); });
+
+        await act(async () => { result.current.choisirScenarioDuPlan(1, 'Nuit'); });
+        await act(async () => { await pause(150); });
+
+        const sauve = JSON.parse(JSON.stringify(result.current.getFullState()));
+        const pf1 = sauve.pfTabs.find(pf => pf.id === 1);
+        expect(pf1.simulationName).toBe('Nuit');
+        expect(pf1.simulationActions).toEqual([3]);
+        // Le plan affiché garde son propre scénario, vide.
+        expect(result.current.simulationName).toBe('');
+        expect(result.current.simulationSelectedActions).toEqual([]);
+    }, 15000);
 });
 
 describe('Jeux de trafic — suppression', () => {

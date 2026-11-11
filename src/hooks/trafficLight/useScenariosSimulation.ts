@@ -64,6 +64,21 @@ export const useScenariosSimulation = ({ pfTabs, setPfTabs, activePFId, isEditLo
         ecrireScenario((_, pf) => nom ? choisirScenario(pf, nom) : quitterScenario(pf));
     }, [ecrireScenario]);
 
+    /**
+     * Ouvre un scénario d'un plan de feu donné, sans passer par l'onglet
+     * Simulation (menu Diagramme ▸ Scénarios). Le plan visé doit devenir
+     * actif : c'est l'appelant qui le fait, l'identifiant du plan n'étant pas
+     * tenu ici. On n'écrit que dans ce plan-là, jamais dans le plan actif par
+     * inadvertance.
+     */
+    const choisirScenarioDuPlan = useCallback((pfId: number, nom: string) => {
+        if (!nom) return;
+        setPfTabs(prev => prev.map(pf => {
+            if (pf.id !== pfId) return pf;
+            return { ...pf, simulationScenarios: scenariosDuPlan(pf), ...choisirScenario(pf, nom) };
+        }));
+    }, [setPfTabs]);
+
     // Créer, enregistrer, supprimer changent le contenu du plan : refusés,
     // comme le titre l'était, sur un plan ou un dossier en lecture seule.
     const creerScenarioSimulation = useCallback((titre: string) => {
@@ -97,7 +112,7 @@ export const useScenariosSimulation = ({ pfTabs, setPfTabs, activePFId, isEditLo
 
     return {
         simulationSelectedActions, simulationName, simulationScenarios,
-        choisirScenarioSimulation, creerScenarioSimulation, enregistrerScenarioSimulation,
+        choisirScenarioSimulation, choisirScenarioDuPlan, creerScenarioSimulation, enregistrerScenarioSimulation,
         supprimerScenarioSimulation, toggleSimulationAction
     };
 };
