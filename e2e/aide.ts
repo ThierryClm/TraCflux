@@ -131,10 +131,10 @@ export const ecartsMatrice = (page: Page) => page.evaluate(() => ({
 export const lignesConditions = (page: Page) => page.evaluate(() =>
     [...document.querySelectorAll<HTMLInputElement>('.action-table .input-gf')].map(i => i.value || '·'));
 
-/** Mise en page > Description des conditions micro > Afficher / Masquer / Automatique. */
+/** Mise en page > Diagramme > Description des conditions micro > Afficher / Masquer / Automatique. */
 export const modeDescription = async (page: Page, choix: 'Afficher' | 'Masquer' | 'Automatique') => {
-    const sousMenu = page.locator('.menu-item-with-submenu', { hasText: 'Description des conditions micro' });
     const miseEnPage = page.locator('.menu-bar').getByText('Mise en page', { exact: true });
+    const sousMenu = page.locator('.menu-bar .submenu-dropdown .menu-item-with-submenu').first();
     for (let i = 0; i < 6 && !(await sousMenu.isVisible()); i++) {
         await page.mouse.move(5, 400);
         await miseEnPage.hover();
@@ -142,8 +142,14 @@ export const modeDescription = async (page: Page, choix: 'Afficher' | 'Masquer' 
         await miseEnPage.click();
         await sousMenu.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
     }
-    await sousMenu.hover();
-    await sousMenu.locator('.submenu-dropdown').getByText(new RegExp(`^${choix}`)).click();
+    // « Description des conditions micro » vit désormais dans le groupe Diagramme.
+    const diagramme = page.locator('.menu-bar .submenu-dropdown .menu-item-with-submenu')
+        .filter({ has: page.locator('button', { hasText: /^Diagramme/ }) }).first();
+    await diagramme.hover();
+    const description = diagramme.locator('.submenu-dropdown .menu-item-with-submenu')
+        .filter({ has: page.locator('button', { hasText: /^Description des conditions micro/ }) }).first();
+    await description.hover();
+    await description.locator('.submenu-dropdown').getByText(new RegExp(`^${choix}`)).click();
     await page.keyboard.press('Escape');
     await page.mouse.click(900, 1050);
 };
