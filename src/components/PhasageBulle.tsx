@@ -356,15 +356,12 @@ const PhasageBulle = ({
                 );
             }
             case 'TD_G_D': { // Tout droit + Tourne à gauche et à droite
-                // Somme exacte de TD_TàD et TD_TàG : même hampe, mêmes branches
-                // perpendiculaires attachées à mi-hampe, mêmes barbes.
-                //
-                // Le tracé courbe d'origine détonnait à côté des deux flèches dont
-                // celle-ci est la combinaison, et ignorait « Longueur » et « Retour ».
+                // Reculer les branches latérales pour séparer leurs pointes de celle
+                // du tout droit. Le recul reste proportionnel à la longueur de hampe.
                 const bottom = 28 + (arrowLength - 1) * 24;
                 const vb = 32 + (arrowLength - 1) * 24;
                 const portee = 14 * turnLength;
-                const racineY = (8 + bottom) / 2;
+                const racineY = 8 + (bottom - 8) * 0.65;
                 // Une branche par côté : sens = +1 à droite, -1 à gauche. La branche
                 // étant horizontale, les barbes se déduisent sans rotation.
                 const branche = (sens: number) => {
