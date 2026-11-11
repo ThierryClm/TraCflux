@@ -1,7 +1,7 @@
 import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import type { SimulationResult } from '../simulation';
 import { etatDeCouleur, getGroupColorAtTime } from './groupColorAtTime';
-import { calculateQueueLength } from './capacityCalc';
+import { calculateQueueLength, calculateVUtile } from './capacityCalc';
 
 /** Un intervalle de temps du cycle, en secondes. Les bornes peuvent sortir de [0, cycle]. */
 export interface Intervalle {
@@ -80,6 +80,24 @@ const traficDuGroupe = (ctx: ContexteAnimation, groupId: number): number =>
 
 const coefficientVoie = (groupe: Groupe): number =>
     groupe.laneCoef && groupe.laneCoef > 0 ? groupe.laneCoef : 1;
+
+/**
+ * Temps de vert nécessaire pour servir la demande du cycle (V.Utile) : c'est
+ * la durée pendant laquelle les boucles restent occupées par le flux, et non
+ * la longueur de file seule. Plafonnée au vert disponible.
+ */
+const dureeService = (
+    traffic: number,
+    coefficient: number,
+    cycle: number,
+    dureeVert: number
+): number => {
+    const vUtile = calculateVUtile(traffic, coefficient, cycle) ?? 0;
+    return Math.max(0, Math.min(dureeVert, vUtile));
+};
+
+const nombreImpulsions = (service: number, intervalle: number): number =>
+    service > 0 ? Math.max(0, Math.floor(service / intervalle) + 1) : 0;
 
 const contexteCouleur = (ctx: ContexteAnimation) => ({
     groups: ctx.groups,
@@ -233,15 +251,8 @@ const intervallesPiedFeu = (detecteur: Detecteur, ctx: ContexteAnimation): Inter
 
     for (const vert of verts) {
         const dureeVert = arrondiDixieme(Math.max(0, vert.fin - vert.debut));
-        const fileM = calculateQueueLength(traffic, coefficient, dureeVert, cycle) ?? 0;
-        const nFile = vehiculesEnFile(fileM);
-        const nPasses = Math.max(0, Math.floor(dureeVert / intervalle) + 1);
-        ajouterImpulsions(resultat, vert.debut, Math.min(nFile, nPasses), intervalle, occupation);
-
-        // File résiduelle : le véhicule suivant attend sur la boucle jusqu'au vert suivant.
-        if (nFile > nPasses) {
-            resultat.push({ debut: vert.debut + nPasses * intervalle, fin: vert.fin });
-        }
+        const service = dureeService(traffic, coefficient, cycle, dureeVert);
+        ajouterImpulsions(resultat, vert.debut, nombreImpulsions(service, intervalle), intervalle, occupation);
     }
 
     // Pendant le rouge, un véhicule attend au pied du feu : la boucle reste allumée.
@@ -273,18 +284,23 @@ const intervallesEloignee = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
         ...verts.map(v => v.fin - v.debut)
     ));
     const fileM = calculateQueueLength(traffic, coefficient, dureeVertNominale, cycle) ?? 0;
-    const nFile = vehiculesEnFile(fileM);
     const couverte = distance > 0 && fileM >= distance;
+    const service = dureeService(traffic, coefficient, cycle, dureeVertNominale);
     const resultat: Intervalle[] = [];
 
     for (const vert of verts) {
         if (couverte) {
             // La file recouvre la boucle : elle est occupée pendant le rouge,
-            // puis jusqu'à ce que son dernier véhicule passe la boucle.
-            const degagement = Math.max(0, (fileM - distance) / Math.max(0.1, vitesse));
-            resultat.push({ debut: vert.debut, fin: Math.min(vert.fin, vert.debut + degagement) });
+            // puis pendant le temps nécessaire pour servir la demande.
+            resultat.push({ debut: vert.debut, fin: Math.min(vert.fin, vert.debut + service) });
         } else {
-            ajouterImpulsions(resultat, vert.debut + distance / Math.max(0.1, vitesse), nFile, intervalle, occupation);
+            ajouterImpulsions(
+                resultat,
+                vert.debut + distance / Math.max(0.1, vitesse),
+                nombreImpulsions(service, intervalle),
+                intervalle,
+                occupation
+            );
         }
     }
 
@@ -336,19 +352,16 @@ const intervallesComptage = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
         const occupation = dureeOccupation(detecteur.dimension, vitesse);
         const repere = positionPiedFeu(groupId, ctx);
         const distance = repere ? distanceMetres(detecteur.position, repere, ctx.pixelsParMetre) : 0;
-        const nombreVehicules = vehiculesParCycle(traffic, cycle);
         const verts = intervallesVert(groupId, ctx);
-        const dureeVertTotale = verts.reduce((somme, v) => somme + Math.max(0, v.fin - v.debut), 0);
         const intervalle = intervallePassage(coefficient);
 
         for (const vert of verts) {
             const dureeVert = Math.max(0, vert.fin - vert.debut);
-            const part = dureeVertTotale > 0 ? nombreVehicules * dureeVert / dureeVertTotale : nombreVehicules;
-            const nMax = Math.max(0, Math.floor(dureeVert / intervalle) + 1);
+            const service = dureeService(traffic, coefficient, cycle, dureeVert);
             ajouterImpulsions(
                 resultat,
                 vert.debut + distance / Math.max(0.1, vitesse),
-                Math.min(part, nMax),
+                nombreImpulsions(service, intervalle),
                 intervalle,
                 occupation
             );

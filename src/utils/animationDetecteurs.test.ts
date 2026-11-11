@@ -107,6 +107,18 @@ describe('boucle de pied de feu', () => {
         const ctx = contexte({ getTrafficData: () => ({ trafficVol: 0 }) });
         expect(intervallesDetecteur(detecteur(), ctx)).toEqual([]);
     });
+
+    it('reste allumée pendant le vert utile, même si la file est courte', () => {
+        // 386 véh/h, coefficient 0,8, cycle 80 s : V.Utile ≈ 21,4 s, comme le
+        // montre la colonne V.Utile du tableau de trafic (54 % d'un vert de 41 s).
+        const ctx = contexte({
+            cycleLength: 80,
+            groups: [groupe({ laneCoef: 0.8, durations: { green: 41, orange: 3, red: 36 } })],
+            getTrafficData: () => ({ trafficVol: 386 })
+        });
+        expect(estDetecteurOccupe(detecteur(), 20.5, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 21.5, ctx)).toBe(false);
+    });
 });
 
 describe('boucle éloignée', () => {
@@ -119,8 +131,8 @@ describe('boucle éloignée', () => {
         const boucle = detecteur({ categorie: 'boucleEloignee', position: { x: 82, y: 50 } });
         expect(estDetecteurOccupe(boucle, 40, ctx)).toBe(true);
         expect(estDetecteurOccupe(boucle, 2, ctx)).toBe(true);
-        // La file de 66 m met (66 − 20) / 10 = 4,6 s à dégager.
-        expect(estDetecteurOccupe(boucle, 5, ctx)).toBe(false);
+        // La boucle reste occupée pendant le temps de service (V.Utile), ici 30 s.
+        expect(estDetecteurOccupe(boucle, 5, ctx)).toBe(true);
     });
 
     it('s’allume au passage quand la file ne la recouvre pas', () => {
