@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { ChangeEvent, Dispatch, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, MutableRefObject, SetStateAction } from 'react';
 import { safeShowOpenFilePicker } from '../utils/filePicker';
 import { compressImageDataUrl, dataUrlBytes, formatBytes, ALERT_ABOVE_BYTES } from '../utils/imageCompressor';
@@ -13,6 +13,7 @@ import SignalModule from './SignalModule';
 import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import { dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE } from '../utils/detecteurs';
 import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
+import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/animationDetecteurs';
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
 import './IntersectionImage.css';
@@ -32,6 +33,8 @@ export interface IntersectionImageProps {
     /** Échelle du projet : pixels de l'image par mètre. */
     pixelsParMetre?: number;
     onPixelsParMetreChange?: (value: number) => void;
+    /** Trafic du jeu de données actif, pour l'animation des boucles. */
+    getTrafficData?: (groupId: number) => { trafficVol?: number | string } | undefined;
     cycleLength: number;
     simulationResult?: SimulationResult | null;
     // Animation : état tenu par le parent
@@ -78,6 +81,7 @@ const IntersectionImage = ({
     onDetecteursChange: onDetecteursChangeProp,
     pixelsParMetre = 12,
     onPixelsParMetreChange,
+    getTrafficData,
     cycleLength,
     simulationResult,
     // Animation state (lifted to parent)
@@ -169,6 +173,27 @@ const IntersectionImage = ({
     // projet s'entend directement en pixels affichés, sans conversion.
     const pixelsParMetreAffiche = pixelsParMetre;
 
+    // Animation des boucles : les plages sont calculées une fois par état de
+    // simulation, puis seulement interrogées à l'instant affiché.
+    const cycleAnimation = simulationResult?.simulatedCycleLength || cycleLength;
+    const contexteAnimation = useMemo(() => ({
+        cycleLength: cycleAnimation,
+        groups,
+        arrows,
+        getTrafficData: getTrafficData ?? (() => undefined),
+        simulationResult,
+        actionData,
+        selectedActions,
+        conflictMatrix,
+        pixelsParMetre
+    }), [cycleAnimation, groups, arrows, getTrafficData, simulationResult, actionData, selectedActions, conflictMatrix, pixelsParMetre]);
+    const intervallesParDetecteur = useMemo(() => {
+        const map = new Map<number, Intervalle[]>();
+        for (const detecteur of detecteurs) {
+            if (detecteur.position) map.set(detecteur.id, intervallesDetecteur(detecteur, contexteAnimation));
+        }
+        return map;
+    }, [detecteurs, contexteAnimation]);
     const [applyToAllSameType, setApplyToAllSameType] = useState(false);
 
     // Close image menu when clicking outside
@@ -1023,6 +1048,11 @@ const IntersectionImage = ({
                             const taille = tailleDetecteur(detecteur, pixelsParMetreAffiche);
                             const selectionne = selectedDetecteur === detecteur.id;
                             const dansBoucle = etiquetteDansBoucle(detecteur, taille);
+                            const occupe = estOccupee(
+                                displayedTime,
+                                intervallesParDetecteur.get(detecteur.id) ?? [],
+                                cycleAnimation
+                            );
                             return (
                                 <div
                                     key={`detecteur-${detecteur.id}`}
@@ -1048,7 +1078,7 @@ const IntersectionImage = ({
                                             transform: `translate(-50%, -50%) rotate(${detecteur.orientation || 0}deg)`
                                         }}
                                     >
-                                        {renderDetecteurSVG(detecteur, pixelsParMetreAffiche)}
+                                        {renderDetecteurSVG(detecteur, pixelsParMetreAffiche, occupe)}
                                     </div>
                                     <span
                                         className={`detecteur-label ${dansBoucle ? 'dans-boucle' : ''} ${estBoucle(detecteur.categorie) && !dansBoucle ? 'au-dessus' : ''}`}

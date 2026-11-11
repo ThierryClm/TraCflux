@@ -7,9 +7,11 @@ import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import SignalModule from '../components/SignalModule';
-import type { ActionMicro, Detecteur, Groupe, Matrice } from '../types/projet';
+import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import { estBoucle } from '../utils/detecteurs';
+import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/animationDetecteurs';
+import type { SimulationResult } from '../simulation';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
 import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
 
@@ -38,8 +40,9 @@ interface FloatingImageRendererOptions {
     showCropControls: boolean;
     setShowCropControls: Dispatch<SetStateAction<boolean>>;
     intersectionArrows: IntersectionArrow[];
-    detecteurs: Detecteur[];
-    pixelsParMetre: number;
+    detecteurs?: Detecteur[];
+    pixelsParMetre?: number;
+    getTrafficData?: (groupId: number) => { trafficVol?: number | string } | undefined;
     groups: Groupe[];
     imageNaturalDims: ImageDimensions;
     imageFondClair?: boolean;
@@ -75,8 +78,9 @@ const useFloatingImageRenderer = ({
     floatingZoom, setFloatingZoom,
     showCropControls, setShowCropControls,
     intersectionArrows,
-    detecteurs,
-    pixelsParMetre,
+    detecteurs = [],
+    pixelsParMetre = 12,
+    getTrafficData = () => undefined,
     groups,
     imageNaturalDims,
     imageFondClair = true,
@@ -157,6 +161,24 @@ const useFloatingImageRenderer = ({
         const activeTime = isPlayingSimulation
             ? (simulationCurrentTime ?? 0)
             : (hoveredDiagramTime ?? simulationCurrentTime ?? 0);
+
+        // Animation des boucles, avec le même calcul que l'image de la page.
+        const cycleAnimation = (simulationResult as SimulationResult | null)?.simulatedCycleLength || cycleLength;
+        const contexteAnimation = {
+            cycleLength: cycleAnimation,
+            groups,
+            arrows: intersectionArrows as FlecheCarrefour[],
+            getTrafficData,
+            simulationResult: simulationResult as SimulationResult | null,
+            actionData,
+            selectedActions,
+            conflictMatrix,
+            pixelsParMetre
+        };
+        const intervalles = new Map<number, Intervalle[]>();
+        detecteurs.forEach(detecteur => {
+            if (detecteur.position) intervalles.set(detecteur.id, intervallesDetecteur(detecteur, contexteAnimation));
+        });
 
         const colorContext = {
             groups, simulationResult, cycleLength, actionData, selectedActions, conflictMatrix
@@ -308,6 +330,7 @@ const useFloatingImageRenderer = ({
                                 if (!detecteur.position) return null;
                                 const taille = tailleDetecteur(detecteur, pixelsParMetre);
                                 const dansBoucle = etiquetteDansBoucle(detecteur, taille);
+                                const occupe = estOccupee(activeTime, intervalles.get(detecteur.id) ?? [], cycleAnimation);
                                 return (
                                     <div
                                         key={`fdet-${detecteur.id}`}
@@ -322,7 +345,7 @@ const useFloatingImageRenderer = ({
                                                 transform: `translate(-50%, -50%) rotate(${detecteur.orientation || 0}deg)`
                                             }}
                                         >
-                                            {renderDetecteurSVG(detecteur, pixelsParMetre)}
+                                            {renderDetecteurSVG(detecteur, pixelsParMetre, occupe)}
                                         </div>
                                         <span
                                             className={`detecteur-label ${dansBoucle ? 'dans-boucle' : ''} ${estBoucle(detecteur.categorie) && !dansBoucle ? 'au-dessus' : ''}`}
@@ -343,7 +366,7 @@ const useFloatingImageRenderer = ({
             </div></ZoneVerrouSaisie>
         );
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
-        intersectionArrows, detecteurs, pixelsParMetre, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
+        intersectionArrows, detecteurs, pixelsParMetre, getTrafficData, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
         selectedActions, conflictMatrix,
         isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast,

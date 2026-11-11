@@ -29,7 +29,9 @@ const rendre = ({
     showArrows = false,
     onDetecteursChange = vi.fn(),
     onDisplayOptionChange = vi.fn(),
-    pixelsParMetre = 10
+    pixelsParMetre = 10,
+    currentTime = 0,
+    getTrafficData = () => undefined
 } = {}) => {
     const result = render(
         <IntersectionImage
@@ -44,8 +46,9 @@ const rendre = ({
             cycleLength={60}
             isPlaying={false}
             setIsPlaying={vi.fn()}
-            currentTime={0}
+            currentTime={currentTime}
             setCurrentTime={vi.fn()}
+            getTrafficData={getTrafficData}
             actionData={[]}
             selectedActions={[]}
             conflictMatrix={[]}
@@ -79,6 +82,24 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(etiquette).toHaveClass('au-dessus');
         expect(etiquette).not.toHaveClass('dans-boucle');
         expect(etiquette.style.top).toBe('-16px');
+    });
+
+    it('remplit la boucle en orange quand elle est occupée à l’instant affiché', () => {
+        const { container } = rendre({
+            currentTime: 40,
+            getTrafficData: () => ({ trafficVol: 600 })
+        });
+        const remplissage = container.querySelector('.detecteur-symbol rect');
+        expect(remplissage.getAttribute('fill')).toBe('rgba(255, 152, 0, 0.45)');
+    });
+
+    it('laisse la boucle vide entre deux véhicules', () => {
+        const { container } = rendre({
+            currentTime: 1.1,
+            getTrafficData: () => ({ trafficVol: 600 })
+        });
+        const remplissage = container.querySelector('.detecteur-symbol rect');
+        expect(remplissage.getAttribute('fill')).toBe('none');
     });
 
     it('masque tout le calque quand la case Détecteurs est décochée', () => {

@@ -42,13 +42,20 @@ describe('taille des symboles', () => {
 describe('dessin des symboles', () => {
     it('dessine une boucle en rectangle à coins carrés, en pointillé', () => {
         const { container } = render(<div>{renderDetecteurSVG(detecteur(), 10)}</div>);
-        const rect = container.querySelector('rect');
-        expect(rect).not.toBeNull();
-        expect(rect?.getAttribute('rx')).toBeNull();
-        expect(rect?.getAttribute('stroke-dasharray')).toBe('4 3');
-        expect(rect?.getAttribute('stroke')).toBe('#000000');
-        expect(rect?.getAttribute('stroke-width')).toBe('1');
-        expect(rect?.getAttribute('fill')).toBe('none');
+        const rects = container.querySelectorAll('rect');
+        expect(rects).toHaveLength(2);
+        const contour = rects[1];
+        expect(contour.getAttribute('rx')).toBeNull();
+        expect(contour.getAttribute('stroke-dasharray')).toBe('4 3');
+        expect(contour.getAttribute('stroke')).toBe('#000000');
+        expect(contour.getAttribute('stroke-width')).toBe('1');
+        expect(contour.getAttribute('fill')).toBe('none');
+    });
+
+    it('remplit la boucle d’un orange transparent quand elle est occupée', () => {
+        const { container } = render(<div>{renderDetecteurSVG(detecteur(), 10, true)}</div>);
+        const remplissage = container.querySelectorAll('rect')[0];
+        expect(remplissage.getAttribute('fill')).toBe('rgba(255, 152, 0, 0.45)');
     });
 
     it('dessine le radar avec un cône et deux arcs d’onde', () => {
