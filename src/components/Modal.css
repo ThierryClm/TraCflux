@@ -31,15 +31,34 @@
     --md-field-border: #666;
     --md-field-text: #fff;
 
+    /* Liseré clair puis trait sombre autour de la fenêtre : ce sont eux qui la
+       découpent du fond, et ils ne dépendent pas du thème. Les variantes de
+       fenêtre (menu, bulle de phasage, non modale) les reprennent avant
+       d'ajouter leur propre ombre portée. */
+    --md-arete: 0 0 0 1px rgba(255, 255, 255, 0.18),
+        0 0 0 2px rgba(0, 0, 0, 0.55);
+
     background: var(--md-bg);
-    border: 1px solid var(--md-border);
+    /* Deux pixels, et non un : le contour d'un pixel se lisait comme un simple
+       liseré sur le fond sombre, et deux fenêtres voisines se confondaient. */
+    border: 2px solid var(--md-border);
     color: var(--md-text);
     border-radius: 8px;
     min-width: 300px;
     max-width: 500px;
     max-height: 80vh;
     overflow: hidden;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    /* La fenêtre se détache vers la gauche et le bas, comme une feuille posée
+       sur la page : ombre portée franche de ce côté. Sur le voile sombre, une
+       ombre noire se voit mal ; le liseré clair d'un pixel qui suit le contour
+       fait le vrai travail — il découpe la fenêtre sur le fond — et le trait
+       sombre juste dessous lui donne une arête. Le liseré clair en haut, à
+       l'intérieur, accroche la lumière. Rien au-dessus de la fenêtre : un halo
+       la salirait. */
+    box-shadow:
+        var(--md-arete),
+        -12px 14px 34px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
     /* Bandeau, corps, boutons : trois bandes, dont seule celle du milieu se
        comprime. Sans cela, le corps gardait sa hauteur propre — 60 vh, 65 vh
@@ -251,7 +270,7 @@ body.sepia-mode .modal-header {
 .modal-overlay.modal-menu-overlay .modal-content {
     margin-top: 28px;
     margin-left: 160px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+    box-shadow: var(--md-arete), -6px 8px 18px rgba(0, 0, 0, 0.6);
     border-radius: 4px;
 }
 
@@ -298,7 +317,7 @@ body.sepia-mode .modal-header {
 
 .modal-overlay.modal-phasage-bulle-overlay .modal-content {
     pointer-events: auto;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    box-shadow: var(--md-arete), -6px 8px 20px rgba(0, 0, 0, 0.8);
     min-width: 250px;
 }
 
@@ -348,7 +367,7 @@ body.sepia-mode .modal-header {
 
 .modal-overlay.modal-non-modale .modal-content {
     pointer-events: auto;
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+    box-shadow: var(--md-arete), -8px 10px 26px rgba(0, 0, 0, 0.6);
 }
 
 .modal-header-deplacable {
