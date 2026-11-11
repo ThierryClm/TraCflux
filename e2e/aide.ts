@@ -134,7 +134,9 @@ export const lignesConditions = (page: Page) => page.evaluate(() =>
 /** Mise en page > Diagramme > Description des conditions micro > Afficher / Masquer / Automatique. */
 export const modeDescription = async (page: Page, choix: 'Afficher' | 'Masquer' | 'Automatique') => {
     const miseEnPage = page.locator('.menu-bar').getByText('Mise en page', { exact: true });
-    const sousMenu = page.locator('.menu-bar .submenu-dropdown .menu-item-with-submenu').first();
+    // Le déroulant de « Mise en page » est un `.menu-dropdown` ; les popups de
+    // sous-menu, eux, portent `.submenu-dropdown`.
+    const sousMenu = page.locator('.menu-bar .menu-dropdown .menu-item-with-submenu').first();
     for (let i = 0; i < 6 && !(await sousMenu.isVisible()); i++) {
         await page.mouse.move(5, 400);
         await miseEnPage.hover();
@@ -143,7 +145,7 @@ export const modeDescription = async (page: Page, choix: 'Afficher' | 'Masquer' 
         await sousMenu.waitFor({ state: 'visible', timeout: 1500 }).catch(() => {});
     }
     // « Description des conditions micro » vit désormais dans le groupe Diagramme.
-    const diagramme = page.locator('.menu-bar .submenu-dropdown .menu-item-with-submenu')
+    const diagramme = page.locator('.menu-bar .menu-dropdown .menu-item-with-submenu')
         .filter({ has: page.locator('button', { hasText: /^Diagramme/ }) }).first();
     await diagramme.hover();
     const description = diagramme.locator('.submenu-dropdown .menu-item-with-submenu')
