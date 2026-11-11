@@ -67,10 +67,13 @@
     line-height: 1.15;
 }
 
-.detecteurs-table th:nth-child(2) { width: 124px; }
-.detecteurs-table th:nth-child(3) { width: 110px; }
-.detecteurs-table th:nth-child(4) { width: 64px; }
-.detecteurs-table th:nth-child(5) { width: 44px; }
+/* Largeurs en pourcentage : le tableau tient dans la largeur du panneau,
+   y compris lorsqu'on revient de la simulation avec un panneau plus étroit. */
+.detecteurs-table th:nth-child(1) { width: 28%; }
+.detecteurs-table th:nth-child(2) { width: 26%; }
+.detecteurs-table th:nth-child(3) { width: 22%; }
+.detecteurs-table th:nth-child(4) { width: 12%; }
+.detecteurs-table th:nth-child(5) { width: 12%; }
 
 .detecteurs-table td {
     padding: 2px 3px;

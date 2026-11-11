@@ -11,7 +11,7 @@ import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable 
 import { demarrerHorloge } from '../utils/horlogeLecture';
 import SignalModule from './SignalModule';
 import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
-import { creerDetecteur, dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE } from '../utils/detecteurs';
+import { dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE } from '../utils/detecteurs';
 import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
@@ -360,11 +360,18 @@ const IntersectionImage = ({
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-        // Mode « Ajouter un détecteur » : ce clic crée le détecteur et le pose.
+        // Mode « Ajouter un détecteur » : ce clic pose le prochain détecteur
+        // de la liste qui n'a pas encore de position, comme les flèches.
         if (ajoutDetecteursActif && onDetecteursChange) {
-            const nouveau = { ...creerDetecteur(detecteurs), position: { x, y } };
-            onDetecteursChange([...detecteurs, nouveau]);
-            setSelectedDetecteur(nouveau.id);
+            const aPlacer = detecteurs.find(d => !d.position);
+            if (!aPlacer) {
+                toast.info("Tous les détecteurs sont placés. Ajoutez-en un dans l'onglet Détecteurs.");
+                return;
+            }
+            onDetecteursChange(detecteurs.map(d =>
+                d.id === aPlacer.id ? { ...d, position: { x, y } } : d
+            ));
+            setSelectedDetecteur(aPlacer.id);
             setSelectedArrow(null);
             return;
         }

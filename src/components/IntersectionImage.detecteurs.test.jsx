@@ -86,18 +86,23 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(container.querySelector('.detecteur-marker')).toBeNull();
     });
 
-    it('ajoute un détecteur au clic quand la case est cochée', () => {
-        const { area, onDetecteursChange } = rendre({ detecteurs: [] });
+    it('pose le prochain détecteur de la liste au clic', () => {
+        const { area, onDetecteursChange } = rendre({
+            detecteurs: [{ ...DETECTEUR, position: null }]
+        });
         fireEvent.click(screen.getByLabelText('Ajouter un détecteur'));
         fireEvent.click(area, { clientX: 50, clientY: 75 });
 
         expect(onDetecteursChange).toHaveBeenCalledWith([
-            expect.objectContaining({
-                nom: 'Détecteur 1',
-                categorie: 'bouclePiedFeu',
-                position: { x: 25, y: 75 }
-            })
+            expect.objectContaining({ id: 7, position: { x: 25, y: 75 } })
         ]);
+    });
+
+    it('ne crée pas de détecteur depuis l’image quand la liste est vide', () => {
+        const { area, onDetecteursChange } = rendre({ detecteurs: [] });
+        fireEvent.click(screen.getByLabelText('Ajouter un détecteur'));
+        fireEvent.click(area, { clientX: 50, clientY: 75 });
+        expect(onDetecteursChange).not.toHaveBeenCalled();
     });
 
     it('rend les deux modes de placement exclusifs', () => {

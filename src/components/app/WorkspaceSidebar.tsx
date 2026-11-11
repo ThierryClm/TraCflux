@@ -518,7 +518,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 </div>
                             )}
 
-                            {displayConflicts.length > 0 && (
+                            {activeTab !== 'detecteurs' && displayConflicts.length > 0 && (
                                 <ConflictList
                                     conflicts={displayConflicts}
                                     groups={groups}
