@@ -106,10 +106,11 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(remplissage.getAttribute('fill')).toBe('none');
     });
 
-    it('garde les objets détecteurs mais retire leur nom quand le module est désactivé', () => {
-        const { container } = rendre({ detecteurModule: false });
+    it('garde les objets détecteurs mais retire leur nom et l’échelle quand le module est désactivé', () => {
+        const { container } = rendre({ detecteurModule: false, onPixelsParMetreChange: vi.fn() });
         expect(container.querySelector('.detecteur-marker')).not.toBeNull();
         expect(screen.queryByText('Boucle nord')).toBeNull();
+        expect(screen.queryByLabelText('Pixels par mètre')).toBeNull();
     });
 
     it('affiche l’échelle de l’image dans les paramètres et l’enregistre', () => {

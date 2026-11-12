@@ -1525,20 +1525,20 @@ const IntersectionImage = ({
                                     />
                                     <span>Ajouter</span>
                                 </label>
-                            </div>
-                        )}
-                        {onPixelsParMetreChange && (
-                            <div className="display-scale">
-                                <label title={tip("Nombre de pixels de l'image pour un mètre. Une voie de circulation fait environ 7 m.")}>
-                                    Échelle 1 m =
-                                </label>
-                                <LocalInput
-                                    className="input-echelle"
-                                    aria-label="Pixels par mètre"
-                                    value={pixelsParMetre}
-                                    onCommit={(valeur) => onPixelsParMetreChange(normaliserPixelsParMetre(valeur))}
-                                />
-                                <span>px</span>
+                                {onPixelsParMetreChange && (
+                                    <div className="display-scale">
+                                        <label title={tip("Nombre de pixels de l'image pour un mètre. Une voie de circulation fait environ 7 m.")}>
+                                            Échelle 1 m =
+                                        </label>
+                                        <LocalInput
+                                            className="input-echelle"
+                                            aria-label="Pixels par mètre"
+                                            value={pixelsParMetre}
+                                            onCommit={(valeur) => onPixelsParMetreChange(normaliserPixelsParMetre(valeur))}
+                                        />
+                                        <span>px</span>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
