@@ -24,6 +24,10 @@ const renderImage = ({ groups, arrows = [] }) => {
             setImageBrightness={vi.fn()}
             imageContrast={100}
             setImageContrast={vi.fn()}
+            displayOptions={{
+                showCurrents: true, showGroupNumbers: true, showGroupNames: true,
+                showArrows: true, showSignals: false, showDetecteurs: true, showDetecteurNames: true
+            }}
         />
     );
 

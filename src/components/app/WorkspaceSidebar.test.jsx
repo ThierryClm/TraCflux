@@ -182,3 +182,13 @@ it('verrouille les groupes du phasage, conserve le survol et respecte les groupe
     fireEvent.click(screen.getByText('Tout décocher'));
     expect(model.setPhasageBulleVisibleGroups).toHaveBeenCalledWith(new Set());
 });
+
+it('masque l’onglet Détecteurs quand le module est désactivé', () => {
+    const { rerender } = render(
+        <WorkspaceSidebar model={buildModel({ detecteurModule: false, detecteurs: [], setDetecteurs: vi.fn() })} />
+    );
+    expect(screen.queryByRole('button', { name: 'Détecteurs' })).toBeNull();
+
+    rerender(<WorkspaceSidebar model={buildModel({ detecteurModule: true, detecteurs: [], setDetecteurs: vi.fn() })} />);
+    expect(screen.getByRole('button', { name: 'Détecteurs' })).toBeInTheDocument();
+});

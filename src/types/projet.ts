@@ -221,6 +221,12 @@ export interface OptionsMiseEnPage {
     showImageSignals?: boolean;
     /** Image du carrefour : afficher le calque des détecteurs. */
     showImageDetecteurs?: boolean;
+    /** Image du carrefour : afficher le calque des courants de circulation. */
+    showImageCurrents?: boolean;
+    /** Image du carrefour : afficher le nom des détecteurs. */
+    showImageDetecteurNames?: boolean;
+    /** Module Détecteur activé pour le projet (onglet et colonne de l'image). */
+    detecteurModule?: boolean;
     /** Sections dont la saisie est verrouillée (Mise en page → Verrouillage saisie). */
     verrouSaisie?: Partial<Record<'proprietes' | 'configuration' | 'matrice' | 'trafic' | 'diagramme' | 'conditions' | 'variables' | 'image' | 'scenarios' | 'phasages' | 'detecteurs', boolean>>;
 }

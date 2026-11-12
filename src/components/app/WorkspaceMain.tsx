@@ -46,6 +46,7 @@ interface WorkspaceMainModel {
     dependencyGap: number;
     detecteurs: Detecteur[];
     setDetecteurs: Dispatch<SetStateAction<Detecteur[]>>;
+    detecteurModule: boolean;
     pixelsParMetre: number;
     setPixelsParMetre: Dispatch<SetStateAction<number>>;
     getTrafficData: (groupId: number) => { trafficVol?: number | string } | undefined;
@@ -171,7 +172,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         actionColWidths, actionData, activePFId, activePfReadOnly, addRecentDirectory,
         biCarrefourSeparator, brouillonPhasage, conflictMatrix, currentRemarques, cycleLength,
         cycleLengthInput, cycleSimulationSpeed, dependencyGap, detecteurs, setDetecteurs,
-        pixelsParMetre, setPixelsParMetre, getTrafficData, diagramAreaRef, diagramHeight,
+        detecteurModule, pixelsParMetre, setPixelsParMetre, getTrafficData, diagramAreaRef, diagramHeight,
         displayConflicts, dossierReadOnly, draggedTabIndex, endDrag,
         globalTime, groups, handleActionPanelResize, handleDiagramResizeStart, handleResizeStart,
         helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
@@ -546,6 +547,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 onArrowsChange={setIntersectionArrows}
                                 detecteurs={detecteurs}
                                 onDetecteursChange={setDetecteurs}
+                                detecteurModule={detecteurModule}
                                 pixelsParMetre={pixelsParMetre}
                                 onPixelsParMetreChange={setPixelsParMetre}
                                 getTrafficData={getTrafficData}

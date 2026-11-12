@@ -51,11 +51,11 @@ describe('MenuBar — Mise en page, trois groupes', () => {
         expect(tete.slice(0, 3)).toEqual(['Configuration', 'Diagramme', 'Matrice']);
     });
 
-    it('range Affichage, Nom des GFx du formulaire et Réserve de capacité dans Configuration', () => {
+    it('range Affichage, Nom des GFx du formulaire, Réserve de capacité et Détecteur dans Configuration', () => {
         vi.useFakeTimers();
         render(<MenuBar />);
         const configuration = deplier('Configuration');
-        expect(libellesDe(configuration)).toEqual(['Affichage', 'Nom des GFx', 'Réserve de capacité']);
+        expect(libellesDe(configuration)).toEqual(['Affichage', 'Nom des GFx', 'Réserve de capacité', 'Détecteur']);
     });
 
     it('garde Nom des GFx du diagramme dans Diagramme, devant les autres réglages', () => {

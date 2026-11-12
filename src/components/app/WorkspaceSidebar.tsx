@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import SimulationPanel from '../SimulationPanel';
 import TrafficTable from '../TrafficTable';
 import PropertiesPanel from '../PropertiesPanel';
@@ -39,8 +40,7 @@ interface WorkspaceSidebarModel {
     groups: Groupe[];
     detecteurs: Detecteur[];
     setDetecteurs: Dispatch<SetStateAction<Detecteur[]>>;
-    pixelsParMetre: number;
-    setPixelsParMetre: Dispatch<SetStateAction<number>>;
+    detecteurModule: boolean;
     intersectionArrows: IntersectionArrow[];
     phasageBulleVisibleGroups: Set<number>;
     hoveredPhasageGroupId: number | null;
@@ -139,8 +139,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         groups,
         detecteurs,
         setDetecteurs,
-        pixelsParMetre,
-        setPixelsParMetre,
+        detecteurModule,
         intersectionArrows,
         phasageBulleVisibleGroups,
         hoveredPhasageGroupId,
@@ -213,6 +212,11 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         recentImportDirs,
         helpZoneRef,
     } = model;
+
+    // Module désactivé : l'onglet disparaît, on revient au formulaire.
+    useEffect(() => {
+        if (!detecteurModule && activeTab === 'detecteurs') setActiveTab('config');
+    }, [detecteurModule, activeTab, setActiveTab]);
 
     // Le panneau de la simulation porte ses commandes — scénario, actions à
     // cocher : masquer les paramètres ne doit pas le replier avec eux.
@@ -359,15 +363,17 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                         <span className="tab-warning-icon" title={tipConfig("Formulaire non renseigné")} role="img" aria-label="Formulaire non renseigné"> ⚠</span>
                                     )}
                                 </button>
-                                <button
-                                    className={`tab-btn ${activeTab === 'detecteurs' ? 'active' : ''}`}
-                                    onClick={() => {
-                                        setActiveTab('detecteurs');
-                                        setSidebarWidth(560);
-                                    }}
-                                >
-                                    Détecteurs
-                                </button>
+                                {detecteurModule && (
+                                    <button
+                                        className={`tab-btn ${activeTab === 'detecteurs' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setActiveTab('detecteurs');
+                                            setSidebarWidth(560);
+                                        }}
+                                    >
+                                        Détecteurs
+                                    </button>
+                                )}
                                 <button
                                     className={`tab-btn ${activeTab === 'matrix' ? 'active' : ''}`}
                                     onClick={() => {
@@ -446,14 +452,12 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                 </>
                             )}
 
-                            {activeTab === 'detecteurs' && (
+                            {detecteurModule && activeTab === 'detecteurs' && (
                                 <div onMouseEnter={() => { helpZoneRef.current = 'detecteurs'; }}>
                                     <DetecteursTable
                                         detecteurs={detecteurs}
                                         groups={groups}
                                         onChange={setDetecteurs}
-                                        pixelsParMetre={pixelsParMetre}
-                                        onPixelsParMetreChange={setPixelsParMetre}
                                     />
                                 </div>
                             )}

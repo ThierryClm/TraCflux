@@ -22,33 +22,6 @@
     margin-left: auto;
 }
 
-.detecteurs-echelle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 10px;
-    border-bottom: 1px solid #333;
-    font-size: 0.78em;
-    color: #aaa;
-    flex-wrap: wrap;
-}
-
-.detecteurs-echelle input {
-    width: 52px;
-    background: #333;
-    border: 1px solid #444;
-    color: white;
-    padding: 2px 4px;
-    border-radius: 3px;
-    text-align: center;
-    font-size: 1em;
-}
-
-.detecteurs-echelle-note {
-    color: #777;
-    font-size: 0.92em;
-}
-
 .detecteurs-table {
     width: 100%;
     border-collapse: collapse;

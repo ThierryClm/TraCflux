@@ -41,6 +41,7 @@ interface FloatingImageRendererOptions {
     setShowCropControls: Dispatch<SetStateAction<boolean>>;
     intersectionArrows: IntersectionArrow[];
     detecteurs?: Detecteur[];
+    detecteurModule?: boolean;
     pixelsParMetre?: number;
     getTrafficData?: (groupId: number) => { trafficVol?: number | string } | undefined;
     groups: Groupe[];
@@ -79,6 +80,7 @@ const useFloatingImageRenderer = ({
     showCropControls, setShowCropControls,
     intersectionArrows,
     detecteurs = [],
+    detecteurModule = false,
     pixelsParMetre = 12,
     getTrafficData = () => undefined,
     groups,
@@ -105,10 +107,13 @@ const useFloatingImageRenderer = ({
         if (!showFloatingImage || !intersectionImage) return;
         const tip = (text: string) => tooltipsEnabled ? text : undefined;
 
-        const showNums = intersectionDisplay.showGroupNumbers;
+        const showCurrents = intersectionDisplay.showCurrents !== false;
+        const showNums = showCurrents && intersectionDisplay.showGroupNumbers;
         // Même règle que l'image de la page : sans signal renseigné, la case ne pèse sur rien.
-        const showSignals = intersectionDisplay.showSignals && auMoinsUnSignal(groups);
-        const showNames = intersectionDisplay.showGroupNames && !showSignals;
+        const showSignals = showCurrents && intersectionDisplay.showSignals && auMoinsUnSignal(groups);
+        const showNames = showCurrents && intersectionDisplay.showGroupNames && !showSignals;
+        const afficherDetecteurs = detecteurModule ? intersectionDisplay.showDetecteurs : true;
+        const afficherNomsDetecteurs = detecteurModule && intersectionDisplay.showDetecteurNames !== false;
         // Signal montré à la place de la flèche : case cochée et champ Signal renseigné.
         const signalDe = (group: Groupe | undefined) =>
             showSignals && signalDessinable(group?.signal) ? group?.signal : undefined;
@@ -274,7 +279,7 @@ const useFloatingImageRenderer = ({
                                     </div>
                                 );
                             })}
-                            {intersectionArrows.map(arrow => {
+                            {showCurrents && intersectionArrows.map(arrow => {
                                 const groupId = arrow.groupId ?? 0;
                                 const group = groups.find(g => g.id === groupId);
                                 const courant = group?.courant || '';
@@ -326,7 +331,7 @@ const useFloatingImageRenderer = ({
                                     </div>
                                 );
                             })}
-                            {intersectionDisplay.showDetecteurs && detecteurs.map(detecteur => {
+                            {afficherDetecteurs && detecteurs.map(detecteur => {
                                 if (!detecteur.position) return null;
                                 const taille = tailleDetecteur(detecteur, pixelsParMetre);
                                 const dansBoucle = etiquetteDansBoucle(detecteur, taille);
@@ -347,16 +352,18 @@ const useFloatingImageRenderer = ({
                                         >
                                             {renderDetecteurSVG(detecteur, pixelsParMetre, occupe)}
                                         </div>
-                                        <span
-                                            className={`detecteur-label ${dansBoucle ? 'dans-boucle' : ''} ${estBoucle(detecteur.categorie) && !dansBoucle ? 'au-dessus' : ''}`}
-                                            style={dansBoucle
-                                                ? { top: 0, transform: 'translate(-50%, -50%)' }
-                                                : estBoucle(detecteur.categorie)
-                                                    ? { top: -(taille.hauteur / 2) - 6 }
-                                                    : { top: taille.hauteur / 2 + 4 }}
-                                        >
-                                            {detecteur.nom}
-                                        </span>
+                                        {afficherNomsDetecteurs && (
+                                            <span
+                                                className={`detecteur-label ${dansBoucle ? 'dans-boucle' : ''} ${estBoucle(detecteur.categorie) && !dansBoucle ? 'au-dessus' : ''}`}
+                                                style={dansBoucle
+                                                    ? { top: 0, transform: 'translate(-50%, -50%)' }
+                                                    : estBoucle(detecteur.categorie)
+                                                        ? { top: -(taille.hauteur / 2) - 6 }
+                                                        : { top: taille.hauteur / 2 + 4 }}
+                                            >
+                                                {detecteur.nom}
+                                            </span>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -366,12 +373,13 @@ const useFloatingImageRenderer = ({
             </div></ZoneVerrouSaisie>
         );
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
-        intersectionArrows, detecteurs, pixelsParMetre, getTrafficData, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
+        intersectionArrows, detecteurs, detecteurModule, pixelsParMetre, getTrafficData, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
         selectedActions, conflictMatrix,
         isPlayingSimulation, simulationCurrentTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast,
-        intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames, intersectionDisplay.showSignals,
-        intersectionDisplay.showDetecteurs, tooltipsEnabled, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+        intersectionDisplay.showCurrents, intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames,
+        intersectionDisplay.showSignals, intersectionDisplay.showDetecteurs, intersectionDisplay.showDetecteurNames,
+        tooltipsEnabled, detecteurModule, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 
 export default useFloatingImageRenderer;

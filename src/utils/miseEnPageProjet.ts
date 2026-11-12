@@ -44,6 +44,9 @@ interface LayoutSetters {
     setShowImageArrows?: SetterBooleen;
     setShowImageSignals?: SetterBooleen;
     setShowImageDetecteurs?: SetterBooleen;
+    setShowImageCurrents?: SetterBooleen;
+    setShowImageDetecteurNames?: SetterBooleen;
+    setDetecteurModule?: SetterBooleen;
     setDossierSections?: (sections: Record<string, boolean>) => void;
     /** Verrouillage de la saisie : celui du projet, ou rien de verrouillé. */
     setVerrouSaisie?: (prefs?: OptionsMiseEnPage['verrouSaisie']) => void;
@@ -60,8 +63,8 @@ const DRAPEAUX_MISE_EN_PAGE: (keyof OptionsMiseEnPage)[] = [
     'showFloatingForm', 'showFloatingMatrix', 'showFloatingTraffic',
     'showFloatingImage', 'showFloatingConditions', 'showFloatingVariables',
     'showFloatingRemarks',
-    'showImageGroupNumbers', 'showImageGroupNames', 'showImageArrows', 'showImageSignals',
-    'showImageDetecteurs'
+    'showImageCurrents', 'showImageGroupNumbers', 'showImageGroupNames', 'showImageArrows', 'showImageSignals',
+    'showImageDetecteurs', 'showImageDetecteurNames', 'detecteurModule'
 ];
 
 /** Compose les réglages persistants depuis l'état courant de l'application. */
@@ -86,11 +89,14 @@ export const lireMiseEnPage = (v: LayoutValues): Partial<Projet> => ({
         showFloatingConditions: v.showFloatingConditions,
         showFloatingVariables: v.showFloatingVariables,
         showFloatingRemarks: v.showFloatingRemarks,
+        showImageCurrents: v.showImageCurrents,
         showImageGroupNumbers: v.showImageGroupNumbers,
         showImageGroupNames: v.showImageGroupNames,
         showImageArrows: v.showImageArrows,
         showImageSignals: v.showImageSignals,
         showImageDetecteurs: v.showImageDetecteurs,
+        showImageDetecteurNames: v.showImageDetecteurNames,
+        detecteurModule: v.detecteurModule,
         verrouSaisie: v.verrouSaisie
     },
     directoryNames: {
@@ -147,11 +153,14 @@ export const appliquerMiseEnPage = (
         showFloatingConditions: s.setShowFloatingConditions,
         showFloatingVariables: s.setShowFloatingVariables,
         showFloatingRemarks: s.setShowFloatingRemarks,
+        showImageCurrents: s.setShowImageCurrents,
         showImageGroupNumbers: s.setShowImageGroupNumbers,
         showImageGroupNames: s.setShowImageGroupNames,
         showImageArrows: s.setShowImageArrows,
         showImageSignals: s.setShowImageSignals,
-        showImageDetecteurs: s.setShowImageDetecteurs
+        showImageDetecteurs: s.setShowImageDetecteurs,
+        showImageDetecteurNames: s.setShowImageDetecteurNames,
+        detecteurModule: s.setDetecteurModule
     };
 
     s.setVerrouSaisie?.(data.layoutOptions && typeof data.layoutOptions === 'object' ? data.layoutOptions.verrouSaisie : undefined);
@@ -169,6 +178,11 @@ export const appliquerMiseEnPage = (
             if (nom === 'showParameters' || nom === 'showActionDescription') return;
             if (typeof lo[nom] === 'boolean') poseurs[nom]?.(lo[nom]);
         });
+        // Projets antérieurs : courants et noms de détecteurs visibles, module
+        // Détecteur décoché par défaut.
+        s.setShowImageCurrents?.(typeof lo.showImageCurrents === 'boolean' ? lo.showImageCurrents : true);
+        s.setShowImageDetecteurNames?.(typeof lo.showImageDetecteurNames === 'boolean' ? lo.showImageDetecteurNames : true);
+        s.setDetecteurModule?.(lo.detecteurModule === true);
     } else {
         const affichage = affichageCommentairesRemarques(data);
         s.setCommentsMode?.(affichage.commentsMode);
@@ -177,6 +191,9 @@ export const appliquerMiseEnPage = (
         DRAPEAUX_MISE_EN_PAGE
             .filter(nom => nom.startsWith('showFloating'))
             .forEach(nom => poseurs[nom]?.(false));
+        s.setShowImageCurrents?.(true);
+        s.setShowImageDetecteurNames?.(true);
+        s.setDetecteurModule?.(false);
     }
 
     if (data.dossierSections && Object.keys(data.dossierSections).length > 0) {

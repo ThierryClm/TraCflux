@@ -50,7 +50,11 @@ const poseurs = () => {
             setShowImageGroupNumbers: espion('imageNumeros'),
             setShowImageGroupNames: espion('imageNoms'),
             setShowImageArrows: espion('imageFleches'),
-            setShowImageSignals: espion('imageSignaux')
+            setShowImageSignals: espion('imageSignaux'),
+            setShowImageDetecteurs: espion('imageDetecteurs'),
+            setShowImageCurrents: espion('imageCourants'),
+            setShowImageDetecteurNames: espion('imageNomsDetecteurs'),
+            setDetecteurModule: espion('moduleDetecteurs')
         }
     };
 };
@@ -243,5 +247,29 @@ describe('verrouillage de la saisie enregistré avec le projet', () => {
         expect(setVerrouSaisie).toHaveBeenLastCalledWith(undefined);
         appliquerMiseEnPage({ groups: [] }, { setVerrouSaisie });
         expect(setVerrouSaisie).toHaveBeenLastCalledWith(undefined);
+    });
+});
+
+describe('miseEnPageProjet — module Détecteur', () => {
+    it('enregistre le module et ses cases avec le projet', () => {
+        const paquet = lireMiseEnPage({
+            ...etatCourant,
+            detecteurModule: true,
+            showImageCurrents: false,
+            showImageDetecteurNames: false
+        });
+        expect(paquet.layoutOptions).toMatchObject({
+            detecteurModule: true,
+            showImageCurrents: false,
+            showImageDetecteurNames: false
+        });
+    });
+
+    it('laisse un projet antérieur avec le module décoché et les courants visibles', () => {
+        const { vus, s } = poseurs();
+        appliquerMiseEnPage({ layoutOptions: {} }, s);
+        expect(vus.moduleDetecteurs).toBe(false);
+        expect(vus.imageCourants).toBe(true);
+        expect(vus.imageNomsDetecteurs).toBe(true);
     });
 });

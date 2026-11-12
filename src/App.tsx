@@ -456,9 +456,12 @@ function App() {
     // Verrouillage de la saisie : enregistré avec le projet (cf. champsProjetRef).
     const prefsVerrou = usePrefsVerrou();
 
+    // Module Détecteur : décoché par défaut, enregistré avec le projet.
+    const [detecteurModule, setDetecteurModule] = useState(false);
+
     // Track whether project has been modified (for "Nouveau projet" menu)
     const { projectModified, setProjectModified, projectModifiedSkip, hasUnsavedChanges, isDirty, setHasUnsavedChanges, absorbDerivedChanges } =
-        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, intersectionDisplay, detecteurs, pixelsParMetre,
+        useProjectModification([groups, actionData, cycleLength, conflictMatrix, projectProperties, intersectionName, capacityCompareSelection, capacityCompareDataset, capacityCompareScenarios, capacityCompareVUtile, intersectionDisplay, detecteurs, pixelsParMetre, detecteurModule,
             // Enregistrés dans le projet : les changer est une modification.
             commentsMode, remarksMode, descriptionMode, prefsVerrou]);
 
@@ -982,11 +985,14 @@ function App() {
                 showFloatingForm, showFloatingMatrix, showFloatingTraffic,
                 showFloatingImage, showFloatingConditions, showFloatingVariables,
                 showFloatingRemarks,
+                showImageCurrents: intersectionDisplay.showCurrents,
                 showImageGroupNumbers: intersectionDisplay.showGroupNumbers,
                 showImageGroupNames: intersectionDisplay.showGroupNames,
                 showImageArrows: intersectionDisplay.showArrows,
                 showImageSignals: intersectionDisplay.showSignals,
                 showImageDetecteurs: intersectionDisplay.showDetecteurs,
+                showImageDetecteurNames: intersectionDisplay.showDetecteurNames,
+                detecteurModule,
                 verrouSaisie: prefsVerrouAEnregistrer(),
                 directoryNames: {
                     open: lastOpenDirectoryRef.current?.name || recentOpenDirs[0]?.name || null,
@@ -1006,9 +1012,12 @@ function App() {
             setShowFloatingRemarks, setDossierSections,
             setShowImageGroupNumbers: (v) => setIntersectionDisplayOption('showGroupNumbers', v),
             setShowImageGroupNames: (v) => setIntersectionDisplayOption('showGroupNames', v),
+            setShowImageCurrents: (v) => setIntersectionDisplayOption('showCurrents', v),
             setShowImageArrows: (v) => setIntersectionDisplayOption('showArrows', v),
             setShowImageSignals: (v) => setIntersectionDisplayOption('showSignals', v),
             setShowImageDetecteurs: (v) => setIntersectionDisplayOption('showDetecteurs', v),
+            setShowImageDetecteurNames: (v) => setIntersectionDisplayOption('showDetecteurNames', v),
+            setDetecteurModule,
             setVerrouSaisie: definirPrefsVerrou
         })
     };
@@ -1266,6 +1275,7 @@ function App() {
                 if (okNew) {
                     leaveExampleMode(); // un nouveau projet n'est plus l'exemple
                     resetToNewProject();
+                    setDetecteurModule(false);
                     setActiveTab(openPropertiesOnNewProject ? 'properties' : 'config');
                     resetDiagramHeight();
                     setSidebarVisible(true);
@@ -1702,6 +1712,12 @@ function App() {
             case 'toggleCapacityReserve':
                 setShowCapacityReserve(v => !v);
                 break;
+            case 'toggleDetecteurModule': {
+                const actif = !detecteurModule;
+                setDetecteurModule(actif);
+                if (!actif && activeTab === 'detecteurs') setActiveTab('config');
+                break;
+            }
             case 'toggleFloatingDiagram':
                 setShowFloatingDiagram(v => !v);
                 break;
@@ -2034,7 +2050,7 @@ function App() {
         floatingCrop, setFloatingCrop,
         floatingZoom, setFloatingZoom,
         showCropControls, setShowCropControls,
-        intersectionArrows, groups, detecteurs, pixelsParMetre, getTrafficData, imageNaturalDims, imageFondClair,
+        intersectionArrows, groups, detecteurs, detecteurModule, pixelsParMetre, getTrafficData, imageNaturalDims, imageFondClair,
         selectedActions: simulationSelectedActions, conflictMatrix,
         hoveredArrowGroupId, hoveredArrowGroupIds: flechesActionSimulation, setHoveredArrowGroupId, hoveredDiagramTime,
         isPlayingSimulation,
@@ -2358,7 +2374,7 @@ function App() {
                     onManageUsers={() => setShowUserManager(true)}
                     accountsEnabled={accountsEnabled}
                     biCarrefourSeparator={biCarrefourSeparator}
-                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, descriptionMode, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
+                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, descriptionMode, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, detecteurModule, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
                     pixelsPerSecond={pixelsPerSecond}
                     onPixelsPerSecondChange={setPixelsPerSecond}
                     showMicroOnHover={showMicroOnHover}
@@ -2394,8 +2410,7 @@ function App() {
             <main className="split-view" ref={splitViewRef}>
                 <WorkspaceSidebar
                     model={{
-                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs,
-                        pixelsParMetre, setPixelsParMetre,
+                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs, detecteurModule,
                         intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
                         tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction, compenserBts, setCompenserBts,
@@ -2425,7 +2440,7 @@ function App() {
                         helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
                         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
                         imageFondClair, intersectionArrows, intersectionDisplay, intersectionImage, intersectionName, isPlayingSimulation,
-                        detecteurs, setDetecteurs, pixelsParMetre, setPixelsParMetre, getTrafficData,
+                        detecteurs, setDetecteurs, detecteurModule, pixelsParMetre, setPixelsParMetre, getTrafficData,
                         isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
                         phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
                         phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,

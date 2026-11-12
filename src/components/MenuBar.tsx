@@ -83,6 +83,7 @@ export interface OptionsMenuBar {
     showActionDescription?: boolean;
     descriptionMode?: ModeAffichage;
     showCapacityReserve?: boolean;
+    detecteurModule?: boolean;
     showGroupNamesForm?: boolean;
     showGroupNamesMatrix?: boolean;
     showGroupNamesDiagram?: boolean;
@@ -493,7 +494,8 @@ const MenuBar = ({
                     submenu: [
                         { label: 'Affichage', action: 'toggleParameters', checked: layoutOptions.showParameters, keepSubmenuOpen: true },
                         { label: 'Nom des GFx', action: 'toggleGroupNamesForm', checked: layoutOptions.showGroupNamesForm, keepSubmenuOpen: true },
-                        { label: 'Réserve de capacité', action: 'toggleCapacityReserve', checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true }
+                        { label: 'Réserve de capacité', action: 'toggleCapacityReserve', checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true },
+                        { label: 'Détecteur', action: 'toggleDetecteurModule', checked: layoutOptions.detecteurModule, keepSubmenuOpen: true }
                     ]
                 },
                 {
