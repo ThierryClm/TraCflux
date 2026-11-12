@@ -110,6 +110,46 @@ const estSature = (
     return dureeVert > 0 && vUtile >= dureeVert - 0.01;
 };
 
+/** Part du vert nécessaire pour servir la demande (Cap.U en ratio). */
+const capaciteUtilisee = (
+    traffic: number,
+    coefficient: number,
+    cycle: number,
+    dureeVert: number
+): number => {
+    const vUtile = calculateVUtile(traffic, coefficient, cycle) ?? 0;
+    return dureeVert > 0 ? vUtile / dureeVert : 0;
+};
+
+/** En dessous de ce seuil, la demande est considérée servie avant la fin du vert. */
+const SEUIL_SANS_FILE = 0.90;
+
+/** Absence visible de véhicule après la fin du vert quand la demande est servie. */
+const ABSENCE_APRES_VERT_S = 8;
+
+/**
+ * Plages de rouge après chaque vert. Si la capacité utilisée ne dépasse pas
+ * 90 %, on laisse 8 s sans véhicule après la fin du vert : la boucle reste
+ * éteinte, ce qui montre que la demande a été servie.
+ */
+const rougesApresVert = (
+    verts: Intervalle[],
+    cycle: number,
+    capacite: number
+): Intervalle[] => {
+    if (!verts.length) return [];
+    const rouges: Intervalle[] = [];
+    for (let i = 0; i < verts.length; i++) {
+        const vert = verts[i];
+        const debutSuivant = verts[i + 1]?.debut ?? verts[0].debut + cycle;
+        const debut = capacite <= SEUIL_SANS_FILE
+            ? vert.fin + ABSENCE_APRES_VERT_S
+            : vert.fin;
+        if (debut < debutSuivant) rouges.push({ debut, fin: debutSuivant });
+    }
+    return rouges;
+};
+
 const contexteCouleur = (ctx: ContexteAnimation) => ({
     groups: ctx.groups,
     simulationResult: ctx.simulationResult,
@@ -266,8 +306,11 @@ const intervallesPiedFeu = (detecteur: Detecteur, ctx: ContexteAnimation): Inter
         ajouterImpulsions(resultat, vert.debut, nombreImpulsions(service, intervalle), intervalle, occupation);
     }
 
-    // Pendant le rouge, un véhicule attend au pied du feu : la boucle reste allumée.
-    resultat.push(...intervallesRouge(verts, cycle));
+    // Pendant le rouge, un véhicule attend au pied du feu : la boucle reste
+    // allumée, sauf les 8 premières secondes si la demande a été servie.
+    const dureeVertTotale = arrondiDixieme(verts.reduce((somme, v) => somme + Math.max(0, v.fin - v.debut), 0));
+    const capacite = capaciteUtilisee(traffic, coefficient, cycle, dureeVertTotale);
+    resultat.push(...rougesApresVert(verts, cycle, capacite));
     return resultat;
 };
 
@@ -317,8 +360,10 @@ const intervallesEloignee = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
     }
 
     // Courant saturé : la file ne se vide pas, la boucle reste occupée pendant
-    // le rouge, même si le calcul de file ne la recouvre pas encore.
-    if (couverte || sature) resultat.push(...intervallesRouge(verts, cycle));
+    // le rouge, même si le calcul de file ne la recouvre pas encore. Si la
+    // demande a été servie, on laisse 8 s sans véhicule après le vert.
+    const capacite = capaciteUtilisee(traffic, coefficient, cycle, dureeVertNominale);
+    if (couverte || sature) resultat.push(...rougesApresVert(verts, cycle, capacite));
     return resultat;
 };
 

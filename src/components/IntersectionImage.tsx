@@ -11,8 +11,15 @@ import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable 
 import { demarrerHorloge } from '../utils/horlogeLecture';
 import SignalModule from './SignalModule';
 import LocalInput from './LocalInput';
-import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
-import { dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE, normaliserPixelsParMetre } from '../utils/detecteurs';
+import type { ActionMicro, CategorieDetecteur, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
+import {
+    CATEGORIES_DETECTEUR,
+    changerCategorie,
+    dimensionSaisissable,
+    estBoucle,
+    LIBELLE_CATEGORIE,
+    normaliserPixelsParMetre
+} from '../utils/detecteurs';
 import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/animationDetecteurs';
 import type { SimulationResult } from '../simulation';
@@ -1204,11 +1211,36 @@ const IntersectionImage = ({
                                 <h4>Modifier le détecteur</h4>
                                 <div className="editor-row">
                                     <label>Nom:</label>
-                                    <span className="detecteur-editor-value">{detecteur.nom || 'Sans nom'}</span>
+                                    <select
+                                        className="detecteur-editor-select"
+                                        aria-label="Choisir le détecteur"
+                                        value={detecteur.id}
+                                        onChange={(e) => setSelectedDetecteur(Number(e.target.value))}
+                                    >
+                                        {detecteurs.map(d => (
+                                            <option key={d.id} value={d.id}>
+                                                {d.nom || `Détecteur ${d.id}`}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="editor-row">
                                     <label>Type:</label>
-                                    <span className="detecteur-editor-value">{LIBELLE_CATEGORIE[detecteur.categorie]}</span>
+                                    <select
+                                        className="detecteur-editor-select"
+                                        aria-label="Type du détecteur dans l’éditeur"
+                                        value={detecteur.categorie}
+                                        onChange={(e) => {
+                                            const categorie = e.target.value as CategorieDetecteur;
+                                            onDetecteursChange(detecteurs.map(d =>
+                                                d.id === detecteur.id ? changerCategorie(d, categorie) : d
+                                            ));
+                                        }}
+                                    >
+                                        {CATEGORIES_DETECTEUR.map(c => (
+                                            <option key={c.valeur} value={c.valeur}>{c.libelle}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="editor-row">
                                     <label>Rotation:</label>

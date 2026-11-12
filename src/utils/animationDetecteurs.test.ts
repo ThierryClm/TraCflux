@@ -119,6 +119,27 @@ describe('boucle de pied de feu', () => {
         expect(estDetecteurOccupe(detecteur(), 20.5, ctx)).toBe(true);
         expect(estDetecteurOccupe(detecteur(), 21.5, ctx)).toBe(false);
     });
+
+    it('laisse 8 s sans véhicule après le vert quand la capacité ne dépasse pas 90 %', () => {
+        const ctx = contexte({
+            cycleLength: 80,
+            groups: [groupe({ laneCoef: 0.8, durations: { green: 41, orange: 3, red: 36 } })],
+            getTrafficData: () => ({ trafficVol: 386 })
+        });
+        // Vert 0–41, capacité ≈ 52 % : boucle éteinte de 41 à 49, puis rallumée.
+        expect(estDetecteurOccupe(detecteur(), 43, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 50, ctx)).toBe(true);
+    });
+
+    it('reste allumée dès la fin du vert au-dessus de 90 % de capacité', () => {
+        const ctx = contexte({
+            cycleLength: 80,
+            groups: [groupe({ laneCoef: 0.8, durations: { green: 41, orange: 3, red: 36 } })],
+            getTrafficData: () => ({ trafficVol: 700 })
+        });
+        // Capacité ≈ 95 % : pas d'absence de 8 s.
+        expect(estDetecteurOccupe(detecteur(), 43, ctx)).toBe(true);
+    });
 });
 
 describe('boucle éloignée', () => {

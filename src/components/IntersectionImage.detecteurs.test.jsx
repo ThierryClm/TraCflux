@@ -182,6 +182,23 @@ describe('IntersectionImage — calque des détecteurs', () => {
         ]);
     });
 
+    it('permet de choisir le détecteur et son type dans l’éditeur', () => {
+        const autre = { ...DETECTEUR, id: 8, nom: 'Radar sud', categorie: 'radar', position: { x: 60, y: 60 } };
+        const { container, onDetecteursChange } = rendre({ detecteurs: [DETECTEUR, autre] });
+        fireEvent.click(container.querySelectorAll('.detecteur-symbol')[0]);
+
+        const choix = screen.getByLabelText('Choisir le détecteur');
+        expect(choix).toHaveValue('7');
+        fireEvent.change(choix, { target: { value: '8' } });
+        expect(screen.getByLabelText('Choisir le détecteur')).toHaveValue('8');
+        expect(screen.getByLabelText(/Type du détecteur dans/)).toHaveValue('radar');
+
+        fireEvent.change(screen.getByLabelText('Choisir le détecteur'), { target: { value: '7' } });
+        fireEvent.change(screen.getByLabelText(/Type du détecteur dans/), { target: { value: 'boucleComptage' } });
+        const dernier = onDetecteursChange.mock.calls.at(-1)[0];
+        expect(dernier.find(d => d.id === 7).categorie).toBe('boucleComptage');
+    });
+
     it('retire le symbole de l’image sans supprimer le détecteur', () => {
         const { container, onDetecteursChange } = rendre();
         fireEvent.click(container.querySelector('.detecteur-symbol'));
