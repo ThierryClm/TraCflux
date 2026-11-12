@@ -1527,7 +1527,7 @@ const IntersectionImage = ({
                                 </label>
                                 {onPixelsParMetreChange && (
                                     <div className="display-scale">
-                                        <label title={tip("Nombre de pixels de l'image pour un mètre. Une voie de circulation fait environ 7 m.")}>
+                                        <label title={tip("Nombre de pixels de l'image pour un mètre. Sur la base d'une estimation de l'échelle du plan.")}>
                                             Échelle 1 m =
                                         </label>
                                         <LocalInput
