@@ -30,6 +30,8 @@ export interface IntersectionImageProps {
     /** Détecteurs de terrain et leur calque sur l'image. */
     detecteurs?: Detecteur[];
     onDetecteursChange?: (detecteurs: Detecteur[]) => void;
+    /** Module Détecteur activé dans Mise en page ▸ Configuration. */
+    detecteurModule?: boolean;
     /** Échelle du projet : pixels de l'image par mètre. */
     pixelsParMetre?: number;
     onPixelsParMetreChange?: (value: number) => void;
@@ -79,6 +81,7 @@ const IntersectionImage = ({
     onArrowsChange: onArrowsChangeProp,
     detecteurs = [],
     onDetecteursChange: onDetecteursChangeProp,
+    detecteurModule = false,
     pixelsParMetre = 12,
     onPixelsParMetreChange,
     getTrafficData,
@@ -116,7 +119,7 @@ const IntersectionImage = ({
     imageContrast = 100,
     setImageContrast: setImageContrastProp,
     // Cases numéros / noms / flèches / signal (persistées avec le projet)
-    displayOptions = { showGroupNumbers: true, showGroupNames: true, showArrows: true, showSignals: false, showDetecteurs: true },
+    displayOptions = { showCurrents: true, showGroupNumbers: true, showGroupNames: true, showArrows: false, showSignals: false, showDetecteurs: true, showDetecteurNames: true },
     onDisplayOptionChange: onDisplayOptionChangeProp,
     tooltipsEnabled = true
 }: IntersectionImageProps) => {
@@ -144,13 +147,27 @@ const IntersectionImage = ({
     const imageMenuRef = useRef<HTMLDivElement>(null);
 
     // Cases d'affichage : enregistrées avec le projet (useIntersectionDisplayOptions).
-    const { showGroupNumbers, showGroupNames, showArrows, showDetecteurs } = displayOptions;
+    const {
+        showCurrents = true,
+        showGroupNumbers,
+        showGroupNames,
+        showArrows,
+        showDetecteurs,
+        showDetecteurNames = true
+    } = displayOptions;
     // Sans signal renseigné, la case est grisée et ne pèse sur rien d'autre ; son
     // choix reste mémorisé pour le jour où un signal sera saisi.
     const signalDisponible = auMoinsUnSignal(groups);
-    const showSignals = displayOptions.showSignals && signalDisponible;
+    const showSignals = showCurrents && displayOptions.showSignals && signalDisponible;
+    // Module désactivé : les objets détecteurs restent visibles, sans leur texte.
+    const afficherDetecteurs = detecteurModule ? showDetecteurs : true;
+    const afficherNomsDetecteurs = detecteurModule && showDetecteurNames;
     const setShowGroupNumbers = (value: boolean) => onDisplayOptionChange?.('showGroupNumbers', value);
     const setShowGroupNames = (value: boolean) => onDisplayOptionChange?.('showGroupNames', value);
+    const setShowCurrents = (value: boolean) => {
+        onDisplayOptionChange?.('showCurrents', value);
+        if (!value) onDisplayOptionChange?.('showArrows', false);
+    };
     // Les deux modes de placement sont exclusifs ; aucun des deux n'est obligatoire.
     const setShowArrows = (value: boolean) => {
         onDisplayOptionChange?.('showArrows', value);
@@ -163,11 +180,27 @@ const IntersectionImage = ({
             onDisplayOptionChange?.('showDetecteurs', true);
         }
     };
+    const setShowSignals = (value: boolean) => onDisplayOptionChange?.('showSignals', value);
+    const setShowDetecteurs = (value: boolean) => {
+        onDisplayOptionChange?.('showDetecteurs', value);
+        if (!value) setAjoutDetecteurs(false);
+    };
+    const setShowDetecteurNames = (value: boolean) => onDisplayOptionChange?.('showDetecteurNames', value);
+
+    // Une flèche ne peut être ajoutée que s'il reste un groupe porteur d'un
+    // courant sans flèche ; un détecteur, que s'il en reste un à poser.
+    const peutAjouterFleche = showCurrents && groups.some(g =>
+        (g.courant || '').trim() && !arrows.some(a => a.groupId === g.id)
+    );
+    const peutAjouterDetecteur = detecteurModule && showDetecteurs && detecteurs.some(d => !d.position);
     // Le mode détecteur ne vaut que si le mode flèche est fermé : les deux
     // cases ne peuvent jamais être cochées ensemble.
-    const ajoutDetecteursActif = ajoutDetecteurs && !showArrows;
-    const setShowSignals = (value: boolean) => onDisplayOptionChange?.('showSignals', value);
-    const setShowDetecteurs = (value: boolean) => onDisplayOptionChange?.('showDetecteurs', value);
+    const ajoutDetecteursActif = detecteurModule && ajoutDetecteurs && !showArrows && peutAjouterDetecteur;
+
+    // Plus rien à ajouter : le mode d'ajout de flèche se décoche de lui-même.
+    useEffect(() => {
+        if (showArrows && !peutAjouterFleche) onDisplayOptionChange?.('showArrows', false);
+    }, [showArrows, peutAjouterFleche]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // L'image est affichée dans une boîte fixe de 750 × 530 : l'échelle du
     // projet s'entend directement en pixels affichés, sans conversion.
@@ -401,7 +434,7 @@ const IntersectionImage = ({
             return;
         }
 
-        if (!showArrows) return;
+        if (!showCurrents || !showArrows) return;
 
         // Find a group without an arrow yet
         const groupsWithoutArrows = groups.filter(g =>
@@ -992,7 +1025,7 @@ const IntersectionImage = ({
                             className="intersection-img"
                             style={{ filter: `brightness(${imageBrightness}%) contrast(${imageContrast}%)` }}
                         />
-                        {arrows.map(arrow => {
+                        {showCurrents && arrows.map(arrow => {
                             const groupInfo = getGroupInfo(arrow.groupId);
                             const rotation = arrow.rotation || 0;
                             const scale = arrow.scale || 1;
@@ -1035,7 +1068,7 @@ const IntersectionImage = ({
                                             <SignalModule code={signal} couleur={arrowColor} temps={displayedTime} enLecture={!!isPlaying} a13bAllume={ppAllume} courant={groupInfo.courant} />
                                         ) : avecPriseSurvol(renderArrowSVG(groupInfo.courant, arrowColor, arrowLength, turnLength, ppAllume), scale)}
                                     </div>
-                                    {showGroupNames && !showSignals && groupInfo.name && (
+                                    {showCurrents && showGroupNames && !showSignals && groupInfo.name && (
                                         <span className="arrow-label">
                                             {groupInfo.name}
                                         </span>
@@ -1043,7 +1076,7 @@ const IntersectionImage = ({
                                 </div>
                             );
                         })}
-                        {showDetecteurs && detecteurs.map(detecteur => {
+                        {afficherDetecteurs && detecteurs.map(detecteur => {
                             if (!detecteur.position) return null;
                             const taille = tailleDetecteur(detecteur, pixelsParMetreAffiche);
                             const selectionne = selectedDetecteur === detecteur.id;
@@ -1056,7 +1089,7 @@ const IntersectionImage = ({
                             return (
                                 <div
                                     key={`detecteur-${detecteur.id}`}
-                                    className={`detecteur-marker ${selectionne ? 'selected' : ''}`}
+                                    className={`detecteur-marker ${selectionne ? 'selected' : ''} ${detecteurModule ? '' : 'hors-module'}`}
                                     style={{ left: `${detecteur.position.x}%`, top: `${detecteur.position.y}%` }}
                                     onMouseDown={(e) => handleDetecteurMouseDown(e, detecteur.id)}
                                     onClick={(e) => {
@@ -1080,20 +1113,22 @@ const IntersectionImage = ({
                                     >
                                         {renderDetecteurSVG(detecteur, pixelsParMetreAffiche, occupe)}
                                     </div>
-                                    <span
-                                        className={`detecteur-label ${dansBoucle ? 'dans-boucle' : ''} ${estBoucle(detecteur.categorie) && !dansBoucle ? 'au-dessus' : ''}`}
-                                        style={dansBoucle
-                                            ? { top: 0, transform: 'translate(-50%, -50%)' }
-                                            : estBoucle(detecteur.categorie)
-                                                ? { top: -(taille.hauteur / 2) - 6 }
-                                                : { top: taille.hauteur / 2 + 4 }}
-                                    >
-                                        {detecteur.nom}
-                                    </span>
+                                    {afficherNomsDetecteurs && (
+                                        <span
+                                            className={`detecteur-label ${dansBoucle ? 'dans-boucle' : ''} ${estBoucle(detecteur.categorie) && !dansBoucle ? 'au-dessus' : ''}`}
+                                            style={dansBoucle
+                                                ? { top: 0, transform: 'translate(-50%, -50%)' }
+                                                : estBoucle(detecteur.categorie)
+                                                    ? { top: -(taille.hauteur / 2) - 6 }
+                                                    : { top: taille.hauteur / 2 + 4 }}
+                                        >
+                                            {detecteur.nom}
+                                        </span>
+                                    )}
                                 </div>
                             );
                         })}
-                        {showGroupNumbers && (() => {
+                        {showCurrents && showGroupNumbers && (() => {
                             const containerW = containerRef.current?.clientWidth || 700;
                             const containerH = containerRef.current?.clientHeight || 500;
                             const groupMap: Record<number, { x: number; y: number }[]> = {};
@@ -1159,7 +1194,7 @@ const IntersectionImage = ({
 
                 {/* Right side: Arrow editor */}
                 <div className="intersection-sidebar">
-                    {selectedDetecteur ? (() => {
+                    {detecteurModule && selectedDetecteur ? (() => {
                         const detecteur = detecteurs.find(d => d.id === selectedDetecteur);
                         if (!detecteur) return null;
                         const orientation = detecteur.orientation || 0;
@@ -1407,64 +1442,90 @@ const IntersectionImage = ({
                         </div>
                     ) : null}
 
-                    {/* Display options */}
+                    {/* Paramètres de l'image, en deux familles : courants et détecteurs. */}
                     <div className="display-options">
-                        <label className="checkbox-option">
-                            <input
-                                type="checkbox"
-                                checked={showGroupNumbers}
-                                onChange={(e) => setShowGroupNumbers(e.target.checked)}
-                            />
-                            <span>Afficher n° des groupes</span>
-                        </label>
-                        {/* Vue Signal : pas de noms ; la case retrouve sa valeur une fois décochée. */}
-                        <label className={`checkbox-option ${showSignals ? 'inactive' : ''}`}>
-                            <input
-                                type="checkbox"
-                                checked={showGroupNames && !showSignals}
-                                disabled={showSignals}
-                                onChange={(e) => setShowGroupNames(e.target.checked)}
-                            />
-                            <span>Afficher noms des groupes</span>
-                        </label>
-                        <label className="checkbox-option">
-                            <input
-                                type="checkbox"
-                                checked={showArrows}
-                                onChange={(e) => setShowArrows(e.target.checked)}
-                            />
-                            <span>Ajouter un courant de circulation</span>
-                        </label>
-                        <label className="checkbox-option">
-                            <input
-                                type="checkbox"
-                                checked={ajoutDetecteursActif}
-                                onChange={(e) => activerAjoutDetecteurs(e.target.checked)}
-                            />
-                            <span>Ajouter un détecteur</span>
-                        </label>
-                        <label className="checkbox-option">
-                            <input
-                                type="checkbox"
-                                checked={showDetecteurs}
-                                onChange={(e) => setShowDetecteurs(e.target.checked)}
-                            />
-                            <span>Détecteurs</span>
-                        </label>
-                        <label
-                            className={`checkbox-option ${signalDisponible ? '' : 'inactive'}`}
-                            title={tip(signalDisponible
-                                ? 'Affiche le signal du formulaire à la place de la flèche. Sans signal renseigné, le groupe garde sa flèche.'
-                                : 'Aucun signal renseigné : choisissez-en au moins un dans la colonne Signal du formulaire.')}
-                        >
-                            <input
-                                type="checkbox"
-                                checked={showSignals}
-                                disabled={!signalDisponible}
-                                onChange={(e) => setShowSignals(e.target.checked)}
-                            />
-                            <span>Signaux</span>
-                        </label>
+                        <div className="display-column">
+                            <label className="checkbox-option">
+                                <input
+                                    type="checkbox"
+                                    checked={showCurrents}
+                                    onChange={(e) => setShowCurrents(e.target.checked)}
+                                />
+                                <span>Courant de circulation</span>
+                            </label>
+                            <label className={`checkbox-option sous-option ${showCurrents ? '' : 'inactive'}`}>
+                                <input
+                                    type="checkbox"
+                                    checked={showGroupNumbers}
+                                    disabled={!showCurrents}
+                                    onChange={(e) => setShowGroupNumbers(e.target.checked)}
+                                />
+                                <span>Numéro GF</span>
+                            </label>
+                            {/* Vue Signal : pas de noms ; la case retrouve sa valeur une fois décochée. */}
+                            <label className={`checkbox-option sous-option ${!showCurrents || showSignals ? 'inactive' : ''}`}>
+                                <input
+                                    type="checkbox"
+                                    checked={showGroupNames && !showSignals}
+                                    disabled={!showCurrents || showSignals}
+                                    onChange={(e) => setShowGroupNames(e.target.checked)}
+                                />
+                                <span>Nom GF</span>
+                            </label>
+                            <label className={`checkbox-option ${peutAjouterFleche ? '' : 'inactive'}`}>
+                                <input
+                                    type="checkbox"
+                                    checked={showArrows}
+                                    disabled={!peutAjouterFleche}
+                                    onChange={(e) => setShowArrows(e.target.checked)}
+                                />
+                                <span>Ajouter une flèche</span>
+                            </label>
+                            <label
+                                className={`checkbox-option ${!showCurrents || !signalDisponible ? 'inactive' : ''}`}
+                                title={tip(signalDisponible
+                                    ? 'Affiche le signal du formulaire à la place de la flèche. Sans signal renseigné, le groupe garde sa flèche.'
+                                    : 'Aucun signal renseigné : choisissez-en au moins un dans la colonne Signal du formulaire.')}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={showSignals}
+                                    disabled={!showCurrents || !signalDisponible}
+                                    onChange={(e) => setShowSignals(e.target.checked)}
+                                />
+                                <span>Signaux</span>
+                            </label>
+                        </div>
+                        {detecteurModule && (
+                            <div className="display-column">
+                                <label className="checkbox-option">
+                                    <input
+                                        type="checkbox"
+                                        checked={showDetecteurs}
+                                        onChange={(e) => setShowDetecteurs(e.target.checked)}
+                                    />
+                                    <span>Détecteur</span>
+                                </label>
+                                <label className={`checkbox-option sous-option ${showDetecteurs ? '' : 'inactive'}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={showDetecteurNames}
+                                        disabled={!showDetecteurs}
+                                        onChange={(e) => setShowDetecteurNames(e.target.checked)}
+                                    />
+                                    <span>Afficher nom</span>
+                                </label>
+                                <label className={`checkbox-option sous-option ${peutAjouterDetecteur ? '' : 'inactive'}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={ajoutDetecteursActif}
+                                        disabled={!peutAjouterDetecteur}
+                                        onChange={(e) => activerAjoutDetecteurs(e.target.checked)}
+                                    />
+                                    <span>Ajouter</span>
+                                </label>
+                            </div>
+                        )}
                     </div>
                     {onPixelsParMetreChange && (
                         <div className="image-filters">

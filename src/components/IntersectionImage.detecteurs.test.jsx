@@ -25,6 +25,7 @@ const DETECTEUR = {
 
 const rendre = ({
     detecteurs = [DETECTEUR],
+    detecteurModule = true,
     showDetecteurs = true,
     showArrows = false,
     onDetecteursChange = vi.fn(),
@@ -42,6 +43,7 @@ const rendre = ({
             onArrowsChange={vi.fn()}
             detecteurs={detecteurs}
             onDetecteursChange={onDetecteursChange}
+            detecteurModule={detecteurModule}
             pixelsParMetre={pixelsParMetre}
             cycleLength={60}
             isPlaying={false}
@@ -102,6 +104,24 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(remplissage.getAttribute('fill')).toBe('none');
     });
 
+    it('garde les objets détecteurs mais retire leur nom quand le module est désactivé', () => {
+        const { container } = rendre({ detecteurModule: false });
+        expect(container.querySelector('.detecteur-marker')).not.toBeNull();
+        expect(screen.queryByText('Boucle nord')).toBeNull();
+    });
+
+    it('présente les deux familles de cases, courants et détecteurs', () => {
+        rendre({ detecteurModule: true });
+        expect(screen.getByLabelText('Courant de circulation')).toBeInTheDocument();
+        expect(screen.getByLabelText('Numéro GF')).toBeInTheDocument();
+        expect(screen.getByLabelText('Nom GF')).toBeInTheDocument();
+        expect(screen.getByLabelText('Ajouter une flèche')).toBeInTheDocument();
+        expect(screen.getByLabelText('Signaux')).toBeInTheDocument();
+        expect(screen.getByLabelText('Détecteur')).toBeInTheDocument();
+        expect(screen.getByLabelText('Afficher nom')).toBeInTheDocument();
+        expect(screen.getByLabelText('Ajouter')).toBeInTheDocument();
+    });
+
     it('masque tout le calque quand la case Détecteurs est décochée', () => {
         const { container } = rendre({ showDetecteurs: false });
         expect(container.querySelector('.detecteur-marker')).toBeNull();
@@ -111,7 +131,7 @@ describe('IntersectionImage — calque des détecteurs', () => {
         const { area, onDetecteursChange } = rendre({
             detecteurs: [{ ...DETECTEUR, position: null }]
         });
-        fireEvent.click(screen.getByLabelText('Ajouter un détecteur'));
+        fireEvent.click(screen.getByLabelText('Ajouter'));
         fireEvent.click(area, { clientX: 50, clientY: 75 });
 
         expect(onDetecteursChange).toHaveBeenCalledWith([
@@ -121,18 +141,18 @@ describe('IntersectionImage — calque des détecteurs', () => {
 
     it('ne crée pas de détecteur depuis l’image quand la liste est vide', () => {
         const { area, onDetecteursChange } = rendre({ detecteurs: [] });
-        fireEvent.click(screen.getByLabelText('Ajouter un détecteur'));
+        fireEvent.click(screen.getByLabelText('Ajouter'));
         fireEvent.click(area, { clientX: 50, clientY: 75 });
         expect(onDetecteursChange).not.toHaveBeenCalled();
     });
 
     it('rend les deux modes de placement exclusifs', () => {
-        const { onDisplayOptionChange } = rendre({ detecteurs: [] });
-        const ajout = screen.getByLabelText('Ajouter un détecteur');
+        const { onDisplayOptionChange } = rendre({ detecteurs: [{ ...DETECTEUR, position: null }] });
+        const ajout = screen.getByLabelText('Ajouter');
         fireEvent.click(ajout);
         expect(ajout).toBeChecked();
 
-        fireEvent.click(screen.getByLabelText('Ajouter un courant de circulation'));
+        fireEvent.click(screen.getByLabelText('Ajouter une flèche'));
         expect(ajout).not.toBeChecked();
         expect(onDisplayOptionChange).toHaveBeenCalledWith('showArrows', true);
     });

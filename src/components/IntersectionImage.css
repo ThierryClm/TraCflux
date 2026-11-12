@@ -333,6 +333,32 @@
     background: #2a2a2a;
     border: 1px solid #444;
     border-radius: 4px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 10px;
+    align-items: start;
+}
+
+.display-column {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.display-options .checkbox-option {
+    gap: 5px;
+    font-size: 0.78em;
+}
+
+.display-options .checkbox-option input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.checkbox-option.sous-option {
+    padding-left: 14px;
 }
 
 .checkbox-option {
@@ -1054,7 +1080,18 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     position: absolute;
     width: 0;
     height: 0;
-    z-index: 15;
+    /* Au-dessus des flèches et de leurs étiquettes. */
+    z-index: 25;
+}
+
+.detecteur-marker.selected {
+    z-index: 30;
+}
+
+/* Module désactivé : les objets restent visibles, mais ne captent plus le clic. */
+.detecteur-marker.hors-module,
+.detecteur-marker.hors-module .detecteur-symbol {
+    pointer-events: none;
 }
 
 .detecteur-symbol {
@@ -1082,10 +1119,10 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     left: 0;
     transform: translateX(-50%);
     white-space: nowrap;
-    font-size: 0.65em;
+    font-size: 0.55em;
     color: #fff;
     background: rgba(0, 0, 0, 0.62);
-    padding: 0 3px;
+    padding: 0 2px;
     border-radius: 2px;
     pointer-events: none;
 }

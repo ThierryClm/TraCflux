@@ -60,7 +60,7 @@ describe('IntersectionImage — case Signal', () => {
     it('masque les noms des groupes et grise leur case tant que Signal est cochée', () => {
         const { container } = renderImage({ showSignals: true });
         expect(container.querySelector('.arrow-label')).toBeNull();
-        const caseNoms = screen.getByRole('checkbox', { name: 'Afficher noms des groupes' });
+        const caseNoms = screen.getByRole('checkbox', { name: 'Nom GF' });
         expect(caseNoms.disabled).toBe(true);
         expect(caseNoms.checked).toBe(false);
     });
@@ -68,7 +68,7 @@ describe('IntersectionImage — case Signal', () => {
     it('rend les noms et leur case quand Signal est décochée', () => {
         const { container } = renderImage({ showSignals: false });
         expect(container.querySelector('.arrow-label')).not.toBeNull();
-        const caseNoms = screen.getByRole('checkbox', { name: 'Afficher noms des groupes' });
+        const caseNoms = screen.getByRole('checkbox', { name: 'Nom GF' });
         expect(caseNoms.disabled).toBe(false);
         expect(caseNoms.checked).toBe(true);
     });
@@ -87,7 +87,7 @@ describe('IntersectionImage — case Signal', () => {
         expect(caseSignal.checked).toBe(false);
         expect(caseSignal.closest('label').title).toMatch(/Aucun signal renseigné/);
         // Le choix mémorisé ne doit griser ni les noms ni les réglages.
-        expect(screen.getByRole('checkbox', { name: 'Afficher noms des groupes' }).disabled).toBe(false);
+        expect(screen.getByRole('checkbox', { name: 'Nom GF' }).disabled).toBe(false);
         expect(container.querySelector('.arrow-label')).not.toBeNull();
         fireEvent.click(marqueur(container, 0));
         expect(container.querySelector('.arrow-editor').disabled).toBe(false);
