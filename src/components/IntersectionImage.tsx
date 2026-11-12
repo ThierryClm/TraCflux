@@ -10,8 +10,9 @@ import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefau
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import { demarrerHorloge } from '../utils/horlogeLecture';
 import SignalModule from './SignalModule';
+import LocalInput from './LocalInput';
 import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
-import { dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE } from '../utils/detecteurs';
+import { dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE, normaliserPixelsParMetre } from '../utils/detecteurs';
 import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/animationDetecteurs';
 import type { SimulationResult } from '../simulation';
@@ -1526,30 +1527,21 @@ const IntersectionImage = ({
                                 </label>
                             </div>
                         )}
-                    </div>
-                    {onPixelsParMetreChange && (
-                        <div className="image-filters">
-                            <div className="filter-row">
-                                <label title={tip("Échelle de l'image : nombre de pixels pour un mètre. Une voie fait environ 7 m.")}>Échelle:</label>
-                                <input
-                                    type="range"
-                                    min="2"
-                                    max="40"
-                                    step="1"
+                        {onPixelsParMetreChange && (
+                            <div className="display-scale">
+                                <label title={tip("Nombre de pixels de l'image pour un mètre. Une voie de circulation fait environ 7 m.")}>
+                                    Échelle 1 m =
+                                </label>
+                                <LocalInput
+                                    className="input-echelle"
+                                    aria-label="Pixels par mètre"
                                     value={pixelsParMetre}
-                                    onChange={(e) => onPixelsParMetreChange(Number(e.target.value))}
-                                    className="filter-slider"
-                                    aria-label="Échelle de l'image"
+                                    onCommit={(valeur) => onPixelsParMetreChange(normaliserPixelsParMetre(valeur))}
                                 />
-                                <span className="filter-value">{pixelsParMetre} px/m</span>
+                                <span>px</span>
                             </div>
-                            <div className="filter-row">
-                                <span style={{ color: '#888', fontSize: '0.75em' }}>
-                                    voie de 7 m ≈ {Math.round(pixelsParMetre * 7)} px
-                                </span>
-                            </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                     {imageData && setImageBrightness && (
                         <div className="image-filters">
                             <div className="filter-row">

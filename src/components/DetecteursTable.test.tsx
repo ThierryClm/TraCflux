@@ -25,14 +25,11 @@ const detecteur = (overrides: Partial<Detecteur> = {}): Detecteur => ({
 
 const Table = ({ initial = [detecteur()] }: { initial?: Detecteur[] }) => {
     const [detecteurs, setDetecteurs] = useState(initial);
-    const [pixelsParMetre, setPixelsParMetre] = useState(12);
     return (
         <DetecteursTable
             detecteurs={detecteurs}
             groups={groupes}
             onChange={setDetecteurs}
-            pixelsParMetre={pixelsParMetre}
-            onPixelsParMetreChange={setPixelsParMetre}
         />
     );
 };
@@ -142,18 +139,7 @@ describe('DetecteursTable — duplication et suppression', () => {
     });
 });
 
-describe('DetecteursTable — échelle', () => {
-    it('affiche l’échelle et la largeur de voie de référence', () => {
-        rendre();
-        const echelle = screen.getByLabelText('Pixels par mètre');
-        expect(echelle).toHaveValue('12');
-        expect(screen.getByText(/voie de 7 m ≈ 84 px/)).toBeInTheDocument();
-
-        fireEvent.change(echelle, { target: { value: '10' } });
-        fireEvent.blur(echelle);
-        expect(screen.getByText(/voie de 7 m ≈ 70 px/)).toBeInTheDocument();
-    });
-
+describe('DetecteursTable — dimension', () => {
     it('grise et vide la dimension d’un radar', () => {
         rendre([detecteur({ categorie: 'radar', dimension: 25 })]);
         expect(dimension()).toBeDisabled();

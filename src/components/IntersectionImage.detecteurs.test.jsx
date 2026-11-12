@@ -30,6 +30,7 @@ const rendre = ({
     showArrows = false,
     onDetecteursChange = vi.fn(),
     onDisplayOptionChange = vi.fn(),
+    onPixelsParMetreChange,
     pixelsParMetre = 10,
     currentTime = 0,
     getTrafficData = () => undefined
@@ -45,6 +46,7 @@ const rendre = ({
             onDetecteursChange={onDetecteursChange}
             detecteurModule={detecteurModule}
             pixelsParMetre={pixelsParMetre}
+            onPixelsParMetreChange={onPixelsParMetreChange}
             cycleLength={60}
             isPlaying={false}
             setIsPlaying={vi.fn()}
@@ -108,6 +110,16 @@ describe('IntersectionImage — calque des détecteurs', () => {
         const { container } = rendre({ detecteurModule: false });
         expect(container.querySelector('.detecteur-marker')).not.toBeNull();
         expect(screen.queryByText('Boucle nord')).toBeNull();
+    });
+
+    it('affiche l’échelle de l’image dans les paramètres et l’enregistre', () => {
+        const onPixelsParMetreChange = vi.fn();
+        rendre({ onPixelsParMetreChange, pixelsParMetre: 12 });
+        const champ = screen.getByLabelText('Pixels par mètre');
+        expect(champ).toHaveValue('12');
+        fireEvent.change(champ, { target: { value: '20' } });
+        fireEvent.blur(champ);
+        expect(onPixelsParMetreChange).toHaveBeenCalledWith(20);
     });
 
     it('présente les deux familles de cases, courants et détecteurs', () => {

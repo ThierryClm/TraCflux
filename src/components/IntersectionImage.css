@@ -361,6 +361,29 @@
     padding-left: 14px;
 }
 
+.display-scale {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #444;
+    color: #ccc;
+    font-size: 0.8em;
+}
+
+.display-scale .input-echelle {
+    width: 52px;
+    background: #333;
+    border: 1px solid #444;
+    color: white;
+    padding: 2px 4px;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 1em;
+}
+
 .checkbox-option {
     display: flex;
     align-items: center;

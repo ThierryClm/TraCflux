@@ -8,9 +8,7 @@ import {
     descriptionDimension,
     dimensionDepuisSaisie,
     dimensionSaisissable,
-    dupliquerDetecteur,
-    LARGEUR_VOIE_REFERENCE_M,
-    normaliserPixelsParMetre
+    dupliquerDetecteur
 } from '../utils/detecteurs';
 import type { CategorieDetecteur, Detecteur, Groupe } from '../types/projet';
 import './DetecteursTable.css';
@@ -19,9 +17,6 @@ interface DetecteursTableProps {
     detecteurs: Detecteur[];
     groups: Groupe[];
     onChange: (detecteurs: Detecteur[]) => void;
-    /** Échelle de l'image : pixels par mètre. */
-    pixelsParMetre: number;
-    onPixelsParMetreChange: (valeur: number) => void;
     onDetach?: () => void;
     /** En fenêtre détachée, le bandeau porte déjà le titre. */
     titreEnBandeau?: boolean;
@@ -32,8 +27,6 @@ const DetecteursTable = ({
     detecteurs,
     groups,
     onChange,
-    pixelsParMetre,
-    onPixelsParMetreChange,
     onDetach,
     titreEnBandeau = false
 }: DetecteursTableProps) => {
@@ -85,20 +78,6 @@ const DetecteursTable = ({
                         )}
                     </h3>
                 )}
-
-                <div className="detecteurs-echelle">
-                    <label>Échelle de l'image : 1 m =</label>
-                    <LocalInput
-                        className="input-pixels-metre"
-                        aria-label="Pixels par mètre"
-                        value={pixelsParMetre}
-                        onCommit={(valeur) => onPixelsParMetreChange(normaliserPixelsParMetre(valeur))}
-                    />
-                    <span>px</span>
-                    <span className="detecteurs-echelle-note">
-                        voie de {LARGEUR_VOIE_REFERENCE_M} m ≈ {Math.round(pixelsParMetre * LARGEUR_VOIE_REFERENCE_M)} px
-                    </span>
-                </div>
 
                 <table className="detecteurs-table">
                     <thead>

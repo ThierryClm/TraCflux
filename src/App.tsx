@@ -2411,7 +2411,6 @@ function App() {
                 <WorkspaceSidebar
                     model={{
                         sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs, detecteurModule,
-                        pixelsParMetre, setPixelsParMetre,
                         intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
                         tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction, compenserBts, setCompenserBts,
