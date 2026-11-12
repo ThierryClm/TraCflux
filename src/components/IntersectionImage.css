@@ -1168,3 +1168,19 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     font-size: 0.75em;
     margin: 6px 0;
 }
+
+.detecteur-editor-dimension {
+    width: 64px;
+    background: #333;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 3px 4px;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 0.85em;
+}
+
+.detecteur-editor-unit {
+    color: #888;
+    font-size: 0.8em;
+}

@@ -15,6 +15,7 @@ import type { ActionMicro, CategorieDetecteur, Detecteur, FlecheCarrefour, Group
 import {
     CATEGORIES_DETECTEUR,
     changerCategorie,
+    dimensionDepuisSaisie,
     dimensionSaisissable,
     estBoucle,
     LIBELLE_CATEGORIE,
@@ -1274,12 +1275,28 @@ const IntersectionImage = ({
                                         <span className="rotation-unit">°</span>
                                     </div>
                                 </div>
+                                {dimensionSaisissable(detecteur.categorie) && (
+                                    <div className="editor-row">
+                                        <label>Longueur:</label>
+                                        <LocalInput
+                                            className="detecteur-editor-dimension"
+                                            aria-label="Longueur du détecteur"
+                                            value={detecteur.dimension ?? ''}
+                                            onCommit={(valeur) => onDetecteursChange(detecteurs.map(d =>
+                                                d.id === detecteur.id
+                                                    ? { ...d, dimension: dimensionDepuisSaisie(valeur, detecteur.categorie) }
+                                                    : d
+                                            ))}
+                                        />
+                                        <span className="detecteur-editor-unit">m (largeur 1 m)</span>
+                                    </div>
+                                )}
                                 <p className="detecteur-editor-note">
                                     {dimensionSaisissable(detecteur.categorie)
-                                        ? detecteur.categorie === 'radar'
-                                            ? `Portée ${detecteur.dimension ?? '—'} m — symbole de taille fixe`
-                                            : `Longueur ${detecteur.dimension ?? '—'} m × largeur 1 m`
-                                        : 'Bouton poussoir — symbole de taille fixe'}
+                                        ? 'La largeur d’une boucle est fixe : 1 m.'
+                                        : detecteur.categorie === 'radar'
+                                            ? 'Radar — symbole de taille fixe.'
+                                            : 'Bouton poussoir — symbole de taille fixe.'}
                                 </p>
                                 <button className="delete-arrow-btn" onClick={() => retirerDetecteurDeImage(detecteur.id)}>
                                     Retirer de l'image

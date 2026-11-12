@@ -197,6 +197,12 @@ describe('IntersectionImage — calque des détecteurs', () => {
         fireEvent.change(screen.getByLabelText(/Type du détecteur dans/), { target: { value: 'boucleComptage' } });
         const dernier = onDetecteursChange.mock.calls.at(-1)[0];
         expect(dernier.find(d => d.id === 7).categorie).toBe('boucleComptage');
+
+        const longueur = screen.getByLabelText('Longueur du détecteur');
+        fireEvent.change(longueur, { target: { value: '7,5' } });
+        fireEvent.blur(longueur);
+        const apresLongueur = onDetecteursChange.mock.calls.at(-1)[0];
+        expect(apresLongueur.find(d => d.id === 7).dimension).toBe(7.5);
     });
 
     it('retire le symbole de l’image sans supprimer le détecteur', () => {
