@@ -76,6 +76,7 @@ import './App.css';
 import { lireMiseEnPage, appliquerMiseEnPage, affichageCommentairesRemarques } from './utils/miseEnPageProjet';
 import { estAffiche, planACommentaires, planADescriptions, texteRenseigne } from './utils/modeAffichage';
 import { entier } from './utils/entier';
+import { groupesVehicules } from './utils/trafficHelpers';
 import type { ChampsProjet } from './hooks/useTrafficLight';
 import type { GreenWaveProjectSource, SavedGreenWave } from './types/greenWave';
 import type { CreatedIntersection } from './components/CreateGreenWaveDialog';
@@ -557,12 +558,15 @@ function App() {
         diagnosticPopup
     } = useFloatingDiagnostic(activePFName);
 
-    // Floating traffic state
+    // Floating traffic state — la fenêtre se dimensionne sur les lignes que le
+    // tableau affiche (groupes véhicules), pas sur tous les groupes de feu :
+    // piétons et cyclistes n'y figurent pas et gonflaient la hauteur.
+    const trafficRowCount = groupesVehicules(groups).length;
     const {
         showFloatingTraffic,
         setShowFloatingTraffic,
         trafficPopup
-    } = useFloatingTraffic(groups.length, activePFName);
+    } = useFloatingTraffic(trafficRowCount, activePFName);
 
     // Floating remarques state (notes du PF actif, projection sur 2e écran)
     const {
