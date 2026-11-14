@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     buildTrafficDatasetNames,
     getTotalGreenTime,
+    groupesVehicules,
     isCoordinated,
     parseTrafficVol,
     trafficDatasetHasData,
@@ -94,5 +95,18 @@ describe('trafficHelpers — getTotalGreenTime', () => {
             { id: 1, gf: 1, action: 'Seconde lucarne', deb: 50, fin: 60 },
         ];
         expect(getTotalGreenTime(1, 30, actions, CYCLE, 'e')).toBe(40);
+    });
+});
+
+describe('trafficHelpers — groupesVehicules', () => {
+    it('ne garde que les groupes véhicules du tableau trafic', () => {
+        const groups = [
+            { id: 1, type: 'VL' },
+            { id: 2, type: 'P' },
+            { id: 3, type: 'V' },
+            { id: 4, type: 'CY' },
+            { id: 5, type: 'TC' },
+        ];
+        expect(groupesVehicules(groups).map(g => g.id)).toEqual([1, 3]);
     });
 });

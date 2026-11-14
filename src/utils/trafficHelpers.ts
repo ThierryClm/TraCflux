@@ -1,9 +1,17 @@
-import type { ActionMicro, DrapeauPhase, JeuTrafic, PlanDeFeu } from '../types/projet';
+import type { ActionMicro, DrapeauPhase, Groupe, JeuTrafic, PlanDeFeu } from '../types/projet';
 
 /**
  * Aides trafic partagées entre le tableau Données Trafic et le panneau
  * Diagnostic, pour qu'ils calculent toujours à partir des mêmes bases.
  */
+
+/**
+ * Groupes véhicules, les seules lignes du tableau Données trafic. Sert aussi
+ * à dimensionner sa fenêtre détachée : piétons et cyclistes ne doivent pas
+ * l'agrandir.
+ */
+export const groupesVehicules = (groups: Groupe[]): Groupe[] =>
+    groups.filter(g => g.type === 'VL' || g.type === 'V');
 
 /**
  * Vert pris en compte pour la capacité : vert principal + secondes lucarnes.

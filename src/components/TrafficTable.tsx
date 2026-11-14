@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import EmptyState from './EmptyState';
 import { useAlert, useConfirm } from './ConfirmProvider';
-import { getTotalGreenTime as computeTotalGreenTime, parseTrafficVol, isCoordinated, groupesInhibes } from '../utils/trafficHelpers';
+import { getTotalGreenTime as computeTotalGreenTime, parseTrafficVol, isCoordinated, groupesInhibes, groupesVehicules } from '../utils/trafficHelpers';
 import type { PlanSuppressionJeu } from '../utils/trafficHelpers';
 import type { ActionMicro, Groupe } from '../types/projet';
 import type { SimulationResult } from '../simulation';
@@ -222,9 +222,7 @@ const TrafficTable = ({
     };
 
     // Filter groups based on showAllGroups checkbox
-    const vlGroups = showAllGroups
-        ? groups
-        : groups.filter(g => g.type === 'VL' || g.type === 'V');
+    const vlGroups = showAllGroups ? groups : groupesVehicules(groups);
     const isDatasetEmpty = useMemo(() => {
         return vlGroups.every(g => {
             const data = getTrafficData(g.id);

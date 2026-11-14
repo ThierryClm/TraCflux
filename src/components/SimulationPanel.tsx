@@ -280,11 +280,6 @@ const SimulationPanel = ({
                 </span>
             </div>
 
-            {contientSynchroBts && <label className="simulation-bts-option">
-                <input type="checkbox" checked={compenserBts} onChange={e => onCompenserBts(e.target.checked)} />
-                Compenser les contractions à la synchro BTS
-            </label>}
-
             {/* Le scénario choisi, puis la liste : les scénarios fixes Tout
                 coché et Tout décoché, ceux du plan, Nouveau scénario. La liste
                 s'ouvre par-dessus le panneau. Les cases cochées ne mettent à
@@ -419,6 +414,13 @@ const SimulationPanel = ({
                     })
                 )}
             </div>
+
+            {/* L'option de compensation ne concerne que les actions cochées :
+                elle se place donc sous la liste, pas au-dessus. */}
+            {contientSynchroBts && <label className="simulation-bts-option">
+                <input type="checkbox" checked={compenserBts} onChange={e => onCompenserBts(e.target.checked)} />
+                Compenser les contractions à la synchro BTS
+            </label>}
 
             {/* Conflicts display - below actions */}
             {conflicts.length > 0 && (
