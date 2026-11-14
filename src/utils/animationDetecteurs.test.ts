@@ -137,8 +137,12 @@ describe('boucle de pied de feu', () => {
             groups: [groupe({ laneCoef: 0.8, durations: { green: 41, orange: 3, red: 36 } })],
             getTrafficData: () => ({ trafficVol: 386 })
         });
-        expect(estDetecteurOccupe(detecteur(), 19.7, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 21.5, ctx)).toBe(false);
+        // Coefficient 0,8 : libération à 2,5 s puis un véhicule toutes les 2,5 s.
+        expect(estDetecteurOccupe(detecteur(), 2.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 2.7, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 5.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 7.7, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 21, ctx)).toBe(false);
     });
 
     it('laisse 6 s sans véhicule après le vert quand la capacité ne dépasse pas 90 %', () => {

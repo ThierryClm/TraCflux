@@ -102,6 +102,8 @@ interface DemandeBoucle {
     nombreVehicules: number;
     /** Intervalle entre deux véhicules au débit de saturation, en secondes. */
     intervalle: number;
+    /** Libération de la boucle par le premier véhicule, en secondes de vert. */
+    premier: number;
     /** Part du vert consommée par la demande (Cap. U). */
     capacite: number;
     /** Véhicules de la file qui passent effectivement avant la fin du vert. */
@@ -110,15 +112,16 @@ interface DemandeBoucle {
     sature: boolean;
 }
 
-/** Véhicules passés au vert, en tenant compte du départ à la 3e seconde. */
+/** Véhicules passés au vert, en tenant compte du départ du premier véhicule. */
 const vehiculesServisAuVert = (
     nombreVehicules: number,
     intervalle: number,
-    dureeVert: number
+    dureeVert: number,
+    premier: number
 ): number => {
-    if (dureeVert < PREMIER_PASSAGE_VERT_S) return 0;
+    if (dureeVert < premier) return 0;
     const possibles = Math.floor(
-        (dureeVert - PREMIER_PASSAGE_VERT_S) / intervalle + 1e-9
+        (dureeVert - premier) / intervalle + 1e-9
     ) + 1;
     return Math.max(0, Math.min(Math.ceil(nombreVehicules), possibles));
 };
@@ -131,11 +134,15 @@ const demandeBoucle = (
 ): DemandeBoucle => {
     const nombreVehicules = vehiculesParCycle(traffic, cycle);
     const intervalle = intervallePassage(coefficient);
+    // La règle de base est 2 s pour un coefficient de 1 : le coefficient
+    // ralentit aussi la libération du premier véhicule.
+    const premier = PREMIER_PASSAGE_VERT_S / (coefficient > 0 ? coefficient : 1);
     const capacite = dureeVert > 0 ? (nombreVehicules * intervalle) / dureeVert : 0;
-    const servis = vehiculesServisAuVert(nombreVehicules, intervalle, dureeVert);
+    const servis = vehiculesServisAuVert(nombreVehicules, intervalle, dureeVert, premier);
     return {
         nombreVehicules,
         intervalle,
+        premier,
         capacite,
         servis,
         sature: dureeVert > 0 && (capacite >= 1 - 0.01 || servis < Math.ceil(nombreVehicules))
@@ -310,15 +317,17 @@ const intervallesPiedFeu = (detecteur: Detecteur, ctx: ContexteAnimation): Inter
             continue;
         }
 
-        // Le premier véhicule est sur la boucle et la libère à la 3e seconde.
+        // Le premier véhicule est sur la boucle et la libère après le délai
+        // de départ (2 s pour un coefficient de 1, davantage si le coefficient
+        // réduit le débit).
         resultat.push({
             debut: vert.debut,
-            fin: vert.debut + PREMIER_PASSAGE_VERT_S
+            fin: vert.debut + demande.premier
         });
         // Les véhicules suivants passent ensuite à l'intervalle de débit.
         ajouterVehicules(
             resultat,
-            vert.debut + PREMIER_PASSAGE_VERT_S + demande.intervalle,
+            vert.debut + demande.premier + demande.intervalle,
             demande.servis - 1,
             demande.intervalle,
             occupation
@@ -398,12 +407,12 @@ const intervallesEloignee = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
             if (figeAuVert > 0) {
                 resultat.push({
                     debut: vert.debut,
-                    fin: vert.debut + PREMIER_PASSAGE_VERT_S
+                    fin: vert.debut + demande.premier
                         + (figeAuVert - 1) * demande.intervalle
                 });
                 ajouterVehicules(
                     resultat,
-                    vert.debut + PREMIER_PASSAGE_VERT_S + figeAuVert * demande.intervalle,
+                    vert.debut + demande.premier + figeAuVert * demande.intervalle,
                     demande.servis - figeAuVert,
                     demande.intervalle,
                     occupation
@@ -416,7 +425,7 @@ const intervallesEloignee = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
             // après le trajet depuis la ligne d'arrêt.
             ajouterVehicules(
                 resultat,
-                vert.debut + PREMIER_PASSAGE_VERT_S + trajet,
+                vert.debut + demande.premier + trajet,
                 demande.servis,
                 demande.intervalle,
                 occupation
@@ -520,12 +529,12 @@ const intervallesComptage = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
                 if (figeAuVert > 0) {
                     resultat.push({
                         debut: vert.debut,
-                        fin: vert.debut + PREMIER_PASSAGE_VERT_S
+                        fin: vert.debut + demande.premier
                             + (figeAuVert - 1) * demande.intervalle
                     });
                     ajouterVehicules(
                         resultat,
-                        vert.debut + PREMIER_PASSAGE_VERT_S + figeAuVert * demande.intervalle,
+                        vert.debut + demande.premier + figeAuVert * demande.intervalle,
                         demande.servis - figeAuVert,
                         demande.intervalle,
                         occupation
@@ -536,7 +545,7 @@ const intervallesComptage = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
             } else if (demande.servis > 0) {
                 ajouterVehicules(
                     resultat,
-                    vert.debut + PREMIER_PASSAGE_VERT_S + trajet,
+                    vert.debut + demande.premier + trajet,
                     demande.servis,
                     demande.intervalle,
                     occupation
