@@ -80,7 +80,7 @@ describe('DetecteursTable — saisie', () => {
         expect(nom()).toHaveValue('Détecteur 1');
         expect(type()).toHaveValue('bouclePiedFeu');
         expect(gf()).toHaveValue('');
-        expect(dimension()).toHaveValue('');
+        expect(dimension()).toHaveValue('2');
     });
 
     it('enregistre le nom et le groupe de feu au changement', () => {
@@ -101,12 +101,14 @@ describe('DetecteursTable — saisie', () => {
         expect(screen.getAllByTitle(/Un bouton poussoir n’a pas de dimension/)[0]).toBeInTheDocument();
     });
 
-    it('donne 2 m à une boucle de comptage choisie', () => {
+    it('suit la longueur par défaut quand on change de type de boucle', () => {
         rendre([]);
         fireEvent.click(screen.getByRole('button', { name: /Ajouter un détecteur/ }));
-        expect(dimension()).toHaveValue('');
-        fireEvent.change(type(), { target: { value: 'boucleComptage' } });
+        expect(dimension()).toHaveValue('2');
+        fireEvent.change(type(), { target: { value: 'boucleEloignee' } });
         expect(dimension()).toBeEnabled();
+        expect(dimension()).toHaveValue('10');
+        fireEvent.change(type(), { target: { value: 'boucleComptage' } });
         expect(dimension()).toHaveValue('2');
     });
 

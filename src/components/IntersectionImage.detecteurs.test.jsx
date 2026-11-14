@@ -99,7 +99,7 @@ describe('IntersectionImage — calque des détecteurs', () => {
 
     it('laisse la boucle vide entre deux véhicules', () => {
         const { container } = rendre({
-            currentTime: 1.1,
+            currentTime: 4,
             getTrafficData: () => ({ trafficVol: 600 })
         });
         const remplissage = container.querySelector('.detecteur-symbol rect');

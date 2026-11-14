@@ -38,11 +38,12 @@ describe('catégories et dimensions', () => {
         ]);
     });
 
-    it('donne 2 m à la boucle de comptage, rien aux autres', () => {
+    it('donne 2 m au pied de feu et à la comptage, 10 m à la boucle longue', () => {
+        expect(dimensionParDefaut('bouclePiedFeu')).toBe(2);
+        expect(dimensionParDefaut('boucleEloignee')).toBe(10);
         expect(dimensionParDefaut('boucleComptage')).toBe(2);
-        expect(dimensionParDefaut('bouclePiedFeu')).toBeNull();
-        expect(dimensionParDefaut('boucleEloignee')).toBeNull();
         expect(dimensionParDefaut('radar')).toBeNull();
+        expect(dimensionParDefaut('boutonPoussoir')).toBeNull();
     });
 
     it('ne saisit pas de dimension pour un radar ni pour un bouton poussoir', () => {
@@ -106,7 +107,7 @@ describe('création et changement de type', () => {
             nom: 'Détecteur 2',
             categorie: 'bouclePiedFeu',
             gf: null,
-            dimension: null,
+            dimension: 2,
             retrait: 0,
             position: null,
             orientation: 0,
@@ -114,8 +115,10 @@ describe('création et changement de type', () => {
         });
     });
 
-    it('donne 2 m à une boucle de comptage créée directement', () => {
+    it('donne la longueur par défaut de chaque boucle créée directement', () => {
         expect(creerDetecteur([], 'boucleComptage').dimension).toBe(2);
+        expect(creerDetecteur([], 'bouclePiedFeu').dimension).toBe(2);
+        expect(creerDetecteur([], 'boucleEloignee').dimension).toBe(10);
     });
 
     it('efface la dimension en passant au bouton poussoir, la remet en revenant', () => {
@@ -213,5 +216,16 @@ describe('normalisation d’un projet enregistré', () => {
         expect(liste[1].position).toBeNull();
         // Un bouton poussoir n'a pas de dimension ni de retrait ; nom non textuel vidé.
         expect(liste[2]).toMatchObject({ id: 4, nom: '', categorie: 'boutonPoussoir', dimension: null, retrait: null });
+    });
+
+    it('applique la longueur par défaut quand une boucle n’en a pas', () => {
+        const [piedFeu] = normaliserDetecteurs([
+            { id: 1, categorie: 'bouclePiedFeu', dimension: null }
+        ]);
+        const [longue] = normaliserDetecteurs([
+            { id: 2, categorie: 'boucleEloignee', dimension: 0 }
+        ]);
+        expect(piedFeu.dimension).toBe(2);
+        expect(longue.dimension).toBe(10);
     });
 });

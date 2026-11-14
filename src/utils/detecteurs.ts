@@ -20,6 +20,12 @@ export const LIBELLE_CATEGORIE: Record<CategorieDetecteur, string> = {
 /** Largeur d'une boucle, fixe : seule sa longueur se saisit. */
 export const LARGEUR_BOUCLE_M = 1;
 
+/** Longueur par défaut d'une boucle de pied de feu. */
+export const DIMENSION_PIED_FEU_M = 2;
+
+/** Longueur par défaut d'une boucle éloignée (« boucle longue »). */
+export const DIMENSION_ELOIGNEE_M = 10;
+
 /** Longueur proposée pour une boucle de comptage, posée après le carrefour. */
 export const DIMENSION_COMPTAGE_M = 2;
 
@@ -45,8 +51,12 @@ export const estBoucle = (categorie: CategorieDetecteur): boolean =>
 export const dimensionSaisissable = (categorie: CategorieDetecteur): boolean =>
     estBoucle(categorie);
 
-export const dimensionParDefaut = (categorie: CategorieDetecteur): number | null =>
-    categorie === 'boucleComptage' ? DIMENSION_COMPTAGE_M : null;
+export const dimensionParDefaut = (categorie: CategorieDetecteur): number | null => {
+    if (categorie === 'bouclePiedFeu') return DIMENSION_PIED_FEU_M;
+    if (categorie === 'boucleEloignee') return DIMENSION_ELOIGNEE_M;
+    if (categorie === 'boucleComptage') return DIMENSION_COMPTAGE_M;
+    return null;
+};
 
 /** Retrait d'une boucle de pied de feu : elle est sur la ligne d'arrêt. */
 export const RETRAIT_PIED_FEU_M = 0;
@@ -151,7 +161,11 @@ export const changerCategorie = (detecteur: Detecteur, categorie: CategorieDetec
     if (categorie === detecteur.categorie) return detecteur;
     let dimension = detecteur.dimension;
     if (!dimensionSaisissable(categorie)) dimension = null;
-    else if (dimension === null) dimension = dimensionParDefaut(categorie);
+    else if (dimension === null || dimension === dimensionParDefaut(detecteur.categorie)) {
+        // La longueur encore à sa valeur par défaut suit le nouveau type ;
+        // une longueur saisie par l'utilisateur est conservée.
+        dimension = dimensionParDefaut(categorie);
+    }
 
     // Le retrait n'a de sens que sur une boucle ; au pied de feu il vaut 0.
     let retrait = detecteur.retrait;
@@ -215,9 +229,9 @@ export const normaliserDetecteurs = (valeur: unknown): Detecteur[] => {
             nom: typeof d.nom === 'string' ? d.nom : '',
             categorie,
             gf: gf !== null && Number.isInteger(gf) && gf > 0 ? gf : null,
-            dimension: estBoutonPoussoir(categorie) || dimension === null || dimension <= 0
-                ? null
-                : dimension,
+            dimension: estBoucle(categorie)
+                ? dimension !== null && dimension > 0 ? dimension : dimensionParDefaut(categorie)
+                : categorie === 'radar' ? dimension : null,
             retrait,
             position: positionValide(d.position),
             orientation: nombreFini(d.orientation) ?? 0,

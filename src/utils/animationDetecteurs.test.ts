@@ -114,12 +114,14 @@ describe('boucle de pied de feu', () => {
 
     it('s’allume par impulsions pendant le vert, une par véhicule de la file', () => {
         const ctx = contexte();
-        // File : 600 véh/h, rouge de 60 s, coefficient 1 → 11 véhicules, un toutes les 2 s.
+        // 600 véh/h, cycle 90 s, vert 30 s, coefficient 1 : le premier véhicule
+        // libère la boucle à 3 s, les suivants passent toutes les 2 s.
         expect(estDetecteurOccupe(detecteur(), 0.2, ctx)).toBe(true);
         expect(estDetecteurOccupe(detecteur(), 2.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 20.5, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 1.2, ctx)).toBe(false);
-        expect(estDetecteurOccupe(detecteur(), 25, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 3.5, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 5.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 21.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 26, ctx)).toBe(false);
     });
 
     it('ne s’anime pas sans trafic', () => {
@@ -172,13 +174,17 @@ describe('exemple du cahier des charges : 320 véh/h, cycle 90 s, vert 40 s', ()
         ...overrides
     });
 
-    it('sert 8 véhicules en 16 s, reste éteinte 24 s, puis 6 s encore', () => {
+    it('sert 8 véhicules à partir de la 3e seconde, puis reste éteinte', () => {
         const ctx = ctxExemple();
-        // 8 véhicules × 2 s = 16 s de passages, une impulsion par véhicule.
+        // Le premier véhicule tient la boucle jusqu'à 3 s, les 7 autres passent
+        // ensuite toutes les 2 s jusqu'à 17 s.
         expect(estDetecteurOccupe(detecteur(), 0.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 14.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 15.5, ctx)).toBe(false);
-        // Le reste du vert (16–40) et les 6 s de principe (40–46) sont éteints.
+        expect(estDetecteurOccupe(detecteur(), 3.5, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 5.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 13.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 17.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 18, ctx)).toBe(false);
+        // Le reste du vert et les 6 s de principe (40–46) sont éteints.
         expect(estDetecteurOccupe(detecteur(), 20, ctx)).toBe(false);
         expect(estDetecteurOccupe(detecteur(), 39, ctx)).toBe(false);
         expect(estDetecteurOccupe(detecteur(), 45.9, ctx)).toBe(false);
@@ -238,7 +244,8 @@ describe('boucle éloignée', () => {
             getTrafficData: () => ({ trafficVol: 300 })
         });
         const boucle = detecteur({ categorie: 'boucleEloignee', position: { x: 74, y: 50 } });
-        expect(estDetecteurOccupe(boucle, 8.2, ctx)).toBe(true);
+        // Départ à 3 s puis 8 s de trajet jusqu'à la boucle.
+        expect(estDetecteurOccupe(boucle, 11.2, ctx)).toBe(true);
         expect(estDetecteurOccupe(boucle, 2, ctx)).toBe(false);
     });
 });
