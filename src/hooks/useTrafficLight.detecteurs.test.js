@@ -10,6 +10,7 @@ const boucle = {
     categorie: 'bouclePiedFeu',
     gf: 1,
     dimension: 8,
+    retrait: 0,
     position: null,
     orientation: 0,
     note: ''
