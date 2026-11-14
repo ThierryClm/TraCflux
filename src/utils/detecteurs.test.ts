@@ -11,7 +11,11 @@ import {
     normaliserPixelsParMetre,
     PIXELS_PAR_METRE_DEFAUT,
     PIXELS_PAR_METRE_MAX,
-    PIXELS_PAR_METRE_MIN
+    PIXELS_PAR_METRE_MIN,
+    RETRAIT_PIED_FEU_M,
+    retraitDepuisSaisie,
+    retraitParDefaut,
+    retraitSaisissable
 } from './detecteurs';
 import type { Detecteur } from '../types/projet';
 
@@ -34,11 +38,12 @@ describe('catégories et dimensions', () => {
         ]);
     });
 
-    it('donne 2 m à la boucle de comptage, rien aux autres', () => {
+    it('donne 2 m au pied de feu et à la comptage, 10 m à la boucle longue', () => {
+        expect(dimensionParDefaut('bouclePiedFeu')).toBe(2);
+        expect(dimensionParDefaut('boucleEloignee')).toBe(10);
         expect(dimensionParDefaut('boucleComptage')).toBe(2);
-        expect(dimensionParDefaut('bouclePiedFeu')).toBeNull();
-        expect(dimensionParDefaut('boucleEloignee')).toBeNull();
         expect(dimensionParDefaut('radar')).toBeNull();
+        expect(dimensionParDefaut('boutonPoussoir')).toBeNull();
     });
 
     it('ne saisit pas de dimension pour un radar ni pour un bouton poussoir', () => {
@@ -55,6 +60,27 @@ describe('catégories et dimensions', () => {
         expect(dimensionDepuisSaisie('', 'bouclePiedFeu')).toBeNull();
         expect(dimensionDepuisSaisie('0', 'bouclePiedFeu')).toBeNull();
         expect(dimensionDepuisSaisie('abc', 'bouclePiedFeu')).toBeNull();
+    });
+});
+
+describe('retrait de la boucle', () => {
+    it('ne concerne que les boucles et vaut 0 au pied de feu', () => {
+        expect(retraitSaisissable('bouclePiedFeu')).toBe(true);
+        expect(retraitSaisissable('boucleEloignee')).toBe(true);
+        expect(retraitSaisissable('radar')).toBe(false);
+        expect(retraitParDefaut('bouclePiedFeu')).toBe(0);
+        expect(retraitParDefaut('boucleEloignee')).toBeNull();
+        expect(RETRAIT_PIED_FEU_M).toBe(0);
+    });
+
+    it('lit un retrait positif, virgule admise ; vide ou négatif refusé', () => {
+        expect(retraitDepuisSaisie('20', 'boucleEloignee')).toBe(20);
+        expect(retraitDepuisSaisie('12,5', 'boucleComptage')).toBe(12.5);
+        expect(retraitDepuisSaisie('', 'boucleEloignee')).toBeNull();
+        expect(retraitDepuisSaisie('-3', 'boucleEloignee')).toBeNull();
+        expect(retraitDepuisSaisie('20', 'radar')).toBeNull();
+        // Une boucle de pied de feu reste à 0 quoi qu'on saisisse.
+        expect(retraitDepuisSaisie('20', 'bouclePiedFeu')).toBe(0);
     });
 });
 
@@ -81,15 +107,18 @@ describe('création et changement de type', () => {
             nom: 'Détecteur 2',
             categorie: 'bouclePiedFeu',
             gf: null,
-            dimension: null,
+            dimension: 2,
+            retrait: 0,
             position: null,
             orientation: 0,
             note: ''
         });
     });
 
-    it('donne 2 m à une boucle de comptage créée directement', () => {
+    it('donne la longueur par défaut de chaque boucle créée directement', () => {
         expect(creerDetecteur([], 'boucleComptage').dimension).toBe(2);
+        expect(creerDetecteur([], 'bouclePiedFeu').dimension).toBe(2);
+        expect(creerDetecteur([], 'boucleEloignee').dimension).toBe(10);
     });
 
     it('efface la dimension en passant au bouton poussoir, la remet en revenant', () => {
@@ -107,6 +136,13 @@ describe('création et changement de type', () => {
     it('conserve la longueur saisie entre deux types de boucle', () => {
         const boucle = detecteur({ categorie: 'bouclePiedFeu', dimension: 9 });
         expect(changerCategorie(boucle, 'boucleEloignee').dimension).toBe(9);
+    });
+
+    it('garde le retrait entre deux boucles, le remet à 0 au pied de feu', () => {
+        const eloignee = detecteur({ categorie: 'boucleEloignee', retrait: 18 });
+        expect(changerCategorie(eloignee, 'boucleComptage').retrait).toBe(18);
+        expect(changerCategorie(eloignee, 'bouclePiedFeu').retrait).toBe(0);
+        expect(changerCategorie(eloignee, 'radar').retrait).toBeNull();
     });
 });
 
@@ -151,6 +187,7 @@ describe('normalisation d’un projet enregistré', () => {
                 categorie: 'boucleComptage',
                 gf: '3',
                 dimension: '2,5',
+                retrait: '18,5',
                 position: { x: 12, y: 40 },
                 orientation: '45',
                 note: 'après le carrefour'
@@ -166,6 +203,7 @@ describe('normalisation d’un projet enregistré', () => {
             categorie: 'boucleComptage',
             gf: 3,
             dimension: 2.5,
+            retrait: 18.5,
             position: { x: 12, y: 40 },
             orientation: 45,
             note: 'après le carrefour'
@@ -174,8 +212,20 @@ describe('normalisation d’un projet enregistré', () => {
         expect(liste[1].id).toBe(3);
         expect(liste[1].categorie).toBe('bouclePiedFeu');
         expect(liste[1].dimension).toBe(4);
+        expect(liste[1].retrait).toBe(0);
         expect(liste[1].position).toBeNull();
-        // Un bouton poussoir n'a pas de dimension ; nom non textuel vidé.
-        expect(liste[2]).toMatchObject({ id: 4, nom: '', categorie: 'boutonPoussoir', dimension: null });
+        // Un bouton poussoir n'a pas de dimension ni de retrait ; nom non textuel vidé.
+        expect(liste[2]).toMatchObject({ id: 4, nom: '', categorie: 'boutonPoussoir', dimension: null, retrait: null });
+    });
+
+    it('applique la longueur par défaut quand une boucle n’en a pas', () => {
+        const [piedFeu] = normaliserDetecteurs([
+            { id: 1, categorie: 'bouclePiedFeu', dimension: null }
+        ]);
+        const [longue] = normaliserDetecteurs([
+            { id: 2, categorie: 'boucleEloignee', dimension: 0 }
+        ]);
+        expect(piedFeu.dimension).toBe(2);
+        expect(longue.dimension).toBe(10);
     });
 });

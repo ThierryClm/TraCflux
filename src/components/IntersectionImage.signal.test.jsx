@@ -37,19 +37,18 @@ describe('IntersectionImage — case Signal', () => {
         expect(screen.queryByRole('img', { name: /^Signal/ })).toBeNull();
     });
 
-    it('remplace la flèche du groupe qui a un signal, et de lui seul', () => {
+    it('affiche les signaux à la place des flèches, sans les groupes sans signal', () => {
         const { container } = renderImage({ showSignals: true });
         const signal = screen.getByRole('img', { name: 'Signal R14tg' });
         expect(marqueur(container, 0).contains(signal)).toBe(true);
         expect(signal.dataset.forme).toBe('tg');
-        expect(marqueur(container, 1).querySelector('[role="img"]')).toBeNull();
-        expect(marqueur(container, 1).querySelector('svg')).not.toBeNull();
+        // La vue Signaux remplace la vue Flèche : le groupe sans signal disparaît.
+        expect(container.querySelectorAll('.arrow-marker')).toHaveLength(1);
     });
 
     it("suit l'échelle de la flèche, réduite de moitié, mais jamais sa rotation", () => {
         const { container } = renderImage({ showSignals: true });
         expect(marqueur(container, 0).querySelector('.arrow-symbol').style.transform).toBe('scale(1)');
-        expect(marqueur(container, 1).querySelector('.arrow-symbol').style.transform).toContain('rotate(45deg)');
     });
 
     it('prend la couleur de l’état du groupe', () => {
@@ -132,34 +131,43 @@ describe('IntersectionImage — case Signal', () => {
         expect(onDisplayOptionChange).toHaveBeenCalledWith('showSignals', true);
     });
 
-    it('écarte le numéro de groupe du pictogramme', () => {
+    it('cocher Signaux décoche Flèche', () => {
+        const onDisplayOptionChange = vi.fn();
+        renderImage({ showSignals: false, onDisplayOptionChange });
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Signaux' }));
+        expect(onDisplayOptionChange).toHaveBeenCalledWith('showCurrents', false);
+        expect(onDisplayOptionChange).toHaveBeenCalledWith('showArrows', false);
+    });
+
+    it('cocher Flèche décoche Signaux', () => {
+        const onDisplayOptionChange = vi.fn();
+        renderImage({ showSignals: true, onDisplayOptionChange });
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Flèche' }));
+        expect(onDisplayOptionChange).toHaveBeenCalledWith('showCurrents', true);
+        expect(onDisplayOptionChange).toHaveBeenCalledWith('showSignals', false);
+    });
+
+    it('masque les numéros de groupe quand les signaux sont affichés', () => {
         const { container } = renderImage({ showSignals: true });
-        const numeros = container.querySelectorAll('.group-number-centroid');
-        expect(numeros[0].textContent).toBe('1');
-        expect(parseFloat(numeros[0].style.left)).toBeGreaterThan(20);
-        expect(parseFloat(numeros[0].style.top)).toBeLessThan(20);
-        expect(numeros[1].style.left).toBe('60%');
+        expect(container.querySelectorAll('.group-number-centroid')).toHaveLength(0);
     });
 
     it('le double-clic ne tourne rien tant que la case est cochée', () => {
         const onArrowsChange = vi.fn();
-        const { container } = renderImage({ showSignals: true, onArrowsChange });
+        const { container } = renderImage({ showSignals: true, onArrowsChange, });
         fireEvent.doubleClick(marqueur(container, 0));
-        fireEvent.doubleClick(marqueur(container, 1));
         expect(onArrowsChange).not.toHaveBeenCalled();
     });
 
-    it('grise tous les réglages tant que la case est cochée, flèche sans signal comprise', () => {
+    it('grise tous les réglages tant que la case est cochée', () => {
         const { container } = renderImage({ showSignals: true });
-        for (const index of [0, 1]) {
-            fireEvent.click(marqueur(container, index));
-            const reglages = container.querySelector('.arrow-editor');
-            expect(reglages.disabled).toBe(true);
-            expect(screen.getByText('Rotation:')).toBeTruthy();
-            expect(screen.getByText('Zoom:')).toBeTruthy();
-            for (const champ of reglages.querySelectorAll('input, select, button')) {
-                expect(champ.matches(':disabled')).toBe(true);
-            }
+        fireEvent.click(marqueur(container, 0));
+        const reglages = container.querySelector('.arrow-editor');
+        expect(reglages.disabled).toBe(true);
+        expect(screen.getByText('Rotation:')).toBeTruthy();
+        expect(screen.getByText('Zoom:')).toBeTruthy();
+        for (const champ of reglages.querySelectorAll('input, select, button')) {
+            expect(champ.matches(':disabled')).toBe(true);
         }
         expect(screen.getByText(/Réglages inactifs/)).toBeTruthy();
     });

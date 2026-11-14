@@ -99,7 +99,7 @@ describe('IntersectionImage — calque des détecteurs', () => {
 
     it('laisse la boucle vide entre deux véhicules', () => {
         const { container } = rendre({
-            currentTime: 1.1,
+            currentTime: 3,
             getTrafficData: () => ({ trafficVol: 600 })
         });
         const remplissage = container.querySelector('.detecteur-symbol rect');
@@ -125,7 +125,7 @@ describe('IntersectionImage — calque des détecteurs', () => {
 
     it('présente les deux familles de cases, courants et détecteurs', () => {
         rendre({ detecteurModule: true });
-        expect(screen.getByLabelText('Courant de circulation')).toBeInTheDocument();
+        expect(screen.getByLabelText('Flèche')).toBeInTheDocument();
         expect(screen.getByLabelText('Numéro GF')).toBeInTheDocument();
         expect(screen.getByLabelText('Nom GF')).toBeInTheDocument();
         expect(screen.getByLabelText('Ajouter une flèche')).toBeInTheDocument();
@@ -180,6 +180,50 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(onDetecteursChange).toHaveBeenCalledWith([
             expect.objectContaining({ id: 7, orientation: 1 })
         ]);
+    });
+
+    it('permet de choisir le détecteur et son type dans l’éditeur', () => {
+        const autre = { ...DETECTEUR, id: 8, nom: 'Radar sud', categorie: 'radar', position: { x: 60, y: 60 } };
+        const { container, onDetecteursChange } = rendre({ detecteurs: [DETECTEUR, autre] });
+        fireEvent.click(container.querySelectorAll('.detecteur-symbol')[0]);
+
+        const choix = screen.getByLabelText('Choisir le détecteur');
+        expect(choix).toHaveValue('7');
+        fireEvent.change(choix, { target: { value: '8' } });
+        expect(screen.getByLabelText('Choisir le détecteur')).toHaveValue('8');
+        expect(screen.getByLabelText(/Type du détecteur dans/)).toHaveValue('radar');
+
+        fireEvent.change(screen.getByLabelText('Choisir le détecteur'), { target: { value: '7' } });
+        fireEvent.change(screen.getByLabelText(/Type du détecteur dans/), { target: { value: 'boucleComptage' } });
+        const dernier = onDetecteursChange.mock.calls.at(-1)[0];
+        expect(dernier.find(d => d.id === 7).categorie).toBe('boucleComptage');
+
+        const longueur = screen.getByLabelText('Longueur du détecteur');
+        fireEvent.change(longueur, { target: { value: '7,5' } });
+        fireEvent.blur(longueur);
+        const apresLongueur = onDetecteursChange.mock.calls.at(-1)[0];
+        expect(apresLongueur.find(d => d.id === 7).dimension).toBe(7.5);
+    });
+
+    it('affiche et enregistre le retrait d’une boucle éloignée', () => {
+        const eloignee = { ...DETECTEUR, categorie: 'boucleEloignee', retrait: 18 };
+        const { container, onDetecteursChange } = rendre({ detecteurs: [eloignee] });
+        fireEvent.click(container.querySelector('.detecteur-symbol'));
+
+        const champ = screen.getByLabelText('Retrait de la boucle');
+        expect(champ).toHaveValue('18');
+        fireEvent.change(champ, { target: { value: '22,5' } });
+        fireEvent.blur(champ);
+
+        const dernier = onDetecteursChange.mock.calls.at(-1)[0];
+        expect(dernier.find(d => d.id === 7).retrait).toBe(22.5);
+    });
+
+    it('ne montre pas de retrait pour une boucle de pied de feu', () => {
+        const { container } = rendre();
+        fireEvent.click(container.querySelector('.detecteur-symbol'));
+
+        expect(screen.queryByLabelText('Retrait de la boucle')).toBeNull();
     });
 
     it('retire le symbole de l’image sans supprimer le détecteur', () => {

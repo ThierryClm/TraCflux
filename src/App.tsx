@@ -2058,7 +2058,7 @@ function App() {
         selectedActions: simulationSelectedActions, conflictMatrix,
         hoveredArrowGroupId, hoveredArrowGroupIds: flechesActionSimulation, setHoveredArrowGroupId, hoveredDiagramTime,
         isPlayingSimulation,
-        simulationCurrentTime, simulationResult,
+        simulationCurrentTime, playbackSpeed: simulationSpeed, simulationResult,
         actionData, cycleLength,
         imageBrightness, imageContrast,
         intersectionDisplay,

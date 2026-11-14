@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 
 /** Cases d'affichage de l'image du carrefour. */
 export interface IntersectionDisplayOptions {
-    /** Calque des courants de circulation : flèches, numéros, noms et signaux. */
+    /** Calque des flèches : courants de circulation, numéros et noms. */
     showCurrents: boolean;
     showGroupNumbers: boolean;
     showGroupNames: boolean;
     /** Mode d'ajout d'une flèche au clic. */
     showArrows: boolean;
-    /** Signal ISR du groupe à la place de sa flèche, si le champ Signal est renseigné. */
+    /** Vue Signaux, exclusive avec les flèches : signaux ISR à la place de celles-ci. */
     showSignals: boolean;
     /** Calque des détecteurs de terrain. */
     showDetecteurs: boolean;
@@ -51,15 +51,20 @@ const readStored = (option: IntersectionDisplayOption, parDefaut = true): boolea
  * partie.
  */
 const useIntersectionDisplayOptions = () => {
-    const [options, setOptions] = useState<IntersectionDisplayOptions>(() => ({
-        showCurrents: readStored('showCurrents'),
-        showGroupNumbers: readStored('showGroupNumbers'),
-        showGroupNames: readStored('showGroupNames'),
-        showArrows: readStored('showArrows', false),
-        showSignals: readStored('showSignals', false),
-        showDetecteurs: readStored('showDetecteurs'),
-        showDetecteurNames: readStored('showDetecteurNames')
-    }));
+    const [options, setOptions] = useState<IntersectionDisplayOptions>(() => {
+        // Signaux et flèches sont exclusifs : un choix « signaux » enregistré
+        // par une version antérieure l'emporte sur les courants.
+        const signals = readStored('showSignals', false);
+        return {
+            showCurrents: !signals && readStored('showCurrents'),
+            showGroupNumbers: readStored('showGroupNumbers'),
+            showGroupNames: readStored('showGroupNames'),
+            showArrows: readStored('showArrows', false),
+            showSignals: signals,
+            showDetecteurs: readStored('showDetecteurs'),
+            showDetecteurNames: readStored('showDetecteurNames')
+        };
+    });
 
     useEffect(() => {
         OPTIONS.forEach(option => {
@@ -70,7 +75,19 @@ const useIntersectionDisplayOptions = () => {
     }, [options]);
 
     const setOption = useCallback((option: IntersectionDisplayOption, value: boolean) => {
-        setOptions(prev => (prev[option] === value ? prev : { ...prev, [option]: value }));
+        setOptions(prev => {
+            const next = { ...prev, [option]: value };
+            // Flèches et signaux s'excluent : cocher l'un décoche l'autre.
+            if (option === 'showSignals' && value) {
+                next.showCurrents = false;
+                next.showArrows = false;
+            }
+            if (option === 'showCurrents') {
+                if (value) next.showSignals = false;
+                else next.showArrows = false;
+            }
+            return next;
+        });
     }, []);
 
     return { intersectionDisplay: options, setIntersectionDisplayOption: setOption };

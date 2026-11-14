@@ -7,9 +7,34 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
-## [Non publié]
+## [1.6.0] — 2026-11-14
+
+### Ajouté
+
+- **Détecteurs de terrain** : un module optionnel (Mise en page → Configuration → Détecteur) ajoute
+  l'onglet Détecteurs et un calque sur l'image du carrefour. Boucles de pied de feu, boucles éloignées,
+  boucles de comptage, radars et boutons poussoirs se posent comme les flèches, se nomment, se rattachent
+  à un groupe de feu et se règlent : longueur, retrait par rapport à la ligne d'arrêt, rotation,
+  duplication, retrait de l'image sans suppression. Longueurs par défaut : 2 m au pied de feu et en
+  comptage, 10 m pour une boucle éloignée. L'échelle « 1 m = … px » règle la taille des symboles et la
+  mesure du retrait.
+- **Animation des boucles en simulation** : les véhicules franchissent la boucle un toutes les 2 secondes
+  divisées par le coefficient de voie, quelle que soit la capacité utilisée. Le premier véhicule libère la
+  boucle à 2 secondes de vert divisées par le coefficient ; les suivants sont décalés d'autant. Chaque
+  occupation dure (longueur de boucle + 5 m) / vitesse du mouvement. La file s'écoule au vert, puis la
+  boucle reste éteinte ; si la capacité ne dépasse pas 90 %, 6 secondes sans véhicule montrent que la
+  demande est servie, avant que les véhicules du cycle suivant ne se répartissent sur le reste du cycle.
+  Une boucle de pied de feu reste allumée dès le premier véhicule arrivé ; une boucle éloignée est figée
+  par le véhicule qui la recouvre, un tous les 6 m de file ; la boucle de comptage additionne les groupes
+  dont la flèche aboutit sur la même branche, tournants compris. Une file non vidée laisse la boucle
+  allumée pendant le rouge. L'animation des boucles a sa propre horloge au dixième de seconde, tandis que
+  le diagramme continue d'avancer à la seconde.
 
 ### Modifié
+
+- **Image du carrefour** : la case « Courant de circulation » devient **« Flèche »**. Flèche et Signaux
+  sont exclusives : cocher l'une décoche l'autre. La vue Signaux n'a plus besoin de Flèche et n'affiche
+  que les groupes qui ont un signal ; un projet ancien avec les deux cases cochées s'ouvre en vue Signaux.
 
 - **Verrouillage de la saisie** : mention « (verrouillé) » dans les titres, y compris des fenêtres
   détachées. Dans Trafic, elle remplace « Tous les Grp » et le filtre est conservé au déverrouillage.

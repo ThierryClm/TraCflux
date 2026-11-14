@@ -14,6 +14,7 @@ import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/anim
 import type { SimulationResult } from '../simulation';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
 import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
+import useDetectorClock from './useDetectorClock';
 
 interface IntersectionArrow {
     id: number | string;
@@ -56,6 +57,8 @@ interface FloatingImageRendererOptions {
     hoveredDiagramTime?: number | null;
     isPlayingSimulation: boolean;
     simulationCurrentTime?: number | null;
+    /** Vitesse de lecture, pour l'horloge fine des détecteurs. */
+    playbackSpeed?: number;
     simulationResult?: object | null;
     actionData: ActionMicro[];
     cycleLength: number;
@@ -94,6 +97,7 @@ const useFloatingImageRenderer = ({
     hoveredDiagramTime,
     isPlayingSimulation,
     simulationCurrentTime,
+    playbackSpeed = 1,
     simulationResult = null,
     actionData,
     cycleLength,
@@ -103,6 +107,16 @@ const useFloatingImageRenderer = ({
     floatingImagePopup,
     tooltipsEnabled = true
 }: FloatingImageRendererOptions) => {
+    // Même horloge fine que l'image de la page : les boucles s'animent au
+    // dixième de seconde, alors que les flèches suivent la seconde du diagramme.
+    const cycleAnimation = (simulationResult as SimulationResult | null)?.simulatedCycleLength || cycleLength;
+    const detectorTime = useDetectorClock({
+        isPlaying: isPlayingSimulation,
+        currentTime: simulationCurrentTime ?? 0,
+        cycleLength: cycleAnimation,
+        playbackSpeed
+    });
+
     useEffect(() => {
         if (!showFloatingImage || !intersectionImage) return;
         const tip = (text: string) => tooltipsEnabled ? text : undefined;
@@ -168,7 +182,6 @@ const useFloatingImageRenderer = ({
             : (hoveredDiagramTime ?? simulationCurrentTime ?? 0);
 
         // Animation des boucles, avec le même calcul que l'image de la page.
-        const cycleAnimation = (simulationResult as SimulationResult | null)?.simulatedCycleLength || cycleLength;
         const contexteAnimation = {
             cycleLength: cycleAnimation,
             groups,
@@ -335,7 +348,8 @@ const useFloatingImageRenderer = ({
                                 if (!detecteur.position) return null;
                                 const taille = tailleDetecteur(detecteur, pixelsParMetre);
                                 const dansBoucle = etiquetteDansBoucle(detecteur, taille);
-                                const occupe = estOccupee(activeTime, intervalles.get(detecteur.id) ?? [], cycleAnimation);
+                                const instantBoucles = isPlayingSimulation ? detectorTime : activeTime;
+                                const occupe = estOccupee(instantBoucles, intervalles.get(detecteur.id) ?? [], cycleAnimation);
                                 return (
                                     <div
                                         key={`fdet-${detecteur.id}`}
@@ -375,7 +389,7 @@ const useFloatingImageRenderer = ({
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
         intersectionArrows, detecteurs, detecteurModule, pixelsParMetre, getTrafficData, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
         selectedActions, conflictMatrix,
-        isPlayingSimulation, simulationCurrentTime, simulationResult,
+        isPlayingSimulation, simulationCurrentTime, detectorTime, simulationResult,
         actionData, cycleLength, imageBrightness, imageContrast,
         intersectionDisplay.showCurrents, intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames,
         intersectionDisplay.showSignals, intersectionDisplay.showDetecteurs, intersectionDisplay.showDetecteurNames,
