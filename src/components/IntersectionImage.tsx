@@ -160,7 +160,7 @@ const IntersectionImage = ({
 
     // Cases d'affichage : enregistrées avec le projet (useIntersectionDisplayOptions).
     const {
-        showCurrents = true,
+        showCurrents: courantsDemandes = true,
         showGroupNumbers,
         showGroupNames,
         showArrows,
@@ -170,7 +170,10 @@ const IntersectionImage = ({
     // Sans signal renseigné, la case est grisée et ne pèse sur rien d'autre ; son
     // choix reste mémorisé pour le jour où un signal sera saisi.
     const signalDisponible = auMoinsUnSignal(groups);
-    const showSignals = showCurrents && displayOptions.showSignals && signalDisponible;
+    // Flèches et signaux sont deux vues exclusives : la seconde remplace la
+    // première, elle n'a donc plus besoin que les courants soient cochés.
+    const showSignals = displayOptions.showSignals && signalDisponible;
+    const showCurrents = courantsDemandes && !showSignals;
     // Module désactivé : les objets détecteurs restent visibles, sans leur texte.
     const afficherDetecteurs = detecteurModule ? showDetecteurs : true;
     const afficherNomsDetecteurs = detecteurModule && showDetecteurNames;
@@ -178,7 +181,8 @@ const IntersectionImage = ({
     const setShowGroupNames = (value: boolean) => onDisplayOptionChange?.('showGroupNames', value);
     const setShowCurrents = (value: boolean) => {
         onDisplayOptionChange?.('showCurrents', value);
-        if (!value) onDisplayOptionChange?.('showArrows', false);
+        if (value) onDisplayOptionChange?.('showSignals', false);
+        else onDisplayOptionChange?.('showArrows', false);
     };
     // Les deux modes de placement sont exclusifs ; aucun des deux n'est obligatoire.
     const setShowArrows = (value: boolean) => {
@@ -192,7 +196,13 @@ const IntersectionImage = ({
             onDisplayOptionChange?.('showDetecteurs', true);
         }
     };
-    const setShowSignals = (value: boolean) => onDisplayOptionChange?.('showSignals', value);
+    const setShowSignals = (value: boolean) => {
+        onDisplayOptionChange?.('showSignals', value);
+        if (value) {
+            onDisplayOptionChange?.('showCurrents', false);
+            onDisplayOptionChange?.('showArrows', false);
+        }
+    };
     const setShowDetecteurs = (value: boolean) => {
         onDisplayOptionChange?.('showDetecteurs', value);
         if (!value) setAjoutDetecteurs(false);
@@ -1048,7 +1058,7 @@ const IntersectionImage = ({
                             className="intersection-img"
                             style={{ filter: `brightness(${imageBrightness}%) contrast(${imageContrast}%)` }}
                         />
-                        {showCurrents && arrows.map(arrow => {
+                        {(showCurrents || showSignals) && arrows.map(arrow => {
                             const groupInfo = getGroupInfo(arrow.groupId);
                             const rotation = arrow.rotation || 0;
                             const scale = arrow.scale || 1;
@@ -1058,6 +1068,8 @@ const IntersectionImage = ({
                             const isHovered = hoveredArrowGroupId === arrow.groupId || !!hoveredArrowGroupIds?.includes(arrow.groupId);
                             const isPedestrianOrCycle = groupInfo.courant === 'Piéton' || groupInfo.courant === 'Cycle';
                             const signal = getSignalAffiche(arrow.groupId);
+                            // Vue Signaux seule : un groupe sans signal n'affiche rien.
+                            if (!showCurrents && !signal) return null;
                             const ppAllume = isPPLit(arrow.groupId, displayedTime, { groups, simulationResult, cycleLength });
                             return (
                                 <div
@@ -1527,7 +1539,7 @@ const IntersectionImage = ({
                         </div>
                     ) : null}
 
-                    {/* Paramètres de l'image, en deux familles : courants et détecteurs. */}
+                    {/* Paramètres de l'image, en deux familles : flèches et détecteurs. */}
                     <div className="display-options">
                         <div className="display-column">
                             <label className="checkbox-option">
@@ -1536,7 +1548,7 @@ const IntersectionImage = ({
                                     checked={showCurrents}
                                     onChange={(e) => setShowCurrents(e.target.checked)}
                                 />
-                                <span>Courant de circulation</span>
+                                <span>Flèche</span>
                             </label>
                             <label className={`checkbox-option sous-option ${showCurrents ? '' : 'inactive'}`}>
                                 <input
@@ -1567,15 +1579,15 @@ const IntersectionImage = ({
                                 <span>Ajouter une flèche</span>
                             </label>
                             <label
-                                className={`checkbox-option ${!showCurrents || !signalDisponible ? 'inactive' : ''}`}
+                                className={`checkbox-option ${!signalDisponible ? 'inactive' : ''}`}
                                 title={tip(signalDisponible
-                                    ? 'Affiche le signal du formulaire à la place de la flèche. Sans signal renseigné, le groupe garde sa flèche.'
+                                    ? 'Affiche les signaux du formulaire à la place des flèches ; la case Flèche se décoche.'
                                     : 'Aucun signal renseigné : choisissez-en au moins un dans la colonne Signal du formulaire.')}
                             >
                                 <input
                                     type="checkbox"
                                     checked={showSignals}
-                                    disabled={!showCurrents || !signalDisponible}
+                                    disabled={!signalDisponible}
                                     onChange={(e) => setShowSignals(e.target.checked)}
                                 />
                                 <span>Signaux</span>

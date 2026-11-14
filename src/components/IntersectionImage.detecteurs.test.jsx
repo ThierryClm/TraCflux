@@ -125,7 +125,7 @@ describe('IntersectionImage — calque des détecteurs', () => {
 
     it('présente les deux familles de cases, courants et détecteurs', () => {
         rendre({ detecteurModule: true });
-        expect(screen.getByLabelText('Courant de circulation')).toBeInTheDocument();
+        expect(screen.getByLabelText('Flèche')).toBeInTheDocument();
         expect(screen.getByLabelText('Numéro GF')).toBeInTheDocument();
         expect(screen.getByLabelText('Nom GF')).toBeInTheDocument();
         expect(screen.getByLabelText('Ajouter une flèche')).toBeInTheDocument();
