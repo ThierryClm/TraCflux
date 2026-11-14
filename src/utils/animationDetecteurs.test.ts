@@ -115,13 +115,13 @@ describe('boucle de pied de feu', () => {
     it('s’allume par impulsions pendant le vert, une par véhicule de la file', () => {
         const ctx = contexte();
         // 600 véh/h, cycle 90 s, vert 30 s, coefficient 1 : le premier véhicule
-        // libère la boucle à 3 s, les suivants passent toutes les 2 s.
+        // libère la boucle à 2 s, les suivants passent toutes les 2 s.
         expect(estDetecteurOccupe(detecteur(), 0.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 2.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 3.5, ctx)).toBe(false);
-        expect(estDetecteurOccupe(detecteur(), 5.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 21.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 26, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 1.9, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 3, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 4.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 20.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 27, ctx)).toBe(false);
     });
 
     it('ne s’anime pas sans trafic', () => {
@@ -137,7 +137,7 @@ describe('boucle de pied de feu', () => {
             groups: [groupe({ laneCoef: 0.8, durations: { green: 41, orange: 3, red: 36 } })],
             getTrafficData: () => ({ trafficVol: 386 })
         });
-        expect(estDetecteurOccupe(detecteur(), 20.5, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 19.7, ctx)).toBe(true);
         expect(estDetecteurOccupe(detecteur(), 21.5, ctx)).toBe(false);
     });
 
@@ -174,16 +174,16 @@ describe('exemple du cahier des charges : 320 véh/h, cycle 90 s, vert 40 s', ()
         ...overrides
     });
 
-    it('sert 8 véhicules à partir de la 3e seconde, puis reste éteinte', () => {
+    it('sert 8 véhicules à partir de la 2e seconde, puis reste éteinte', () => {
         const ctx = ctxExemple();
-        // Le premier véhicule tient la boucle jusqu'à 3 s, les 7 autres passent
-        // ensuite toutes les 2 s jusqu'à 17 s.
+        // Le premier véhicule tient la boucle jusqu'à 2 s, les 7 autres passent
+        // ensuite toutes les 2 s jusqu'à 16 s.
         expect(estDetecteurOccupe(detecteur(), 0.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 3.5, ctx)).toBe(false);
-        expect(estDetecteurOccupe(detecteur(), 5.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 13.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 17.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(detecteur(), 18, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 2.5, ctx)).toBe(false);
+        expect(estDetecteurOccupe(detecteur(), 4.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 12.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 16.2, ctx)).toBe(true);
+        expect(estDetecteurOccupe(detecteur(), 17, ctx)).toBe(false);
         // Le reste du vert et les 6 s de principe (40–46) sont éteints.
         expect(estDetecteurOccupe(detecteur(), 20, ctx)).toBe(false);
         expect(estDetecteurOccupe(detecteur(), 39, ctx)).toBe(false);
@@ -204,8 +204,9 @@ describe('exemple du cahier des charges : 320 véh/h, cycle 90 s, vert 40 s', ()
         const boucle = detecteur({ categorie: 'boucleEloignee', position: { x: 82, y: 50 } });
         // Au vert : la file recouvre la boucle 8 s, puis les 4 derniers passent.
         expect(estDetecteurOccupe(boucle, 2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(boucle, 8.2, ctx)).toBe(true);
-        expect(estDetecteurOccupe(boucle, 9, ctx)).toBe(false);
+        expect(estDetecteurOccupe(boucle, 7.9, ctx)).toBe(true);
+        expect(estDetecteurOccupe(boucle, 8.2, ctx)).toBe(false);
+        expect(estDetecteurOccupe(boucle, 10.2, ctx)).toBe(true);
         // Après le vert : quatre passages (2 s de trajet jusqu'à la boucle),
         // puis le cinquième fige l'occupation.
         expect(estDetecteurOccupe(boucle, 46.2, ctx)).toBe(false);
@@ -244,8 +245,8 @@ describe('boucle éloignée', () => {
             getTrafficData: () => ({ trafficVol: 300 })
         });
         const boucle = detecteur({ categorie: 'boucleEloignee', position: { x: 74, y: 50 } });
-        // Départ à 3 s puis 8 s de trajet jusqu'à la boucle.
-        expect(estDetecteurOccupe(boucle, 11.2, ctx)).toBe(true);
+        // Départ à 2 s puis 8 s de trajet jusqu'à la boucle.
+        expect(estDetecteurOccupe(boucle, 10.2, ctx)).toBe(true);
         expect(estDetecteurOccupe(boucle, 2, ctx)).toBe(false);
     });
 });

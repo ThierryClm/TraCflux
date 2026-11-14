@@ -89,8 +89,8 @@ const SEUIL_SANS_FILE = 0.90;
  */
 export const ABSENCE_APRES_VERT_S = 6;
 
-/** Le premier véhicule libère la boucle à la 3e seconde de vert. */
-export const PREMIER_PASSAGE_VERT_S = 3;
+/** Le premier véhicule libère la boucle à la 2e seconde de vert. */
+export const PREMIER_PASSAGE_VERT_S = 2;
 
 /** Nombre de véhicules en file nécessaires pour couvrir une boucle éloignée. */
 export const vehiculesAvantRecouvrement = (retrait: number): number =>
