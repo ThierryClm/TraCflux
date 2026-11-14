@@ -19,7 +19,9 @@ import {
     dimensionSaisissable,
     estBoucle,
     LIBELLE_CATEGORIE,
-    normaliserPixelsParMetre
+    normaliserPixelsParMetre,
+    retraitDepuisSaisie,
+    retraitSaisissable
 } from '../utils/detecteurs';
 import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/animationDetecteurs';
@@ -1291,9 +1293,28 @@ const IntersectionImage = ({
                                         <span className="detecteur-editor-unit">m (largeur 1 m)</span>
                                     </div>
                                 )}
+                                {retraitSaisissable(detecteur.categorie) && (
+                                    <div className="editor-row">
+                                        <label>Retrait de la boucle:</label>
+                                        <LocalInput
+                                            className="detecteur-editor-dimension"
+                                            aria-label="Retrait de la boucle"
+                                            value={detecteur.categorie === 'bouclePiedFeu' ? 0 : (detecteur.retrait ?? '')}
+                                            placeholder={detecteur.categorie === 'bouclePiedFeu' ? '0' : 'mesuré sur l’image'}
+                                            disabled={detecteur.categorie === 'bouclePiedFeu'}
+                                            title={tip('Distance entre la boucle et la ligne d’arrêt, en mètres. 0 pour une boucle de pied de feu ; laissé vide, le retrait est mesuré sur l’image.')}
+                                            onCommit={(valeur) => onDetecteursChange(detecteurs.map(d =>
+                                                d.id === detecteur.id
+                                                    ? { ...d, retrait: retraitDepuisSaisie(valeur, detecteur.categorie) }
+                                                    : d
+                                            ))}
+                                        />
+                                        <span className="detecteur-editor-unit">m</span>
+                                    </div>
+                                )}
                                 <p className="detecteur-editor-note">
                                     {dimensionSaisissable(detecteur.categorie)
-                                        ? 'La largeur d’une boucle est fixe : 1 m.'
+                                        ? 'La largeur d’une boucle est fixe : 1 m. Le retrait se compte depuis la ligne d’arrêt.'
                                         : detecteur.categorie === 'radar'
                                             ? 'Radar — symbole de taille fixe.'
                                             : 'Bouton poussoir — symbole de taille fixe.'}

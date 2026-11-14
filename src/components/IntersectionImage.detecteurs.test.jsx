@@ -205,6 +205,29 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(apresLongueur.find(d => d.id === 7).dimension).toBe(7.5);
     });
 
+    it('affiche et enregistre le retrait d’une boucle éloignée', () => {
+        const eloignee = { ...DETECTEUR, categorie: 'boucleEloignee', retrait: 18 };
+        const { container, onDetecteursChange } = rendre({ detecteurs: [eloignee] });
+        fireEvent.click(container.querySelector('.detecteur-symbol'));
+
+        const champ = screen.getByLabelText('Retrait de la boucle');
+        expect(champ).toHaveValue('18');
+        fireEvent.change(champ, { target: { value: '22,5' } });
+        fireEvent.blur(champ);
+
+        const dernier = onDetecteursChange.mock.calls.at(-1)[0];
+        expect(dernier.find(d => d.id === 7).retrait).toBe(22.5);
+    });
+
+    it('force un retrait de 0 pour une boucle de pied de feu', () => {
+        const { container } = rendre();
+        fireEvent.click(container.querySelector('.detecteur-symbol'));
+
+        const champ = screen.getByLabelText('Retrait de la boucle');
+        expect(champ).toHaveValue('0');
+        expect(champ).toBeDisabled();
+    });
+
     it('retire le symbole de l’image sans supprimer le détecteur', () => {
         const { container, onDetecteursChange } = rendre();
         fireEvent.click(container.querySelector('.detecteur-symbol'));

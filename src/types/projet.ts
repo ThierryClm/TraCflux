@@ -168,6 +168,12 @@ export interface Detecteur {
     gf: number | null;
     /** Longueur d'une boucle ou portée d'un radar, en mètres ; null si sans objet. */
     dimension: number | null;
+    /**
+     * Retrait de la boucle : distance à la ligne d'arrêt, en mètres. Vaut 0
+     * pour une boucle de pied de feu ; null (ou absent) laisse l'animation
+     * mesurer la distance sur l'image.
+     */
+    retrait?: number | null;
     position?: PositionDetecteur | null;
     /** Rotation du symbole en degrés ; 0 pointe vers le haut. */
     orientation?: number;
