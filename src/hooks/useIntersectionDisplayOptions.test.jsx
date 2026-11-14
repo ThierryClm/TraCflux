@@ -20,4 +20,24 @@ describe('useIntersectionDisplayOptions — case Signal', () => {
         const { result: rouvert } = renderHook(() => useIntersectionDisplayOptions());
         expect(rouvert.current.intersectionDisplay.showSignals).toBe(true);
     });
+
+    it('rend Flèche et Signaux exclusifs', () => {
+        const { result } = renderHook(() => useIntersectionDisplayOptions());
+
+        act(() => result.current.setIntersectionDisplayOption('showSignals', true));
+        expect(result.current.intersectionDisplay.showSignals).toBe(true);
+        expect(result.current.intersectionDisplay.showCurrents).toBe(false);
+
+        act(() => result.current.setIntersectionDisplayOption('showCurrents', true));
+        expect(result.current.intersectionDisplay.showCurrents).toBe(true);
+        expect(result.current.intersectionDisplay.showSignals).toBe(false);
+    });
+
+    it('reprend un état ancien avec les deux cases cochées en faveur des signaux', () => {
+        localStorage.setItem('intersection_showCurrents', 'true');
+        localStorage.setItem('intersection_showSignals', 'true');
+        const { result } = renderHook(() => useIntersectionDisplayOptions());
+        expect(result.current.intersectionDisplay.showCurrents).toBe(false);
+        expect(result.current.intersectionDisplay.showSignals).toBe(true);
+    });
 });

@@ -1,7 +1,6 @@
 import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import type { SimulationResult } from '../simulation';
 import { etatDeCouleur, getGroupColorAtTime } from './groupColorAtTime';
-import { calculateQueueLength, calculateVUtile } from './capacityCalc';
 
 /** Un intervalle de temps du cycle, en secondes. Les bornes peuvent sortir de [0, cycle]. */
 export interface Intervalle {
@@ -81,34 +80,93 @@ const traficDuGroupe = (ctx: ContexteAnimation, groupId: number): number =>
 const coefficientVoie = (groupe: Groupe): number =>
     groupe.laneCoef && groupe.laneCoef > 0 ? groupe.laneCoef : 1;
 
+/** En dessous de ce seuil, la demande est considérée servie avant la fin du vert. */
+const SEUIL_SANS_FILE = 0.90;
+
 /**
- * Temps de vert nécessaire pour servir la demande du cycle (V.Utile) : c'est
- * la durée pendant laquelle les boucles restent occupées par le flux, et non
- * la longueur de file seule. Plafonnée au vert disponible.
+ * Absence visible de véhicule après la fin du vert quand la demande est
+ * servie : elle montre que la file a été écoulée.
  */
-const dureeService = (
-    traffic: number,
-    coefficient: number,
-    cycle: number,
-    dureeVert: number
+export const ABSENCE_APRES_VERT_S = 6;
+
+/** Le premier véhicule libère la boucle à la 2e seconde de vert. */
+export const PREMIER_PASSAGE_VERT_S = 2;
+
+/** Nombre de véhicules en file nécessaires pour couvrir une boucle éloignée. */
+export const vehiculesAvantRecouvrement = (retrait: number): number =>
+    Math.max(1, Math.ceil(Math.max(0, retrait) / LONGUEUR_FILE_PAR_VEHICULE_M) + 1);
+
+/** Débit et temps de service d'un groupe sur un de ses verts. */
+interface DemandeBoucle {
+    /** Véhicules par cycle (peut être décimal). */
+    nombreVehicules: number;
+    /** Intervalle entre deux véhicules au débit de saturation, en secondes. */
+    intervalle: number;
+    /** Libération de la boucle par le premier véhicule, en secondes de vert. */
+    premier: number;
+    /** Part du vert consommée par la demande (Cap. U). */
+    capacite: number;
+    /** Véhicules de la file qui passent effectivement avant la fin du vert. */
+    servis: number;
+    /** La file ne se vide pas avant la fin du vert. */
+    sature: boolean;
+}
+
+/** Véhicules passés au vert, en tenant compte du départ du premier véhicule. */
+const vehiculesServisAuVert = (
+    nombreVehicules: number,
+    intervalle: number,
+    dureeVert: number,
+    premier: number
 ): number => {
-    const vUtile = calculateVUtile(traffic, coefficient, cycle) ?? 0;
-    return Math.max(0, Math.min(dureeVert, vUtile));
+    if (dureeVert < premier) return 0;
+    const possibles = Math.floor(
+        (dureeVert - premier) / intervalle + 1e-9
+    ) + 1;
+    return Math.max(0, Math.min(Math.ceil(nombreVehicules), possibles));
 };
 
-const nombreImpulsions = (service: number, intervalle: number): number =>
-    service > 0 ? Math.max(0, Math.floor(service / intervalle) + 1) : 0;
-
-/** Le courant est-il saturé (demande au moins égale à la capacité du vert) ? */
-const estSature = (
+const demandeBoucle = (
     traffic: number,
     coefficient: number,
     cycle: number,
     dureeVert: number
-): boolean => {
-    const vUtile = calculateVUtile(traffic, coefficient, cycle) ?? 0;
-    return dureeVert > 0 && vUtile >= dureeVert - 0.01;
+): DemandeBoucle => {
+    const nombreVehicules = vehiculesParCycle(traffic, cycle);
+    const intervalle = intervallePassage(coefficient);
+    // La règle de base est 2 s pour un coefficient de 1 : le coefficient
+    // ralentit aussi la libération du premier véhicule.
+    const premier = PREMIER_PASSAGE_VERT_S / (coefficient > 0 ? coefficient : 1);
+    const capacite = dureeVert > 0 ? (nombreVehicules * intervalle) / dureeVert : 0;
+    const servis = vehiculesServisAuVert(nombreVehicules, intervalle, dureeVert, premier);
+    return {
+        nombreVehicules,
+        intervalle,
+        premier,
+        capacite,
+        servis,
+        sature: dureeVert > 0 && (capacite >= 1 - 0.01 || servis < Math.ceil(nombreVehicules))
+    };
 };
+
+/** Ajoute une impulsion par véhicule, à partir de l'heure du véhicule `premier`. */
+const ajouterVehicules = (
+    resultat: Intervalle[],
+    premiereHeure: number,
+    nombre: number,
+    intervalle: number,
+    occupation: number,
+    premier = 0
+): void => {
+    for (let k = premier; k < nombre; k++) {
+        const debut = premiereHeure + (k - premier) * intervalle;
+        resultat.push({ debut, fin: debut + occupation });
+    }
+};
+
+/** Début du vert suivant, pour borner la période de rouge. */
+const debutVertSuivant = (verts: Intervalle[], index: number, cycle: number): number =>
+    verts[index + 1]?.debut ?? verts[0].debut + cycle;
 
 const contexteCouleur = (ctx: ContexteAnimation) => ({
     groups: ctx.groups,
@@ -214,20 +272,6 @@ export const estOccupee = (time: number, intervals: Intervalle[], cycle: number)
     });
 };
 
-const ajouterImpulsions = (
-    resultat: Intervalle[],
-    depart: number,
-    nombreVehicules: number,
-    intervalle: number,
-    occupation: number
-): void => {
-    const n = Math.max(0, Math.ceil(nombreVehicules));
-    for (let k = 0; k < n; k++) {
-        const debut = depart + k * intervalle;
-        resultat.push({ debut, fin: debut + occupation });
-    }
-};
-
 /** Position de la flèche du groupe, prise comme repère du pied de feu. */
 const positionPiedFeu = (groupId: number, ctx: ContexteAnimation) =>
     ctx.arrows.find(a => a.groupId === groupId) || null;
@@ -243,9 +287,11 @@ const distanceMetres = (
 };
 
 /**
- * Boucle de pied de feu : le premier véhicule de la file l'occupe pendant tout
- * le rouge ; au vert, elle s'allume à chaque passage, puis reste allumée si la
- * file n'est pas vidée à la fin du vert.
+ * Boucle de pied de feu : au vert, elle s'allume une fois par véhicule de la
+ * file, à l'intervalle de passage. La file s'écoule en `nombreVehicules ×
+ * intervalle` secondes ; le reste du vert est éteint. Après 6 s sans véhicule
+ * (demande servie), le premier véhicule qui arrive se pose sur la boucle et la
+ * laisse allumée jusqu'au vert suivant.
  */
 const intervallesPiedFeu = (detecteur: Detecteur, ctx: ContexteAnimation): Intervalle[] => {
     const groupe = ctx.groups.find(g => g.id === detecteur.gf);
@@ -256,25 +302,74 @@ const intervallesPiedFeu = (detecteur: Detecteur, ctx: ContexteAnimation): Inter
     const cycle = ctx.cycleLength;
     const verts = intervallesVert(groupe.id, ctx);
     const coefficient = coefficientVoie(groupe);
-    const intervalle = intervallePassage(coefficient);
     const occupation = dureeOccupation(detecteur.dimension, vitesseCourant(groupe.courant));
     const resultat: Intervalle[] = [];
 
-    for (const vert of verts) {
+    for (let i = 0; i < verts.length; i++) {
+        const vert = verts[i];
         const dureeVert = arrondiDixieme(Math.max(0, vert.fin - vert.debut));
-        const service = dureeService(traffic, coefficient, cycle, dureeVert);
-        ajouterImpulsions(resultat, vert.debut, nombreImpulsions(service, intervalle), intervalle, occupation);
-    }
+        const demande = demandeBoucle(traffic, coefficient, cycle, dureeVert);
+        const suivant = debutVertSuivant(verts, i, cycle);
 
-    // Pendant le rouge, un véhicule attend au pied du feu : la boucle reste allumée.
-    resultat.push(...intervallesRouge(verts, cycle));
+        if (demande.servis === 0) {
+            // Le vert est trop court pour libérer la boucle : elle reste tenue.
+            resultat.push({ debut: vert.debut, fin: suivant });
+            continue;
+        }
+
+        // Le premier véhicule est sur la boucle et la libère après le délai
+        // de départ (2 s pour un coefficient de 1, davantage si le coefficient
+        // réduit le débit).
+        resultat.push({
+            debut: vert.debut,
+            fin: vert.debut + demande.premier
+        });
+        // Les véhicules suivants passent ensuite à l'intervalle de débit.
+        ajouterVehicules(
+            resultat,
+            vert.debut + demande.premier + demande.intervalle,
+            demande.servis - 1,
+            demande.intervalle,
+            occupation
+        );
+
+        if (demande.sature) {
+            // La file ne se vide pas : un véhicule reste au pied du feu.
+            resultat.push({ debut: vert.fin, fin: suivant });
+            continue;
+        }
+        const absence = demande.capacite <= SEUIL_SANS_FILE ? ABSENCE_APRES_VERT_S : 0;
+        const premiereArrivee = vert.fin + absence;
+        if (demande.nombreVehicules > 0 && premiereArrivee < suivant) {
+            // Le premier véhicule arrivé se pose sur la boucle et y reste.
+            resultat.push({ debut: premiereArrivee, fin: suivant });
+        }
+    }
     return resultat;
 };
 
 /**
- * Boucle éloignée : si la file calculée la recouvre, elle reste allumée pendant
- * le rouge et jusqu'à ce que le dernier véhicule de la file l'ait dépassée.
- * Sinon, elle s'allume au passage des véhicules, après le temps de parcours.
+ * Retrait effectif d'une boucle : 0 au pied de feu, la valeur saisie si elle
+ * existe, sinon la distance mesurée entre le symbole et la flèche du groupe.
+ */
+export const retraitEffectif = (
+    detecteur: Detecteur,
+    groupId: number,
+    ctx: ContexteAnimation
+): number => {
+    if (detecteur.categorie === 'bouclePiedFeu') return 0;
+    const saisi = detecteur.retrait;
+    if (typeof saisi === 'number' && Number.isFinite(saisi) && saisi >= 0) return saisi;
+    if (!detecteur.position) return 0;
+    const repere = positionPiedFeu(groupId, ctx);
+    return repere ? distanceMetres(detecteur.position, repere, ctx.pixelsParMetre) : 0;
+};
+
+/**
+ * Boucle éloignée : les premiers véhicules de la file franchissent la boucle
+ * sans s'y arrêter et n'y font qu'une impulsion. À partir du véhicule qui
+ * recouvre le retrait (un véhicule tous les 6 m), l'occupation devient fixe
+ * jusqu'à ce que la file se vide au vert suivant.
  */
 const intervallesEloignee = (detecteur: Detecteur, ctx: ContexteAnimation): Intervalle[] => {
     const groupe = ctx.groups.find(g => g.id === detecteur.gf);
@@ -285,40 +380,86 @@ const intervallesEloignee = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
     const cycle = ctx.cycleLength;
     const verts = intervallesVert(groupe.id, ctx);
     const coefficient = coefficientVoie(groupe);
-    const intervalle = intervallePassage(coefficient);
     const vitesse = vitesseCourant(groupe.courant);
     const occupation = dureeOccupation(detecteur.dimension, vitesse);
-    const repere = positionPiedFeu(groupe.id, ctx);
-    const distance = repere ? distanceMetres(detecteur.position, repere, ctx.pixelsParMetre) : 0;
-    const dureeVertNominale = arrondiDixieme(Math.max(
-        groupe.durations?.green || 0,
-        ...verts.map(v => v.fin - v.debut)
-    ));
-    const fileM = calculateQueueLength(traffic, coefficient, dureeVertNominale, cycle) ?? 0;
-    const couverte = distance > 0 && fileM >= distance;
-    const service = dureeService(traffic, coefficient, cycle, dureeVertNominale);
-    const sature = estSature(traffic, coefficient, cycle, dureeVertNominale);
+    const retrait = retraitEffectif(detecteur, groupe.id, ctx);
+    const recouvrement = vehiculesAvantRecouvrement(retrait);
     const resultat: Intervalle[] = [];
 
-    for (const vert of verts) {
+    for (let i = 0; i < verts.length; i++) {
+        const vert = verts[i];
+        const dureeVert = arrondiDixieme(Math.max(0, vert.fin - vert.debut));
+        const demande = demandeBoucle(traffic, coefficient, cycle, dureeVert);
+        const suivant = debutVertSuivant(verts, i, cycle);
+        const trajet = retrait / Math.max(0.1, vitesse);
+        const couverte = demande.nombreVehicules >= recouvrement;
+        const figeAuVert = couverte
+            ? Math.max(0, demande.servis - recouvrement + 1)
+            : 0;
+
+        // La file recouvre la boucle au début du vert : elle reste tenue
+        // pendant les départs, puis les derniers véhicules passent un par un.
         if (couverte) {
-            // La file recouvre la boucle : elle est occupée pendant le rouge,
-            // puis pendant le temps nécessaire pour servir la demande.
-            resultat.push({ debut: vert.debut, fin: Math.min(vert.fin, vert.debut + service) });
-        } else {
-            ajouterImpulsions(
+            if (demande.servis === 0) {
+                resultat.push({ debut: vert.debut, fin: suivant });
+                continue;
+            }
+            if (figeAuVert > 0) {
+                resultat.push({
+                    debut: vert.debut,
+                    fin: vert.debut + demande.premier
+                        + (figeAuVert - 1) * demande.intervalle
+                });
+                ajouterVehicules(
+                    resultat,
+                    vert.debut + demande.premier + figeAuVert * demande.intervalle,
+                    demande.servis - figeAuVert,
+                    demande.intervalle,
+                    occupation
+                );
+            } else {
+                resultat.push({ debut: vert.debut, fin: vert.fin });
+            }
+        } else if (demande.servis > 0) {
+            // La file ne recouvre pas la boucle : chaque véhicule la franchit
+            // après le trajet depuis la ligne d'arrêt.
+            ajouterVehicules(
                 resultat,
-                vert.debut + distance / Math.max(0.1, vitesse),
-                nombreImpulsions(service, intervalle),
-                intervalle,
+                vert.debut + demande.premier + trajet,
+                demande.servis,
+                demande.intervalle,
                 occupation
             );
         }
-    }
 
-    // Courant saturé : la file ne se vide pas, la boucle reste occupée pendant
-    // le rouge, même si le calcul de file ne la recouvre pas encore.
-    if (couverte || sature) resultat.push(...intervallesRouge(verts, cycle));
+        if (demande.sature) {
+            resultat.push({ debut: vert.fin, fin: suivant });
+            continue;
+        }
+        const absence = demande.capacite <= SEUIL_SANS_FILE ? ABSENCE_APRES_VERT_S : 0;
+        const premiereArrivee = vert.fin + absence;
+        const reste = suivant - premiereArrivee;
+        if (demande.nombreVehicules <= 0 || reste <= 0) continue;
+
+        // Les véhicules se présentent régulièrement jusqu'au vert suivant :
+        // les premiers traversent la boucle, celui qui la recouvre la fige.
+        const pas = reste / demande.nombreVehicules;
+        for (let k = 0; k < Math.ceil(demande.nombreVehicules); k++) {
+            const arrivee = premiereArrivee + k * pas;
+            if (arrivee >= suivant) break;
+            if (k + 1 >= recouvrement) {
+                resultat.push({
+                    debut: arrivee,
+                    fin: suivant + figeAuVert * demande.intervalle
+                });
+                break;
+            }
+            resultat.push({
+                debut: arrivee + retrait / Math.max(0.1, vitesse),
+                fin: arrivee + retrait / Math.max(0.1, vitesse) + occupation
+            });
+        }
+    }
     return resultat;
 };
 
@@ -345,7 +486,8 @@ export const groupesComptesParProximite = (detecteur: Detecteur, ctx: ContexteAn
 /**
  * Boucle de comptage : elle compte les véhicules de tous les groupes dont la
  * flèche aboutit sur la même branche, tournants des transversales compris.
- * Chaque groupe apporte son débit, son coefficient de voie et sa vitesse.
+ * Chaque groupe apporte son débit, son coefficient de voie et sa vitesse, et
+ * suit le même modèle de file que la boucle éloignée à son retrait.
  */
 const intervallesComptage = (detecteur: Detecteur, ctx: ContexteAnimation): Intervalle[] => {
     if (!detecteur.position) return [];
@@ -364,31 +506,78 @@ const intervallesComptage = (detecteur: Detecteur, ctx: ContexteAnimation): Inte
         const coefficient = coefficientVoie(groupe);
         const vitesse = vitesseCourant(groupe.courant);
         const occupation = dureeOccupation(detecteur.dimension, vitesse);
-        const repere = positionPiedFeu(groupId, ctx);
-        const distance = repere ? distanceMetres(detecteur.position, repere, ctx.pixelsParMetre) : 0;
+        const retrait = retraitEffectif(detecteur, groupId, ctx);
+        const recouvrement = vehiculesAvantRecouvrement(retrait);
         const verts = intervallesVert(groupId, ctx);
-        const intervalle = intervallePassage(coefficient);
-        const dureeVertNominale = Math.max(
-            groupe.durations?.green || 0,
-            ...verts.map(v => v.fin - v.debut)
-        );
-        const sature = estSature(traffic, coefficient, cycle, dureeVertNominale);
 
-        for (const vert of verts) {
-            const dureeVert = Math.max(0, vert.fin - vert.debut);
-            const service = dureeService(traffic, coefficient, cycle, dureeVert);
-            ajouterImpulsions(
-                resultat,
-                vert.debut + distance / Math.max(0.1, vitesse),
-                nombreImpulsions(service, intervalle),
-                intervalle,
-                occupation
-            );
+        for (let i = 0; i < verts.length; i++) {
+            const vert = verts[i];
+            const dureeVert = arrondiDixieme(Math.max(0, vert.fin - vert.debut));
+            const demande = demandeBoucle(traffic, coefficient, cycle, dureeVert);
+            const suivant = debutVertSuivant(verts, i, cycle);
+            const trajet = retrait / Math.max(0.1, vitesse);
+            const couverte = demande.nombreVehicules >= recouvrement;
+            const figeAuVert = couverte
+                ? Math.max(0, demande.servis - recouvrement + 1)
+                : 0;
+
+            if (couverte) {
+                if (demande.servis === 0) {
+                    resultat.push({ debut: vert.debut, fin: suivant });
+                    continue;
+                }
+                if (figeAuVert > 0) {
+                    resultat.push({
+                        debut: vert.debut,
+                        fin: vert.debut + demande.premier
+                            + (figeAuVert - 1) * demande.intervalle
+                    });
+                    ajouterVehicules(
+                        resultat,
+                        vert.debut + demande.premier + figeAuVert * demande.intervalle,
+                        demande.servis - figeAuVert,
+                        demande.intervalle,
+                        occupation
+                    );
+                } else {
+                    resultat.push({ debut: vert.debut, fin: vert.fin });
+                }
+            } else if (demande.servis > 0) {
+                ajouterVehicules(
+                    resultat,
+                    vert.debut + demande.premier + trajet,
+                    demande.servis,
+                    demande.intervalle,
+                    occupation
+                );
+            }
+
+            if (demande.sature) {
+                resultat.push({ debut: vert.fin, fin: suivant });
+                continue;
+            }
+            const absence = demande.capacite <= SEUIL_SANS_FILE ? ABSENCE_APRES_VERT_S : 0;
+            const premiereArrivee = vert.fin + absence;
+            const reste = suivant - premiereArrivee;
+            if (demande.nombreVehicules <= 0 || reste <= 0) continue;
+
+            const pas = reste / demande.nombreVehicules;
+            for (let k = 0; k < Math.ceil(demande.nombreVehicules); k++) {
+                const arrivee = premiereArrivee + k * pas;
+                if (arrivee >= suivant) break;
+                if (k + 1 >= recouvrement) {
+                    resultat.push({
+                        debut: arrivee,
+                        fin: suivant + figeAuVert * demande.intervalle
+                    });
+                    break;
+                }
+                resultat.push({
+                debut: arrivee + retrait / Math.max(0.1, vitesse),
+                fin: arrivee + retrait / Math.max(0.1, vitesse) + occupation
+            });
+            }
         }
-
-        // Courant saturé : les véhicules continuent de se présenter, la boucle
-        // de comptage reste occupée pendant le rouge.
-        if (sature) resultat.push(...intervallesRouge(verts, cycle));
     }
     return resultat;
 };

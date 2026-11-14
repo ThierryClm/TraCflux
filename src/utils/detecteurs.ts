@@ -20,6 +20,12 @@ export const LIBELLE_CATEGORIE: Record<CategorieDetecteur, string> = {
 /** Largeur d'une boucle, fixe : seule sa longueur se saisit. */
 export const LARGEUR_BOUCLE_M = 1;
 
+/** Longueur par défaut d'une boucle de pied de feu. */
+export const DIMENSION_PIED_FEU_M = 2;
+
+/** Longueur par défaut d'une boucle éloignée (« boucle longue »). */
+export const DIMENSION_ELOIGNEE_M = 10;
+
 /** Longueur proposée pour une boucle de comptage, posée après le carrefour. */
 export const DIMENSION_COMPTAGE_M = 2;
 
@@ -45,8 +51,28 @@ export const estBoucle = (categorie: CategorieDetecteur): boolean =>
 export const dimensionSaisissable = (categorie: CategorieDetecteur): boolean =>
     estBoucle(categorie);
 
-export const dimensionParDefaut = (categorie: CategorieDetecteur): number | null =>
-    categorie === 'boucleComptage' ? DIMENSION_COMPTAGE_M : null;
+export const dimensionParDefaut = (categorie: CategorieDetecteur): number | null => {
+    if (categorie === 'bouclePiedFeu') return DIMENSION_PIED_FEU_M;
+    if (categorie === 'boucleEloignee') return DIMENSION_ELOIGNEE_M;
+    if (categorie === 'boucleComptage') return DIMENSION_COMPTAGE_M;
+    return null;
+};
+
+/** Retrait d'une boucle de pied de feu : elle est sur la ligne d'arrêt. */
+export const RETRAIT_PIED_FEU_M = 0;
+
+/** Seules les boucles ont un retrait : ni le radar ni le bouton n'en ont. */
+export const retraitSaisissable = (categorie: CategorieDetecteur): boolean =>
+    estBoucle(categorie);
+
+export const retraitParDefaut = (categorie: CategorieDetecteur): number | null =>
+    categorie === 'bouclePiedFeu' ? RETRAIT_PIED_FEU_M : null;
+
+export const descriptionRetrait = (categorie: CategorieDetecteur): string => {
+    if (categorie === 'bouclePiedFeu') return 'Une boucle de pied de feu est sur la ligne d’arrêt : retrait 0 m';
+    if (estBoucle(categorie)) return 'Distance entre la boucle et la ligne d’arrêt, en mètres';
+    return 'Le retrait ne concerne que les boucles';
+};
 
 export const descriptionDimension = (categorie: CategorieDetecteur): string => {
     if (categorie === 'radar') return 'Un radar n’a pas de dimension : symbole de taille fixe';
@@ -81,6 +107,17 @@ export const dimensionDepuisSaisie = (
     return n !== null && n > 0 ? n : null;
 };
 
+/** Retrait saisi ; une boucle de pied de feu reste toujours à 0. */
+export const retraitDepuisSaisie = (
+    valeur: string,
+    categorie: CategorieDetecteur
+): number | null => {
+    if (!retraitSaisissable(categorie)) return null;
+    if (categorie === 'bouclePiedFeu') return RETRAIT_PIED_FEU_M;
+    const n = nombreFini(valeur);
+    return n !== null && n >= 0 ? n : null;
+};
+
 export const prochainIdDetecteur = (existants: Detecteur[]): number =>
     existants.reduce((max, d) => Math.max(max, d.id), 0) + 1;
 
@@ -110,6 +147,7 @@ export const creerDetecteur = (
     categorie,
     gf: null,
     dimension: dimensionParDefaut(categorie),
+    retrait: retraitParDefaut(categorie),
     position: null,
     orientation: 0,
     note: ''
@@ -123,8 +161,18 @@ export const changerCategorie = (detecteur: Detecteur, categorie: CategorieDetec
     if (categorie === detecteur.categorie) return detecteur;
     let dimension = detecteur.dimension;
     if (!dimensionSaisissable(categorie)) dimension = null;
-    else if (dimension === null) dimension = dimensionParDefaut(categorie);
-    return { ...detecteur, categorie, dimension };
+    else if (dimension === null || dimension === dimensionParDefaut(detecteur.categorie)) {
+        // La longueur encore à sa valeur par défaut suit le nouveau type ;
+        // une longueur saisie par l'utilisateur est conservée.
+        dimension = dimensionParDefaut(categorie);
+    }
+
+    // Le retrait n'a de sens que sur une boucle ; au pied de feu il vaut 0.
+    let retrait = detecteur.retrait;
+    if (!retraitSaisissable(categorie)) retrait = null;
+    else if (categorie === 'bouclePiedFeu') retrait = RETRAIT_PIED_FEU_M;
+
+    return { ...detecteur, categorie, dimension, retrait };
 };
 
 /** Copie insérée juste après l'original, avec un nom libre. */
@@ -169,14 +217,22 @@ export const normaliserDetecteurs = (valeur: unknown): Detecteur[] => {
         const categorie = estCategorieDetecteur(d.categorie) ? d.categorie : 'bouclePiedFeu';
         const gf = nombreFini(d.gf);
         const dimension = nombreFini(d.dimension);
+        const retraitLu = nombreFini(d.retrait);
+        let retrait: number | null = null;
+        if (retraitSaisissable(categorie)) {
+            retrait = categorie === 'bouclePiedFeu'
+                ? RETRAIT_PIED_FEU_M
+                : retraitLu !== null && retraitLu >= 0 ? retraitLu : null;
+        }
         resultat.push({
             id,
             nom: typeof d.nom === 'string' ? d.nom : '',
             categorie,
             gf: gf !== null && Number.isInteger(gf) && gf > 0 ? gf : null,
-            dimension: estBoutonPoussoir(categorie) || dimension === null || dimension <= 0
-                ? null
-                : dimension,
+            dimension: estBoucle(categorie)
+                ? dimension !== null && dimension > 0 ? dimension : dimensionParDefaut(categorie)
+                : categorie === 'radar' ? dimension : null,
+            retrait,
             position: positionValide(d.position),
             orientation: nombreFini(d.orientation) ?? 0,
             note: typeof d.note === 'string' ? d.note : ''

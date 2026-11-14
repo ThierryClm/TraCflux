@@ -11,12 +11,23 @@ import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable 
 import { demarrerHorloge } from '../utils/horlogeLecture';
 import SignalModule from './SignalModule';
 import LocalInput from './LocalInput';
-import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
-import { dimensionSaisissable, estBoucle, LIBELLE_CATEGORIE, normaliserPixelsParMetre } from '../utils/detecteurs';
+import type { ActionMicro, CategorieDetecteur, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
+import {
+    CATEGORIES_DETECTEUR,
+    changerCategorie,
+    dimensionDepuisSaisie,
+    dimensionSaisissable,
+    estBoucle,
+    LIBELLE_CATEGORIE,
+    normaliserPixelsParMetre,
+    retraitDepuisSaisie,
+    retraitSaisissable
+} from '../utils/detecteurs';
 import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
 import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/animationDetecteurs';
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
+import useDetectorClock from '../hooks/useDetectorClock';
 import './IntersectionImage.css';
 import { lirePrefsVerrou, ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 
@@ -149,7 +160,7 @@ const IntersectionImage = ({
 
     // Cases d'affichage : enregistrées avec le projet (useIntersectionDisplayOptions).
     const {
-        showCurrents = true,
+        showCurrents: courantsDemandes = true,
         showGroupNumbers,
         showGroupNames,
         showArrows,
@@ -159,7 +170,10 @@ const IntersectionImage = ({
     // Sans signal renseigné, la case est grisée et ne pèse sur rien d'autre ; son
     // choix reste mémorisé pour le jour où un signal sera saisi.
     const signalDisponible = auMoinsUnSignal(groups);
-    const showSignals = showCurrents && displayOptions.showSignals && signalDisponible;
+    // Flèches et signaux sont deux vues exclusives : la seconde remplace la
+    // première, elle n'a donc plus besoin que les courants soient cochés.
+    const showSignals = displayOptions.showSignals && signalDisponible;
+    const showCurrents = courantsDemandes && !showSignals;
     // Module désactivé : les objets détecteurs restent visibles, sans leur texte.
     const afficherDetecteurs = detecteurModule ? showDetecteurs : true;
     const afficherNomsDetecteurs = detecteurModule && showDetecteurNames;
@@ -167,7 +181,8 @@ const IntersectionImage = ({
     const setShowGroupNames = (value: boolean) => onDisplayOptionChange?.('showGroupNames', value);
     const setShowCurrents = (value: boolean) => {
         onDisplayOptionChange?.('showCurrents', value);
-        if (!value) onDisplayOptionChange?.('showArrows', false);
+        if (value) onDisplayOptionChange?.('showSignals', false);
+        else onDisplayOptionChange?.('showArrows', false);
     };
     // Les deux modes de placement sont exclusifs ; aucun des deux n'est obligatoire.
     const setShowArrows = (value: boolean) => {
@@ -181,7 +196,13 @@ const IntersectionImage = ({
             onDisplayOptionChange?.('showDetecteurs', true);
         }
     };
-    const setShowSignals = (value: boolean) => onDisplayOptionChange?.('showSignals', value);
+    const setShowSignals = (value: boolean) => {
+        onDisplayOptionChange?.('showSignals', value);
+        if (value) {
+            onDisplayOptionChange?.('showCurrents', false);
+            onDisplayOptionChange?.('showArrows', false);
+        }
+    };
     const setShowDetecteurs = (value: boolean) => {
         onDisplayOptionChange?.('showDetecteurs', value);
         if (!value) setAjoutDetecteurs(false);
@@ -921,6 +942,17 @@ const IntersectionImage = ({
         ? (currentTime ?? 0)
         : (hoveredDiagramTime ?? currentTime ?? 0);
 
+    // Les boucles ont leur propre horloge au dixième de seconde : elles ne
+    // sautent pas d'une seconde à l'autre avec le diagramme. À l'arrêt, elles
+    // montrent l'instant du diagramme (ou celui survolé).
+    const detectorTime = useDetectorClock({
+        isPlaying: !!isPlaying,
+        currentTime: currentTime ?? 0,
+        cycleLength: cycleAnimation,
+        playbackSpeed
+    });
+    const instantBoucles = isPlaying ? detectorTime : displayedTime;
+
     // Durée du cycle lue par la boucle de défilement au moment où elle avance,
     // et non captée à son lancement : cocher ou décocher une action change la
     // simulation SANS relancer la boucle. La relancer remettait son compteur
@@ -1026,7 +1058,7 @@ const IntersectionImage = ({
                             className="intersection-img"
                             style={{ filter: `brightness(${imageBrightness}%) contrast(${imageContrast}%)` }}
                         />
-                        {showCurrents && arrows.map(arrow => {
+                        {(showCurrents || showSignals) && arrows.map(arrow => {
                             const groupInfo = getGroupInfo(arrow.groupId);
                             const rotation = arrow.rotation || 0;
                             const scale = arrow.scale || 1;
@@ -1036,6 +1068,8 @@ const IntersectionImage = ({
                             const isHovered = hoveredArrowGroupId === arrow.groupId || !!hoveredArrowGroupIds?.includes(arrow.groupId);
                             const isPedestrianOrCycle = groupInfo.courant === 'Piéton' || groupInfo.courant === 'Cycle';
                             const signal = getSignalAffiche(arrow.groupId);
+                            // Vue Signaux seule : un groupe sans signal n'affiche rien.
+                            if (!showCurrents && !signal) return null;
                             const ppAllume = isPPLit(arrow.groupId, displayedTime, { groups, simulationResult, cycleLength });
                             return (
                                 <div
@@ -1083,7 +1117,7 @@ const IntersectionImage = ({
                             const selectionne = selectedDetecteur === detecteur.id;
                             const dansBoucle = etiquetteDansBoucle(detecteur, taille);
                             const occupe = estOccupee(
-                                displayedTime,
+                                instantBoucles,
                                 intervallesParDetecteur.get(detecteur.id) ?? [],
                                 cycleAnimation
                             );
@@ -1204,11 +1238,36 @@ const IntersectionImage = ({
                                 <h4>Modifier le détecteur</h4>
                                 <div className="editor-row">
                                     <label>Nom:</label>
-                                    <span className="detecteur-editor-value">{detecteur.nom || 'Sans nom'}</span>
+                                    <select
+                                        className="detecteur-editor-select"
+                                        aria-label="Choisir le détecteur"
+                                        value={detecteur.id}
+                                        onChange={(e) => setSelectedDetecteur(Number(e.target.value))}
+                                    >
+                                        {detecteurs.map(d => (
+                                            <option key={d.id} value={d.id}>
+                                                {d.nom || `Détecteur ${d.id}`}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="editor-row">
                                     <label>Type:</label>
-                                    <span className="detecteur-editor-value">{LIBELLE_CATEGORIE[detecteur.categorie]}</span>
+                                    <select
+                                        className="detecteur-editor-select"
+                                        aria-label="Type du détecteur dans l’éditeur"
+                                        value={detecteur.categorie}
+                                        onChange={(e) => {
+                                            const categorie = e.target.value as CategorieDetecteur;
+                                            onDetecteursChange(detecteurs.map(d =>
+                                                d.id === detecteur.id ? changerCategorie(d, categorie) : d
+                                            ));
+                                        }}
+                                    >
+                                        {CATEGORIES_DETECTEUR.map(c => (
+                                            <option key={c.valeur} value={c.valeur}>{c.libelle}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="editor-row">
                                     <label>Rotation:</label>
@@ -1242,12 +1301,49 @@ const IntersectionImage = ({
                                         <span className="rotation-unit">°</span>
                                     </div>
                                 </div>
+                                {dimensionSaisissable(detecteur.categorie) && (
+                                    <div className="editor-row">
+                                        <label>Longueur:</label>
+                                        <LocalInput
+                                            className="detecteur-editor-dimension"
+                                            aria-label="Longueur du détecteur"
+                                            value={detecteur.dimension ?? ''}
+                                            onCommit={(valeur) => onDetecteursChange(detecteurs.map(d =>
+                                                d.id === detecteur.id
+                                                    ? { ...d, dimension: dimensionDepuisSaisie(valeur, detecteur.categorie) }
+                                                    : d
+                                            ))}
+                                        />
+                                        <span className="detecteur-editor-unit">m (largeur 1 m)</span>
+                                    </div>
+                                )}
+                                {/* Une boucle de pied de feu est sur la ligne d'arrêt : le retrait n'a pas lieu d'être saisi. */}
+                                {retraitSaisissable(detecteur.categorie) && detecteur.categorie !== 'bouclePiedFeu' && (
+                                    <div className="editor-row">
+                                        <label>Retrait de la boucle:</label>
+                                        <LocalInput
+                                            className="detecteur-editor-dimension"
+                                            aria-label="Retrait de la boucle"
+                                            value={detecteur.retrait ?? ''}
+                                            placeholder="mesuré sur l’image"
+                                            title={tip('Distance entre la boucle et la ligne d’arrêt, en mètres. Laissé vide, le retrait est mesuré sur l’image.')}
+                                            onCommit={(valeur) => onDetecteursChange(detecteurs.map(d =>
+                                                d.id === detecteur.id
+                                                    ? { ...d, retrait: retraitDepuisSaisie(valeur, detecteur.categorie) }
+                                                    : d
+                                            ))}
+                                        />
+                                        <span className="detecteur-editor-unit">m</span>
+                                    </div>
+                                )}
                                 <p className="detecteur-editor-note">
                                     {dimensionSaisissable(detecteur.categorie)
-                                        ? detecteur.categorie === 'radar'
-                                            ? `Portée ${detecteur.dimension ?? '—'} m — symbole de taille fixe`
-                                            : `Longueur ${detecteur.dimension ?? '—'} m × largeur 1 m`
-                                        : 'Bouton poussoir — symbole de taille fixe'}
+                                        ? detecteur.categorie === 'bouclePiedFeu'
+                                            ? 'La largeur d’une boucle est fixe : 1 m.'
+                                            : 'La largeur d’une boucle est fixe : 1 m. Le retrait se compte depuis la ligne d’arrêt.'
+                                        : detecteur.categorie === 'radar'
+                                            ? 'Radar — symbole de taille fixe.'
+                                            : 'Bouton poussoir — symbole de taille fixe.'}
                                 </p>
                                 <button className="delete-arrow-btn" onClick={() => retirerDetecteurDeImage(detecteur.id)}>
                                     Retirer de l'image
@@ -1443,7 +1539,7 @@ const IntersectionImage = ({
                         </div>
                     ) : null}
 
-                    {/* Paramètres de l'image, en deux familles : courants et détecteurs. */}
+                    {/* Paramètres de l'image, en deux familles : flèches et détecteurs. */}
                     <div className="display-options">
                         <div className="display-column">
                             <label className="checkbox-option">
@@ -1452,7 +1548,7 @@ const IntersectionImage = ({
                                     checked={showCurrents}
                                     onChange={(e) => setShowCurrents(e.target.checked)}
                                 />
-                                <span>Courant de circulation</span>
+                                <span>Flèche</span>
                             </label>
                             <label className={`checkbox-option sous-option ${showCurrents ? '' : 'inactive'}`}>
                                 <input
@@ -1483,15 +1579,15 @@ const IntersectionImage = ({
                                 <span>Ajouter une flèche</span>
                             </label>
                             <label
-                                className={`checkbox-option ${!showCurrents || !signalDisponible ? 'inactive' : ''}`}
+                                className={`checkbox-option ${!signalDisponible ? 'inactive' : ''}`}
                                 title={tip(signalDisponible
-                                    ? 'Affiche le signal du formulaire à la place de la flèche. Sans signal renseigné, le groupe garde sa flèche.'
+                                    ? 'Affiche les signaux du formulaire à la place des flèches ; la case Flèche se décoche.'
                                     : 'Aucun signal renseigné : choisissez-en au moins un dans la colonne Signal du formulaire.')}
                             >
                                 <input
                                     type="checkbox"
                                     checked={showSignals}
-                                    disabled={!showCurrents || !signalDisponible}
+                                    disabled={!signalDisponible}
                                     onChange={(e) => setShowSignals(e.target.checked)}
                                 />
                                 <span>Signaux</span>
