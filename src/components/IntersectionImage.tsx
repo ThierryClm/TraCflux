@@ -27,6 +27,7 @@ import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../uti
 import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/animationDetecteurs';
 import type { SimulationResult } from '../simulation';
 import type { IntersectionDisplayOption, IntersectionDisplayOptions } from '../hooks/useIntersectionDisplayOptions';
+import useDetectorClock from '../hooks/useDetectorClock';
 import './IntersectionImage.css';
 import { lirePrefsVerrou, ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
 
@@ -931,6 +932,17 @@ const IntersectionImage = ({
         ? (currentTime ?? 0)
         : (hoveredDiagramTime ?? currentTime ?? 0);
 
+    // Les boucles ont leur propre horloge au dixième de seconde : elles ne
+    // sautent pas d'une seconde à l'autre avec le diagramme. À l'arrêt, elles
+    // montrent l'instant du diagramme (ou celui survolé).
+    const detectorTime = useDetectorClock({
+        isPlaying: !!isPlaying,
+        currentTime: currentTime ?? 0,
+        cycleLength: cycleAnimation,
+        playbackSpeed
+    });
+    const instantBoucles = isPlaying ? detectorTime : displayedTime;
+
     // Durée du cycle lue par la boucle de défilement au moment où elle avance,
     // et non captée à son lancement : cocher ou décocher une action change la
     // simulation SANS relancer la boucle. La relancer remettait son compteur
@@ -1093,7 +1105,7 @@ const IntersectionImage = ({
                             const selectionne = selectedDetecteur === detecteur.id;
                             const dansBoucle = etiquetteDansBoucle(detecteur, taille);
                             const occupe = estOccupee(
-                                displayedTime,
+                                instantBoucles,
                                 intervallesParDetecteur.get(detecteur.id) ?? [],
                                 cycleAnimation
                             );
