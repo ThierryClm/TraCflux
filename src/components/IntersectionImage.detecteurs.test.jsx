@@ -219,13 +219,11 @@ describe('IntersectionImage — calque des détecteurs', () => {
         expect(dernier.find(d => d.id === 7).retrait).toBe(22.5);
     });
 
-    it('force un retrait de 0 pour une boucle de pied de feu', () => {
+    it('ne montre pas de retrait pour une boucle de pied de feu', () => {
         const { container } = rendre();
         fireEvent.click(container.querySelector('.detecteur-symbol'));
 
-        const champ = screen.getByLabelText('Retrait de la boucle');
-        expect(champ).toHaveValue('0');
-        expect(champ).toBeDisabled();
+        expect(screen.queryByLabelText('Retrait de la boucle')).toBeNull();
     });
 
     it('retire le symbole de l’image sans supprimer le détecteur', () => {
