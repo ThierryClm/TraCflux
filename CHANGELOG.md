@@ -13,6 +13,9 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 - **Onglet Détecteurs** : tri croissant ou décroissant par nom, type ou GF en cliquant sur l'en-tête de
   colonne ; un troisième clic revient à l'ordre de saisie. Le tri ne touche pas à l'ordre enregistré.
+- **Aide, navigation entre chapitres** : après un clic sur un chapitre du sommaire, les flèches ▲ et ▼
+  de la barre de recherche mènent au chapitre précédent ou suivant, et le compteur affiche la position
+  (« Chapitre 2 / 3 »).
 
 ### Modifié
 

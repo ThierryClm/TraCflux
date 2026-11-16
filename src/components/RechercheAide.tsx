@@ -65,9 +65,21 @@ interface RechercheAideProps {
     racine: RefObject<HTMLElement | null>;
     /** Case « Page principale » de Mise en page → Infobulles. */
     tooltipsEnabled?: boolean;
+    /** Chapitres de l'aide, dans l'ordre du sommaire. */
+    chapitres?: { id: string; title: string }[];
+    /** Chapitre ouvert depuis le sommaire, s'il y en a un. */
+    chapitreCourant?: number | null;
+    /** Ouvre le chapitre demandé (le défilement appartient au sommaire). */
+    onAllerChapitre?: (index: number) => void;
 }
 
-const RechercheAide = ({ racine, tooltipsEnabled = true }: RechercheAideProps) => {
+const RechercheAide = ({
+    racine,
+    tooltipsEnabled = true,
+    chapitres = [],
+    chapitreCourant = null,
+    onAllerChapitre,
+}: RechercheAideProps) => {
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const [saisie, setSaisie] = useState('');
     const [resultat, setResultat] = useState<{ requete: string; occurrences: OccurrenceAide[] }>({ requete: '', occurrences: [] });
@@ -168,8 +180,17 @@ const RechercheAide = ({ racine, tooltipsEnabled = true }: RechercheAideProps) =
         }
     };
 
+    // Deux usages des flèches ▲ ▼ : la recherche dès qu'un mot est saisi, et à
+    // défaut la navigation entre chapitres, une fois un chapitre ouvert par le
+    // sommaire. Sans mot ni chapitre, elles restent grisées.
     const actif = preparerRequete(requete) !== '';
-    const compteur = !actif ? '' : total === 0 ? 'Aucun résultat' : `${Math.min(courante, total - 1) + 1} / ${total}`;
+    const chapitre = chapitreCourant ?? 0;
+    const modeChapitres = !actif && !!onAllerChapitre && chapitreCourant !== null && chapitres.length > 0;
+    const premierChapitre = chapitre <= 0;
+    const dernierChapitre = chapitre >= chapitres.length - 1;
+    const compteur = actif
+        ? total === 0 ? 'Aucun résultat' : `${Math.min(courante, total - 1) + 1} / ${total}`
+        : modeChapitres ? `Chapitre ${chapitre + 1} / ${chapitres.length}` : '';
 
     return (
         <div className="help-recherche" ref={barre} role="search">
@@ -186,10 +207,16 @@ const RechercheAide = ({ racine, tooltipsEnabled = true }: RechercheAideProps) =
                     onKeyDown={surToucheChamp}
                 />
                 <span className={`help-recherche-compteur${actif && total === 0 ? ' help-recherche-vide' : ''}`} aria-live="polite">{compteur}</span>
-                <button type="button" className="help-recherche-btn" onClick={() => aller(-1)} disabled={total === 0 || premiere}
-                    title={tip('Occurrence précédente (Maj+Entrée)')} aria-label="Occurrence précédente">▲</button>
-                <button type="button" className="help-recherche-btn" onClick={() => aller(1)} disabled={total === 0 || derniere}
-                    title={tip('Occurrence suivante (Entrée)')} aria-label="Occurrence suivante">▼</button>
+                <button type="button" className="help-recherche-btn"
+                    onClick={modeChapitres ? () => onAllerChapitre?.(chapitre - 1) : () => aller(-1)}
+                    disabled={modeChapitres ? premierChapitre : total === 0 || premiere}
+                    title={tip(modeChapitres ? 'Chapitre précédent' : 'Occurrence précédente (Maj+Entrée)')}
+                    aria-label={modeChapitres ? 'Chapitre précédent' : 'Occurrence précédente'}>▲</button>
+                <button type="button" className="help-recherche-btn"
+                    onClick={modeChapitres ? () => onAllerChapitre?.(chapitre + 1) : () => aller(1)}
+                    disabled={modeChapitres ? dernierChapitre : total === 0 || derniere}
+                    title={tip(modeChapitres ? 'Chapitre suivant' : 'Occurrence suivante (Entrée)')}
+                    aria-label={modeChapitres ? 'Chapitre suivant' : 'Occurrence suivante'}>▼</button>
                 <button type="button" className="help-recherche-btn help-recherche-chapitres" onClick={() => setListeOuverte(o => !o)}
                     disabled={total === 0} aria-expanded={listeOuverte} aria-haspopup="listbox"
                     title={tip('Chapitres qui contiennent ce mot')}>

@@ -92,3 +92,70 @@ describe("recherche dans l'aide", () => {
         expect(document.activeElement).toBe(screen.getByRole('searchbox'));
     });
 });
+
+describe('flèches sans recherche', () => {
+    const ouvrirChapitre = (n) => {
+        const sommaire = document.getElementById('help-sommaire');
+        const liens = within(sommaire).getAllByRole('link', { name: new RegExp(`^Chapitre ${n} `) });
+        fireEvent.click(liens[0]);
+    };
+    const totalChapitres = () => {
+        const texte = screen.getByText(/^Chapitre 1 \/ \d+$/).textContent;
+        return Number(texte.split('/ ')[1]);
+    };
+
+    it('restent grisées tant qu’aucun chapitre n’a été ouvert', () => {
+        render(<HelpContent />);
+        expect(screen.getByRole('button', { name: 'Occurrence précédente' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Occurrence suivante' })).toBeDisabled();
+        expect(screen.queryByText(/^Chapitre \d+ \/ \d+$/)).toBeNull();
+    });
+
+    it('passent d’un chapitre à l’autre après un clic dans le sommaire', () => {
+        const defiler = vi.spyOn(Element.prototype, 'scrollIntoView');
+        render(<HelpContent />);
+        ouvrirChapitre(1);
+        const precedent = screen.getByRole('button', { name: 'Chapitre précédent' });
+        const suivant = screen.getByRole('button', { name: 'Chapitre suivant' });
+        expect(precedent).toBeDisabled();
+        expect(suivant).toBeEnabled();
+        const total = totalChapitres();
+        expect(total).toBeGreaterThan(1);
+
+        fireEvent.click(suivant);
+        expect(screen.getByText(`Chapitre 2 / ${total}`)).toBeInTheDocument();
+        expect(precedent).toBeEnabled();
+        // Le titre du chapitre 2 est bien celui qu'on a rejoint.
+        expect(defiler.mock.instances.at(-1).textContent).toContain('Chapitre 2');
+
+        for (let i = 2; i < total; i++) fireEvent.click(suivant);
+        expect(screen.getByText(`Chapitre ${total} / ${total}`)).toBeInTheDocument();
+        expect(suivant).toBeDisabled();
+        expect(precedent).toBeEnabled();
+
+        fireEvent.click(precedent);
+        expect(screen.getByText(`Chapitre ${total - 1} / ${total}`)).toBeInTheDocument();
+        defiler.mockRestore();
+    });
+
+    it('la recherche reprend la main dès qu’un mot est saisi', () => {
+        render(<HelpContent />);
+        ouvrirChapitre(1);
+        chercher('escamotage');
+        expect(screen.getByRole('button', { name: 'Occurrence précédente' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Chapitre suivant' })).toBeNull();
+        expect(screen.queryByText(/^Chapitre \d+ \/ \d+$/)).toBeNull();
+        expect(screen.getByText(/^1 \/ \d+$/)).toBeInTheDocument();
+    });
+
+    it('effacer la recherche retrouve la navigation par chapitres', () => {
+        render(<HelpContent />);
+        ouvrirChapitre(2);
+        const champ = chercher('escamotage');
+        fireEvent.keyDown(champ, { key: 'Escape' });
+        expect(champ.value).toBe('');
+        act(() => { vi.advanceTimersByTime(200); });
+        expect(screen.getByRole('button', { name: 'Chapitre suivant' })).toBeEnabled();
+        expect(screen.getByText(/^Chapitre 2 \/ \d+$/)).toBeInTheDocument();
+    });
+});
