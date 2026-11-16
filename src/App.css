@@ -1185,6 +1185,12 @@ body.blue-night-mode .conflict-list {
     color: #ddd;
 }
 
+/* Le bouton « retour au sommaire » s'arrête sous la barre de recherche collée
+   en haut : le titre « Sommaire » et sa première ligne restent visibles. */
+.help-toc {
+    scroll-margin-top: 64px;
+}
+
 .help-toc a:hover {
     text-decoration: underline;
 }
