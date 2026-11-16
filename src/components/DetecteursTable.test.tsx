@@ -166,3 +166,59 @@ describe('DetecteursTable — verrouillage de la saisie', () => {
         expect(screen.getByRole('button', { name: /Ajouter un détecteur/ })).toBeEnabled();
     });
 });
+
+describe('DetecteursTable — tri des colonnes', () => {
+    const liste = [
+        detecteur({ id: 1, nom: 'Détecteur 10', categorie: 'radar', gf: 2 }),
+        detecteur({ id: 2, nom: 'Détecteur 2', categorie: 'boucleEloignee', gf: null }),
+        detecteur({ id: 3, nom: 'Boucle A', categorie: 'bouclePiedFeu', gf: 1 })
+    ];
+    const noms = () => screen.getAllByLabelText('Nom du détecteur').map(el => (el as HTMLInputElement).value);
+    const enTete = (libelle: RegExp) => screen.getByRole('button', { name: libelle });
+
+    it('trie par nom en croissant, puis décroissant, puis revient à l’ordre de saisie', () => {
+        rendre(liste);
+        fireEvent.click(enTete(/^Nom/));
+        expect(noms()).toEqual(['Boucle A', 'Détecteur 2', 'Détecteur 10']);
+        expect(enTete(/^Nom/).closest('th')).toHaveAttribute('aria-sort', 'ascending');
+        fireEvent.click(enTete(/^Nom/));
+        expect(noms()).toEqual(['Détecteur 10', 'Détecteur 2', 'Boucle A']);
+        expect(enTete(/^Nom/).closest('th')).toHaveAttribute('aria-sort', 'descending');
+        fireEvent.click(enTete(/^Nom/));
+        expect(noms()).toEqual(['Détecteur 10', 'Détecteur 2', 'Boucle A']);
+        expect(enTete(/^Nom/).closest('th')).toHaveAttribute('aria-sort', 'none');
+    });
+
+    it('trie par type sur le libellé', () => {
+        rendre(liste);
+        fireEvent.click(enTete(/^Type/));
+        // Boucle de pied de feu, Boucle éloignée, Radar.
+        expect(noms()).toEqual(['Boucle A', 'Détecteur 2', 'Détecteur 10']);
+        fireEvent.click(enTete(/^Type/));
+        expect(noms()).toEqual(['Détecteur 10', 'Détecteur 2', 'Boucle A']);
+    });
+
+    it('trie par GF et laisse un détecteur sans GF en fin de liste dans les deux sens', () => {
+        rendre(liste);
+        fireEvent.click(enTete(/^GF/));
+        expect(noms()).toEqual(['Boucle A', 'Détecteur 10', 'Détecteur 2']);
+        fireEvent.click(enTete(/^GF/));
+        expect(noms()).toEqual(['Détecteur 10', 'Boucle A', 'Détecteur 2']);
+    });
+
+    it('une modification garde le tri et la ligne modifiée', () => {
+        rendre(liste);
+        fireEvent.click(enTete(/^Nom/));
+        fireEvent.change(nom(0), { target: { value: 'Zone Z' } });
+        fireEvent.blur(nom(0));
+        expect(noms()).toEqual(['Détecteur 2', 'Détecteur 10', 'Zone Z']);
+    });
+
+    it('reste disponible quand la saisie est verrouillée', async () => {
+        rendre(liste);
+        await act(async () => { basculerVerrou('detecteurs'); });
+        expect(enTete(/^Nom/)).toBeEnabled();
+        fireEvent.click(enTete(/^Nom/));
+        expect(noms()).toEqual(['Boucle A', 'Détecteur 2', 'Détecteur 10']);
+    });
+});

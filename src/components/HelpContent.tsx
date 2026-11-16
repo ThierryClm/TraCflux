@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import RechercheAide from './RechercheAide';
 import { allerAuMenu, menuAccessible } from '../utils/renvoiMenu';
@@ -44,10 +44,29 @@ interface ChapitreAide {
 const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }: HelpContentProps) => {
     const helpContentRef = useRef<HTMLDivElement>(null);
     const [helpToc, setHelpToc] = useState<ChapitreAide[]>([]);
+    // Rubrique ouverte depuis le sommaire : les flèches ▲ ▼ de la barre de
+    // recherche passent alors d'une rubrique à la précédente ou à la suivante.
+    const [rubriqueCourante, setRubriqueCourante] = useState<number | null>(null);
     // L'aide peut vivre dans une fenêtre détachée : ses ancres se cherchent
     // dans le document qui l'affiche, pas dans celui de l'application.
     const aller = (id: string, behavior: ScrollBehavior = 'auto') =>
         (helpContentRef.current?.ownerDocument ?? document).getElementById(id)?.scrollIntoView({ behavior, block: 'start' });
+
+    // Toutes les rubriques (les h4 pointés du sommaire), dans l'ordre du texte :
+    // les flèches passent de l'une à l'autre, y compris d'un chapitre au suivant.
+    const rubriques = useMemo(() => helpToc.flatMap(c => c.sections), [helpToc]);
+    const rangRubrique = useMemo(
+        () => new Map(rubriques.map((r, index) => [r.id, index])),
+        [rubriques]
+    );
+
+    // Ouvre la rubrique demandée par la barre de recherche, d'un cran à l'autre.
+    const ouvrirRubrique = (index: number) => {
+        const rubrique = rubriques[index];
+        if (!rubrique) return;
+        setRubriqueCourante(index);
+        aller(rubrique.id, 'smooth');
+    };
 
     // Build the help TOC by scanning h3 (chapters) and h4 (sections) and assigning ids
     useEffect(() => {
@@ -55,13 +74,21 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
         if (!root) return;
         const slug = (s: string) => s.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').substring(0, 60);
         const toc: ChapitreAide[] = [];
+        // Deux rubriques peuvent porter le même titre (« Présentation ») :
+        // chacune garde une ancre distincte, sinon le sommaire et les flèches
+        // confondraient les deux.
+        const ancres = new Set<string>();
         let currentChapter: ChapitreAide | null = null;
         root.querySelectorAll<HTMLHeadingElement>('h3, h4').forEach(node => {
             // Remove any previously-injected "back to TOC" link before reading text
             const existing = node.querySelector('.back-to-toc');
             if (existing) existing.remove();
             const text = (node.textContent ?? '').trim();
-            if (!node.id) node.id = slug(text);
+            const base = node.id || slug(text);
+            let ancre = base;
+            for (let n = 2; ancres.has(ancre); n++) ancre = `${base}-${n}`;
+            node.id = ancre;
+            ancres.add(ancre);
             if (node.tagName === 'H3') {
                 currentChapter = { id: node.id, title: text, sections: [] };
                 toc.push(currentChapter);
@@ -70,7 +97,12 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
             }
         });
         setHelpToc(toc);
-    }, []);
+        // Aide ouverte directement sur une rubrique (lien profond) : elle devient la rubrique courante.
+        const ouvert = initialAnchor
+            ? toc.flatMap(c => c.sections).findIndex(s => s.id === initialAnchor)
+            : -1;
+        if (ouvert >= 0) setRubriqueCourante(ouvert);
+    }, [initialAnchor]);
 
     // Scroll to anchor when initialAnchor is provided (deep link from URL param)
     useEffect(() => {
@@ -91,7 +123,12 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
         if (aideSection) {
             const titres = helpContentRef.current?.querySelectorAll<HTMLHeadingElement>('h3, h4') ?? [];
             const cible = [...titres].find(titre => titre.textContent?.trim() === aideSection);
-            if (cible) aller(cible.id);
+            if (cible) {
+                // Un renvoi vers une rubrique la rend courante : les flèches partent de là.
+                const index = rangRubrique.get(cible.id);
+                if (index !== undefined) setRubriqueCourante(index);
+                aller(cible.id);
+            }
         } else if (aideMenu && allerAuMenu(aideMenu)) {
             onFermer?.();
         }
@@ -99,7 +136,13 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
 
     return (
         <div className={`help-content${menuAccessible() ? '' : ' sans-menu'}`} ref={helpContentRef} onClick={surClicRenvoi}>
-            <RechercheAide racine={helpContentRef} tooltipsEnabled={tooltipsEnabled} />
+            <RechercheAide
+                racine={helpContentRef}
+                tooltipsEnabled={tooltipsEnabled}
+                rubriquesAide={rubriques}
+                rubriqueCourante={rubriqueCourante}
+                onAllerRubrique={ouvrirRubrique}
+            />
             {helpToc.length > 0 && (
                 <nav id="help-sommaire" className="help-toc" style={{ background: '#2a2a2a', border: '1px solid #444', borderRadius: '6px', padding: '12px 16px', marginBottom: '20px' }}>
                     <h3 style={{ color: '#4ecdc4', marginTop: 0, marginBottom: '10px', fontSize: '1em' }}>Sommaire</h3>
@@ -107,7 +150,13 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                         <div key={chapter.id} style={{ marginBottom: '8px' }}>
                             <a
                                 href={`#${chapter.id}`}
-                                onClick={(e) => { e.preventDefault(); aller(chapter.id); }}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    // Le chapitre mène à sa première rubrique : les flèches partent de là.
+                                    const premiere = chapter.sections[0] ? rangRubrique.get(chapter.sections[0].id) : undefined;
+                                    if (premiere !== undefined) setRubriqueCourante(premiere);
+                                    aller(chapter.id);
+                                }}
                                 style={{ color: '#4ecdc4', fontWeight: 'bold', textDecoration: 'none' }}
                             >
                                 {chapter.title}
@@ -118,7 +167,13 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                                         <li key={s.id} style={{ margin: '2px 0' }}>
                                             <a
                                                 href={`#${s.id}`}
-                                                onClick={(e) => { e.preventDefault(); aller(s.id); }}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    const rang = rangRubrique.get(s.id);
+                                                    if (rang !== undefined) setRubriqueCourante(rang);
+                                                    aller(s.id);
+                                                }}
+                                                aria-current={rubriqueCourante !== null && rubriques[rubriqueCourante]?.id === s.id ? 'true' : undefined}
                                                 style={{ color: '#ccc', textDecoration: 'none' }}
                                                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.color = '#ccc'; }}
@@ -164,6 +219,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                     <li><strong>Renvois :</strong> Les liens en couleur du texte mènent à leur destination. Un renvoi vers une section y conduit directement ; un renvoi vers un menu, comme <VoirMenu chemin="Mise en page → Options de contraste" />, déplie ce menu dans la fenêtre principale et signale l'entrée, sans fermer l'aide ; les menus Mise en page et Diagramme demandent un projet ouvert. Le bouton flottant ↑ ramène au sommaire.</li>
                     <li><strong>Fenêtre de l'aide :</strong> L'aide s'ouvre dans sa propre fenêtre, non modale, comme les fenêtres détachées : on la déplace sur un autre écran et on continue à travailler dans l'application pendant qu'elle reste ouverte. Sa position est retenue d'une ouverture à l'autre ; la redemander la ramène au premier plan. Sur un téléphone, ou si le navigateur bloque les fenêtres, elle s'affiche dans la page.</li>
                     <li><strong>Rechercher dans l'aide :</strong> Saisissez un mot dans le champ en haut de cette fenêtre. Toutes ses occurrences sont surlignées, la courante en orange ; ▲ et ▼ (ou Entrée et Maj+Entrée) passent de l'une à l'autre, et le bouton <em>Chapitres</em> déroule la liste des sections qui contiennent le mot, avec leur nombre d'occurrences. La recherche ignore majuscules et accents : « ecran » trouve « écran ».</li>
+                    <li><strong>Passer d'une rubrique à l'autre :</strong> sans mot saisi, ▲ et ▼ restent grisées jusqu'à ce que vous ouvriez une rubrique du sommaire (les entrées pointées sous un chapitre) ; à partir de là, elles mènent à la rubrique précédente ou suivante, y compris d'un chapitre au suivant, et le compteur indique la rubrique courante sur le total. Dès qu'un mot est saisi, les deux flèches reprennent leur rôle dans la recherche.</li>
                 </ul>
             </section>
 
@@ -575,6 +631,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 <h4>Détecteurs de terrain</h4>
                 <p><strong>Activer le module :</strong> <VoirMenu chemin="Mise en page → Configuration → Détecteur" />. Décoché par défaut, il ajoute l'onglet <em>Détecteurs</em> et la colonne Détecteur des paramètres de l'image. Quand il est décoché, les détecteurs déjà posés restent visibles sur l'image, sans leur nom, mais l'onglet et la colonne disparaissent.</p>
                 <p><strong>Créer et poser un détecteur :</strong> dans l'onglet Détecteurs, <em>Ajouter un détecteur</em> crée une ligne. Choisissez son nom, son type et son groupe de feu, renseignez sa longueur, puis cochez <em>Ajouter</em> dans la colonne Détecteur du tableau de l'image et cliquez sur le plan. Le placement d'un détecteur est exclusif avec <em>Ajouter une flèche</em>. <em>Retirer de l'image</em> conserve la ligne dans le tableau.</p>
+                <p><strong>Trier le tableau :</strong> cliquez sur l'en-tête <em>Nom</em>, <em>Type</em> ou <em>GF</em> pour trier en ordre croissant (▲), cliquez de nouveau pour l'ordre décroissant (▼), une troisième fois pour revenir à l'ordre de saisie. Le tri ne change que l'affichage : l'ordre enregistré des détecteurs est conservé. Un détecteur sans groupe de feu reste en fin de liste.</p>
                 <ul>
                     <li><strong>Types :</strong> boucle de pied de feu, boucle éloignée, boucle de comptage, radar et bouton poussoir. Le radar et le bouton n'ont pas de longueur ; la longueur se saisit pour les boucles.</li>
                     <li><strong>Longueur et retrait :</strong> la longueur par défaut est de 2 m pour une boucle de pied de feu et une boucle de comptage, 10 m pour une boucle éloignée. Le <em>retrait</em> est la distance entre la boucle et la ligne d'arrêt : il n'est pas demandé au pied de feu, qui est sur la ligne d'arrêt. Laissé vide pour une boucle éloignée ou de comptage, il est mesuré sur l'image à partir de la flèche du groupe.</li>
@@ -582,7 +639,8 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                     <li><strong>Modifier un détecteur :</strong> cliquez sur son symbole. La fenêtre permet de passer d'un détecteur à l'autre par la liste des noms, de changer son type, de le faire tourner, de régler sa longueur ou son retrait, et de l'écarter de l'image. Les noms des boucles courtes sont placés au-dessus pour ne pas masquer l'animation.</li>
                     <li><strong>Affichage :</strong> la case <em>Détecteur</em> montre le calque, <em>Afficher nom</em> ses noms, <em>Ajouter</em> arme le placement. Les options sont enregistrées avec le projet.</li>
                 </ul>
-                <p><strong>Animation en simulation :</strong> les boucles s'animent à partir du trafic du jeu de données actif, de la durée du cycle, de la durée du vert du groupe de feu, du coefficient de voie, de la longueur de la boucle, de son retrait et de la vitesse du mouvement.</p>
+                <p><strong>Animation en simulation :</strong> il s'agit d'une animation <strong>théorique</strong>, à vocation purement visuelle. Elle donne une idée de l'occupation des boucles au fil du cycle, mais ne prétend pas reproduire fidèlement le comportement réel des détecteurs : le sujet n'a pas été approfondi et ses résultats ne doivent pas servir à dimensionner un réglage ni à interpréter des mesures de terrain.</p>
+                <p>Elle s'appuie sur quelques principes simples, à partir du trafic du jeu de données actif, de la durée du cycle, du vert du groupe de feu, du coefficient de voie, de la longueur de la boucle, de son retrait et de la vitesse du mouvement :</p>
                 <ul>
                     <li><strong>Débit :</strong> un véhicule franchit la boucle toutes les 2 secondes divisées par le coefficient de voie, quelle que soit la capacité utilisée. Le premier véhicule libère la boucle à 2 secondes de vert divisées par le coefficient ; les passages suivants sont décalés d'autant. Chaque occupation dure (longueur de la boucle + 5 m) / vitesse du mouvement ; un tourne à gauche est donc occupé plus longtemps qu'un tout droit.</li>
                     <li><strong>File au vert :</strong> le nombre de véhicules du cycle est le trafic multiplié par le cycle, divisé par 3 600. La file s'écoule au rythme du débit ; lorsque la demande est servie avant la fin du vert, la boucle reste éteinte jusqu'au vert suivant. Si la capacité utilisée ne dépasse pas 90 %, 6 secondes sans véhicule le montrent, puis les véhicules du cycle suivant se répartissent sur le reste du cycle.</li>

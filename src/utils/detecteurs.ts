@@ -240,3 +240,44 @@ export const normaliserDetecteurs = (valeur: unknown): Detecteur[] => {
     }
     return resultat;
 };
+
+/** Colonnes du tableau des détecteurs qui se trient. */
+export type ColonneTriDetecteur = 'nom' | 'categorie' | 'gf';
+export type SensTri = 'croissant' | 'decroissant';
+
+const comparerTexte = (a: string, b: string): number =>
+    a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' });
+
+/**
+ * Détecteurs dans l'ordre d'affichage demandé, sans toucher à l'ordre enregistré.
+ * Le nom se compare comme on le lit (« Détecteur 2 » avant « Détecteur 10 »), le type
+ * sur son libellé, le GF sur son numéro ; un détecteur sans GF reste en fin de liste
+ * dans les deux sens. À égalité, l'ordre de saisie est conservé.
+ */
+export const trierDetecteurs = (
+    detecteurs: Detecteur[],
+    colonne: ColonneTriDetecteur,
+    sens: SensTri
+): Detecteur[] => {
+    const signe = sens === 'croissant' ? 1 : -1;
+    return detecteurs
+        .map((detecteur, rang) => ({ detecteur, rang }))
+        .sort((x, y) => {
+            const a = x.detecteur;
+            const b = y.detecteur;
+            let ecart = 0;
+            if (colonne === 'gf') {
+                if (a.gf === null || b.gf === null) {
+                    ecart = a.gf === b.gf ? 0 : a.gf === null ? 1 : -1;
+                    return ecart || x.rang - y.rang;
+                }
+                ecart = a.gf - b.gf;
+            } else if (colonne === 'categorie') {
+                ecart = comparerTexte(LIBELLE_CATEGORIE[a.categorie], LIBELLE_CATEGORIE[b.categorie]);
+            } else {
+                ecart = comparerTexte(a.nom.trim(), b.nom.trim());
+            }
+            return signe * ecart || x.rang - y.rang;
+        })
+        .map(({ detecteur }) => detecteur);
+};

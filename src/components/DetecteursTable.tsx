@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import LocalInput from './LocalInput';
 import { useConfirm } from './ConfirmProvider';
 import { MentionVerrou, ZoneVerrouSaisie } from '../utils/verrouSaisie';
@@ -8,7 +9,10 @@ import {
     descriptionDimension,
     dimensionDepuisSaisie,
     dimensionSaisissable,
-    dupliquerDetecteur
+    dupliquerDetecteur,
+    trierDetecteurs,
+    type ColonneTriDetecteur,
+    type SensTri
 } from '../utils/detecteurs';
 import type { CategorieDetecteur, Detecteur, Groupe } from '../types/projet';
 import './DetecteursTable.css';
@@ -31,6 +35,39 @@ const DetecteursTable = ({
     titreEnBandeau = false
 }: DetecteursTableProps) => {
     const askConfirm = useConfirm();
+    // Tri d'affichage seulement : l'ordre enregistré des détecteurs ne change pas.
+    // Un clic trie en croissant, le deuxième en décroissant, le troisième revient
+    // à l'ordre de saisie.
+    const [tri, setTri] = useState<{ colonne: ColonneTriDetecteur; sens: SensTri } | null>(null);
+    const lignes = tri ? trierDetecteurs(detecteurs, tri.colonne, tri.sens) : detecteurs;
+
+    const changerTri = (colonne: ColonneTriDetecteur) => {
+        setTri(actuel => {
+            if (actuel?.colonne !== colonne) return { colonne, sens: 'croissant' };
+            return actuel.sens === 'croissant' ? { colonne, sens: 'decroissant' } : null;
+        });
+    };
+
+    const enTeteTriable = (colonne: ColonneTriDetecteur, libelle: string, aide: string) => {
+        const sens = tri?.colonne === colonne ? tri.sens : null;
+        const prochain = sens === null ? 'croissant' : sens === 'croissant' ? 'décroissant' : 'ordre de saisie';
+        return (
+            <th aria-sort={sens === 'croissant' ? 'ascending' : sens === 'decroissant' ? 'descending' : 'none'}>
+                <button
+                    type="button"
+                    className={`detecteurs-tri ${sens ? 'actif' : ''}`}
+                    data-verrou-autorise
+                    onClick={() => changerTri(colonne)}
+                    title={`${aide} — cliquer pour trier : ${prochain}`}
+                >
+                    {libelle}
+                    <span className="detecteurs-tri-sens" aria-hidden="true">
+                        {sens === 'croissant' ? ' ▲' : sens === 'decroissant' ? ' ▼' : ' ⇅'}
+                    </span>
+                </button>
+            </th>
+        );
+    };
 
     const remplacer = (id: number, updates: Partial<Detecteur>) => {
         onChange(detecteurs.map(d => (d.id === id ? { ...d, ...updates } : d)));
@@ -82,15 +119,15 @@ const DetecteursTable = ({
                 <table className="detecteurs-table">
                     <thead>
                         <tr>
-                            <th>Nom</th>
-                            <th>Type</th>
-                            <th title="Groupe de feu concerné">GF</th>
+                            {enTeteTriable('nom', 'Nom', 'Nom du détecteur')}
+                            {enTeteTriable('categorie', 'Type', 'Type de détecteur')}
+                            {enTeteTriable('gf', 'GF', 'Groupe de feu concerné')}
                             <th title="Longueur d’une boucle, en mètres">Dim. (m)</th>
                             <th aria-label="Actions" />
                         </tr>
                     </thead>
                     <tbody>
-                        {detecteurs.map(d => {
+                        {lignes.map(d => {
                             const sansDimension = !dimensionSaisissable(d.categorie);
                             return (
                                 <tr key={d.id}>

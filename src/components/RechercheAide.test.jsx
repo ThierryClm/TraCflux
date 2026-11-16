@@ -92,3 +92,81 @@ describe("recherche dans l'aide", () => {
         expect(document.activeElement).toBe(screen.getByRole('searchbox'));
     });
 });
+
+describe('flèches sans recherche', () => {
+    const ouvrirRubrique = (nom) => {
+        const sommaire = document.getElementById('help-sommaire');
+        // Deux rubriques de l'aide s'appellent « Présentation » : la première suffit.
+        fireEvent.click(within(sommaire).getAllByRole('link', { name: nom })[0]);
+    };
+    const totalRubriques = () => {
+        const texte = screen.getByText(/^Rubrique 1 \/ \d+$/).textContent;
+        return Number(texte.split('/ ')[1]);
+    };
+
+    it('restent grisées tant qu’aucune rubrique n’a été ouverte', () => {
+        render(<HelpContent />);
+        expect(screen.getByRole('button', { name: 'Occurrence précédente' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Occurrence suivante' })).toBeDisabled();
+        expect(screen.queryByText(/^Rubrique \d+ \/ \d+$/)).toBeNull();
+    });
+
+    it('passent d’une rubrique à l’autre après un clic dans le sommaire', () => {
+        const defiler = vi.spyOn(Element.prototype, 'scrollIntoView');
+        render(<HelpContent />);
+        ouvrirRubrique('Présentation');
+        const precedente = screen.getByRole('button', { name: 'Rubrique précédente' });
+        const suivante = screen.getByRole('button', { name: 'Rubrique suivante' });
+        expect(precedente).toBeDisabled();
+        expect(suivante).toBeEnabled();
+        const total = totalRubriques();
+        expect(total).toBeGreaterThan(2);
+
+        fireEvent.click(suivante);
+        expect(screen.getByText(`Rubrique 2 / ${total}`)).toBeInTheDocument();
+        expect(precedente).toBeEnabled();
+        // La rubrique rejointe est bien la deuxième du texte.
+        expect(defiler.mock.instances.at(-1).textContent).toContain('Interface principale');
+
+        for (let i = 2; i < total; i++) fireEvent.click(suivante);
+        expect(screen.getByText(`Rubrique ${total} / ${total}`)).toBeInTheDocument();
+        expect(suivante).toBeDisabled();
+        expect(precedente).toBeEnabled();
+
+        fireEvent.click(precedente);
+        expect(screen.getByText(`Rubrique ${total - 1} / ${total}`)).toBeInTheDocument();
+        defiler.mockRestore();
+    });
+
+    it('un clic sur un chapitre place les flèches sur sa première rubrique', () => {
+        render(<HelpContent />);
+        const sommaire = document.getElementById('help-sommaire');
+        const chapitre = within(sommaire).getByRole('link', { name: /^Chapitre 2 / });
+        fireEvent.click(chapitre);
+        // La première rubrique du chapitre 2 suit celles du chapitre 1.
+        expect(screen.getByText(/^Rubrique \d+ \/ \d+$/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Rubrique suivante' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Rubrique précédente' })).toBeEnabled();
+    });
+
+    it('la recherche reprend la main dès qu’un mot est saisi', () => {
+        render(<HelpContent />);
+        ouvrirRubrique('Présentation');
+        chercher('escamotage');
+        expect(screen.getByRole('button', { name: 'Occurrence précédente' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Rubrique suivante' })).toBeNull();
+        expect(screen.queryByText(/^Rubrique \d+ \/ \d+$/)).toBeNull();
+        expect(screen.getByText(/^1 \/ \d+$/)).toBeInTheDocument();
+    });
+
+    it('effacer la recherche retrouve la navigation par rubriques', () => {
+        render(<HelpContent />);
+        ouvrirRubrique('Interface principale');
+        const champ = chercher('escamotage');
+        fireEvent.keyDown(champ, { key: 'Escape' });
+        expect(champ.value).toBe('');
+        act(() => { vi.advanceTimersByTime(200); });
+        expect(screen.getByRole('button', { name: 'Rubrique suivante' })).toBeEnabled();
+        expect(screen.getByText(/^Rubrique 2 \/ \d+$/)).toBeInTheDocument();
+    });
+});

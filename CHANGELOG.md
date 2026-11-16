@@ -7,6 +7,21 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [Non publié]
+
+### Ajouté
+
+- **Onglet Détecteurs** : tri croissant ou décroissant par nom, type ou GF en cliquant sur l'en-tête de
+  colonne ; un troisième clic revient à l'ordre de saisie. Le tri ne touche pas à l'ordre enregistré.
+- **Aide, navigation entre rubriques** : après un clic sur une rubrique du sommaire, les flèches ▲ et ▼
+  de la barre de recherche mènent à la rubrique précédente ou suivante, y compris d'un chapitre à l'autre,
+  et le compteur affiche la position (« Rubrique 5 / 42 »).
+
+### Modifié
+
+- **Aide, détecteurs** : l'animation des boucles en simulation est présentée comme théorique et purement
+  visuelle, fondée sur quelques principes simples, sans prétention de précision.
+
 ## [1.6.0] — 2026-11-14
 
 ### Ajouté
