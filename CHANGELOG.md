@@ -9,6 +9,11 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ## [Non publié]
 
+### Ajouté
+
+- **Onglet Détecteurs** : tri croissant ou décroissant par nom, type ou GF en cliquant sur l'en-tête de
+  colonne ; un troisième clic revient à l'ordre de saisie. Le tri ne touche pas à l'ordre enregistré.
+
 ### Modifié
 
 - **Aide, détecteurs** : l'animation des boucles en simulation est présentée comme théorique et purement

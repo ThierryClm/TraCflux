@@ -125,3 +125,27 @@
     font-size: 0.72em;
     line-height: 1.35;
 }
+
+/* En-têtes triables : Nom, Type, GF. */
+.detecteurs-tri {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.detecteurs-tri:hover,
+.detecteurs-tri.actif {
+    color: #4ecdc4;
+}
+
+.detecteurs-tri-sens {
+    opacity: 0.6;
+}
+
+.detecteurs-tri.actif .detecteurs-tri-sens {
+    opacity: 1;
+}
