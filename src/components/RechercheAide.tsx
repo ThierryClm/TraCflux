@@ -65,20 +65,20 @@ interface RechercheAideProps {
     racine: RefObject<HTMLElement | null>;
     /** Case « Page principale » de Mise en page → Infobulles. */
     tooltipsEnabled?: boolean;
-    /** Chapitres de l'aide, dans l'ordre du sommaire. */
-    chapitres?: { id: string; title: string }[];
-    /** Chapitre ouvert depuis le sommaire, s'il y en a un. */
-    chapitreCourant?: number | null;
-    /** Ouvre le chapitre demandé (le défilement appartient au sommaire). */
-    onAllerChapitre?: (index: number) => void;
+    /** Rubriques de l'aide (les h4 du sommaire), dans l'ordre du texte. */
+    rubriquesAide?: { id: string; title: string }[];
+    /** Rubrique ouverte depuis le sommaire, s'il y en a une. */
+    rubriqueCourante?: number | null;
+    /** Ouvre la rubrique demandée (le défilement appartient au sommaire). */
+    onAllerRubrique?: (index: number) => void;
 }
 
 const RechercheAide = ({
     racine,
     tooltipsEnabled = true,
-    chapitres = [],
-    chapitreCourant = null,
-    onAllerChapitre,
+    rubriquesAide = [],
+    rubriqueCourante = null,
+    onAllerRubrique,
 }: RechercheAideProps) => {
     const tip = (text: string) => tooltipsEnabled ? text : undefined;
     const [saisie, setSaisie] = useState('');
@@ -181,16 +181,16 @@ const RechercheAide = ({
     };
 
     // Deux usages des flèches ▲ ▼ : la recherche dès qu'un mot est saisi, et à
-    // défaut la navigation entre chapitres, une fois un chapitre ouvert par le
-    // sommaire. Sans mot ni chapitre, elles restent grisées.
+    // défaut la navigation entre rubriques, une fois une rubrique ouverte par
+    // le sommaire. Sans mot ni rubrique, elles restent grisées.
     const actif = preparerRequete(requete) !== '';
-    const chapitre = chapitreCourant ?? 0;
-    const modeChapitres = !actif && !!onAllerChapitre && chapitreCourant !== null && chapitres.length > 0;
-    const premierChapitre = chapitre <= 0;
-    const dernierChapitre = chapitre >= chapitres.length - 1;
+    const rubrique = rubriqueCourante ?? 0;
+    const modeRubriques = !actif && !!onAllerRubrique && rubriqueCourante !== null && rubriquesAide.length > 0;
+    const premiereRubrique = rubrique <= 0;
+    const derniereRubrique = rubrique >= rubriquesAide.length - 1;
     const compteur = actif
         ? total === 0 ? 'Aucun résultat' : `${Math.min(courante, total - 1) + 1} / ${total}`
-        : modeChapitres ? `Chapitre ${chapitre + 1} / ${chapitres.length}` : '';
+        : modeRubriques ? `Rubrique ${rubrique + 1} / ${rubriquesAide.length}` : '';
 
     return (
         <div className="help-recherche" ref={barre} role="search">
@@ -208,15 +208,15 @@ const RechercheAide = ({
                 />
                 <span className={`help-recherche-compteur${actif && total === 0 ? ' help-recherche-vide' : ''}`} aria-live="polite">{compteur}</span>
                 <button type="button" className="help-recherche-btn"
-                    onClick={modeChapitres ? () => onAllerChapitre?.(chapitre - 1) : () => aller(-1)}
-                    disabled={modeChapitres ? premierChapitre : total === 0 || premiere}
-                    title={tip(modeChapitres ? 'Chapitre précédent' : 'Occurrence précédente (Maj+Entrée)')}
-                    aria-label={modeChapitres ? 'Chapitre précédent' : 'Occurrence précédente'}>▲</button>
+                    onClick={modeRubriques ? () => onAllerRubrique?.(rubrique - 1) : () => aller(-1)}
+                    disabled={modeRubriques ? premiereRubrique : total === 0 || premiere}
+                    title={tip(modeRubriques ? 'Rubrique précédente' : 'Occurrence précédente (Maj+Entrée)')}
+                    aria-label={modeRubriques ? 'Rubrique précédente' : 'Occurrence précédente'}>▲</button>
                 <button type="button" className="help-recherche-btn"
-                    onClick={modeChapitres ? () => onAllerChapitre?.(chapitre + 1) : () => aller(1)}
-                    disabled={modeChapitres ? dernierChapitre : total === 0 || derniere}
-                    title={tip(modeChapitres ? 'Chapitre suivant' : 'Occurrence suivante (Entrée)')}
-                    aria-label={modeChapitres ? 'Chapitre suivant' : 'Occurrence suivante'}>▼</button>
+                    onClick={modeRubriques ? () => onAllerRubrique?.(rubrique + 1) : () => aller(1)}
+                    disabled={modeRubriques ? derniereRubrique : total === 0 || derniere}
+                    title={tip(modeRubriques ? 'Rubrique suivante' : 'Occurrence suivante (Entrée)')}
+                    aria-label={modeRubriques ? 'Rubrique suivante' : 'Occurrence suivante'}>▼</button>
                 <button type="button" className="help-recherche-btn help-recherche-chapitres" onClick={() => setListeOuverte(o => !o)}
                     disabled={total === 0} aria-expanded={listeOuverte} aria-haspopup="listbox"
                     title={tip('Chapitres qui contiennent ce mot')}>

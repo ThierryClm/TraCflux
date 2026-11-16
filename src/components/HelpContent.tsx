@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import type { MouseEvent, ReactNode } from 'react';
 import RechercheAide from './RechercheAide';
 import { allerAuMenu, menuAccessible } from '../utils/renvoiMenu';
@@ -44,20 +44,28 @@ interface ChapitreAide {
 const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }: HelpContentProps) => {
     const helpContentRef = useRef<HTMLDivElement>(null);
     const [helpToc, setHelpToc] = useState<ChapitreAide[]>([]);
-    // Chapitre ouvert depuis le sommaire : les flèches ▲ ▼ de la barre de
-    // recherche passent alors d'un chapitre au précédent ou au suivant.
-    const [chapitreCourant, setChapitreCourant] = useState<number | null>(null);
+    // Rubrique ouverte depuis le sommaire : les flèches ▲ ▼ de la barre de
+    // recherche passent alors d'une rubrique à la précédente ou à la suivante.
+    const [rubriqueCourante, setRubriqueCourante] = useState<number | null>(null);
     // L'aide peut vivre dans une fenêtre détachée : ses ancres se cherchent
     // dans le document qui l'affiche, pas dans celui de l'application.
     const aller = (id: string, behavior: ScrollBehavior = 'auto') =>
         (helpContentRef.current?.ownerDocument ?? document).getElementById(id)?.scrollIntoView({ behavior, block: 'start' });
 
-    // Ouvre le chapitre demandé par la barre de recherche, d'un cran à l'autre.
-    const ouvrirChapitre = (index: number) => {
-        const chapitre = helpToc[index];
-        if (!chapitre) return;
-        setChapitreCourant(index);
-        aller(chapitre.id, 'smooth');
+    // Toutes les rubriques (les h4 pointés du sommaire), dans l'ordre du texte :
+    // les flèches passent de l'une à l'autre, y compris d'un chapitre au suivant.
+    const rubriques = useMemo(() => helpToc.flatMap(c => c.sections), [helpToc]);
+    const rangRubrique = useMemo(
+        () => new Map(rubriques.map((r, index) => [r.id, index])),
+        [rubriques]
+    );
+
+    // Ouvre la rubrique demandée par la barre de recherche, d'un cran à l'autre.
+    const ouvrirRubrique = (index: number) => {
+        const rubrique = rubriques[index];
+        if (!rubrique) return;
+        setRubriqueCourante(index);
+        aller(rubrique.id, 'smooth');
     };
 
     // Build the help TOC by scanning h3 (chapters) and h4 (sections) and assigning ids
@@ -66,13 +74,21 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
         if (!root) return;
         const slug = (s: string) => s.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').substring(0, 60);
         const toc: ChapitreAide[] = [];
+        // Deux rubriques peuvent porter le même titre (« Présentation ») :
+        // chacune garde une ancre distincte, sinon le sommaire et les flèches
+        // confondraient les deux.
+        const ancres = new Set<string>();
         let currentChapter: ChapitreAide | null = null;
         root.querySelectorAll<HTMLHeadingElement>('h3, h4').forEach(node => {
             // Remove any previously-injected "back to TOC" link before reading text
             const existing = node.querySelector('.back-to-toc');
             if (existing) existing.remove();
             const text = (node.textContent ?? '').trim();
-            if (!node.id) node.id = slug(text);
+            const base = node.id || slug(text);
+            let ancre = base;
+            for (let n = 2; ancres.has(ancre); n++) ancre = `${base}-${n}`;
+            node.id = ancre;
+            ancres.add(ancre);
             if (node.tagName === 'H3') {
                 currentChapter = { id: node.id, title: text, sections: [] };
                 toc.push(currentChapter);
@@ -81,11 +97,11 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
             }
         });
         setHelpToc(toc);
-        // Aide ouverte directement sur un chapitre ou une section (lien profond).
+        // Aide ouverte directement sur une rubrique (lien profond) : elle devient la rubrique courante.
         const ouvert = initialAnchor
-            ? toc.findIndex(c => c.id === initialAnchor || c.sections.some(s => s.id === initialAnchor))
+            ? toc.flatMap(c => c.sections).findIndex(s => s.id === initialAnchor)
             : -1;
-        if (ouvert >= 0) setChapitreCourant(ouvert);
+        if (ouvert >= 0) setRubriqueCourante(ouvert);
     }, [initialAnchor]);
 
     // Scroll to anchor when initialAnchor is provided (deep link from URL param)
@@ -108,9 +124,9 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
             const titres = helpContentRef.current?.querySelectorAll<HTMLHeadingElement>('h3, h4') ?? [];
             const cible = [...titres].find(titre => titre.textContent?.trim() === aideSection);
             if (cible) {
-                // Le renvoi peut viser une section : son chapitre devient le chapitre courant.
-                const index = helpToc.findIndex(c => c.id === cible.id || c.sections.some(s => s.id === cible.id));
-                if (index >= 0) setChapitreCourant(index);
+                // Un renvoi vers une rubrique la rend courante : les flèches partent de là.
+                const index = rangRubrique.get(cible.id);
+                if (index !== undefined) setRubriqueCourante(index);
                 aller(cible.id);
             }
         } else if (aideMenu && allerAuMenu(aideMenu)) {
@@ -123,19 +139,24 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
             <RechercheAide
                 racine={helpContentRef}
                 tooltipsEnabled={tooltipsEnabled}
-                chapitres={helpToc}
-                chapitreCourant={chapitreCourant}
-                onAllerChapitre={ouvrirChapitre}
+                rubriquesAide={rubriques}
+                rubriqueCourante={rubriqueCourante}
+                onAllerRubrique={ouvrirRubrique}
             />
             {helpToc.length > 0 && (
                 <nav id="help-sommaire" className="help-toc" style={{ background: '#2a2a2a', border: '1px solid #444', borderRadius: '6px', padding: '12px 16px', marginBottom: '20px' }}>
                     <h3 style={{ color: '#4ecdc4', marginTop: 0, marginBottom: '10px', fontSize: '1em' }}>Sommaire</h3>
-                    {helpToc.map((chapter, index) => (
+                    {helpToc.map(chapter => (
                         <div key={chapter.id} style={{ marginBottom: '8px' }}>
                             <a
                                 href={`#${chapter.id}`}
-                                onClick={(e) => { e.preventDefault(); setChapitreCourant(index); aller(chapter.id); }}
-                                aria-current={chapitreCourant === index ? 'true' : undefined}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    // Le chapitre mène à sa première rubrique : les flèches partent de là.
+                                    const premiere = chapter.sections[0] ? rangRubrique.get(chapter.sections[0].id) : undefined;
+                                    if (premiere !== undefined) setRubriqueCourante(premiere);
+                                    aller(chapter.id);
+                                }}
                                 style={{ color: '#4ecdc4', fontWeight: 'bold', textDecoration: 'none' }}
                             >
                                 {chapter.title}
@@ -146,7 +167,13 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                                         <li key={s.id} style={{ margin: '2px 0' }}>
                                             <a
                                                 href={`#${s.id}`}
-                                                onClick={(e) => { e.preventDefault(); setChapitreCourant(index); aller(s.id); }}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    const rang = rangRubrique.get(s.id);
+                                                    if (rang !== undefined) setRubriqueCourante(rang);
+                                                    aller(s.id);
+                                                }}
+                                                aria-current={rubriqueCourante !== null && rubriques[rubriqueCourante]?.id === s.id ? 'true' : undefined}
                                                 style={{ color: '#ccc', textDecoration: 'none' }}
                                                 onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
                                                 onMouseLeave={(e) => { e.currentTarget.style.color = '#ccc'; }}
@@ -192,7 +219,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                     <li><strong>Renvois :</strong> Les liens en couleur du texte mènent à leur destination. Un renvoi vers une section y conduit directement ; un renvoi vers un menu, comme <VoirMenu chemin="Mise en page → Options de contraste" />, déplie ce menu dans la fenêtre principale et signale l'entrée, sans fermer l'aide ; les menus Mise en page et Diagramme demandent un projet ouvert. Le bouton flottant ↑ ramène au sommaire.</li>
                     <li><strong>Fenêtre de l'aide :</strong> L'aide s'ouvre dans sa propre fenêtre, non modale, comme les fenêtres détachées : on la déplace sur un autre écran et on continue à travailler dans l'application pendant qu'elle reste ouverte. Sa position est retenue d'une ouverture à l'autre ; la redemander la ramène au premier plan. Sur un téléphone, ou si le navigateur bloque les fenêtres, elle s'affiche dans la page.</li>
                     <li><strong>Rechercher dans l'aide :</strong> Saisissez un mot dans le champ en haut de cette fenêtre. Toutes ses occurrences sont surlignées, la courante en orange ; ▲ et ▼ (ou Entrée et Maj+Entrée) passent de l'une à l'autre, et le bouton <em>Chapitres</em> déroule la liste des sections qui contiennent le mot, avec leur nombre d'occurrences. La recherche ignore majuscules et accents : « ecran » trouve « écran ».</li>
-                    <li><strong>Passer d'un chapitre à l'autre :</strong> sans mot saisi, ▲ et ▼ restent grisées jusqu'à ce que vous ouvriez un chapitre depuis le sommaire ; à partir de là, elles mènent au chapitre précédent ou suivant et le compteur affiche « Chapitre 2 / 3 ». Dès qu'un mot est saisi, les deux flèches reprennent leur rôle dans la recherche.</li>
+                    <li><strong>Passer d'une rubrique à l'autre :</strong> sans mot saisi, ▲ et ▼ restent grisées jusqu'à ce que vous ouvriez une rubrique du sommaire (les entrées pointées sous un chapitre) ; à partir de là, elles mènent à la rubrique précédente ou suivante, y compris d'un chapitre au suivant, et le compteur indique la rubrique courante sur le total. Dès qu'un mot est saisi, les deux flèches reprennent leur rôle dans la recherche.</li>
                 </ul>
             </section>
 
