@@ -7,6 +7,13 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
+## [Non publié]
+
+### Modifié
+
+- **Aide, détecteurs** : l'animation des boucles en simulation est présentée comme théorique et purement
+  visuelle, fondée sur quelques principes simples, sans prétention de précision.
+
 ## [1.6.0] — 2026-11-14
 
 ### Ajouté
