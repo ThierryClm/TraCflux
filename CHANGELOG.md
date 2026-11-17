@@ -19,6 +19,9 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Modifié
 
+- **Image du carrefour** : un groupe sans début ni fin de vert dans le diagramme du plan n'affiche plus sa
+  flèche ni son numéro, ni son signal en vue Signaux, dans la page comme dans la fenêtre détachée, ce qui montre les mouvements supprimés (un
+  tourne-à-gauche écarté quand le trafic est faible, par exemple). Tout revient dès qu'un vert est rendu.
 - **Aide, détecteurs** : l'animation des boucles en simulation est présentée comme théorique et purement
   visuelle, fondée sur quelques principes simples, sans prétention de précision.
 

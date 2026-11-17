@@ -73,3 +73,29 @@ describe('useFloatingImageRenderer — case Signal', () => {
         expect(disque(contenuDetache({ showSignals: true, simulationCurrentTime: 5, isPlayingSimulation: true }))).toContain('rgb(120, 120, 120)');
     });
 });
+
+describe('useFloatingImageRenderer — groupes sans vert', () => {
+    it('masque la flèche et le signal d’un groupe sans vert', () => {
+        const groups = [
+            { ...GROUPES[0], durations: { green: 0, orange: 3, red: 57 } },
+            GROUPES[1]
+        ];
+        const fenetre = contenuDetache({ showSignals: true, groups });
+        expect(fenetre.querySelectorAll('.floating-arrow-marker')).toHaveLength(1);
+        expect(fenetre.querySelector('[role="img"]')).toBeNull();
+    });
+
+    it('en simulation, masque la flèche d’un groupe escamoté', () => {
+        const simulationResult = {
+            simulatedCycleLength: 60,
+            simulatedGroups: [{ id: 2, simulatedGreen: 0, simulatedOffset: 30, isEscamoted: true }]
+        };
+        const fenetre = contenuDetache({ showSignals: false, simulationResult });
+        expect(fenetre.querySelectorAll('.floating-arrow-marker')).toHaveLength(1);
+    });
+
+    it('garde le feu d’un groupe qui a un vert', () => {
+        const fenetre = contenuDetache({ showSignals: true });
+        expect(fenetre.querySelector('[role="img"]')).not.toBeNull();
+    });
+});
