@@ -37,14 +37,20 @@ describe('MenuBar — menu Diagramme ▸ Scénarios', () => {
         expect(bouton).toHaveAttribute('title', expect.stringContaining('Simulation'));
     });
 
-    it('suit l’entrée Assistant conception', () => {
+    it('se place entre Capacité des plans de feu et Assistant conception', () => {
         vi.useFakeTimers();
         render(<MenuBar scenariosPlans={[{ id: 1, nom: 'PF1', scenarios: ['Nuit'] }]} />);
         fireEvent.click(screen.getByRole('button', { name: 'Diagramme' }));
         const libelles = screen.getAllByRole('button').map(b => b.textContent.trim());
         const index = libelles.findIndex(l => l.startsWith('Scénarios'));
         expect(index).toBeGreaterThan(-1);
-        expect(libelles[index - 1]).toMatch(/^Assistant conception/);
+        expect(libelles[index - 1]).toMatch(/^Capacité des plans de feu/);
+        expect(libelles[index + 1]).toMatch(/^Assistant conception/);
+        // La future expertise IA ferme la série, annoncée en cours de développement.
+        const expertise = screen.getByRole('button', { name: 'Expertise IA' });
+        expect(expertise).toBeDisabled();
+        expect(expertise).toHaveAttribute('title', 'En cours de développement');
+        expect(libelles[index + 2]).toBe('Expertise IA');
     });
 
     it('liste les scénarios préparés et envoie plan + nom', () => {

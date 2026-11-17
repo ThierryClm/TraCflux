@@ -686,10 +686,10 @@ const MenuBar = ({
                 },
                 { type: 'separator' },
                 {
-                    label: 'Assistant conception...',
-                    action: 'cycleSuggestion',
-                    disabled: !traficRenseigne || !assistantPret,
-                    title: [INFOBULLE_ASSISTANT, assistantBlocage, !traficRenseigne ? 'Renseignez le trafic du plan de feu (onglet Trafic).' : ''].filter(Boolean).join('\n\n')
+                    label: 'Capacité des plans de feu...',
+                    action: 'compareCapacity',
+                    disabled: pfCount < 2,
+                    title: pfCount < 2 ? 'Nécessite au moins 2 plans de feu' : 'Tableau comparatif du vert utile et de la capacité utilisée'
                 },
                 {
                     // Accès direct aux scénarios de simulation préparés, sans
@@ -706,10 +706,18 @@ const MenuBar = ({
                     submenu: scenariosEnregistres
                 },
                 {
-                    label: 'Capacité des plans de feu...',
-                    action: 'compareCapacity',
-                    disabled: pfCount < 2,
-                    title: pfCount < 2 ? 'Nécessite au moins 2 plans de feu' : 'Tableau comparatif du vert utile et de la capacité utilisée'
+                    label: 'Assistant conception...',
+                    action: 'cycleSuggestion',
+                    disabled: !traficRenseigne || !assistantPret,
+                    title: [INFOBULLE_ASSISTANT, assistantBlocage, !traficRenseigne ? 'Renseignez le trafic du plan de feu (onglet Trafic).' : ''].filter(Boolean).join('\n\n')
+                },
+                {
+                    // Annonce de la future expertise IA : la ligne est là pour
+                    // réserver sa place, sans action tant que le module n'existe pas.
+                    label: 'Expertise IA',
+                    action: 'expertiseIA',
+                    disabled: true,
+                    title: 'En cours de développement'
                 },
                 { type: 'separator' },
                 {

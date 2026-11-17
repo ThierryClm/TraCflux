@@ -26,7 +26,9 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 ### Modifié
 
 - **Menu Diagramme ▸ Scénarios** : le libellé devient « Scénarios — aucun enregistré » tant qu'aucun
-  scénario n'existe ; l'infobulle renvoie à Simulation (Enregistrer…).
+  scénario n'existe ; l'infobulle renvoie à Simulation (Enregistrer…). Le menu range Capacité des plans de
+  feu, Scénarios, Assistant conception, puis Expertise IA, nouvelle ligne annoncée « En cours de
+  développement ».
 - **Phasage bulle** : l'ensemble des bulles descend à l'écran pour ne plus être coupé par la barre de
   boutons ; l'impression garde sa composition mesurée.
 - **Aide, plan du sommaire** : l'aide est répartie en chapitres — Saisie des données d'entrée, Les plans de
