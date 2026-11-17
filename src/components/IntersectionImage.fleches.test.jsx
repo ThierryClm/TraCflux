@@ -90,10 +90,18 @@ describe('IntersectionImage — flèches des groupes sans vert', () => {
         expect(container.querySelectorAll('.arrow-marker')).toHaveLength(2);
     });
 
-    it('laisse la vue Signaux inchangée : le feu reste affiché', () => {
-        const groupes = [{ ...groupe(2, 0), signal: 'R14tg' }];
+    it('en vue Signaux, masque aussi le feu d’un groupe sans vert', () => {
         const { container } = rendre({
-            groups: groupes,
+            groups: [{ ...groupe(2, 0), signal: 'R14tg' }],
+            displayOptions: { showSignals: true, showCurrents: false }
+        });
+        expect(marqueurs(container)).toHaveLength(0);
+        expect(screen.queryByRole('img', { name: 'Signal R14tg' })).toBeNull();
+    });
+
+    it('en vue Signaux, garde le feu d’un groupe qui a un vert', () => {
+        const { container } = rendre({
+            groups: [{ ...groupe(2, 20), signal: 'R14tg' }],
             displayOptions: { showSignals: true, showCurrents: false }
         });
         expect(marqueurs(container)).toHaveLength(1);

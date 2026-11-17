@@ -1074,9 +1074,9 @@ const IntersectionImage = ({
                         />
                         {(showCurrents || showSignals) && arrows.map(arrow => {
                             const groupInfo = getGroupInfo(arrow.groupId);
-                            // Vue Flèche : un groupe sans vert dans le diagramme n'a
-                            // pas de mouvement à montrer, sa flèche disparaît.
-                            if (showCurrents && !groupeAvecVert(arrow.groupId)) return null;
+                            // Un groupe sans vert dans le diagramme n'a pas de mouvement
+                            // à montrer : sa flèche disparaît, et son signal avec elle.
+                            if (!groupeAvecVert(arrow.groupId)) return null;
                             const rotation = arrow.rotation || 0;
                             const scale = arrow.scale || 1;
                             const arrowLength = arrow.length || 1;
