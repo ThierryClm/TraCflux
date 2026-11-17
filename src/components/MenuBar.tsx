@@ -88,6 +88,7 @@ export interface OptionsMenuBar {
     showGroupNamesMatrix?: boolean;
     showGroupNamesDiagram?: boolean;
     showFloatingProperties?: boolean;
+    showFloatingDetecteurs?: boolean;
     showFloatingForm?: boolean;
     showFloatingMatrix?: boolean;
     showFloatingConflicts?: boolean;
@@ -559,6 +560,7 @@ const MenuBar = ({
                     submenuId: 'detachement',
                     submenu: [
                         { label: 'Propriétés', action: 'toggleFloatingProperties', checked: layoutOptions.showFloatingProperties, keepSubmenuOpen: true },
+                        { label: 'Détecteurs', action: 'toggleFloatingDetecteurs', checked: layoutOptions.showFloatingDetecteurs, disabled: !layoutOptions.detecteurModule, keepSubmenuOpen: true },
                         { label: 'Formulaire', action: 'toggleFloatingForm', checked: layoutOptions.showFloatingForm, keepSubmenuOpen: true },
                         { label: 'Matrice interverts', action: 'toggleFloatingMatrix', checked: layoutOptions.showFloatingMatrix, keepSubmenuOpen: true },
                         { label: 'Conflits', action: 'toggleFloatingConflicts', checked: layoutOptions.showFloatingConflicts, keepSubmenuOpen: true },
@@ -694,7 +696,7 @@ const MenuBar = ({
                     // passer par l'onglet Simulation. Grisé par défaut : tant
                     // qu'aucun plan de feu n'a de scénario enregistré, il n'y
                     // a rien à lister.
-                    label: 'Scénarios',
+                    label: scenariosEnregistres.length === 0 ? 'Scénarios — aucun enregistré' : 'Scénarios',
                     type: 'submenu',
                     submenuId: 'scenariosEnregistres',
                     disabled: scenariosEnregistres.length === 0,
@@ -914,7 +916,7 @@ const MenuBar = ({
                         }
                     }}
                 >
-                    <button className={`menu-item has-submenu ${item.disabled ? 'disabled' : ''}`} disabled={item.disabled}>
+                    <button className={`menu-item has-submenu ${item.disabled ? 'disabled' : ''}`} disabled={item.disabled} title={tip(item.title)}>
                         {item.label}
                         <span className="submenu-arrow">▶</span>
                     </button>

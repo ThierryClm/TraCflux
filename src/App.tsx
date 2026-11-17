@@ -52,6 +52,8 @@ import useDirectoryHandles from './hooks/useDirectoryHandles';
 import useFloatingImageRenderer from './hooks/useFloatingImageRenderer';
 import useFloatingForm from './hooks/useFloatingForm';
 import useFloatingProperties from './hooks/useFloatingProperties';
+import useFloatingDetecteurs from './hooks/useFloatingDetecteurs';
+import DetecteursTable from './components/DetecteursTable';
 import useFloatingDiagnostic from './hooks/useFloatingDiagnostic';
 import useFloatingTraffic from './hooks/useFloatingTraffic';
 import useFloatingRemarks from './hooks/useFloatingRemarks';
@@ -551,6 +553,13 @@ function App() {
         propertiesPopup
     } = useFloatingProperties(activePFName);
 
+    // Floating detecteurs state
+    const {
+        showFloatingDetecteurs,
+        setShowFloatingDetecteurs,
+        detecteursPopup
+    } = useFloatingDetecteurs(activePFName);
+
     // Floating diagnostic state
     const {
         showFloatingDiagnostic,
@@ -559,8 +568,8 @@ function App() {
     } = useFloatingDiagnostic(activePFName);
 
     // Floating traffic state — la fenêtre se dimensionne sur les lignes que le
-    // tableau affiche (groupes véhicules), pas sur tous les groupes de feu :
-    // piétons et cyclistes n'y figurent pas et gonflaient la hauteur.
+    // tableau affiche (groupes véhicules et bus), pas sur tous les groupes de
+    // feu : piétons et cyclistes n'y figurent pas et gonflaient la hauteur.
     const trafficRowCount = groupesVehicules(groups).length;
     const {
         showFloatingTraffic,
@@ -1710,6 +1719,9 @@ function App() {
             case 'toggleFloatingProperties':
                 setShowFloatingProperties(v => !v);
                 break;
+            case 'toggleFloatingDetecteurs':
+                setShowFloatingDetecteurs(v => !v);
+                break;
             case 'toggleFloatingDiagnostic':
                 setShowFloatingDiagnostic(v => !v);
                 break;
@@ -2129,6 +2141,26 @@ function App() {
         );
     }, [showFloatingProperties, intersectionName, setIntersectionName, projectProperties, updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, tooltipPrefs, propertiesPopup.renderToPopup]);
 
+    // Render detecteurs into popup window
+    useEffect(() => {
+        if (!showFloatingDetecteurs || !detecteurModule) return;
+        detecteursPopup.renderToPopup(
+            <div style={{ padding: '12px', height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
+                <DetecteursTable
+                    detecteurs={detecteurs}
+                    groups={groups}
+                    onChange={setDetecteurs}
+                    titreEnBandeau
+                />
+            </div>
+        );
+    }, [showFloatingDetecteurs, detecteurModule, detecteurs, groups, setDetecteurs, detecteursPopup.renderToPopup]);
+
+    // Le module Détecteur coupé, la fenêtre détachée n'a plus d'objet.
+    useEffect(() => {
+        if (!detecteurModule && showFloatingDetecteurs) setShowFloatingDetecteurs(false);
+    }, [detecteurModule, showFloatingDetecteurs, setShowFloatingDetecteurs]);
+
     // Render diagnostic into popup window
     useEffect(() => {
         if (!showFloatingDiagnostic) return;
@@ -2378,7 +2410,7 @@ function App() {
                     onManageUsers={() => setShowUserManager(true)}
                     accountsEnabled={accountsEnabled}
                     biCarrefourSeparator={biCarrefourSeparator}
-                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, descriptionMode, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, detecteurModule, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
+                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, descriptionMode, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingDetecteurs, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, detecteurModule, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
                     pixelsPerSecond={pixelsPerSecond}
                     onPixelsPerSecondChange={setPixelsPerSecond}
                     showMicroOnHover={showMicroOnHover}
@@ -2425,7 +2457,7 @@ function App() {
                         hoveredArrowGroupId, setHoveredArrowGroupSaturated, trafficDatasetNames, trafficDatasetSourceNames, setHoveredVUtile, copyTrafficDataset,
                         addCustomTrafficDataset, infoSuppressionJeuTrafic, supprimerJeuTrafic, simulationResult, setShowFloatingTraffic, tooltipPrefs, activeTab,
                         setActiveTab, setSidebarWidth, intersectionName, setIntersectionName, projectProperties,
-                        updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, setShowFloatingProperties,
+                        updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, setShowFloatingProperties, setShowFloatingDetecteurs,
                         showGroupNamesForm, setShowFloatingForm, activePFId,
                         pfTabs, biCarrefourSeparator, showGroupNamesMatrix, matricesLocked, setShowFloatingMatrix,
                         showCapacityReserve, showFloatingDiagnostic, setShowFloatingDiagnostic, displayConflicts, isConflictGrayed,

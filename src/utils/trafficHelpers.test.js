@@ -99,14 +99,15 @@ describe('trafficHelpers — getTotalGreenTime', () => {
 });
 
 describe('trafficHelpers — groupesVehicules', () => {
-    it('ne garde que les groupes véhicules du tableau trafic', () => {
+    it('garde les groupes véhicules et bus, mais pas les piétons ni les cycles', () => {
         const groups = [
             { id: 1, type: 'VL' },
             { id: 2, type: 'P' },
             { id: 3, type: 'V' },
             { id: 4, type: 'CY' },
             { id: 5, type: 'TC' },
+            { id: 6, type: 'B' },
         ];
-        expect(groupesVehicules(groups).map(g => g.id)).toEqual([1, 3]);
+        expect(groupesVehicules(groups).map(g => g.id)).toEqual([1, 3, 5, 6]);
     });
 });

@@ -16,9 +16,18 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 - **Aide, navigation entre rubriques** : après un clic sur une rubrique du sommaire, les flèches ▲ et ▼
   de la barre de recherche mènent à la rubrique précédente ou suivante, y compris d'un chapitre à l'autre,
   et le compteur affiche la position (« Rubrique 5 / 42 »).
+- **Fenêtre Détecteurs** : le tableau des détecteurs se détache dans une fenêtre séparée, depuis l'onglet
+  Détecteurs ou Mise en page → Détachement. Il reste éditable dans la fenêtre, et son titre indique
+  « (verrouillé) » quand la saisie l'est.
+- **Données trafic, bus** : la ligne des groupes Bus reste affichée quand « Tous les Grp » est décoché,
+  même avec un trafic très faible, parce que son débit sert à l'animation des boucles.
 
 ### Modifié
 
+- **Menu Diagramme ▸ Scénarios** : le libellé devient « Scénarios — aucun enregistré » tant qu'aucun
+  scénario n'existe ; l'infobulle renvoie à Simulation (Enregistrer…).
+- **Phasage bulle** : l'ensemble des bulles descend à l'écran pour ne plus être coupé par la barre de
+  boutons ; l'impression garde sa composition mesurée.
 - **Aide, plan du sommaire** : l'aide est répartie en chapitres — Saisie des données d'entrée, Les plans de
   feux, La micro-régulation, Autres actions, Aide à la conception et à l'optimisation — puis Onde verte et
   Glossaire. Nouvelle rubrique **Propriétés** ; rubriques renommées : **Formulaire**, **Détecteurs (boucle,

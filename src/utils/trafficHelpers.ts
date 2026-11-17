@@ -6,12 +6,13 @@ import type { ActionMicro, DrapeauPhase, Groupe, JeuTrafic, PlanDeFeu } from '..
  */
 
 /**
- * Groupes véhicules, les seules lignes du tableau Données trafic. Sert aussi
- * à dimensionner sa fenêtre détachée : piétons et cyclistes ne doivent pas
- * l'agrandir.
+ * Groupes véhicules et bus, les seules lignes du tableau Données trafic. Le
+ * bus y figure même avec un trafic très faible : son débit sert à l'animation
+ * des boucles. Sert aussi à dimensionner la fenêtre détachée : piétons et
+ * cyclistes ne doivent pas l'agrandir.
  */
 export const groupesVehicules = (groups: Groupe[]): Groupe[] =>
-    groups.filter(g => g.type === 'VL' || g.type === 'V');
+    groups.filter(g => g.type === 'VL' || g.type === 'V' || g.type === 'B' || g.type === 'TC');
 
 /**
  * Vert pris en compte pour la capacité : vert principal + secondes lucarnes.

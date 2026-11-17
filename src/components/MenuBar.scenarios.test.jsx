@@ -28,6 +28,15 @@ describe('MenuBar — menu Diagramme ▸ Scénarios', () => {
         expect(screen.queryByText('Nuit')).not.toBeInTheDocument();
     });
 
+    it('dit qu’aucun scénario n’est enregistré et renvoie vers Simulation', () => {
+        vi.useFakeTimers();
+        render(<MenuBar scenariosPlans={[{ id: 1, nom: 'PF1', scenarios: [] }]} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Diagramme' }));
+        const bouton = screen.getByRole('button', { name: /Scénarios — aucun enregistré/ });
+        expect(bouton).toBeDisabled();
+        expect(bouton).toHaveAttribute('title', expect.stringContaining('Simulation'));
+    });
+
     it('suit l’entrée Assistant conception', () => {
         vi.useFakeTimers();
         render(<MenuBar scenariosPlans={[{ id: 1, nom: 'PF1', scenarios: ['Nuit'] }]} />);
