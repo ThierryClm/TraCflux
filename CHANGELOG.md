@@ -18,7 +18,8 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   et le compteur affiche la position (« Rubrique 5 / 42 »).
 - **Fenêtre Détecteurs** : le tableau des détecteurs se détache dans une fenêtre séparée, depuis l'onglet
   Détecteurs ou Mise en page → Détachement. Il reste éditable dans la fenêtre, et son titre indique
-  « (verrouillé) » quand la saisie l'est.
+  « (verrouillé) » quand la saisie l'est. Les menus Détachement et Verrouillage saisie rangent désormais
+  Propriétés, Formulaire puis Détecteurs, et l'option de verrouillage « Configuration » s'appelle « Formulaire ».
 - **Données trafic, bus** : la ligne des groupes Bus reste affichée quand « Tous les Grp » est décoché,
   même avec un trafic très faible, parce que son débit sert à l'animation des boucles.
 

@@ -560,8 +560,8 @@ const MenuBar = ({
                     submenuId: 'detachement',
                     submenu: [
                         { label: 'Propriétés', action: 'toggleFloatingProperties', checked: layoutOptions.showFloatingProperties, keepSubmenuOpen: true },
-                        { label: 'Détecteurs', action: 'toggleFloatingDetecteurs', checked: layoutOptions.showFloatingDetecteurs, disabled: !layoutOptions.detecteurModule, keepSubmenuOpen: true },
                         { label: 'Formulaire', action: 'toggleFloatingForm', checked: layoutOptions.showFloatingForm, keepSubmenuOpen: true },
+                        { label: 'Détecteurs', action: 'toggleFloatingDetecteurs', checked: layoutOptions.showFloatingDetecteurs, disabled: !layoutOptions.detecteurModule, keepSubmenuOpen: true },
                         { label: 'Matrice interverts', action: 'toggleFloatingMatrix', checked: layoutOptions.showFloatingMatrix, keepSubmenuOpen: true },
                         { label: 'Conflits', action: 'toggleFloatingConflicts', checked: layoutOptions.showFloatingConflicts, keepSubmenuOpen: true },
                         { label: 'Données trafic', action: 'toggleFloatingTraffic', checked: layoutOptions.showFloatingTraffic, keepSubmenuOpen: true },
@@ -598,7 +598,8 @@ const MenuBar = ({
                         { label: toutVerrouille ? 'Tout déverrouiller' : 'Tout verrouiller', action: 'verrouSaisie:tout', keepSubmenuOpen: true },
                         { type: 'separator' },
                         { label: 'Propriétés',    action: 'verrouSaisie:proprietes',    checked: verrou.proprietes,    keepSubmenuOpen: true },
-                        { label: 'Configuration', action: 'verrouSaisie:configuration', checked: verrou.configuration, keepSubmenuOpen: true },
+                        { label: 'Formulaire',    action: 'verrouSaisie:configuration', checked: verrou.configuration, keepSubmenuOpen: true },
+                        { label: 'Détecteurs',    action: 'verrouSaisie:detecteurs',    checked: verrou.detecteurs,    keepSubmenuOpen: true },
                         { label: 'Matrice',       action: 'verrouSaisie:matrice',       checked: verrou.matrice,       keepSubmenuOpen: true },
                         { label: 'Trafic',        action: 'verrouSaisie:trafic',        checked: verrou.trafic,        keepSubmenuOpen: true },
                         { label: 'Diagramme',     action: 'verrouSaisie:diagramme',     checked: verrou.diagramme,     keepSubmenuOpen: true },
@@ -606,8 +607,7 @@ const MenuBar = ({
                         { label: 'Variables micro', action: 'verrouSaisie:variables', checked: verrou.variables, keepSubmenuOpen: true },
                         { label: 'Image du carrefour', action: 'verrouSaisie:image', checked: verrou.image, keepSubmenuOpen: true },
                         { label: 'Scénarios', action: 'verrouSaisie:scenarios', checked: verrou.scenarios, keepSubmenuOpen: true },
-                        { label: 'Phasages bulles', action: 'verrouSaisie:phasages', checked: verrou.phasages, keepSubmenuOpen: true },
-                        { label: 'Détecteurs', action: 'verrouSaisie:detecteurs', checked: verrou.detecteurs, keepSubmenuOpen: true }
+                        { label: 'Phasages bulles', action: 'verrouSaisie:phasages', checked: verrou.phasages, keepSubmenuOpen: true }
                     ]
                 },
                 {

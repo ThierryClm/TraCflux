@@ -147,6 +147,17 @@ describe('MenuBar — Mise en page ▸ Verrouillage saisie', () => {
         expect(enfants[2]).toBe('Propriétés');
     });
 
+    it('suit l’ordre Propriétés, Formulaire, Détecteurs, Matrice', () => {
+        vi.useFakeTimers();
+        render(<MenuBar />);
+        const entree = ouvrirVerrouillage();
+        const depliant = entree.querySelector('.submenu-dropdown');
+        const boutons = [...depliant.querySelectorAll('button')].map(b => b.textContent.replace(/[✓▶]/g, '').trim());
+        expect(boutons.slice(1, 5)).toEqual(['Propriétés', 'Formulaire', 'Détecteurs', 'Matrice']);
+        // L'ancien libellé « Configuration » a disparu : c'est le Formulaire.
+        expect(boutons).not.toContain('Configuration');
+    });
+
     it('envoie l’action qui verrouille toutes les sections', () => {
         vi.useFakeTimers();
         const onAction = vi.fn();

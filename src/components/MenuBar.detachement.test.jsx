@@ -25,6 +25,14 @@ describe('MenuBar — menu Détachement', () => {
         expect(onAction).toHaveBeenCalledWith('toggleFloatingDetecteurs');
     });
 
+    it('range Propriétés, Formulaire puis Détecteurs en tête', () => {
+        vi.useFakeTimers();
+        render(<MenuBar layoutOptions={{ detecteurModule: true }} />);
+        const entree = ouvrirDetachement();
+        const boutons = [...entree.querySelectorAll('button')].map(b => b.textContent.replace(/[✓▶]/g, '').trim());
+        expect(boutons.slice(1, 4)).toEqual(['Propriétés', 'Formulaire', 'Détecteurs']);
+    });
+
     it('grise la fenêtre Détecteurs quand le module est coupé', () => {
         vi.useFakeTimers();
         render(<MenuBar layoutOptions={{ detecteurModule: false }} />);
