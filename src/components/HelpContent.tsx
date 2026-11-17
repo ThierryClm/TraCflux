@@ -189,6 +189,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 </nav>
             )}
             <h3 style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginBottom: '16px' }}>Chapitre 1 — Boite à outils d'optimisation des diagrammes de feu</h3>
+
             <section className="help-section">
                 <h4>Présentation</h4>
                 <p>Application de conception de diagrammes de feux pour carrefours à feux.</p>
@@ -221,20 +222,6 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                     <li><strong>Rechercher dans l'aide :</strong> Saisissez un mot dans le champ en haut de cette fenêtre. Toutes ses occurrences sont surlignées, la courante en orange ; ▲ et ▼ (ou Entrée et Maj+Entrée) passent de l'une à l'autre, et le bouton <em>Chapitres</em> déroule la liste des sections qui contiennent le mot, avec leur nombre d'occurrences. La recherche ignore majuscules et accents : « ecran » trouve « écran ».</li>
                     <li><strong>Passer d'une rubrique à l'autre :</strong> sans mot saisi, ▲ et ▼ restent grisées jusqu'à ce que vous ouvriez une rubrique du sommaire (les entrées pointées sous un chapitre) ; à partir de là, elles mènent à la rubrique précédente ou suivante, y compris d'un chapitre au suivant, et le compteur indique la rubrique courante sur le total. Dès qu'un mot est saisi, les deux flèches reprennent leur rôle dans la recherche.</li>
                 </ul>
-            </section>
-
-            <section id="help-demarche" className="help-section">
-                <h4>Démarche conseillée sur un nouveau carrefour</h4>
-                <p>L'application est structurée pour suivre une démarche progressive. Voici une séquence qui fonctionne bien :</p>
-                <ol>
-                    <li><strong>Décrire les groupes de feux</strong> dans le formulaire (onglet <em>Formulaire</em>) : nom, type (véhicules, bus, piéton, cycle…), signal, courant et durée de vert minimale. Vous posez ainsi ce qui circule dans le carrefour.</li>
-                    <li><strong>Renseigner la matrice des temps interverts</strong> : les temps de dégagement requis entre groupes conflictuels. Une matrice non symétrique ou des cases manquantes sont signalées (fond orange).</li>
-                    <li><strong>Construire le PF1</strong>, le plan de feux de référence (fonctionnement nominal en heure creuse, par exemple) : ajustez offsets et durées de vert dans le diagramme. L'<em>assistant de conception de diagramme</em> (voir « <VoirSection titre="Assistant conception" /> ») peut en proposer une première version à partir des trafics. L'application contrôle en temps réel que les interverts sont respectés (fond rouge en cas de conflit).</li>
-                    <li><strong>Vérifier les conflits restants</strong> : la liste sous la matrice indique les paires en violation. Au survol d'une case rouge, une infobulle décrit le problème (recouvrement de verts ou délai insuffisant).</li>
-                    <li><strong>Décliner les autres PF</strong> (HPM, HPS, HC, HN, variantes priorité bus…) à partir du PF1 : les différences sont colorées (rouge = augmenté, vert = réduit) et explicitées par infobulle au survol, ce qui rend immédiatement visible ce qui change d'un plan à l'autre.</li>
-                    <li><strong>Affiner</strong> : conditions de micro-régulation et scénarios testés en simulation, données trafic, onde verte si plusieurs carrefours sont coordonnés.</li>
-                </ol>
-                <p>Vous pouvez à tout moment ouvrir le <strong>projet exemple</strong> depuis l'écran d'accueil pour comparer avec un carrefour déjà entièrement renseigné.</p>
             </section>
 
             <section className="help-section">
@@ -325,8 +312,25 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 <p>Le choix du thème est sauvegardé automatiquement dans le navigateur et propagé aux fenêtres détachées (matrice, formulaire, données trafic, conditions micro, variables micro, image du carrefour). Le sous-menu reste ouvert après sélection pour faciliter la comparaison entre thèmes.</p>
             </section>
 
+            <h3 style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Chapitre 2 — Saisie des données d'entrée</h3>
+
+            <section className="help-section">
+                <h4>Propriétés</h4>
+                <p>L'onglet <em>Propriétés</em> du panneau de gauche rassemble l'identité du carrefour et du dossier ; ces renseignements se retrouvent dans le dossier imprimé.</p>
+                <ul>
+                    <li><strong>Nom du carrefour :</strong> titre partagé avec l'en-tête du projet. Le modifier ne renomme pas le fichier JSON ; un titre vide à l'ouverture est initialisé avec le nom du fichier. Champ de 60 caractères.</li>
+                    <li><strong>Commune :</strong> choisie dans la liste ou saisie libre. <strong>Id. commune</strong> et <strong>Id. carrefour</strong> sont des numéros de 0 à 255.</li>
+                    <li><strong>Contrôleur</strong> et <strong>Programme :</strong> type de contrôleur et nom du programme, libres.</li>
+                    <li><strong>Hors agglomération :</strong> porte le jaune des groupes véhicules et bus à 5 s au lieu de 3 s. <strong>Carrefour coordonné :</strong> décochée par défaut, enregistrée avec le projet.</li>
+                    <li><strong>Numéro de dossier</strong> et <strong>Phase d'étude :</strong> ESQ (esquisse), AVP (avant-projet), PRO (projet), DCE (consultation), ACT (assistance), EXE (exécution), DOE (dossier ouvrage).</li>
+                    <li><strong>Maître d'ouvrage</strong> (MOA) et <strong>Concepteur</strong> (MOE), avec leur logo, puis <strong>Entreprise</strong> et <strong>Auteur</strong>.</li>
+                    <li><strong>Dates</strong> de création et de dernière modification, et <strong>Commentaires</strong> libres sur le projet.</li>
+                </ul>
+                <p>Le panneau se détache dans une fenêtre séparée par le bouton <em>Détacher</em>. Il se verrouille comme le reste du projet par <VoirMenu chemin="Mise en page → Verrouillage saisie..." />.</p>
+            </section>
+
             <section id="help-config-groupes" className="help-section">
-                <h4>Configuration des groupes</h4>
+                <h4>Formulaire</h4>
                 <p>Champs du formulaire (panneau de configuration), dans l'ordre des colonnes :</p>
                 <ul>
                     <li><strong>GF :</strong> Numéro du groupe de feux (1, 2, 3…), attribué automatiquement. Sert de référence dans la matrice et les actions de micro-régulation.</li>
@@ -359,6 +363,32 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 </ul>
             </section>
 
+            <section className="help-section">
+                <h4>Détecteurs (boucle, radar, BP)</h4>
+                <p><strong>Activer le module :</strong> <VoirMenu chemin="Mise en page → Configuration → Détecteur" />. Décoché par défaut, il ajoute l'onglet <em>Détecteurs</em> et la colonne Détecteur des paramètres de l'image. Quand il est décoché, les détecteurs déjà posés restent visibles sur l'image, sans leur nom, mais l'onglet et la colonne disparaissent.</p>
+                <p><strong>Créer et poser un détecteur :</strong> dans l'onglet Détecteurs, <em>Ajouter un détecteur</em> crée une ligne. Choisissez son nom, son type et son groupe de feu, renseignez sa longueur, puis cochez <em>Ajouter</em> dans la colonne Détecteur du tableau de l'image et cliquez sur le plan. Le placement d'un détecteur est exclusif avec <em>Ajouter une flèche</em>. <em>Retirer de l'image</em> conserve la ligne dans le tableau.</p>
+                <p><strong>Trier le tableau :</strong> cliquez sur l'en-tête <em>Nom</em>, <em>Type</em> ou <em>GF</em> pour trier en ordre croissant (▲), cliquez de nouveau pour l'ordre décroissant (▼), une troisième fois pour revenir à l'ordre de saisie. Le tri ne change que l'affichage : l'ordre enregistré des détecteurs est conservé. Un détecteur sans groupe de feu reste en fin de liste.</p>
+                <ul>
+                    <li><strong>Types :</strong> boucle de pied de feu, boucle éloignée, boucle de comptage, radar et bouton poussoir. Le radar et le bouton n'ont pas de longueur ; la longueur se saisit pour les boucles.</li>
+                    <li><strong>Longueur et retrait :</strong> la longueur par défaut est de 2 m pour une boucle de pied de feu et une boucle de comptage, 10 m pour une boucle éloignée. Le <em>retrait</em> est la distance entre la boucle et la ligne d'arrêt : il n'est pas demandé au pied de feu, qui est sur la ligne d'arrêt. Laissé vide pour une boucle éloignée ou de comptage, il est mesuré sur l'image à partir de la flèche du groupe.</li>
+                    <li><strong>Échelle de l'image :</strong> le champ « Échelle 1 m = … px » de la colonne Détecteur règle la taille des symboles et la mesure des retraits. Il s'appuie sur une estimation de l'échelle du plan.</li>
+                    <li><strong>Modifier un détecteur :</strong> cliquez sur son symbole. La fenêtre permet de passer d'un détecteur à l'autre par la liste des noms, de changer son type, de le faire tourner, de régler sa longueur ou son retrait, et de l'écarter de l'image. Les noms des boucles courtes sont placés au-dessus pour ne pas masquer l'animation.</li>
+                    <li><strong>Affichage :</strong> la case <em>Détecteur</em> montre le calque, <em>Afficher nom</em> ses noms, <em>Ajouter</em> arme le placement. Les options sont enregistrées avec le projet.</li>
+                </ul>
+                <p><strong>Animation en simulation :</strong> il s'agit d'une animation <strong>théorique</strong>, à vocation purement visuelle. Elle donne une idée de l'occupation des boucles au fil du cycle, mais ne prétend pas reproduire fidèlement le comportement réel des détecteurs : le sujet n'a pas été approfondi et ses résultats ne doivent pas servir à dimensionner un réglage ni à interpréter des mesures de terrain.</p>
+                <p>Elle s'appuie sur quelques principes simples, à partir du trafic du jeu de données actif, de la durée du cycle, du vert du groupe de feu, du coefficient de voie, de la longueur de la boucle, de son retrait et de la vitesse du mouvement :</p>
+                <ul>
+                    <li><strong>Débit :</strong> un véhicule franchit la boucle toutes les 2 secondes divisées par le coefficient de voie, quelle que soit la capacité utilisée. Le premier véhicule libère la boucle à 2 secondes de vert divisées par le coefficient ; les passages suivants sont décalés d'autant. Chaque occupation dure (longueur de la boucle + 5 m) / vitesse du mouvement ; un tourne à gauche est donc occupé plus longtemps qu'un tout droit.</li>
+                    <li><strong>File au vert :</strong> le nombre de véhicules du cycle est le trafic multiplié par le cycle, divisé par 3 600. La file s'écoule au rythme du débit ; lorsque la demande est servie avant la fin du vert, la boucle reste éteinte jusqu'au vert suivant. Si la capacité utilisée ne dépasse pas 90 %, 6 secondes sans véhicule le montrent, puis les véhicules du cycle suivant se répartissent sur le reste du cycle.</li>
+                    <li><strong>Boucle de pied de feu :</strong> le premier véhicule arrivé après cette absence se pose sur la boucle et la maintient allumée jusqu'au vert suivant. Sa file est celle du groupe auquel elle est rattachée.</li>
+                    <li><strong>Boucle éloignée :</strong> un véhicule occupe 6 m de file. Au retrait de 20 m, quatre véhicules franchissent la boucle sans s'y arrêter ; le cinquième la recouvre et fige l'occupation, qui reste allumée jusqu'à ce que la file se vide au vert suivant.</li>
+                    <li><strong>Boucle de comptage :</strong> elle additionne les véhicules des groupes dont la flèche aboutit sur la même branche, y compris les tournants des transversales, et suit le même modèle de file à son propre retrait.</li>
+                    <li><strong>Saturation :</strong> quand la file ne se vide pas avant la fin du vert, la boucle reste allumée pendant le rouge.</li>
+                    <li><strong>Horloge :</strong> l'animation des boucles avance au dixième de seconde, indépendamment du diagramme qui déroule les secondes entières. Elle se met en pause, reprend et se recale sur le curseur avec la lecture.</li>
+                </ul>
+                <p>Les boucles ne s'animent qu'en mode Simulation. Hors simulation, elles restent dessinées à l'état de repos.</p>
+            </section>
+
             <section id="help-matrice" className="help-section">
                 <h4>Matrice des temps interverts</h4>
                 <p>Définit les temps de dégagement (intervert) entre groupes conflictuels.
@@ -379,8 +409,37 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 <p>Ce délai d'une demi-seconde évite l'apparition d'infobulles à la chaîne lors d'un balayage rapide de la grille.</p>
             </section>
 
+            <section id="help-trafic" className="help-section">
+                <h4>Données Trafic</h4>
+                <p>L'onglet Trafic permet de saisir les données de trafic par groupe :</p>
+                <ul>
+                    <li><strong>Coef :</strong> Coefficient de voie correspondant aux courants de circulation du groupe de feu (partagé entre tous les jeux de données)</li>
+                    <li><strong>Trafic :</strong> Volume de trafic (véh/h) - spécifique à chaque jeu de données. Appuyez sur la touche <em>c</em> pour indiquer un trafic coordonné : les véhicules arrivent en peloton pendant le vert, grâce à la coordination avec le carrefour amont (onde verte par exemple), et n'attendent pas au feu. Un petit "c" apparaît à côté de la valeur ; le Retard et la File d'attente du groupe sont mis à 0, tandis que le V.Utile et la capacité utilisée restent calculés sur le volume saisi. Appuyez à nouveau sur <em>c</em> pour retirer la coordination. Une infobulle le rappelle après 2,5 s de survol du champ.</li>
+                    <li><strong>V.Utile :</strong> Durée de vert nécessaire pour passer le trafic. Formule = Trafic / (1800 × Coef / Cycle)</li>
+                    <li><strong>Cap.U :</strong> Capacité utilisée pour passer le trafic affecté au groupe de feu. Formule = (V.Utile / Vert total) × 100%</li>
+                    <li><strong>Retard :</strong> Temps d'attente théorique moyen en pied de feu hors saturation. Formule = (Cycle - Vert total)² / (2 × Cycle × (1 - Trafic / (1800 × Coef))). <em>Si une action "Début de bande passante" cible ce groupe (Action GF), alors Retard = max(0, Début de vert - Fin de l'action).</em></li>
+                    <li><strong>File d'attente :</strong> File d'attente théorique maximale hors saturation. Formule = (partie entière de (Trafic × (Cycle - Vert total) / 3600 / Coef) + 1) × 6 mètres. <em>Si une action "Début de bande passante" cible ce groupe (Action GF), alors File d'attente = max(0, Début de vert - Fin de l'action).</em></li>
+                    <li><strong>Vert total :</strong> Les calculs de Cap.U, Retard et File d'attente prennent en compte le temps de vert principal + la durée des secondes lucarnes du groupe. Exception : pour un groupe en aiguillage (« a »), seul le vert principal compte. Sa seconde lucarne s'ouvre à la place de l'autre branche de l'aiguillage et ne s'ajoute pas à chaque cycle.</li>
+                </ul>
+                <p><strong>Surbrillance interactive :</strong> Le survol des champs Coef, Trafic, V.Utile, Cap.U, Retard ou File d'attente met en surbrillance la barre correspondante dans le diagramme.</p>
+                <p><strong>Jeux de données :</strong> La listbox "Donnée" permet de basculer entre plusieurs jeux de données trafic (HPM, HPS, etc.). Chaque jeu de données conserve ses propres valeurs de trafic.</p>
+                <p><strong>Jeux de données personnalisés :</strong> Survolez le sélecteur "Donnée" et appuyez sur la touche <em>+</em> pour créer un nouveau jeu de données personnalisé (17 caractères max). Le nom est prérempli à partir du jeu actif. Les jeux personnalisés sont sauvegardés dans le projet et dans le stockage local.</p>
+                <p><strong>Supprimer un jeu de données :</strong> Survolez le sélecteur "Donnée" et appuyez sur la touche <em>−</em> pour supprimer le jeu affiché, après confirmation. Ses volumes sont effacés ; la fenêtre nomme les plans de feux qui l'utilisaient et le jeu sur lequel ils passent (le premier autre jeu renseigné). « Projection », toujours proposé, ne se supprime pas, ni le dernier jeu de la liste.</p>
+                <p><strong>Association PF / jeu de données :</strong> Chaque onglet PF mémorise le jeu de données trafic sélectionné. Lorsque vous changez d'onglet PF, le jeu de données associé est automatiquement restauré. Cette association est sauvegardée dans le projet.</p>
+                <p><strong>Bouton Coller :</strong> Si le jeu de données sélectionné est vide, un bouton "Coller..." apparaît pour copier les données depuis un autre jeu de données.</p>
+                <p><strong>Code couleur Cap.U :</strong></p>
+                <ul>
+                    <li><span style={{color: '#4caf50'}}>Vert</span> : &lt; 76% (fluide)</li>
+                    <li><span style={{color: '#ff9800'}}>Orange</span> : 76-85% (chargé)</li>
+                    <li><span style={{color: '#f44336'}}>Rouge</span> : 86-100% (saturé)</li>
+                    <li><span style={{color: '#000', background: '#ff6b6b', padding: '0 4px'}}>Noir/Rouge</span> : &gt; 100% (sursaturé)</li>
+                </ul>
+            </section>
+
+            <h3 style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Chapitre 3 — Les plans de feux</h3>
+
             <section id="help-diagramme" className="help-section">
-                <h4>Diagramme</h4>
+                <h4>Champs de saisie</h4>
                 <ul>
                     <li><strong>DA :</strong> Correspond au code trajet d'une ligne de bus en délai d'approche, communément noté T0, T1, T2...</li>
                     <li><strong>Déb (Début de vert) :</strong> Position de départ du vert dans le cycle (en secondes depuis le début du cycle)</li>
@@ -391,8 +450,63 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 </ul>
             </section>
 
+            <section className="help-section">
+                <h4>Commentaires</h4>
+                <p>Le champ <strong>Commentaire</strong> est associé à chaque <em>groupe de feu</em>. Il permet d'annoter individuellement une ligne du diagramme avec une information libre (par exemple une remarque technique, un rappel de configuration, un point à valider avec le maître d'ouvrage). Chaque groupe de feu possède son propre commentaire, qui reste affiché sur sa ligne dans le diagramme. Les commentaires sont sauvegardés avec le projet et sont communs à tous les plans de feux (une même annotation reste valable pour tous les PF d'un groupe de feu donné).</p>
+                <ul>
+                    <li><strong>Coloration du texte :</strong> Sélectionnez du texte puis appuyez sur <span style={{color: '#4CAF50'}}>+</span> (vert) ou <span style={{color: '#F44336'}}>−</span> (rouge).</li>
+                    <li><strong>Coloration de toute la ligne :</strong> Sans sélection, <span style={{color: '#4CAF50'}}>+</span> ou <span style={{color: '#F44336'}}>−</span> colore tout le contenu.</li>
+                    <li><strong>Basculer en blanc :</strong> Si une ligne entière est déjà colorée, appuyez à nouveau sur <span style={{color: '#4CAF50'}}>+</span> ou <span style={{color: '#F44336'}}>−</span> pour retirer la couleur.</li>
+                    <li><strong>Affichage :</strong> Les commentaires sont affichés dans la colonne dédiée du diagramme. L'option <em><VoirMenu chemin="Mise en page → Diagramme → Commentaires" /></em> permet de les masquer globalement.</li>
+                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Commentaires</em> de chaque plan de feu les ajoute en texte simple, une ligne « GF x : » par groupe commenté. Voir <em><VoirSection titre="Impression du dossier" /></em>.</li>
+                </ul>
+            </section>
+
+            <section className="help-section">
+                <h4>Remarques</h4>
+                <p>Le champ <strong>Remarques</strong> est associé à chaque <em>plan de feu</em> (PF1, PF2, PF3...). Il permet de consigner des informations d'ensemble propres à un plan de feu : justification d'un choix de cycle, horaires d'activation, scénario de régulation, validation d'un comité, etc. Contrairement aux commentaires (par groupe), chaque plan de feu a ses propres remarques, indépendantes des autres PF. Changer d'onglet PF modifie le contenu affiché.</p>
+                <ul>
+                    <li><strong>Coloration du texte :</strong> Sélectionnez du texte puis appuyez sur <span style={{color: '#4CAF50'}}>+</span> (vert) ou <span style={{color: '#F44336'}}>−</span> (rouge).</li>
+                    <li><strong>Taille du texte :</strong> Sélectionnez du texte puis appuyez sur <strong>▲</strong> (agrandir) ou <strong>▼</strong> (réduire). Utile pour hiérarchiser les informations (titre plus grand, détails plus petits).</li>
+                    <li><strong>Mise en forme conservée :</strong> Si vous collez depuis un traitement de texte (Word, LibreOffice...), la mise en forme (taille de police, couleurs) est préservée.</li>
+                    <li><strong>Longueur :</strong> jusqu'à 1 000 caractères par plan de feu, quel que soit le nombre de groupes. Sauts de ligne, ponctuation et mise en forme sont conservés ; au-delà de la hauteur du diagramme, la zone défile. Arrivée à la limite, la saisie s'arrête ; un collage trop long est réduit à la place restante.</li>
+                    <li><strong>Affichage :</strong> Les remarques sont affichées dans une zone dédiée à droite du diagramme. L'option <em><VoirMenu chemin="Mise en page → Diagramme → Remarques" /></em> permet de les masquer globalement.</li>
+                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Remarques</em> de chaque plan de feu les ajoute en texte simple, avec leurs sauts de ligne. Voir <em><VoirSection titre="Impression du dossier" /></em>.</li>
+                </ul>
+            </section>
+
+            <section className="help-section">
+                <h4>Manipulation du diagramme</h4>
+                <ul>
+                    <li><strong>Glisser-déposer :</strong> Déplacez les barres du diagramme avec la souris (bords gauche/droit pour redimensionner)</li>
+                    <li><strong>Actions glissables :</strong> Les overlays d'actions peuvent aussi être redimensionnés par glisser-déposer</li>
+                    <li><strong>Zoom :</strong> Utilisez le curseur dans l'en-tête</li>
+                    <li><strong>Dépendances :</strong> Affichez les flèches de dégagement avec le bouton "Dépendance"</li>
+                    <li><strong>Surbrillance :</strong> Survolez une action dans le tableau ou le diagramme pour la mettre en évidence (voir <em><VoirSection titre="Survol et mise en relation" /></em> ci-dessous)</li>
+                </ul>
+            </section>
+
+            <section className="help-section">
+                <h4>Menu Diagramme</h4>
+                <ul>
+                    <li><strong>Nouveau plan de feu :</strong> Crée un onglet « Nouveau PF » vierge, avec les mêmes groupes et la même matrice : verts (Déb, Fin), DA, conditions et variables micro vides. Une fenêtre propose ensuite le jeu de trafic du plan (s'il existe des données) : <em>Associer ce jeu</em> l'associe sans fermer la fenêtre (le bouton se grise), pour enchaîner sur <em>Suggérer le cycle…</em> ou <em>Fermer</em> ; <em>Associer et suggérer le cycle…</em> fait les deux d'un coup ; sans trafic, elle invite à le saisir dans l'onglet Trafic.</li>
+                    <li><strong>Dupliquer :</strong> Crée un nouvel onglet PF avec une copie du diagramme actuel</li>
+                    <li><strong>Modification du diagramme :</strong> sous-menu qui regroupe les opérations qui remanient le diagramme : <em><VoirMenu chemin="Diagramme → Modification du diagramme → Déplacer un groupe de feu">Déplacer un groupe de feu</VoirMenu></em>, <em><VoirMenu chemin="Diagramme → Modification du diagramme → Glisser">Glisser</VoirMenu></em>, <em><VoirMenu chemin="Diagramme → Modification du diagramme → Insérer">Insérer</VoirMenu></em>, <em><VoirMenu chemin="Diagramme → Modification du diagramme → Réduire">Réduire</VoirMenu></em> et <em><VoirMenu chemin="Diagramme → Modification du diagramme → Intégrer un bi-Carrefour">Intégrer un bi-Carrefour</VoirMenu></em> (ou <em><VoirMenu chemin="Diagramme → Modification du diagramme → Rétablir en uni-carrefour">Rétablir en uni-carrefour</VoirMenu></em>), détaillées ci-dessous.</li>
+                    <li><strong>Glisser :</strong> Décale tous les groupes d'un nombre de secondes donné</li>
+                    <li><strong>Insérer :</strong> Insère du temps dans le cycle à une position donnée</li>
+                    <li><strong>Réduire :</strong> Réduit la plage de temps dans le cycle à une position donnée</li>
+                    <li><strong>Déplacer un groupe :</strong> Déplace un groupe vers une nouvelle position. <em>Cette action synchronise automatiquement les données (diagramme, matrice, actions, données de trafic) dans tous les plans de feux.</em> La fenêtre reste ouverte après chaque déplacement pour enchaîner plusieurs opérations ; seuls la croix ou le bouton Annuler la ferment.</li>
+                    <li><strong>Intégrer un bi-Carrefour :</strong> Permet de séparer visuellement le carrefour en deux zones en désignant un groupe de feu de séparation. Une ligne blanche horizontale et verticale apparaît dans la matrice des temps interverts (onglet Formulaire et onglet Matrice), ainsi qu'une ligne blanche de séparation dans le diagramme du plan de feu. Le menu bascule ensuite en « Rétablir en uni-carrefour » pour supprimer la séparation. Cette option est sauvegardée avec le projet.</li>
+                    <li><strong>Assistant conception :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase, puis le placement des groupes associés, les adaptatifs verticaux, les fermetures anticipées et les points de repos bus (voir la <VoirSection titre="Assistant conception">section du même nom</VoirSection>)</li>
+                    <li><strong>Scénarios :</strong> sous-menu qui liste les scénarios de simulation enregistrés dans les plans de feu du projet ; grisé tant qu'aucun plan n'en a enregistré. Choisir un scénario rend actif le plan de feu qui le porte, l'ouvre et affiche la simulation (voir « <VoirSection titre="Simulation" /> »)</li>
+                    <li><strong>Options :</strong> Affiche la légende visuelle des actions</li>
+                </ul>
+            </section>
+
+            <h3 style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Chapitre 4 — La micro-régulation</h3>
+
             <section id="help-actions" className="help-section">
-                <h4>Colonnes du tableau des actions de micro-régulation</h4>
+                <h4>Tableau des conditions de micro-régulation</h4>
                 <ul>
                     <li><strong>GF :</strong> Groupe fonctionnel concerné par l'action</li>
                     <li><strong>Action :</strong> Type d'action (liste déroulante)</li>
@@ -407,7 +521,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
             </section>
 
             <section className="help-section">
-                <h4>Conditions de micro-régulation</h4>
+                <h4>Actions de micro-régulation</h4>
                 <p>Permet de définir des actions spéciales sur le diagramme. Survolez une ligne pour mettre en surbrillance l'action correspondante dans le diagramme (et inversement).</p>
                 <ul>
                     <li><strong>Adaptatif vertical :</strong> Zone d'adaptation du temps de vert (rectangle bleu). Utilisez Plage1/Plage2 pour définir les groupes concernés.</li>
@@ -519,7 +633,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
             </section>
 
             <section className="help-section">
-                <h4>Orientation « priorité bus »</h4>
+                <h4>Volet « Priorité bus »</h4>
                 <p>
                     TraCflux traite la priorité aux transports en commun comme une composante à
                     part entière de la micro-régulation, et non comme un module ajouté en
@@ -548,17 +662,6 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
             </section>
 
             <section className="help-section">
-                <h4>Manipulation du diagramme</h4>
-                <ul>
-                    <li><strong>Glisser-déposer :</strong> Déplacez les barres du diagramme avec la souris (bords gauche/droit pour redimensionner)</li>
-                    <li><strong>Actions glissables :</strong> Les overlays d'actions peuvent aussi être redimensionnés par glisser-déposer</li>
-                    <li><strong>Zoom :</strong> Utilisez le curseur dans l'en-tête</li>
-                    <li><strong>Dépendances :</strong> Affichez les flèches de dégagement avec le bouton "Dépendance"</li>
-                    <li><strong>Surbrillance :</strong> Survolez une action dans le tableau ou le diagramme pour la mettre en évidence (voir <em><VoirSection titre="Survol et mise en relation" /></em> ci-dessous)</li>
-                </ul>
-            </section>
-
-            <section className="help-section">
                 <h4>Survol et mise en relation</h4>
                 <p>Un même groupe de feux est représenté à plusieurs endroits à la fois : une ligne dans le diagramme, une ligne dans le formulaire, une ligne dans les données Trafic, une ou plusieurs flèches sur le plan du carrefour. Le survol les relie : <strong>poser la souris sur l'une de ces représentations met toutes les autres en évidence.</strong></p>
                 <ul>
@@ -571,23 +674,6 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 <p><strong>Ces liens franchissent les fenêtres détachées, dans les deux sens.</strong> Le plan du carrefour posé sur un second écran réagit au survol du diagramme resté sur le premier, et réciproquement. Il en va de même du miroir du diagramme, du formulaire et des données Trafic : une fenêtre détachée n'est pas une copie figée, elle reste solidaire du reste.</p>
                 <p><strong>Une flèche ne réagit que sur son tracé</strong>, avec quelques pixels de marge pour la viser facilement, quelles que soient sa taille et son orientation. Le carré vide qui l'entoure laisse la souris atteindre les flèches voisines : passer d'une flèche à l'autre déplace aussitôt la mise en évidence, même sur un plan dense. Il en va de même dans la fenêtre détachée et, avec la case <em>Signaux</em>, sur le feu dessiné. Là où deux flèches se croisent, celle du dessus répond.</p>
                 <p><em>Si votre système est réglé sur « mouvement réduit », le halo reste affiché mais ne pulse pas.</em></p>
-            </section>
-
-            <section className="help-section">
-                <h4>Menu Diagramme</h4>
-                <ul>
-                    <li><strong>Nouveau plan de feu :</strong> Crée un onglet « Nouveau PF » vierge, avec les mêmes groupes et la même matrice : verts (Déb, Fin), DA, conditions et variables micro vides. Une fenêtre propose ensuite le jeu de trafic du plan (s'il existe des données) : <em>Associer ce jeu</em> l'associe sans fermer la fenêtre (le bouton se grise), pour enchaîner sur <em>Suggérer le cycle…</em> ou <em>Fermer</em> ; <em>Associer et suggérer le cycle…</em> fait les deux d'un coup ; sans trafic, elle invite à le saisir dans l'onglet Trafic.</li>
-                    <li><strong>Dupliquer :</strong> Crée un nouvel onglet PF avec une copie du diagramme actuel</li>
-                    <li><strong>Modification du diagramme :</strong> sous-menu qui regroupe les opérations qui remanient le diagramme : <em><VoirMenu chemin="Diagramme → Modification du diagramme → Déplacer un groupe de feu">Déplacer un groupe de feu</VoirMenu></em>, <em><VoirMenu chemin="Diagramme → Modification du diagramme → Glisser">Glisser</VoirMenu></em>, <em><VoirMenu chemin="Diagramme → Modification du diagramme → Insérer">Insérer</VoirMenu></em>, <em><VoirMenu chemin="Diagramme → Modification du diagramme → Réduire">Réduire</VoirMenu></em> et <em><VoirMenu chemin="Diagramme → Modification du diagramme → Intégrer un bi-Carrefour">Intégrer un bi-Carrefour</VoirMenu></em> (ou <em><VoirMenu chemin="Diagramme → Modification du diagramme → Rétablir en uni-carrefour">Rétablir en uni-carrefour</VoirMenu></em>), détaillées ci-dessous.</li>
-                    <li><strong>Glisser :</strong> Décale tous les groupes d'un nombre de secondes donné</li>
-                    <li><strong>Insérer :</strong> Insère du temps dans le cycle à une position donnée</li>
-                    <li><strong>Réduire :</strong> Réduit la plage de temps dans le cycle à une position donnée</li>
-                    <li><strong>Déplacer un groupe :</strong> Déplace un groupe vers une nouvelle position. <em>Cette action synchronise automatiquement les données (diagramme, matrice, actions, données de trafic) dans tous les plans de feux.</em> La fenêtre reste ouverte après chaque déplacement pour enchaîner plusieurs opérations ; seuls la croix ou le bouton Annuler la ferment.</li>
-                    <li><strong>Intégrer un bi-Carrefour :</strong> Permet de séparer visuellement le carrefour en deux zones en désignant un groupe de feu de séparation. Une ligne blanche horizontale et verticale apparaît dans la matrice des temps interverts (onglet Formulaire et onglet Matrice), ainsi qu'une ligne blanche de séparation dans le diagramme du plan de feu. Le menu bascule ensuite en « Rétablir en uni-carrefour » pour supprimer la séparation. Cette option est sauvegardée avec le projet.</li>
-                    <li><strong>Assistant conception :</strong> Propose une durée de cycle à partir du trafic et des groupes déterminants de chaque phase, puis le placement des groupes associés, les adaptatifs verticaux, les fermetures anticipées et les points de repos bus (voir la <VoirSection titre="Assistant conception">section du même nom</VoirSection>)</li>
-                    <li><strong>Scénarios :</strong> sous-menu qui liste les scénarios de simulation enregistrés dans les plans de feu du projet ; grisé tant qu'aucun plan n'en a enregistré. Choisir un scénario rend actif le plan de feu qui le porte, l'ouvre et affiche la simulation (voir « <VoirSection titre="Simulation" /> »)</li>
-                    <li><strong>Options :</strong> Affiche la légende visuelle des actions</li>
-                </ul>
             </section>
 
             <section className="help-section">
@@ -626,32 +712,6 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 </ul>
 
                 <p>Le survol d'une flèche l'entoure d'un halo et met en évidence le groupe partout ailleurs — diagramme, formulaire, données Trafic. Voir <em><VoirSection titre="Survol et mise en relation" /></em>.</p>
-            </section>
-
-            <section className="help-section">
-                <h4>Détecteurs de terrain</h4>
-                <p><strong>Activer le module :</strong> <VoirMenu chemin="Mise en page → Configuration → Détecteur" />. Décoché par défaut, il ajoute l'onglet <em>Détecteurs</em> et la colonne Détecteur des paramètres de l'image. Quand il est décoché, les détecteurs déjà posés restent visibles sur l'image, sans leur nom, mais l'onglet et la colonne disparaissent.</p>
-                <p><strong>Créer et poser un détecteur :</strong> dans l'onglet Détecteurs, <em>Ajouter un détecteur</em> crée une ligne. Choisissez son nom, son type et son groupe de feu, renseignez sa longueur, puis cochez <em>Ajouter</em> dans la colonne Détecteur du tableau de l'image et cliquez sur le plan. Le placement d'un détecteur est exclusif avec <em>Ajouter une flèche</em>. <em>Retirer de l'image</em> conserve la ligne dans le tableau.</p>
-                <p><strong>Trier le tableau :</strong> cliquez sur l'en-tête <em>Nom</em>, <em>Type</em> ou <em>GF</em> pour trier en ordre croissant (▲), cliquez de nouveau pour l'ordre décroissant (▼), une troisième fois pour revenir à l'ordre de saisie. Le tri ne change que l'affichage : l'ordre enregistré des détecteurs est conservé. Un détecteur sans groupe de feu reste en fin de liste.</p>
-                <ul>
-                    <li><strong>Types :</strong> boucle de pied de feu, boucle éloignée, boucle de comptage, radar et bouton poussoir. Le radar et le bouton n'ont pas de longueur ; la longueur se saisit pour les boucles.</li>
-                    <li><strong>Longueur et retrait :</strong> la longueur par défaut est de 2 m pour une boucle de pied de feu et une boucle de comptage, 10 m pour une boucle éloignée. Le <em>retrait</em> est la distance entre la boucle et la ligne d'arrêt : il n'est pas demandé au pied de feu, qui est sur la ligne d'arrêt. Laissé vide pour une boucle éloignée ou de comptage, il est mesuré sur l'image à partir de la flèche du groupe.</li>
-                    <li><strong>Échelle de l'image :</strong> le champ « Échelle 1 m = … px » de la colonne Détecteur règle la taille des symboles et la mesure des retraits. Il s'appuie sur une estimation de l'échelle du plan.</li>
-                    <li><strong>Modifier un détecteur :</strong> cliquez sur son symbole. La fenêtre permet de passer d'un détecteur à l'autre par la liste des noms, de changer son type, de le faire tourner, de régler sa longueur ou son retrait, et de l'écarter de l'image. Les noms des boucles courtes sont placés au-dessus pour ne pas masquer l'animation.</li>
-                    <li><strong>Affichage :</strong> la case <em>Détecteur</em> montre le calque, <em>Afficher nom</em> ses noms, <em>Ajouter</em> arme le placement. Les options sont enregistrées avec le projet.</li>
-                </ul>
-                <p><strong>Animation en simulation :</strong> il s'agit d'une animation <strong>théorique</strong>, à vocation purement visuelle. Elle donne une idée de l'occupation des boucles au fil du cycle, mais ne prétend pas reproduire fidèlement le comportement réel des détecteurs : le sujet n'a pas été approfondi et ses résultats ne doivent pas servir à dimensionner un réglage ni à interpréter des mesures de terrain.</p>
-                <p>Elle s'appuie sur quelques principes simples, à partir du trafic du jeu de données actif, de la durée du cycle, du vert du groupe de feu, du coefficient de voie, de la longueur de la boucle, de son retrait et de la vitesse du mouvement :</p>
-                <ul>
-                    <li><strong>Débit :</strong> un véhicule franchit la boucle toutes les 2 secondes divisées par le coefficient de voie, quelle que soit la capacité utilisée. Le premier véhicule libère la boucle à 2 secondes de vert divisées par le coefficient ; les passages suivants sont décalés d'autant. Chaque occupation dure (longueur de la boucle + 5 m) / vitesse du mouvement ; un tourne à gauche est donc occupé plus longtemps qu'un tout droit.</li>
-                    <li><strong>File au vert :</strong> le nombre de véhicules du cycle est le trafic multiplié par le cycle, divisé par 3 600. La file s'écoule au rythme du débit ; lorsque la demande est servie avant la fin du vert, la boucle reste éteinte jusqu'au vert suivant. Si la capacité utilisée ne dépasse pas 90 %, 6 secondes sans véhicule le montrent, puis les véhicules du cycle suivant se répartissent sur le reste du cycle.</li>
-                    <li><strong>Boucle de pied de feu :</strong> le premier véhicule arrivé après cette absence se pose sur la boucle et la maintient allumée jusqu'au vert suivant. Sa file est celle du groupe auquel elle est rattachée.</li>
-                    <li><strong>Boucle éloignée :</strong> un véhicule occupe 6 m de file. Au retrait de 20 m, quatre véhicules franchissent la boucle sans s'y arrêter ; le cinquième la recouvre et fige l'occupation, qui reste allumée jusqu'à ce que la file se vide au vert suivant.</li>
-                    <li><strong>Boucle de comptage :</strong> elle additionne les véhicules des groupes dont la flèche aboutit sur la même branche, y compris les tournants des transversales, et suit le même modèle de file à son propre retrait.</li>
-                    <li><strong>Saturation :</strong> quand la file ne se vide pas avant la fin du vert, la boucle reste allumée pendant le rouge.</li>
-                    <li><strong>Horloge :</strong> l'animation des boucles avance au dixième de seconde, indépendamment du diagramme qui déroule les secondes entières. Elle se met en pause, reprend et se recale sur le curseur avec la lecture.</li>
-                </ul>
-                <p>Les boucles ne s'animent qu'en mode Simulation. Hors simulation, elles restent dessinées à l'état de repos.</p>
             </section>
 
             <section className="help-section">
@@ -702,161 +762,10 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 <p>L'élément actif au clavier est toujours signalé par un contour visible, dont la couleur suit le thème choisi dans <em><VoirMenu chemin="Mise en page → Options de contraste" /></em>.</p>
             </section>
 
-            <section className="help-section">
-                <h4>Commentaires</h4>
-                <p>Le champ <strong>Commentaire</strong> est associé à chaque <em>groupe de feu</em>. Il permet d'annoter individuellement une ligne du diagramme avec une information libre (par exemple une remarque technique, un rappel de configuration, un point à valider avec le maître d'ouvrage). Chaque groupe de feu possède son propre commentaire, qui reste affiché sur sa ligne dans le diagramme. Les commentaires sont sauvegardés avec le projet et sont communs à tous les plans de feux (une même annotation reste valable pour tous les PF d'un groupe de feu donné).</p>
-                <ul>
-                    <li><strong>Coloration du texte :</strong> Sélectionnez du texte puis appuyez sur <span style={{color: '#4CAF50'}}>+</span> (vert) ou <span style={{color: '#F44336'}}>−</span> (rouge).</li>
-                    <li><strong>Coloration de toute la ligne :</strong> Sans sélection, <span style={{color: '#4CAF50'}}>+</span> ou <span style={{color: '#F44336'}}>−</span> colore tout le contenu.</li>
-                    <li><strong>Basculer en blanc :</strong> Si une ligne entière est déjà colorée, appuyez à nouveau sur <span style={{color: '#4CAF50'}}>+</span> ou <span style={{color: '#F44336'}}>−</span> pour retirer la couleur.</li>
-                    <li><strong>Affichage :</strong> Les commentaires sont affichés dans la colonne dédiée du diagramme. L'option <em><VoirMenu chemin="Mise en page → Diagramme → Commentaires" /></em> permet de les masquer globalement.</li>
-                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Commentaires</em> de chaque plan de feu les ajoute en texte simple, une ligne « GF x : » par groupe commenté. Voir <em><VoirSection titre="Impression du dossier" /></em>.</li>
-                </ul>
-            </section>
+            <h3 style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Chapitre 5 — Autres actions</h3>
 
             <section className="help-section">
-                <h4>Remarques</h4>
-                <p>Le champ <strong>Remarques</strong> est associé à chaque <em>plan de feu</em> (PF1, PF2, PF3...). Il permet de consigner des informations d'ensemble propres à un plan de feu : justification d'un choix de cycle, horaires d'activation, scénario de régulation, validation d'un comité, etc. Contrairement aux commentaires (par groupe), chaque plan de feu a ses propres remarques, indépendantes des autres PF. Changer d'onglet PF modifie le contenu affiché.</p>
-                <ul>
-                    <li><strong>Coloration du texte :</strong> Sélectionnez du texte puis appuyez sur <span style={{color: '#4CAF50'}}>+</span> (vert) ou <span style={{color: '#F44336'}}>−</span> (rouge).</li>
-                    <li><strong>Taille du texte :</strong> Sélectionnez du texte puis appuyez sur <strong>▲</strong> (agrandir) ou <strong>▼</strong> (réduire). Utile pour hiérarchiser les informations (titre plus grand, détails plus petits).</li>
-                    <li><strong>Mise en forme conservée :</strong> Si vous collez depuis un traitement de texte (Word, LibreOffice...), la mise en forme (taille de police, couleurs) est préservée.</li>
-                    <li><strong>Longueur :</strong> jusqu'à 1 000 caractères par plan de feu, quel que soit le nombre de groupes. Sauts de ligne, ponctuation et mise en forme sont conservés ; au-delà de la hauteur du diagramme, la zone défile. Arrivée à la limite, la saisie s'arrête ; un collage trop long est réduit à la place restante.</li>
-                    <li><strong>Affichage :</strong> Les remarques sont affichées dans une zone dédiée à droite du diagramme. L'option <em><VoirMenu chemin="Mise en page → Diagramme → Remarques" /></em> permet de les masquer globalement.</li>
-                    <li><strong>Impression :</strong> Dans le dossier imprimé, la case <em>Remarques</em> de chaque plan de feu les ajoute en texte simple, avec leurs sauts de ligne. Voir <em><VoirSection titre="Impression du dossier" /></em>.</li>
-                </ul>
-            </section>
-
-            <section id="help-trafic" className="help-section">
-                <h4>Données Trafic</h4>
-                <p>L'onglet Trafic permet de saisir les données de trafic par groupe :</p>
-                <ul>
-                    <li><strong>Coef :</strong> Coefficient de voie correspondant aux courants de circulation du groupe de feu (partagé entre tous les jeux de données)</li>
-                    <li><strong>Trafic :</strong> Volume de trafic (véh/h) - spécifique à chaque jeu de données. Appuyez sur la touche <em>c</em> pour indiquer un trafic coordonné : les véhicules arrivent en peloton pendant le vert, grâce à la coordination avec le carrefour amont (onde verte par exemple), et n'attendent pas au feu. Un petit "c" apparaît à côté de la valeur ; le Retard et la File d'attente du groupe sont mis à 0, tandis que le V.Utile et la capacité utilisée restent calculés sur le volume saisi. Appuyez à nouveau sur <em>c</em> pour retirer la coordination. Une infobulle le rappelle après 2,5 s de survol du champ.</li>
-                    <li><strong>V.Utile :</strong> Durée de vert nécessaire pour passer le trafic. Formule = Trafic / (1800 × Coef / Cycle)</li>
-                    <li><strong>Cap.U :</strong> Capacité utilisée pour passer le trafic affecté au groupe de feu. Formule = (V.Utile / Vert total) × 100%</li>
-                    <li><strong>Retard :</strong> Temps d'attente théorique moyen en pied de feu hors saturation. Formule = (Cycle - Vert total)² / (2 × Cycle × (1 - Trafic / (1800 × Coef))). <em>Si une action "Début de bande passante" cible ce groupe (Action GF), alors Retard = max(0, Début de vert - Fin de l'action).</em></li>
-                    <li><strong>File d'attente :</strong> File d'attente théorique maximale hors saturation. Formule = (partie entière de (Trafic × (Cycle - Vert total) / 3600 / Coef) + 1) × 6 mètres. <em>Si une action "Début de bande passante" cible ce groupe (Action GF), alors File d'attente = max(0, Début de vert - Fin de l'action).</em></li>
-                    <li><strong>Vert total :</strong> Les calculs de Cap.U, Retard et File d'attente prennent en compte le temps de vert principal + la durée des secondes lucarnes du groupe. Exception : pour un groupe en aiguillage (« a »), seul le vert principal compte. Sa seconde lucarne s'ouvre à la place de l'autre branche de l'aiguillage et ne s'ajoute pas à chaque cycle.</li>
-                </ul>
-                <p><strong>Surbrillance interactive :</strong> Le survol des champs Coef, Trafic, V.Utile, Cap.U, Retard ou File d'attente met en surbrillance la barre correspondante dans le diagramme.</p>
-                <p><strong>Jeux de données :</strong> La listbox "Donnée" permet de basculer entre plusieurs jeux de données trafic (HPM, HPS, etc.). Chaque jeu de données conserve ses propres valeurs de trafic.</p>
-                <p><strong>Jeux de données personnalisés :</strong> Survolez le sélecteur "Donnée" et appuyez sur la touche <em>+</em> pour créer un nouveau jeu de données personnalisé (17 caractères max). Le nom est prérempli à partir du jeu actif. Les jeux personnalisés sont sauvegardés dans le projet et dans le stockage local.</p>
-                <p><strong>Supprimer un jeu de données :</strong> Survolez le sélecteur "Donnée" et appuyez sur la touche <em>−</em> pour supprimer le jeu affiché, après confirmation. Ses volumes sont effacés ; la fenêtre nomme les plans de feux qui l'utilisaient et le jeu sur lequel ils passent (le premier autre jeu renseigné). « Projection », toujours proposé, ne se supprime pas, ni le dernier jeu de la liste.</p>
-                <p><strong>Association PF / jeu de données :</strong> Chaque onglet PF mémorise le jeu de données trafic sélectionné. Lorsque vous changez d'onglet PF, le jeu de données associé est automatiquement restauré. Cette association est sauvegardée dans le projet.</p>
-                <p><strong>Bouton Coller :</strong> Si le jeu de données sélectionné est vide, un bouton "Coller..." apparaît pour copier les données depuis un autre jeu de données.</p>
-                <p><strong>Code couleur Cap.U :</strong></p>
-                <ul>
-                    <li><span style={{color: '#4caf50'}}>Vert</span> : &lt; 76% (fluide)</li>
-                    <li><span style={{color: '#ff9800'}}>Orange</span> : 76-85% (chargé)</li>
-                    <li><span style={{color: '#f44336'}}>Rouge</span> : 86-100% (saturé)</li>
-                    <li><span style={{color: '#000', background: '#ff6b6b', padding: '0 4px'}}>Noir/Rouge</span> : &gt; 100% (sursaturé)</li>
-                </ul>
-            </section>
-
-            <section className="help-section">
-                <h4>Simulation</h4>
-                <p>L'onglet Simulation permet de tester l'effet des actions de micro-régulation sur le diagramme, <strong>sans modifier le projet original</strong>. Vous cochez les actions à activer, le diagramme se redessine avec le cycle simulé, et vous visualisez conflits et décalages. Décocher les cases revient instantanément à l'état initial.</p>
-                <p><strong>Les actions se combinent :</strong> chacune s'applique au cycle déjà transformé par les précédentes. Un point de repos décale la suite pour tous les groupes, un adaptatif partiel seulement pour les groupes de sa plage. Une action dont la zone chevauche la fin du cycle (de 102 à 8 s sur un cycle de 120 s, par exemple) est prise en compte de part et d'autre. Le vert escamotable est barré d'un <strong>bandeau hachuré</strong> sur sa moitié basse, le vert restant visible au-dessus ; l'escamotage coché le fait disparaître. Survoler une action dans la liste allume ses flèches dans l'image du carrefour.</p>
-                <p><strong>Un scénario</strong> est une combinaison d'actions cochées, sous un titre. Chaque <strong>plan de feu</strong> peut en porter plusieurs : ils sont enregistrés avec le projet et se retrouvent à la réouverture. La liste <em>Scénario</em>, en tête du panneau, propose dans l'ordre les deux scénarios fixes <em>Tout coché</em> et <em>Tout décoché</em>, les scénarios du plan (par ordre alphabétique, avec leur nombre d'actions), puis <em>+ Nouveau scénario…</em>, qui demande un titre et retient les cases cochées à cet instant. Les scénarios fixes ne se modifient ni ne se suppriment, et leurs titres sont réservés : des cases changées à partir de l'un d'eux s'enregistrent sous un nouveau scénario. Le titre du scénario choisi titre la section correspondante du dossier imprimé.</p>
-                <p>Cocher ou décocher une action ne modifie pas le scénario enregistré : un <strong>●</strong> orange signale l'écart, et le bouton <em>Enregistrer…</em> le met à jour. Dans sa fenêtre, changer le titre propose de <em>Renommer</em> le scénario ou d'en <em>Créer une copie</em>. <em>Supprimer…</em> retire le scénario de la liste, après confirmation, en laissant les cases cochées. Ouvrir un scénario alors que le ● est affiché demande quoi faire des modifications : <em>Annuler</em> reste sur le scénario modifié sans rien perdre, <em>Abandonner</em> ouvre le scénario demandé en oubliant les modifications, <em>Enregistrer</em> les garde avant de l'ouvrir. Rechoisir le scénario modifié lui-même permet ainsi de revenir à sa version enregistrée.</p>
-                <p><strong>Actions sans case individuelle :</strong> début et fin de bande passante, priorité piétons, signal d'aide à la conduite, synchro BTS, Instant Co et flèche d'anticipation n'apparaissent pas dans la liste du panneau et « Tout coché » ne les sélectionne pas. La synchro BTS intervient dans la compensation uniquement lorsque l'option dédiée est cochée. Les flèches Synchro BTS et Instant Co restent dessinées sur le diagramme simulé, à leur instant saisi, sauf les synchros BTS remplacées par une attente de compensation.</p>
-                <ul>
-                    <li><strong>Actions cochables :</strong> Chaque action définie dans les conditions de micro-régulation peut être cochée individuellement. Le diagramme se met à jour en temps réel pour visualiser l'effet combiné des actions sélectionnées.</li>
-                    <li><strong>Ordre de traitement :</strong> Les actions sont traitées dans l'ordre suivant : Point de repos → Ouverture anticipée → Fermeture anticipée → Escamotage (groupe) → Adaptatif vertical → Escamotage de phase. Chaque action s'applique sur le diagramme virtuel résultant des actions précédentes.</li>
-                    <li><strong>Compenser les contractions à la synchro BTS :</strong> cette option, proposée uniquement si le plan comporte une synchro BTS avec un instant valide et décochée par défaut, permet de simuler le maintien de la coordination entre plusieurs carrefours, notamment dans une onde verte. Un adaptatif vertical ou un escamotage de phase peut raccourcir le cycle et avancer le retour des phases suivantes. Lorsque l'option est cochée, la prochaine synchro BTS sert de point de repos : une attente restitue le temps réellement retranché avant cette synchro pour retrouver son rendez-vous temporel. Par exemple, un cycle de 90 s contracté de 8 s retrouve 90 s grâce à une attente de 8 s. Le diagramme matérialise cette attente par une bande qui remplace les flèches et l'abréviation de la synchro compensée. Sa durée est accessible au survol ; la durée du cycle reste affichée en tête du panneau, sans ajouter de ligne ni déplacer les cases à cocher.</li>
-                    <li><strong>Plusieurs contractions ou synchros BTS :</strong> l'attente cumule les contractions réellement effectuées depuis la précédente synchro BTS, ou depuis le début du cycle pour la première. Les zones qui se chevauchent ne sont comptées qu'une fois ; une contraction déjà compensée ne l'est pas à nouveau. Un adaptatif limité à une plage de groupes, qui ne réduit pas la durée globale du cycle, ne crée pas d'attente globale. Les contractions situées après la dernière synchro ne sont pas compensées par celle-ci : la durée du cycle n'est maintenue que si toutes ses réductions sont compensées.</li>
-                    <li><strong>Portée pour la coordination :</strong> cette option conserve le rendez-vous de synchronisation du plan simulé ; elle ne calcule ni les décalages entre carrefours ni les bandes passantes d'une onde verte. Les durées de cycle communes, les décalages et les temps de parcours restent à vérifier dans l'étude de coordination. Les points de repos explicites conservent leur propre durée, qui s'ajoute au cycle. Ce réglage de session est indépendant des cases enregistrées dans les scénarios et repart décoché à la réouverture de l'application. Décochée, l'option laisse les contractions raccourcir le cycle comme auparavant.</li>
-                    <li><strong>Contractions cumulatives :</strong> L'Adaptatif vertical et l'Escamotage de phase contractent le diagramme. Les contractions s'ajustent aux contractions précédentes pour éviter les doubles déductions.</li>
-                    <li><strong>Point de repos :</strong> Cocher un Point de repos à l'instant <em>t</em> fige le cycle le temps indiqué dans sa Description, le nombre accolé à « maxi » — « attente maxi 15 secondes », « maxi 15'' » ou « 15'' max » figent 15 s —, 30 s au plus, 10 s si la Description n'en dit rien : la durée du cycle s'allonge d'autant, les groupes dont le vert traverse <em>t</em> sont étirés (ils restent verts pendant le freeze), les actions et groupes situés après <em>t</em> sont décalés vers la droite. Plusieurs Points de repos sont cumulables. Un Point de repos est automatiquement <em>inhibé</em> s'il tombe à l'intérieur d'une zone Adaptatif vertical ou Escamotage de phase sélectionnée. Visuellement, une bande grise hachurée libellée « Repos » signale l'emplacement de chaque Point de repos sur la timeline.</li>
-                    <li><strong>Curseur de lecture et actions cochées :</strong> Cocher ou décocher une action pendant le déroulé ne l'interrompt pas, et le curseur reste au même instant du cycle d'origine. Après l'endroit concerné, il avance quand on ajoute un Point de repos ou rétablit une zone (Escamotage de phase, Adaptatif vertical décochés) et recule quand on retire un repos ou une zone ; avant, il ne bouge pas ; dans une zone retirée ou un repos décoché, il se place à son début. Un Adaptatif vertical avec plage ne change pas la durée du cycle : le curseur ne bouge pas.</li>
-                    <li><strong>Fermeture anticipée et Action GF (ou glissements) :</strong> Lorsqu'une fermeture anticipée pointe sur la fin du vert d'un groupe cible (Action GF), la fin de ce vert est réduite. Si elle pointe sur le début, le début est avancé — on parle alors de <em>glissement</em>. La durée effective tient compte du chevauchement avec les zones AV/EP.</li>
-                    <li><strong>Champs DA, Déb, Fin verrouillés :</strong> Lors d'une simulation active, les champs DA, Déb et Fin de la sidebar du diagramme sont désactivés (grisés, non cliquables). Les valeurs affichées sont calculées par la simulation et ne reflètent plus une saisie utilisateur — les modifier n'aurait pas de sens. La désactivation est levée dès qu'aucune action n'est cochée dans le panneau Simulation.</li>
-                    <li><strong>Actions grisées :</strong> Les actions dont la plage [Déb, Fin] tombe entièrement dans une zone supprimée (AV ou EP) sont affichées en grisé dans la liste.</li>
-                    <li><strong>Conflits simulés :</strong> Le tableau des conflits se met à jour selon les temps de vert simulés. Les groupes réduits à un vert nul sont exclus des conflits. Le survol d'un conflit affiche une flèche rouge pointillée dans le diagramme depuis les positions simulées.</li>
-                    <li><strong>Données trafic :</strong> Les données V.Utile, Cap.U, Retard et File d'attente sont toujours affichées. Les valeurs inhibées par les actions cochées apparaissent en grisé.</li>
-                    <li><strong>Tout coché / Tout décoché</strong> (en tête de la liste <em>Scénario</em>) : Scénarios fixes qui cochent ou décochent toutes les actions rejouées. Un plan sans scénario choisi affiche celui qui correspond à ses cases.</li>
-                    <li><strong>Impression des scénarios :</strong> Les scénarios enregistrés de tous les plans de feu s'impriment dans le dossier (case <em>Scénarios</em>), que l'onglet Simulation soit ouvert ou non. Seule la version enregistrée s'imprime : enregistre tes modifications avant. Voir « <VoirSection titre="Impression du dossier" /> », plus bas.</li>
-                    <li><strong>Choisir un scénario sans ouvrir l'onglet :</strong> le menu <strong><VoirMenu chemin="Diagramme → Scénarios" /></strong> liste les scénarios enregistrés de tous les plans de feu, plan par plan. Grisé tant qu'aucun plan n'en a enregistré, il ouvre sur un clic le scénario choisi : le plan de feu qui le porte devient actif et la simulation s'affiche. C'est le même choix que dans la liste <em>Scénario</em> de l'onglet Simulation ; un scénario modifié depuis son enregistrement propose d'abord de revenir à sa version enregistrée.</li>
-                </ul>
-                <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Construire et justifier un scénario</h5>
-                <p>Un scénario (« escamotage bus phase 1 », « priorité bus seule », « priorité bus + ouverture anticipée »…) est l'unité de travail pour proposer une évolution et la défendre devant un maître d'ouvrage. La démarche tient en six temps :</p>
-                <ol>
-                    <li><strong>Saisir les actions</strong> dans le tableau des conditions de micro-régulation du plan concerné. À ce stade, elles sont décrites mais inactives : le diagramme ne change pas.</li>
-                    <li><strong>Ouvrir l'onglet Simulation et cocher une seule action.</strong> C'est la précaution qui fait gagner du temps : l'effet d'un escamotage seul se lit d'un coup d'œil, celui de quatre actions combinées se discute pendant une heure. Le diagramme passe en lecture seule et se redessine.</li>
-                    <li><strong>Lire le cycle simulé</strong>, affiché en tête du diagramme avec son écart au cycle nominal, par exemple <code>122 s (−15 s)</code>. C'est souvent le premier argument : ce que l'action rend comme temps, et à qui.</li>
-                    <li><strong>Vérifier les conflits</strong> listés sous les actions. Un escamotage coché prend en charge le dégagement du couple de groupes qu'il nomme : ce conflit-là disparaît de la liste, ce qui est normal. Les autres sont à traiter.</li>
-                    <li><strong>Mesurer l'effet sur la capacité</strong> dans le tableau des données de trafic, sous le panneau : les groupes dont une action supprime le vert (escamotage de phase, fermeture anticipée, adaptatif vertical) n'affichent plus de capacité. Le jeu de trafic affiché (pointe du matin, du soir…) se choisit dans ce tableau. Le menu <em><VoirMenu chemin="Diagramme → Capacité des plans de feu" /></em> met côte à côte plans de feu et scénarios, à trafic égal si vous le demandez.</li>
-                    <li><strong>Enregistrer le scénario</strong> depuis la liste <em>Scénario</em>, sous un nom parlant, puis recommencer pour chaque variante.</li>
-                </ol>
-                <p><strong>Le livrable :</strong> dans <em><VoirMenu chemin="Fichier → Imprimer le projet…" /></em>, la case <em>Scénarios</em> liste les scénarios enregistrés de chaque plan, à cocher un par un. Pour chaque plan, un tableau comparatif met les scénarios cochés côte à côte, le plan nominal en première ligne : actions, cycle simulé, conflits, courant dimensionnant, degré de saturation et réserve. Suit chaque scénario : son diagramme recalculé, titré de son nom et de son cycle simulé, avec au choix la liste des actions (celles écartées restant visibles en gris), les conflits, les données de trafic et la réserve de capacité. De quoi montrer ce qui a été retenu, ce qui a été écarté et ce que cela change. L'impression se prépare dans un onglet à part : l'application reste utilisable pendant que la boîte d'impression est ouverte.</p>
-            </section>
-
-            <section className="help-section">
-                <h4>Assistant conception</h4>
-                <p>L'<strong>assistant de conception de diagramme</strong> sert à <strong>dégrossir rapidement un plan de feux</strong> à partir des trafics. En quelques minutes, il pose une base cohérente et chiffrée — chemin critique, durée de cycle, répartition des verts, placement des groupes, premières conditions de micro-régulation — que l'on affine ensuite plutôt que de partir d'une page blanche. Le menu <strong><VoirMenu chemin="Diagramme → Nouveau plan de feu…" /></strong> crée un plan vierge (verts, débuts et fins vides, sans micro-régulation) et invite à lui associer un jeu de trafic, ou à en saisir un dans l'onglet <em>Trafic</em>.</p>
-                <p>Sur le carrefour du TD « croix avec couloir bus d'approche », l'assistant produit en un clic un diagramme complet, <strong>sans aucun conflit</strong> avec la matrice. Les groupes sans vert n'étant pas comptés dans les conflits, un plan en cours de construction n'est pas couvert d'alertes. Ce qu'il apporte surtout : <strong>la rigueur et le temps</strong>. Les calculs fastidieux et les vérifications mécaniques sont faits, chaque proposition est justifiée, et l'on peut consacrer son énergie aux vrais choix de conception.</p>
-                <p>Le menu <strong><VoirMenu chemin="Diagramme → Assistant conception…" /></strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
-                <ul>
-                    <li><strong>Phasage :</strong> choisissez le nombre de phases (2 à 6), puis, dans l'ordre du cycle, le <strong>groupe déterminant</strong> de chaque phase : son courant le plus chargé.</li>
-                    <li><strong>Chemin critique proposé :</strong> si le diagramme est déjà renseigné (et qu'aucun phasage n'est enregistré pour le plan), le tableau est pré-rempli : phases lues sur le diagramme, groupe à la plus forte capacité utilisée dans chaque phase (pour une phase de piétons, la traversée la plus défavorable) et dégagements effectifs entre phases. C'est une règle générale, pas une certitude : vérifiez et corrigez si besoin. Le bouton <em>Relire le diagramme</em> refait la détection.</li>
-                    <li><strong>Dégagements :</strong> le dégagement d'une phase vers la suivante est proposé par la matrice des temps interverts, du déterminant d'une phase vers celui de la suivante. Il reste modifiable : le dégagement le plus contraignant peut venir d'un autre groupe de la phase. Une case vide de la matrice est signalée en orange.</li>
-                    <li><strong>Résultat :</strong> y = trafic / (1 800 × coefficient de voie) pour chaque phase, Y = Σ y, temps perdu L = Σ dégagements ; cycle minimal L / (1 − Y), cycle optimal de Webster (1,5 L + 5) / (1 − Y), cycle tenant un taux de saturation visé (85 % par défaut), et verts proposés par phase, proportionnels aux y et jamais sous le vert minimum. Une alerte s'affiche quand Y atteint 0,9 : le carrefour est saturé.</li>
-                    <li><strong>Cycle proposé :</strong> la valeur de Webster arrondie à la dizaine supérieure (65,6 s donne 70 s) ; les verts proposés sont calculés sur ce cycle.</li>
-                    <li><strong>Chapitres repliables :</strong> la fenêtre est découpée en chapitres — phases et groupes déterminants, durée de cycle, groupes associés, adaptatifs verticaux, fermetures anticipées, points de repos bus. À l'ouverture, seul le tableau des groupes déterminants est déployé ; les autres chapitres sont repliés, et chaque titre garde le résumé de ses valeurs (phases et déterminants, cycle proposé, zones AV et FA, repos…). Un clic sur le titre déploie ou réduit le chapitre.</li>
-                    <li><strong>Fenêtre détachée :</strong> l'assistant s'ouvre dans sa propre fenêtre, comme les panneaux détachés : on la pose sur un autre écran pour garder tout l'espace du diagramme, et sa position est retenue d'une ouverture à l'autre. Si le navigateur bloque les fenêtres détachées, elle s'affiche dans la page, sans assombrir l'application.</li>
-                    <li><strong>Diagramme pré-rempli :</strong> un groupe déterminant sans vert (Déb et Fin vides) est placé à la position proposée dès que le calcul est complet, si la phase tient dans le cycle du plan. Les groupes déjà réglés ne sont jamais modifiés.</li>
-                    <li><strong>Boutons :</strong> <em>Appliquer le cycle</em> règle la durée du cycle du plan, place dans le diagramme les groupes associés marqués « avec le cycle », puis inscrit les adaptatifs verticaux proposés (annulable par Ctrl+Z) ; <em>Enregistrer le phasage</em> garde les groupes déterminants avec le plan de feu. Avec la case <em>Modifier ou pré-remplir le phasage bulle</em> cochée, les deux boutons règlent aussi le phasage bulle : une bulle par phase, au milieu du vert de son déterminant.</li>
-                    <li><strong>Groupes associés :</strong> une fois les déterminants placés, la fenêtre propose la phase et les Déb–Fin des autres groupes, avec la <strong>source</strong> de chaque déduction : la <em>matrice</em> (le groupe rejoint la phase dont le déterminant ne lui est pas antagoniste ; il ouvre au plus tôt et ferme au plus tard que permettent les dégagements, vert le plus long permis), sinon le <em>nom</em> (même voie qu'un déterminant, par exemple « Av. du Parc nord » et « sud »), sinon le <em>plan</em> du carrefour (flèche opposée à celle d'un déterminant). La colonne <em>Placement</em> indique ce que fera <em>Appliquer le cycle</em> : les groupes aux Déb–Fin vides sont placés <em>avec le cycle</em>, une fois sa durée réglée ; les groupes <em>déjà réglés</em> ne sont pas modifiés ; une déduction incertaine est signalée « à vérifier » et reste à placer <em>à la main</em>.</li>
-                    <li><strong>Adaptatifs verticaux (proposition) :</strong> sous les groupes associés, la fenêtre propose pour chaque phase une zone d'adaptatif vertical. La zone finit au plus tôt des fins de vert des groupes de la phase (contracter au-delà rapprocherait un groupe de son antagoniste suivant, au détriment des temps interverts) et ne contient aucun début ni fin de vert. Elle s'allonge tant que, sur le cycle contracté, chaque groupe à trafic reste sous le <em>taux de saturation visé</em> et chaque groupe raccourci garde son vert mini ; la colonne <em>Limité par</em> dit ce qui l'arrête. Le taux visé des zones est réglable à part : <strong>90 %</strong> par défaut, au-dessus des 85 % du calcul de cycle, puisqu'une phase ne se contracte que lorsque sa demande est servie. Deux calculs : <em>Itératif</em> (par défaut) — la contraction d'une phase redonne de la capacité aux autres, d'où jusqu'à 3 passages ; le taux visé n'est alors tenu que si toutes les zones se contractent ensemble (colonne <em>Cap. U zone seule</em>, en orange au-delà ; taux fourni à titre indicatif, car sur le principe, la demande a été satisfaite) ; <em>Prudent</em> — chaque zone est calculée seule, et le taux tient quelle que soit la combinaison. <em>Appliquer le cycle</em> inscrit les zones dans les conditions de micro-régulation, après le cycle et les groupes associés : une ligne « Adaptatif vertical » par zone, abréviation <em>AV</em> suivie du numéro de phase (AV1, AV2…), description « Contraction théorique », condition « Contraction si absence de demande sur … » à adapter à la détection réelle. Les AV1, AV2… d'un passage précédent sont remplacés ; les autres conditions ne sont pas touchées. Ctrl+Z pour annuler ; vérifiez le résultat dans l'onglet Simulation.</li>
-                    <li><strong>Fermetures anticipées avec glissements (proposition) :</strong> sous les adaptatifs, la fenêtre repère les groupes voitures dont la capacité utilisée, au cycle proposé, est sous un seuil (81 % par défaut, réglable). Leur temps disponible est le vert moins le V.utile ; on en propose environ les deux tiers en fermeture anticipée, en fin de vert, sans passer sous le vert mini. Les groupes antagonistes qui ouvrent ensuite (tous types) et peuvent ouvrir plus tôt sans conflit intervert avec leurs autres antagonistes sont placés en <em>Action GF</em> (4 au plus) : la fermeture pointe sur leur début de vert, d'où un glissement. La colonne <em>Non retenus</em> dit quel groupe empêche les autres de glisser. Sans glissement possible, rien n'est proposé pour ce groupe. <em>Appliquer le cycle</em> inscrit ces fermetures dans les conditions de micro-régulation (FA1, FA2…, « Fermeture théorique », « Fermeture si absence de demande sur … »), en remplaçant celles d'un passage précédent. Une fermeture qui tombe dans une zone d'adaptatif vertical ne joue que lorsque celui-ci n'est pas contracté.</li>
-                    <li><strong>Points de repos bus (proposition) :</strong> pour chaque groupe bus (type B ou TC), un point de repos dans les 5 dernières secondes de son vert, à l'instant où le plus de groupes sont au vert (ils profitent tous de l'attente), le plus tard possible à égalité. <em>Appliquer le cycle</em> l'inscrit : abréviation « Att bus », description « attente bus théorique maxi … secondes » (la valeur de TMABx, qui fixe la durée du repos en simulation), condition « Attente quittée si TPPh_L<em>n</em> + DAx &gt; N + TMABx », N étant le temps passé dans la phase bus à l'instant du repos, moins 1. Il écrit aussi « Tx » dans la colonne DA du groupe bus et ajoute la variable micro « TMABx = 10 » si le plan ne l'a pas. L'indice x tient la place du code trajet : remplacez-le ensuite dans DAx, TMABx et Tx. Seuls les repos « attente bus théorique » d'un passage précédent sont remplacés ; un repos écrit à la main n'est pas touché.</li>
-                    <li><strong>Phasage bulle :</strong> une fois le diagramme saisi, le bouton <em>Initialiser depuis les groupes déterminants</em> du panneau de réglage du phasage bulle crée une bulle par phase, au milieu du vert de son groupe déterminant.</li>
-                </ul>
-                <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Ce que l'assistant laisse au concepteur</h5>
-                <p>L'assistant est un <strong>excellent point de départ</strong>, pas une conception clé en main. Il est d'autant plus utile qu'on sait ce qu'il fait et ce qu'il laisse à l'utilisateur :</p>
-                <ul>
-                    <li><strong>Les données d'entrée :</strong> trafics, coefficients, verts minimaux et temps interverts sont les vôtres ; la qualité de la proposition suit celle des données.</li>
-                    <li><strong>La vérification des déductions :</strong> chaque placement affiche sa source ; une déduction incertaine (nom ambigu, matrice muette) est signalée « à vérifier » et laissée à votre main plutôt que posée d'office.</li>
-                    <li><strong>La portée du cycle de Webster :</strong> repère reconnu, il minimise le retard moyen des véhicules, mais ne tient pas compte à lui seul de l'attente des piétons, de la coordination avec les carrefours voisins ou d'une priorité accordée aux transports en commun.</li>
-                    <li><strong>Le phasage :</strong> nombre et ordre des phases, traitement des tourne-à-gauche, place des piétons et des cycles.</li>
-                    <li><strong>Les fonctionnements conditionnels :</strong> l'assistant dimensionne les zones d'adaptatif vertical, mais la condition de contraction (détection, demande, priorité bus) reste à rédiger ; seconde lucarne et escamotage se construisent ensuite sur la base posée.</li>
-                    <li><strong>La connaissance du site :</strong> géométrie fine, visibilité, comportement des usagers, objectifs de la collectivité.</li>
-                </ul>
-                <p>L'élaboration d'un diagramme de feux est une <strong>discipline à part entière</strong> : arbitrer entre sécurité, capacité, temps d'attente, lisibilité pour l'usager et stratégie de déplacement demande une approche de <strong>traficien ou d'expert</strong>. L'assistant est pensé pour servir cette expertise : il dégrossit le sujet avec méthode, pour que le concepteur se concentre sur ce qui fait la qualité d'un plan de feux.</p>
-            </section>
-
-            <section className="help-section">
-                <h4>Capacité des plans de feu et scénarios</h4>
-                <p>Le menu <strong><VoirMenu chemin="Diagramme → Capacité des plans de feu…" /></strong> (disponible dès qu'il existe au moins deux plans de feu) ouvre, dans une <strong>fenêtre déplaçable et non modale</strong> (qui peut rester ouverte pendant que vous travaillez, voire sur un second écran), un tableau comparatif du <strong>vert utile</strong> et de la <strong>capacité utilisée</strong> entre plusieurs PF. Objectif : repérer d'un coup d'œil quel programme absorbe le mieux le trafic et où chaque PF arrive à saturation.</p>
-                <ul>
-                    <li><strong>Plans de feu et scénarios :</strong> la liste déroulante propose les plans de feu à cocher et, en retrait sous chacun, ses scénarios enregistrés dans l'onglet Simulation. Un plan s'évalue à ses valeurs nominales ; un scénario, sur le diagramme simulé de ses actions (cycle simulé, verts recalculés). On peut ainsi aligner les programmes de la journée (pointe, heure creuse, nuit), plusieurs versions d'un diagramme, ou un plan et ses variantes de micro-régulation. Un plan dont le jeu de trafic est vide est grisé, ses scénarios aussi ; avec un jeu unique appliqué à tous, tous redeviennent disponibles.</li>
-                    <li><strong>Jeu de données trafic :</strong> deux modes. <em>« Jeu associé à chaque PF »</em> — chaque PF utilise son propre jeu de trafic. <em>Un jeu unique</em> (HPM, HPS, HC…) — le même trafic est appliqué à tous les PF cochés, ce qui isole l'effet du plan à trafic égal. Les jeux sans aucune donnée saisie apparaissent grisés et ne sont pas sélectionnables.</li>
-                    <li><strong>Lecture du tableau :</strong> une ligne par groupe de feu VL, une colonne par plan ou scénario affichant Trafic, V.Utile et Cap.U. La case <em>Afficher le V.Utile</em> masque ou rétablit la colonne V.Utile. Lorsque toutes les colonnes partagent le même trafic, une seule colonne Trafic est affichée au début pour éviter la répétition. La capacité utilisée est colorée selon les seuils habituels (vert &lt; 76 %, orange ≤ 85 %, rouge ≤ 100 %, noir &gt; 100 %).</li>
-                    <li><strong>Valeurs nominales :</strong> chaque PF est évalué avec son propre vert et son propre cycle, sans les actions de micro-régulation — c'est le sens d'une comparaison entre programmes. Seules les secondes lucarnes comptent dans le vert, pour retrouver les valeurs du tableau Trafic.</li>
-                    <li><strong>Dossier imprimé :</strong> la case <em>Capacité des plans de feu et scénarios</em> de <em><VoirMenu chemin="Fichier → Imprimer le projet…" /></em> ajoute le tableau en fin de dossier, tel que réglé dans cette fenêtre (plans, scénarios, jeu de trafic, V.Utile). Ces réglages sont enregistrés avec le projet.</li>
-                    <li><strong>Exporter (PNG) :</strong> le bouton génère une image du tableau, la télécharge et la copie dans le presse-papiers, prête à coller dans un rapport ou un courriel (couleurs comprises).</li>
-                </ul>
-            </section>
-
-            <section className="help-section">
-                <h4>Authentification</h4>
-                <p>L'application nécessite une connexion pour accéder aux fonctionnalités :</p>
-                <ul>
-                    <li><strong>Premier utilisateur :</strong> Le premier compte créé devient automatiquement administrateur</li>
-                    <li><strong>Niveaux de permissions :</strong></li>
-                    <ul>
-                        <li><em>Lecture seule :</em> Consultation uniquement (ouvrir, imprimer, onde verte)</li>
-                        <li><em>Modification partielle :</em> Ouvrir, enregistrer, importer Excel, imprimer, dupliquer</li>
-                        <li><em>Modification totale :</em> Toutes les fonctionnalités + gestion des utilisateurs</li>
-                    </ul>
-                    <li><strong>Gestion des utilisateurs :</strong> Menu "Utilisateurs" (admin uniquement) pour créer, modifier ou supprimer des comptes</li>
-                    <li><strong>Import/Export :</strong> Possibilité d'exporter et importer la liste des utilisateurs en JSON</li>
-                </ul>
-            </section>
-
-            <section className="help-section">
-                <h4>Sauvegarde et projets</h4>
+                <h4>Lecture et Sauvegarde des projets</h4>
                 <ul>
                     <li><strong>Sauvegarde automatique :</strong> Les données sont sauvegardées automatiquement dans le navigateur (local storage)</li>
                     <li><strong>Nouveau projet :</strong> Menu <VoirMenu chemin="Fichier → Nouveau projet" /> réinitialise l'application (actif uniquement si le projet a été modifié)</li>
@@ -1060,13 +969,130 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                 <h5 style={{ marginTop: '14px', marginBottom: '8px', color: '#aaa' }}>Structure attendue par l'importeur fourni</h5>
                 <p>À titre informatif (un exemple, non un standard) :</p>
                 <ul>
-                    <li><strong>Feuille Formulaire :</strong> Configuration des groupes (nom, type, durées)</li>
+                    <li><strong>Feuille Formulaire :</strong> groupes de feux (nom, type, durées)</li>
                     <li><strong>Feuille PF :</strong> Diagramme et matrice de dégagement pour chaque plan de feux</li>
                     <li><strong>Feuille Trafic :</strong> Données de trafic par groupe — une colonne <em>X</em> pour le coefficient de voie (Coef), une colonne <em>Y</em> pour un premier jeu de données (nom porté par une cellule d'en-tête dédiée), et éventuellement une colonne <em>Z</em> pour un second jeu.</li>
                 </ul>
             </section>
 
-            <h3 id="help-onde-verte" style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Chapitre 2 — Onde verte</h3>
+            <section className="help-section">
+                <h4>Authentification</h4>
+                <p>L'application nécessite une connexion pour accéder aux fonctionnalités :</p>
+                <ul>
+                    <li><strong>Premier utilisateur :</strong> Le premier compte créé devient automatiquement administrateur</li>
+                    <li><strong>Niveaux de permissions :</strong></li>
+                    <ul>
+                        <li><em>Lecture seule :</em> Consultation uniquement (ouvrir, imprimer, onde verte)</li>
+                        <li><em>Modification partielle :</em> Ouvrir, enregistrer, importer Excel, imprimer, dupliquer</li>
+                        <li><em>Modification totale :</em> Toutes les fonctionnalités + gestion des utilisateurs</li>
+                    </ul>
+                    <li><strong>Gestion des utilisateurs :</strong> Menu "Utilisateurs" (admin uniquement) pour créer, modifier ou supprimer des comptes</li>
+                    <li><strong>Import/Export :</strong> Possibilité d'exporter et importer la liste des utilisateurs en JSON</li>
+                </ul>
+            </section>
+
+            <h3 style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Chapitre 6 — Aide à la conception et à l'optimisation</h3>
+
+            <section id="help-demarche" className="help-section">
+                <h4>Démarche conseillée sur un nouveau carrefour</h4>
+                <p>L'application est structurée pour suivre une démarche progressive. Voici une séquence qui fonctionne bien :</p>
+                <ol>
+                    <li><strong>Décrire les groupes de feux</strong> dans le formulaire (onglet <em>Formulaire</em>) : nom, type (véhicules, bus, piéton, cycle…), signal, courant et durée de vert minimale. Vous posez ainsi ce qui circule dans le carrefour.</li>
+                    <li><strong>Renseigner la matrice des temps interverts</strong> : les temps de dégagement requis entre groupes conflictuels. Une matrice non symétrique ou des cases manquantes sont signalées (fond orange).</li>
+                    <li><strong>Construire le PF1</strong>, le plan de feux de référence (fonctionnement nominal en heure creuse, par exemple) : ajustez offsets et durées de vert dans le diagramme. L'<em>assistant de conception de diagramme</em> (voir « <VoirSection titre="Assistant conception" /> ») peut en proposer une première version à partir des trafics. L'application contrôle en temps réel que les interverts sont respectés (fond rouge en cas de conflit).</li>
+                    <li><strong>Vérifier les conflits restants</strong> : la liste sous la matrice indique les paires en violation. Au survol d'une case rouge, une infobulle décrit le problème (recouvrement de verts ou délai insuffisant).</li>
+                    <li><strong>Décliner les autres PF</strong> (HPM, HPS, HC, HN, variantes priorité bus…) à partir du PF1 : les différences sont colorées (rouge = augmenté, vert = réduit) et explicitées par infobulle au survol, ce qui rend immédiatement visible ce qui change d'un plan à l'autre.</li>
+                    <li><strong>Affiner</strong> : conditions de micro-régulation et scénarios testés en simulation, données trafic, onde verte si plusieurs carrefours sont coordonnés.</li>
+                </ol>
+                <p>Vous pouvez à tout moment ouvrir le <strong>projet exemple</strong> depuis l'écran d'accueil pour comparer avec un carrefour déjà entièrement renseigné.</p>
+            </section>
+
+            <section className="help-section">
+                <h4>Simulation</h4>
+                <p>L'onglet Simulation permet de tester l'effet des actions de micro-régulation sur le diagramme, <strong>sans modifier le projet original</strong>. Vous cochez les actions à activer, le diagramme se redessine avec le cycle simulé, et vous visualisez conflits et décalages. Décocher les cases revient instantanément à l'état initial.</p>
+                <p><strong>Les actions se combinent :</strong> chacune s'applique au cycle déjà transformé par les précédentes. Un point de repos décale la suite pour tous les groupes, un adaptatif partiel seulement pour les groupes de sa plage. Une action dont la zone chevauche la fin du cycle (de 102 à 8 s sur un cycle de 120 s, par exemple) est prise en compte de part et d'autre. Le vert escamotable est barré d'un <strong>bandeau hachuré</strong> sur sa moitié basse, le vert restant visible au-dessus ; l'escamotage coché le fait disparaître. Survoler une action dans la liste allume ses flèches dans l'image du carrefour.</p>
+                <p><strong>Un scénario</strong> est une combinaison d'actions cochées, sous un titre. Chaque <strong>plan de feu</strong> peut en porter plusieurs : ils sont enregistrés avec le projet et se retrouvent à la réouverture. La liste <em>Scénario</em>, en tête du panneau, propose dans l'ordre les deux scénarios fixes <em>Tout coché</em> et <em>Tout décoché</em>, les scénarios du plan (par ordre alphabétique, avec leur nombre d'actions), puis <em>+ Nouveau scénario…</em>, qui demande un titre et retient les cases cochées à cet instant. Les scénarios fixes ne se modifient ni ne se suppriment, et leurs titres sont réservés : des cases changées à partir de l'un d'eux s'enregistrent sous un nouveau scénario. Le titre du scénario choisi titre la section correspondante du dossier imprimé.</p>
+                <p>Cocher ou décocher une action ne modifie pas le scénario enregistré : un <strong>●</strong> orange signale l'écart, et le bouton <em>Enregistrer…</em> le met à jour. Dans sa fenêtre, changer le titre propose de <em>Renommer</em> le scénario ou d'en <em>Créer une copie</em>. <em>Supprimer…</em> retire le scénario de la liste, après confirmation, en laissant les cases cochées. Ouvrir un scénario alors que le ● est affiché demande quoi faire des modifications : <em>Annuler</em> reste sur le scénario modifié sans rien perdre, <em>Abandonner</em> ouvre le scénario demandé en oubliant les modifications, <em>Enregistrer</em> les garde avant de l'ouvrir. Rechoisir le scénario modifié lui-même permet ainsi de revenir à sa version enregistrée.</p>
+                <p><strong>Actions sans case individuelle :</strong> début et fin de bande passante, priorité piétons, signal d'aide à la conduite, synchro BTS, Instant Co et flèche d'anticipation n'apparaissent pas dans la liste du panneau et « Tout coché » ne les sélectionne pas. La synchro BTS intervient dans la compensation uniquement lorsque l'option dédiée est cochée. Les flèches Synchro BTS et Instant Co restent dessinées sur le diagramme simulé, à leur instant saisi, sauf les synchros BTS remplacées par une attente de compensation.</p>
+                <ul>
+                    <li><strong>Actions cochables :</strong> Chaque action définie dans les conditions de micro-régulation peut être cochée individuellement. Le diagramme se met à jour en temps réel pour visualiser l'effet combiné des actions sélectionnées.</li>
+                    <li><strong>Ordre de traitement :</strong> Les actions sont traitées dans l'ordre suivant : Point de repos → Ouverture anticipée → Fermeture anticipée → Escamotage (groupe) → Adaptatif vertical → Escamotage de phase. Chaque action s'applique sur le diagramme virtuel résultant des actions précédentes.</li>
+                    <li><strong>Compenser les contractions à la synchro BTS :</strong> cette option, proposée uniquement si le plan comporte une synchro BTS avec un instant valide et décochée par défaut, permet de simuler le maintien de la coordination entre plusieurs carrefours, notamment dans une onde verte. Un adaptatif vertical ou un escamotage de phase peut raccourcir le cycle et avancer le retour des phases suivantes. Lorsque l'option est cochée, la prochaine synchro BTS sert de point de repos : une attente restitue le temps réellement retranché avant cette synchro pour retrouver son rendez-vous temporel. Par exemple, un cycle de 90 s contracté de 8 s retrouve 90 s grâce à une attente de 8 s. Le diagramme matérialise cette attente par une bande qui remplace les flèches et l'abréviation de la synchro compensée. Sa durée est accessible au survol ; la durée du cycle reste affichée en tête du panneau, sans ajouter de ligne ni déplacer les cases à cocher.</li>
+                    <li><strong>Plusieurs contractions ou synchros BTS :</strong> l'attente cumule les contractions réellement effectuées depuis la précédente synchro BTS, ou depuis le début du cycle pour la première. Les zones qui se chevauchent ne sont comptées qu'une fois ; une contraction déjà compensée ne l'est pas à nouveau. Un adaptatif limité à une plage de groupes, qui ne réduit pas la durée globale du cycle, ne crée pas d'attente globale. Les contractions situées après la dernière synchro ne sont pas compensées par celle-ci : la durée du cycle n'est maintenue que si toutes ses réductions sont compensées.</li>
+                    <li><strong>Portée pour la coordination :</strong> cette option conserve le rendez-vous de synchronisation du plan simulé ; elle ne calcule ni les décalages entre carrefours ni les bandes passantes d'une onde verte. Les durées de cycle communes, les décalages et les temps de parcours restent à vérifier dans l'étude de coordination. Les points de repos explicites conservent leur propre durée, qui s'ajoute au cycle. Ce réglage de session est indépendant des cases enregistrées dans les scénarios et repart décoché à la réouverture de l'application. Décochée, l'option laisse les contractions raccourcir le cycle comme auparavant.</li>
+                    <li><strong>Contractions cumulatives :</strong> L'Adaptatif vertical et l'Escamotage de phase contractent le diagramme. Les contractions s'ajustent aux contractions précédentes pour éviter les doubles déductions.</li>
+                    <li><strong>Point de repos :</strong> Cocher un Point de repos à l'instant <em>t</em> fige le cycle le temps indiqué dans sa Description, le nombre accolé à « maxi » — « attente maxi 15 secondes », « maxi 15'' » ou « 15'' max » figent 15 s —, 30 s au plus, 10 s si la Description n'en dit rien : la durée du cycle s'allonge d'autant, les groupes dont le vert traverse <em>t</em> sont étirés (ils restent verts pendant le freeze), les actions et groupes situés après <em>t</em> sont décalés vers la droite. Plusieurs Points de repos sont cumulables. Un Point de repos est automatiquement <em>inhibé</em> s'il tombe à l'intérieur d'une zone Adaptatif vertical ou Escamotage de phase sélectionnée. Visuellement, une bande grise hachurée libellée « Repos » signale l'emplacement de chaque Point de repos sur la timeline.</li>
+                    <li><strong>Curseur de lecture et actions cochées :</strong> Cocher ou décocher une action pendant le déroulé ne l'interrompt pas, et le curseur reste au même instant du cycle d'origine. Après l'endroit concerné, il avance quand on ajoute un Point de repos ou rétablit une zone (Escamotage de phase, Adaptatif vertical décochés) et recule quand on retire un repos ou une zone ; avant, il ne bouge pas ; dans une zone retirée ou un repos décoché, il se place à son début. Un Adaptatif vertical avec plage ne change pas la durée du cycle : le curseur ne bouge pas.</li>
+                    <li><strong>Fermeture anticipée et Action GF (ou glissements) :</strong> Lorsqu'une fermeture anticipée pointe sur la fin du vert d'un groupe cible (Action GF), la fin de ce vert est réduite. Si elle pointe sur le début, le début est avancé — on parle alors de <em>glissement</em>. La durée effective tient compte du chevauchement avec les zones AV/EP.</li>
+                    <li><strong>Champs DA, Déb, Fin verrouillés :</strong> Lors d'une simulation active, les champs DA, Déb et Fin de la sidebar du diagramme sont désactivés (grisés, non cliquables). Les valeurs affichées sont calculées par la simulation et ne reflètent plus une saisie utilisateur — les modifier n'aurait pas de sens. La désactivation est levée dès qu'aucune action n'est cochée dans le panneau Simulation.</li>
+                    <li><strong>Actions grisées :</strong> Les actions dont la plage [Déb, Fin] tombe entièrement dans une zone supprimée (AV ou EP) sont affichées en grisé dans la liste.</li>
+                    <li><strong>Conflits simulés :</strong> Le tableau des conflits se met à jour selon les temps de vert simulés. Les groupes réduits à un vert nul sont exclus des conflits. Le survol d'un conflit affiche une flèche rouge pointillée dans le diagramme depuis les positions simulées.</li>
+                    <li><strong>Données trafic :</strong> Les données V.Utile, Cap.U, Retard et File d'attente sont toujours affichées. Les valeurs inhibées par les actions cochées apparaissent en grisé.</li>
+                    <li><strong>Tout coché / Tout décoché</strong> (en tête de la liste <em>Scénario</em>) : Scénarios fixes qui cochent ou décochent toutes les actions rejouées. Un plan sans scénario choisi affiche celui qui correspond à ses cases.</li>
+                    <li><strong>Impression des scénarios :</strong> Les scénarios enregistrés de tous les plans de feu s'impriment dans le dossier (case <em>Scénarios</em>), que l'onglet Simulation soit ouvert ou non. Seule la version enregistrée s'imprime : enregistre tes modifications avant. Voir « <VoirSection titre="Impression du dossier" /> », plus bas.</li>
+                    <li><strong>Choisir un scénario sans ouvrir l'onglet :</strong> le menu <strong><VoirMenu chemin="Diagramme → Scénarios" /></strong> liste les scénarios enregistrés de tous les plans de feu, plan par plan. Grisé tant qu'aucun plan n'en a enregistré, il ouvre sur un clic le scénario choisi : le plan de feu qui le porte devient actif et la simulation s'affiche. C'est le même choix que dans la liste <em>Scénario</em> de l'onglet Simulation ; un scénario modifié depuis son enregistrement propose d'abord de revenir à sa version enregistrée.</li>
+                </ul>
+                <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Construire et justifier un scénario</h5>
+                <p>Un scénario (« escamotage bus phase 1 », « priorité bus seule », « priorité bus + ouverture anticipée »…) est l'unité de travail pour proposer une évolution et la défendre devant un maître d'ouvrage. La démarche tient en six temps :</p>
+                <ol>
+                    <li><strong>Saisir les actions</strong> dans le tableau des conditions de micro-régulation du plan concerné. À ce stade, elles sont décrites mais inactives : le diagramme ne change pas.</li>
+                    <li><strong>Ouvrir l'onglet Simulation et cocher une seule action.</strong> C'est la précaution qui fait gagner du temps : l'effet d'un escamotage seul se lit d'un coup d'œil, celui de quatre actions combinées se discute pendant une heure. Le diagramme passe en lecture seule et se redessine.</li>
+                    <li><strong>Lire le cycle simulé</strong>, affiché en tête du diagramme avec son écart au cycle nominal, par exemple <code>122 s (−15 s)</code>. C'est souvent le premier argument : ce que l'action rend comme temps, et à qui.</li>
+                    <li><strong>Vérifier les conflits</strong> listés sous les actions. Un escamotage coché prend en charge le dégagement du couple de groupes qu'il nomme : ce conflit-là disparaît de la liste, ce qui est normal. Les autres sont à traiter.</li>
+                    <li><strong>Mesurer l'effet sur la capacité</strong> dans le tableau des données de trafic, sous le panneau : les groupes dont une action supprime le vert (escamotage de phase, fermeture anticipée, adaptatif vertical) n'affichent plus de capacité. Le jeu de trafic affiché (pointe du matin, du soir…) se choisit dans ce tableau. Le menu <em><VoirMenu chemin="Diagramme → Capacité des plans de feu" /></em> met côte à côte plans de feu et scénarios, à trafic égal si vous le demandez.</li>
+                    <li><strong>Enregistrer le scénario</strong> depuis la liste <em>Scénario</em>, sous un nom parlant, puis recommencer pour chaque variante.</li>
+                </ol>
+                <p><strong>Le livrable :</strong> dans <em><VoirMenu chemin="Fichier → Imprimer le projet…" /></em>, la case <em>Scénarios</em> liste les scénarios enregistrés de chaque plan, à cocher un par un. Pour chaque plan, un tableau comparatif met les scénarios cochés côte à côte, le plan nominal en première ligne : actions, cycle simulé, conflits, courant dimensionnant, degré de saturation et réserve. Suit chaque scénario : son diagramme recalculé, titré de son nom et de son cycle simulé, avec au choix la liste des actions (celles écartées restant visibles en gris), les conflits, les données de trafic et la réserve de capacité. De quoi montrer ce qui a été retenu, ce qui a été écarté et ce que cela change. L'impression se prépare dans un onglet à part : l'application reste utilisable pendant que la boîte d'impression est ouverte.</p>
+            </section>
+
+            <section className="help-section">
+                <h4>Assistant conception</h4>
+                <p>L'<strong>assistant de conception de diagramme</strong> sert à <strong>dégrossir rapidement un plan de feux</strong> à partir des trafics. En quelques minutes, il pose une base cohérente et chiffrée — chemin critique, durée de cycle, répartition des verts, placement des groupes, premières conditions de micro-régulation — que l'on affine ensuite plutôt que de partir d'une page blanche. Le menu <strong><VoirMenu chemin="Diagramme → Nouveau plan de feu…" /></strong> crée un plan vierge (verts, débuts et fins vides, sans micro-régulation) et invite à lui associer un jeu de trafic, ou à en saisir un dans l'onglet <em>Trafic</em>.</p>
+                <p>Sur le carrefour du TD « croix avec couloir bus d'approche », l'assistant produit en un clic un diagramme complet, <strong>sans aucun conflit</strong> avec la matrice. Les groupes sans vert n'étant pas comptés dans les conflits, un plan en cours de construction n'est pas couvert d'alertes. Ce qu'il apporte surtout : <strong>la rigueur et le temps</strong>. Les calculs fastidieux et les vérifications mécaniques sont faits, chaque proposition est justifiée, et l'on peut consacrer son énergie aux vrais choix de conception.</p>
+                <p>Le menu <strong><VoirMenu chemin="Diagramme → Assistant conception…" /></strong> (disponible dès que le plan de feu affiché a du trafic dans son jeu de données) calcule une durée de cycle par la <strong>méthode de Webster</strong>.</p>
+                <ul>
+                    <li><strong>Phasage :</strong> choisissez le nombre de phases (2 à 6), puis, dans l'ordre du cycle, le <strong>groupe déterminant</strong> de chaque phase : son courant le plus chargé.</li>
+                    <li><strong>Chemin critique proposé :</strong> si le diagramme est déjà renseigné (et qu'aucun phasage n'est enregistré pour le plan), le tableau est pré-rempli : phases lues sur le diagramme, groupe à la plus forte capacité utilisée dans chaque phase (pour une phase de piétons, la traversée la plus défavorable) et dégagements effectifs entre phases. C'est une règle générale, pas une certitude : vérifiez et corrigez si besoin. Le bouton <em>Relire le diagramme</em> refait la détection.</li>
+                    <li><strong>Dégagements :</strong> le dégagement d'une phase vers la suivante est proposé par la matrice des temps interverts, du déterminant d'une phase vers celui de la suivante. Il reste modifiable : le dégagement le plus contraignant peut venir d'un autre groupe de la phase. Une case vide de la matrice est signalée en orange.</li>
+                    <li><strong>Résultat :</strong> y = trafic / (1 800 × coefficient de voie) pour chaque phase, Y = Σ y, temps perdu L = Σ dégagements ; cycle minimal L / (1 − Y), cycle optimal de Webster (1,5 L + 5) / (1 − Y), cycle tenant un taux de saturation visé (85 % par défaut), et verts proposés par phase, proportionnels aux y et jamais sous le vert minimum. Une alerte s'affiche quand Y atteint 0,9 : le carrefour est saturé.</li>
+                    <li><strong>Cycle proposé :</strong> la valeur de Webster arrondie à la dizaine supérieure (65,6 s donne 70 s) ; les verts proposés sont calculés sur ce cycle.</li>
+                    <li><strong>Chapitres repliables :</strong> la fenêtre est découpée en chapitres — phases et groupes déterminants, durée de cycle, groupes associés, adaptatifs verticaux, fermetures anticipées, points de repos bus. À l'ouverture, seul le tableau des groupes déterminants est déployé ; les autres chapitres sont repliés, et chaque titre garde le résumé de ses valeurs (phases et déterminants, cycle proposé, zones AV et FA, repos…). Un clic sur le titre déploie ou réduit le chapitre.</li>
+                    <li><strong>Fenêtre détachée :</strong> l'assistant s'ouvre dans sa propre fenêtre, comme les panneaux détachés : on la pose sur un autre écran pour garder tout l'espace du diagramme, et sa position est retenue d'une ouverture à l'autre. Si le navigateur bloque les fenêtres détachées, elle s'affiche dans la page, sans assombrir l'application.</li>
+                    <li><strong>Diagramme pré-rempli :</strong> un groupe déterminant sans vert (Déb et Fin vides) est placé à la position proposée dès que le calcul est complet, si la phase tient dans le cycle du plan. Les groupes déjà réglés ne sont jamais modifiés.</li>
+                    <li><strong>Boutons :</strong> <em>Appliquer le cycle</em> règle la durée du cycle du plan, place dans le diagramme les groupes associés marqués « avec le cycle », puis inscrit les adaptatifs verticaux proposés (annulable par Ctrl+Z) ; <em>Enregistrer le phasage</em> garde les groupes déterminants avec le plan de feu. Avec la case <em>Modifier ou pré-remplir le phasage bulle</em> cochée, les deux boutons règlent aussi le phasage bulle : une bulle par phase, au milieu du vert de son déterminant.</li>
+                    <li><strong>Groupes associés :</strong> une fois les déterminants placés, la fenêtre propose la phase et les Déb–Fin des autres groupes, avec la <strong>source</strong> de chaque déduction : la <em>matrice</em> (le groupe rejoint la phase dont le déterminant ne lui est pas antagoniste ; il ouvre au plus tôt et ferme au plus tard que permettent les dégagements, vert le plus long permis), sinon le <em>nom</em> (même voie qu'un déterminant, par exemple « Av. du Parc nord » et « sud »), sinon le <em>plan</em> du carrefour (flèche opposée à celle d'un déterminant). La colonne <em>Placement</em> indique ce que fera <em>Appliquer le cycle</em> : les groupes aux Déb–Fin vides sont placés <em>avec le cycle</em>, une fois sa durée réglée ; les groupes <em>déjà réglés</em> ne sont pas modifiés ; une déduction incertaine est signalée « à vérifier » et reste à placer <em>à la main</em>.</li>
+                    <li><strong>Adaptatifs verticaux (proposition) :</strong> sous les groupes associés, la fenêtre propose pour chaque phase une zone d'adaptatif vertical. La zone finit au plus tôt des fins de vert des groupes de la phase (contracter au-delà rapprocherait un groupe de son antagoniste suivant, au détriment des temps interverts) et ne contient aucun début ni fin de vert. Elle s'allonge tant que, sur le cycle contracté, chaque groupe à trafic reste sous le <em>taux de saturation visé</em> et chaque groupe raccourci garde son vert mini ; la colonne <em>Limité par</em> dit ce qui l'arrête. Le taux visé des zones est réglable à part : <strong>90 %</strong> par défaut, au-dessus des 85 % du calcul de cycle, puisqu'une phase ne se contracte que lorsque sa demande est servie. Deux calculs : <em>Itératif</em> (par défaut) — la contraction d'une phase redonne de la capacité aux autres, d'où jusqu'à 3 passages ; le taux visé n'est alors tenu que si toutes les zones se contractent ensemble (colonne <em>Cap. U zone seule</em>, en orange au-delà ; taux fourni à titre indicatif, car sur le principe, la demande a été satisfaite) ; <em>Prudent</em> — chaque zone est calculée seule, et le taux tient quelle que soit la combinaison. <em>Appliquer le cycle</em> inscrit les zones dans les conditions de micro-régulation, après le cycle et les groupes associés : une ligne « Adaptatif vertical » par zone, abréviation <em>AV</em> suivie du numéro de phase (AV1, AV2…), description « Contraction théorique », condition « Contraction si absence de demande sur … » à adapter à la détection réelle. Les AV1, AV2… d'un passage précédent sont remplacés ; les autres conditions ne sont pas touchées. Ctrl+Z pour annuler ; vérifiez le résultat dans l'onglet Simulation.</li>
+                    <li><strong>Fermetures anticipées avec glissements (proposition) :</strong> sous les adaptatifs, la fenêtre repère les groupes voitures dont la capacité utilisée, au cycle proposé, est sous un seuil (81 % par défaut, réglable). Leur temps disponible est le vert moins le V.utile ; on en propose environ les deux tiers en fermeture anticipée, en fin de vert, sans passer sous le vert mini. Les groupes antagonistes qui ouvrent ensuite (tous types) et peuvent ouvrir plus tôt sans conflit intervert avec leurs autres antagonistes sont placés en <em>Action GF</em> (4 au plus) : la fermeture pointe sur leur début de vert, d'où un glissement. La colonne <em>Non retenus</em> dit quel groupe empêche les autres de glisser. Sans glissement possible, rien n'est proposé pour ce groupe. <em>Appliquer le cycle</em> inscrit ces fermetures dans les conditions de micro-régulation (FA1, FA2…, « Fermeture théorique », « Fermeture si absence de demande sur … »), en remplaçant celles d'un passage précédent. Une fermeture qui tombe dans une zone d'adaptatif vertical ne joue que lorsque celui-ci n'est pas contracté.</li>
+                    <li><strong>Points de repos bus (proposition) :</strong> pour chaque groupe bus (type B ou TC), un point de repos dans les 5 dernières secondes de son vert, à l'instant où le plus de groupes sont au vert (ils profitent tous de l'attente), le plus tard possible à égalité. <em>Appliquer le cycle</em> l'inscrit : abréviation « Att bus », description « attente bus théorique maxi … secondes » (la valeur de TMABx, qui fixe la durée du repos en simulation), condition « Attente quittée si TPPh_L<em>n</em> + DAx &gt; N + TMABx », N étant le temps passé dans la phase bus à l'instant du repos, moins 1. Il écrit aussi « Tx » dans la colonne DA du groupe bus et ajoute la variable micro « TMABx = 10 » si le plan ne l'a pas. L'indice x tient la place du code trajet : remplacez-le ensuite dans DAx, TMABx et Tx. Seuls les repos « attente bus théorique » d'un passage précédent sont remplacés ; un repos écrit à la main n'est pas touché.</li>
+                    <li><strong>Phasage bulle :</strong> une fois le diagramme saisi, le bouton <em>Initialiser depuis les groupes déterminants</em> du panneau de réglage du phasage bulle crée une bulle par phase, au milieu du vert de son groupe déterminant.</li>
+                </ul>
+                <h5 style={{ marginTop: '12px', marginBottom: '8px', color: '#aaa' }}>Ce que l'assistant laisse au concepteur</h5>
+                <p>L'assistant est un <strong>excellent point de départ</strong>, pas une conception clé en main. Il est d'autant plus utile qu'on sait ce qu'il fait et ce qu'il laisse à l'utilisateur :</p>
+                <ul>
+                    <li><strong>Les données d'entrée :</strong> trafics, coefficients, verts minimaux et temps interverts sont les vôtres ; la qualité de la proposition suit celle des données.</li>
+                    <li><strong>La vérification des déductions :</strong> chaque placement affiche sa source ; une déduction incertaine (nom ambigu, matrice muette) est signalée « à vérifier » et laissée à votre main plutôt que posée d'office.</li>
+                    <li><strong>La portée du cycle de Webster :</strong> repère reconnu, il minimise le retard moyen des véhicules, mais ne tient pas compte à lui seul de l'attente des piétons, de la coordination avec les carrefours voisins ou d'une priorité accordée aux transports en commun.</li>
+                    <li><strong>Le phasage :</strong> nombre et ordre des phases, traitement des tourne-à-gauche, place des piétons et des cycles.</li>
+                    <li><strong>Les fonctionnements conditionnels :</strong> l'assistant dimensionne les zones d'adaptatif vertical, mais la condition de contraction (détection, demande, priorité bus) reste à rédiger ; seconde lucarne et escamotage se construisent ensuite sur la base posée.</li>
+                    <li><strong>La connaissance du site :</strong> géométrie fine, visibilité, comportement des usagers, objectifs de la collectivité.</li>
+                </ul>
+                <p>L'élaboration d'un diagramme de feux est une <strong>discipline à part entière</strong> : arbitrer entre sécurité, capacité, temps d'attente, lisibilité pour l'usager et stratégie de déplacement demande une approche de <strong>traficien ou d'expert</strong>. L'assistant est pensé pour servir cette expertise : il dégrossit le sujet avec méthode, pour que le concepteur se concentre sur ce qui fait la qualité d'un plan de feux.</p>
+            </section>
+
+            <section className="help-section">
+                <h4>Capacité des plans de feu et scénarios</h4>
+                <p>Le menu <strong><VoirMenu chemin="Diagramme → Capacité des plans de feu…" /></strong> (disponible dès qu'il existe au moins deux plans de feu) ouvre, dans une <strong>fenêtre déplaçable et non modale</strong> (qui peut rester ouverte pendant que vous travaillez, voire sur un second écran), un tableau comparatif du <strong>vert utile</strong> et de la <strong>capacité utilisée</strong> entre plusieurs PF. Objectif : repérer d'un coup d'œil quel programme absorbe le mieux le trafic et où chaque PF arrive à saturation.</p>
+                <ul>
+                    <li><strong>Plans de feu et scénarios :</strong> la liste déroulante propose les plans de feu à cocher et, en retrait sous chacun, ses scénarios enregistrés dans l'onglet Simulation. Un plan s'évalue à ses valeurs nominales ; un scénario, sur le diagramme simulé de ses actions (cycle simulé, verts recalculés). On peut ainsi aligner les programmes de la journée (pointe, heure creuse, nuit), plusieurs versions d'un diagramme, ou un plan et ses variantes de micro-régulation. Un plan dont le jeu de trafic est vide est grisé, ses scénarios aussi ; avec un jeu unique appliqué à tous, tous redeviennent disponibles.</li>
+                    <li><strong>Jeu de données trafic :</strong> deux modes. <em>« Jeu associé à chaque PF »</em> — chaque PF utilise son propre jeu de trafic. <em>Un jeu unique</em> (HPM, HPS, HC…) — le même trafic est appliqué à tous les PF cochés, ce qui isole l'effet du plan à trafic égal. Les jeux sans aucune donnée saisie apparaissent grisés et ne sont pas sélectionnables.</li>
+                    <li><strong>Lecture du tableau :</strong> une ligne par groupe de feu VL, une colonne par plan ou scénario affichant Trafic, V.Utile et Cap.U. La case <em>Afficher le V.Utile</em> masque ou rétablit la colonne V.Utile. Lorsque toutes les colonnes partagent le même trafic, une seule colonne Trafic est affichée au début pour éviter la répétition. La capacité utilisée est colorée selon les seuils habituels (vert &lt; 76 %, orange ≤ 85 %, rouge ≤ 100 %, noir &gt; 100 %).</li>
+                    <li><strong>Valeurs nominales :</strong> chaque PF est évalué avec son propre vert et son propre cycle, sans les actions de micro-régulation — c'est le sens d'une comparaison entre programmes. Seules les secondes lucarnes comptent dans le vert, pour retrouver les valeurs du tableau Trafic.</li>
+                    <li><strong>Dossier imprimé :</strong> la case <em>Capacité des plans de feu et scénarios</em> de <em><VoirMenu chemin="Fichier → Imprimer le projet…" /></em> ajoute le tableau en fin de dossier, tel que réglé dans cette fenêtre (plans, scénarios, jeu de trafic, V.Utile). Ces réglages sont enregistrés avec le projet.</li>
+                    <li><strong>Exporter (PNG) :</strong> le bouton génère une image du tableau, la télécharge et la copie dans le presse-papiers, prête à coller dans un rapport ou un courriel (couleurs comprises).</li>
+                </ul>
+            </section>
+
+            <h3 id="help-onde-verte" style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Chapitre 7 — Onde verte</h3>
 
             <section className="help-section">
                 <h4>Présentation</h4>
@@ -1158,6 +1184,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                     <li><strong>Imprimer :</strong> Génère une version imprimable du diagramme en format A4 paysage avec légende, vitesses et bandes passantes</li>
                 </ul>
             </section>
+
             <section className="help-section">
                 <h4>Sauvegarde et chargement</h4>
                 <ul>
@@ -1168,6 +1195,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
             </section>
 
             <h3 style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Glossaire</h3>
+
             <section className="help-section">
                 <h4>Glossaire</h4>
                 <dl style={{ margin: 0 }}>
@@ -1281,6 +1309,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                     <dd>Durée minimale obligatoire du vert d'un groupe, pour garantir la sécurité et le confort des usagers (traversée piétonne complète, dégagement véhicule, etc.). Seuil en dessous duquel une alerte se déclenche.</dd>
                 </dl>
             </section>
+
             {/* Bouton flottant "retour au sommaire" */}
             <button
                 className="help-back-to-top"

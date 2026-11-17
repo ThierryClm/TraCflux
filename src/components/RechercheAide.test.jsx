@@ -51,7 +51,7 @@ describe("recherche dans l'aide", () => {
         chercher('onde verte');
         fireEvent.click(screen.getByRole('button', { name: /^Chapitres \(\d+\)/ }));
         const liste = screen.getByRole('listbox', { name: 'Chapitres qui contiennent ce mot' });
-        expect(within(liste).getByText('Chapitre 2 — Onde verte')).toBeInTheDocument();
+        expect(within(liste).getByText('Chapitre 7 — Onde verte')).toBeInTheDocument();
         const section = within(liste).getByRole('button', { name: /Création d'une onde verte/ });
         fireEvent.click(section);
         expect(screen.queryByRole('listbox')).toBeNull();
