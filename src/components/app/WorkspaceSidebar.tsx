@@ -106,6 +106,7 @@ interface WorkspaceSidebarModel {
     appMoaLogos: Record<string, string>;
     appMoeLogos: Record<string, string>;
     setShowFloatingProperties: Dispatch<SetStateAction<boolean>>;
+    setShowFloatingDetecteurs: Dispatch<SetStateAction<boolean>>;
     showGroupNamesForm: boolean;
     setShowFloatingForm: Dispatch<SetStateAction<boolean>>;
     activePFId: number;
@@ -192,6 +193,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
         appMoaLogos,
         appMoeLogos,
         setShowFloatingProperties,
+        setShowFloatingDetecteurs,
         showGroupNamesForm,
         setShowFloatingForm,
         activePFId,
@@ -458,6 +460,7 @@ export default function WorkspaceSidebar({ model }: WorkspaceSidebarProps) {
                                         detecteurs={detecteurs}
                                         groups={groups}
                                         onChange={setDetecteurs}
+                                        onDetach={() => setShowFloatingDetecteurs(v => !v)}
                                     />
                                 </div>
                             )}

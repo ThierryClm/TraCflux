@@ -96,6 +96,14 @@
     max-height: 900px;
 }
 
+/* À l'écran, la bulle du haut déborde au-dessus du dessin et passe sous la
+   barre de boutons de l'application : l'ensemble descend d'une hauteur de
+   bulle pour rester entier. L'impression garde sa composition mesurée. */
+.phasage-circular-container.phasage-ecran {
+    margin-top: 48px;
+    height: calc(100vh - 248px);
+}
+
 /* Ellipse outline */
 .ellipse-outline {
     position: absolute;
@@ -315,6 +323,9 @@
     .phasage-circular-container {
         height: calc(100vh - 250px);
         min-height: 500px;
+    }
+    .phasage-circular-container.phasage-ecran {
+        height: calc(100vh - 298px);
     }
 
 

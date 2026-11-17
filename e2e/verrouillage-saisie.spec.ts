@@ -36,12 +36,12 @@ const deplacer = async (page: Page, poignee: Locator) => {
     await page.mouse.up();
 };
 
-test('verrouiller la configuration et le diagramme : champs en lecture seule, le reste modifiable', async ({ page }) => {
+test('verrouiller le formulaire et le diagramme : champs en lecture seule, le reste modifiable', async ({ page }) => {
     await ouvrirExemple(page);
     const nom = page.locator('.group-table input').first();
     const cycle = page.locator('.cycle-input-label input').first();
     await expect(nom).not.toHaveAttribute('readonly');
-    await cocher(page, 'Configuration');
+    await cocher(page, 'Formulaire');
     await cocher(page, 'Diagramme');
     await expect(nom).toHaveAttribute('readonly');
     await expect(page.locator('.group-table-title .mention-verrou')).toHaveText('(verrouillé)');
@@ -71,7 +71,7 @@ test('verrouiller la configuration et le diagramme : champs en lecture seule, le
     await cocher(page, 'Conditions de micro-régulation');
     await cocher(page, 'Variables micro');
     await expect(page.locator('.action-table select').first()).toBeEnabled();
-    await cocher(page, 'Configuration');
+    await cocher(page, 'Formulaire');
     await cocher(page, 'Diagramme');
     await expect(page.locator('.group-table input').first()).not.toHaveAttribute('readonly');
     await expect(ligne.locator('select').first()).not.toHaveCSS('appearance', 'none');

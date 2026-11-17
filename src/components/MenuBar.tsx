@@ -88,6 +88,7 @@ export interface OptionsMenuBar {
     showGroupNamesMatrix?: boolean;
     showGroupNamesDiagram?: boolean;
     showFloatingProperties?: boolean;
+    showFloatingDetecteurs?: boolean;
     showFloatingForm?: boolean;
     showFloatingMatrix?: boolean;
     showFloatingConflicts?: boolean;
@@ -560,6 +561,7 @@ const MenuBar = ({
                     submenu: [
                         { label: 'Propriétés', action: 'toggleFloatingProperties', checked: layoutOptions.showFloatingProperties, keepSubmenuOpen: true },
                         { label: 'Formulaire', action: 'toggleFloatingForm', checked: layoutOptions.showFloatingForm, keepSubmenuOpen: true },
+                        { label: 'Détecteurs', action: 'toggleFloatingDetecteurs', checked: layoutOptions.showFloatingDetecteurs, disabled: !layoutOptions.detecteurModule, keepSubmenuOpen: true },
                         { label: 'Matrice interverts', action: 'toggleFloatingMatrix', checked: layoutOptions.showFloatingMatrix, keepSubmenuOpen: true },
                         { label: 'Conflits', action: 'toggleFloatingConflicts', checked: layoutOptions.showFloatingConflicts, keepSubmenuOpen: true },
                         { label: 'Données trafic', action: 'toggleFloatingTraffic', checked: layoutOptions.showFloatingTraffic, keepSubmenuOpen: true },
@@ -596,7 +598,8 @@ const MenuBar = ({
                         { label: toutVerrouille ? 'Tout déverrouiller' : 'Tout verrouiller', action: 'verrouSaisie:tout', keepSubmenuOpen: true },
                         { type: 'separator' },
                         { label: 'Propriétés',    action: 'verrouSaisie:proprietes',    checked: verrou.proprietes,    keepSubmenuOpen: true },
-                        { label: 'Configuration', action: 'verrouSaisie:configuration', checked: verrou.configuration, keepSubmenuOpen: true },
+                        { label: 'Formulaire',    action: 'verrouSaisie:configuration', checked: verrou.configuration, keepSubmenuOpen: true },
+                        { label: 'Détecteurs',    action: 'verrouSaisie:detecteurs',    checked: verrou.detecteurs,    keepSubmenuOpen: true },
                         { label: 'Matrice',       action: 'verrouSaisie:matrice',       checked: verrou.matrice,       keepSubmenuOpen: true },
                         { label: 'Trafic',        action: 'verrouSaisie:trafic',        checked: verrou.trafic,        keepSubmenuOpen: true },
                         { label: 'Diagramme',     action: 'verrouSaisie:diagramme',     checked: verrou.diagramme,     keepSubmenuOpen: true },
@@ -604,8 +607,7 @@ const MenuBar = ({
                         { label: 'Variables micro', action: 'verrouSaisie:variables', checked: verrou.variables, keepSubmenuOpen: true },
                         { label: 'Image du carrefour', action: 'verrouSaisie:image', checked: verrou.image, keepSubmenuOpen: true },
                         { label: 'Scénarios', action: 'verrouSaisie:scenarios', checked: verrou.scenarios, keepSubmenuOpen: true },
-                        { label: 'Phasages bulles', action: 'verrouSaisie:phasages', checked: verrou.phasages, keepSubmenuOpen: true },
-                        { label: 'Détecteurs', action: 'verrouSaisie:detecteurs', checked: verrou.detecteurs, keepSubmenuOpen: true }
+                        { label: 'Phasages bulles', action: 'verrouSaisie:phasages', checked: verrou.phasages, keepSubmenuOpen: true }
                     ]
                 },
                 {
@@ -684,17 +686,17 @@ const MenuBar = ({
                 },
                 { type: 'separator' },
                 {
-                    label: 'Assistant conception...',
-                    action: 'cycleSuggestion',
-                    disabled: !traficRenseigne || !assistantPret,
-                    title: [INFOBULLE_ASSISTANT, assistantBlocage, !traficRenseigne ? 'Renseignez le trafic du plan de feu (onglet Trafic).' : ''].filter(Boolean).join('\n\n')
+                    label: 'Capacité des plans de feu...',
+                    action: 'compareCapacity',
+                    disabled: pfCount < 2,
+                    title: pfCount < 2 ? 'Nécessite au moins 2 plans de feu' : 'Tableau comparatif du vert utile et de la capacité utilisée'
                 },
                 {
                     // Accès direct aux scénarios de simulation préparés, sans
                     // passer par l'onglet Simulation. Grisé par défaut : tant
                     // qu'aucun plan de feu n'a de scénario enregistré, il n'y
                     // a rien à lister.
-                    label: 'Scénarios',
+                    label: scenariosEnregistres.length === 0 ? 'Scénarios — aucun enregistré' : 'Scénarios',
                     type: 'submenu',
                     submenuId: 'scenariosEnregistres',
                     disabled: scenariosEnregistres.length === 0,
@@ -704,10 +706,18 @@ const MenuBar = ({
                     submenu: scenariosEnregistres
                 },
                 {
-                    label: 'Capacité des plans de feu...',
-                    action: 'compareCapacity',
-                    disabled: pfCount < 2,
-                    title: pfCount < 2 ? 'Nécessite au moins 2 plans de feu' : 'Tableau comparatif du vert utile et de la capacité utilisée'
+                    label: 'Assistant conception...',
+                    action: 'cycleSuggestion',
+                    disabled: !traficRenseigne || !assistantPret,
+                    title: [INFOBULLE_ASSISTANT, assistantBlocage, !traficRenseigne ? 'Renseignez le trafic du plan de feu (onglet Trafic).' : ''].filter(Boolean).join('\n\n')
+                },
+                {
+                    // Annonce de la future expertise IA : la ligne est là pour
+                    // réserver sa place, sans action tant que le module n'existe pas.
+                    label: 'Expertise IA',
+                    action: 'expertiseIA',
+                    disabled: true,
+                    title: 'En cours de développement'
                 },
                 { type: 'separator' },
                 {
@@ -914,7 +924,7 @@ const MenuBar = ({
                         }
                     }}
                 >
-                    <button className={`menu-item has-submenu ${item.disabled ? 'disabled' : ''}`} disabled={item.disabled}>
+                    <button className={`menu-item has-submenu ${item.disabled ? 'disabled' : ''}`} disabled={item.disabled} title={tip(item.title)}>
                         {item.label}
                         <span className="submenu-arrow">▶</span>
                     </button>

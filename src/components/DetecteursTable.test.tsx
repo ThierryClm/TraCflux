@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import ConfirmProvider from './ConfirmProvider';
@@ -220,5 +220,27 @@ describe('DetecteursTable — tri des colonnes', () => {
         expect(enTete(/^Nom/)).toBeEnabled();
         fireEvent.click(enTete(/^Nom/));
         expect(noms()).toEqual(['Boucle A', 'Détecteur 2', 'Détecteur 10']);
+    });
+});
+
+describe('DetecteursTable — détachement', () => {
+    const rendre = (onDetach: () => void) => render(
+        <ConfirmProvider>
+            <DetecteursTable detecteurs={[detecteur()]} groups={groupes} onChange={vi.fn()} onDetach={onDetach} />
+        </ConfirmProvider>
+    );
+
+    it('détache le tableau dans une fenêtre séparée', () => {
+        const onDetach = vi.fn();
+        rendre(onDetach);
+        fireEvent.click(screen.getByRole('button', { name: 'Détacher' }));
+        expect(onDetach).toHaveBeenCalledOnce();
+    });
+
+    it('laisse Détacher accessible quand la saisie est verrouillée', async () => {
+        rendre(vi.fn());
+        await act(async () => { basculerVerrou('detecteurs'); });
+        expect(screen.getByRole('button', { name: 'Détacher' })).toBeEnabled();
+        expect(screen.getByText('(verrouillé)')).toBeInTheDocument();
     });
 });

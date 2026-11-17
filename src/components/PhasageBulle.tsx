@@ -624,7 +624,7 @@ const PhasageBulle = ({
                 </div>
             </div>
 
-            <div className="phasage-circular-container">
+            <div className={`phasage-circular-container${enImpression ? '' : ' phasage-ecran'}`}>
                 {/* Ellipse outline - uses dynamic radii based on phase count */}
                 <svg className="ellipse-outline" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <ellipse
