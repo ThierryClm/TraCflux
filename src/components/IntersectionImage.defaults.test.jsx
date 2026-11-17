@@ -40,7 +40,7 @@ const renderImage = ({ groups, arrows = [] }) => {
 describe('IntersectionImage — valeurs des nouvelles flèches', () => {
     it('applique le retour métier lors du clic d’ajout', () => {
         const { area, onArrowsChange } = renderImage({
-            groups: [{ id: 1, name: 'Droite', courant: 'TàD' }]
+            groups: [{ id: 1, name: 'Droite', courant: 'TàD', durations: { green: 30, orange: 3, red: 27 } }]
         });
 
         fireEvent.click(area, { clientX: 100, clientY: 50 });
@@ -63,8 +63,8 @@ describe('IntersectionImage — valeurs des nouvelles flèches', () => {
         };
         const { area, onArrowsChange } = renderImage({
             groups: [
-                { id: 1, name: 'Existante', courant: 'TàG' },
-                { id: 2, name: 'Composée', courant: 'TD_G_D' }
+                { id: 1, name: 'Existante', courant: 'TàG', durations: { green: 30, orange: 3, red: 27 } },
+                { id: 2, name: 'Composée', courant: 'TD_G_D', durations: { green: 30, orange: 3, red: 27 } }
             ],
             arrows: [existingArrow]
         });

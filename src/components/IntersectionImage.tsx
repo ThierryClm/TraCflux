@@ -210,9 +210,10 @@ const IntersectionImage = ({
     const setShowDetecteurNames = (value: boolean) => onDisplayOptionChange?.('showDetecteurNames', value);
 
     // Une flèche ne peut être ajoutée que s'il reste un groupe porteur d'un
-    // courant sans flèche ; un détecteur, que s'il en reste un à poser.
+    // courant, servi par le plan (vert non nul) et sans flèche ; un détecteur,
+    // que s'il en reste un à poser.
     const peutAjouterFleche = showCurrents && groups.some(g =>
-        (g.courant || '').trim() && !arrows.some(a => a.groupId === g.id)
+        (g.courant || '').trim() && (g.durations?.green || 0) > 0 && !arrows.some(a => a.groupId === g.id)
     );
     const peutAjouterDetecteur = detecteurModule && showDetecteurs && detecteurs.some(d => !d.position);
     // Le mode détecteur ne vaut que si le mode flèche est fermé : les deux
@@ -458,9 +459,10 @@ const IntersectionImage = ({
 
         if (!showCurrents || !showArrows) return;
 
-        // Find a group without an arrow yet
+        // Find a group without an arrow yet. Un groupe sans vert dans le plan
+        // n'a pas de flèche visible : il n'est pas candidat.
         const groupsWithoutArrows = groups.filter(g =>
-            !arrows.some(a => a.groupId === g.id)
+            !arrows.some(a => a.groupId === g.id) && (g.durations?.green || 0) > 0
         );
 
         // Une flèche n'a de sens que portée par un mouvement : c'est le courant
@@ -689,6 +691,18 @@ const IntersectionImage = ({
                 : a
         ));
     }, []);
+
+    // Un groupe sans début ni fin de vert dans le diagramme ne sert aucun
+    // mouvement : sa flèche est masquée, ce qui montre les mouvements supprimés
+    // d'un plan (un tourne-à-gauche écarté quand le trafic est faible, par
+    // exemple). En simulation, un groupe escamoté compte comme supprimé, comme
+    // dans le diagramme simulé.
+    const groupeAvecVert = (groupId: number) => {
+        const simule = simulationResult?.simulatedGroups.find(g => g.id === groupId);
+        if (simule) return !simule.isEscamoted && (simule.simulatedGreen ?? 0) > 0;
+        const group = groups.find(g => g.id === groupId);
+        return !!group && (group.durations?.green || 0) > 0;
+    };
 
     // Get group info for display
     const getGroupInfo = (groupId: number) => {
@@ -1060,6 +1074,9 @@ const IntersectionImage = ({
                         />
                         {(showCurrents || showSignals) && arrows.map(arrow => {
                             const groupInfo = getGroupInfo(arrow.groupId);
+                            // Vue Flèche : un groupe sans vert dans le diagramme n'a
+                            // pas de mouvement à montrer, sa flèche disparaît.
+                            if (showCurrents && !groupeAvecVert(arrow.groupId)) return null;
                             const rotation = arrow.rotation || 0;
                             const scale = arrow.scale || 1;
                             const arrowLength = arrow.length || 1;
@@ -1168,7 +1185,8 @@ const IntersectionImage = ({
                             const containerH = containerRef.current?.clientHeight || 500;
                             const groupMap: Record<number, { x: number; y: number }[]> = {};
                             arrows.forEach(arrow => {
-                                if (!arrow.groupId) return;
+                                // Pas de numéro sans flèche : le groupe n'est pas servi.
+                                if (!arrow.groupId || !groupeAvecVert(arrow.groupId)) return;
                                 const courant = getGroupInfo(arrow.groupId).courant;
                                 let px = arrow.x;
                                 let py = arrow.y;

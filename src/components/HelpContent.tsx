@@ -614,6 +614,7 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
                     </li>
                     <li><strong>Mode simulation :</strong> Les flèches suivent le temps de la simulation en cours</li>
                     <li><strong>Escamotage :</strong> Quand un escamotage est actif, la flèche du groupe cible passe à l'orange puis au rouge pendant la zone de coupure</li>
+                    <li><strong>Mouvement supprimé :</strong> un groupe sans début ni fin de vert dans le diagramme du plan — un tourne-à-gauche écarté quand le trafic est faible, par exemple — n'affiche plus sa flèche ni son numéro sur le plan. La flèche revient d'elle-même dès qu'un vert lui est rendu. En simulation, un groupe escamoté disparaît de la même façon. La vue Signaux n'est pas concernée : le feu reste dessiné.</li>
                     <li><strong>Déplacement au clavier :</strong> Sélectionnez une flèche en cliquant sur son tracé, puis utilisez les touches fléchées du clavier (gauche, droite, haut, bas) pour la déplacer point par point. Le focus doit être sur l'image du carrefour (ne fonctionne pas quand l'image est détachée).</li>
                     <li><strong>Glisser-déposer :</strong> Cliquez et maintenez sur le tracé d'une flèche pour la déplacer. La flèche suit le mouvement de la souris sans se recentrer sur le point de clic. Un clic à côté du tracé compte comme un clic sur l'image.</li>
                 </ul>
