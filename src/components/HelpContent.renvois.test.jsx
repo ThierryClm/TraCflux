@@ -48,6 +48,21 @@ describe("Renvois de l'aide", () => {
         });
     });
 
+    it('présente les chapitres dans l’ordre du plan de l’aide', () => {
+        dessiner();
+        const chapitres = [...document.querySelectorAll('#help-sommaire > div > a')].map(a => a.textContent);
+        expect(chapitres).toEqual([
+            "Chapitre 1 — Boite à outils d'optimisation des diagrammes de feu",
+            "Chapitre 2 — Saisie des données d'entrée",
+            'Chapitre 3 — Les plans de feux',
+            'Chapitre 4 — La micro-régulation',
+            'Chapitre 5 — Autres actions',
+            "Chapitre 6 — Aide à la conception et à l'optimisation",
+            'Chapitre 7 — Onde verte',
+            'Glossaire'
+        ]);
+    });
+
     it('chaque renvoi de section conduit à un titre qui existe', () => {
         const { container } = dessiner();
         const titres = [...container.querySelectorAll('h3, h4')].map(titre => titre.textContent.trim());
