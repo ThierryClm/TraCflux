@@ -132,10 +132,22 @@ const useFloatingImageRenderer = ({
         const signalDe = (group: Groupe | undefined) =>
             showSignals && signalDessinable(group?.signal) ? group?.signal : undefined;
 
+        // Même règle que l'image de la page : un groupe sans début ni fin de
+        // vert dans le diagramme ne sert aucun mouvement, sa flèche et son
+        // signal sont masqués. En simulation, un groupe escamoté compte comme
+        // supprimé, comme dans le diagramme simulé.
+        const mouvementServi = (groupId: number) => {
+            const simule = (simulationResult as SimulationResult | null)?.simulatedGroups.find(g => g.id === groupId);
+            if (simule) return !simule.isEscamoted && (simule.simulatedGreen ?? 0) > 0;
+            const group = groups.find(g => g.id === groupId);
+            return !!group && (group.durations?.green || 0) > 0;
+        };
+
         // Compute group number centroids
         const groupMap: Record<number, Array<{ x: number; y: number }>> = {};
         intersectionArrows.forEach(arrow => {
-            if (!arrow.groupId) return;
+            // Pas de numéro sans flèche : le groupe n'est pas servi.
+            if (!arrow.groupId || !mouvementServi(arrow.groupId)) return;
             const group = groups.find(g => g.id === arrow.groupId);
             const courant = group?.courant || '';
             let px = arrow.x;
@@ -294,6 +306,9 @@ const useFloatingImageRenderer = ({
                             })}
                             {showCurrents && intersectionArrows.map(arrow => {
                                 const groupId = arrow.groupId ?? 0;
+                                // Un groupe sans vert n'a pas de mouvement à montrer :
+                                // sa flèche disparaît, et son signal avec elle.
+                                if (!mouvementServi(groupId)) return null;
                                 const group = groups.find(g => g.id === groupId);
                                 const courant = group?.courant || '';
                                 const rotation = arrow.rotation || 0;
