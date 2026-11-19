@@ -2450,6 +2450,8 @@ function App() {
                     assistantPret={prerequisAssistant.pret}
                     assistantBlocage={prerequisAssistant.message}
                     scenariosPlans={scenariosPlansMenu}
+                    diagrammeSansValeur={groups.every(g => (g.durations?.green || 0) <= 0)}
+                    matriceVide={!conflictMatrix.some(ligne => ligne.some(cellule => cellule !== '' && cellule != null))}
                 />
             <WelcomeScreen
                 hasActiveProject={hasActiveProject}

@@ -145,6 +145,10 @@ export interface MenuBarProps {
     assistantBlocage?: string;
     /** Scénarios enregistrés, plan de feu par plan de feu (menu Diagramme ▸ Scénarios). */
     scenariosPlans?: PlanScenariosMenu[];
+    /** Aucun groupe n'a encore de vert : l'analyse n'a rien à examiner. */
+    diagrammeSansValeur?: boolean;
+    /** Aucune case de la matrice des temps interverts n'est renseignée. */
+    matriceVide?: boolean;
 }
 
 /** Scénarios enregistrés d'un plan de feu, pour le menu Diagramme ▸ Scénarios. */
@@ -175,7 +179,9 @@ const MenuBar = ({
     traficRenseigne = false,
     assistantPret = false,
     assistantBlocage = '',
-    scenariosPlans = []
+    scenariosPlans = [],
+    diagrammeSansValeur = false,
+    matriceVide = false
 }: MenuBarProps) => {
     const tip = (texte: string | undefined) => layoutOptions.tooltipPrefs?.menu !== false ? texte : undefined;
     const [openMenu, setOpenMenu] = useState<string | null>(initialOpenMenu);
@@ -654,7 +660,12 @@ const MenuBar = ({
                     title: 'Plan vierge (verts, DA, conditions et variables micro vides), puis choix du jeu de trafic'
                 },
                 { label: 'Dupliquer le diagramme actif', action: 'duplicate', disabled: !hasPermission('canDuplicate') },
-                { label: 'Supprimer le diagramme actif', action: 'deleteActiveDiagram', disabled: !hasPermission('canModifyDiagram') },
+                {
+                    label: 'Supprimer le diagramme actif',
+                    action: 'deleteActiveDiagram',
+                    disabled: !hasPermission('canModifyDiagram') || pfCount < 2,
+                    title: pfCount < 2 ? 'Il faut au moins deux plans de feu pour en supprimer un' : undefined
+                },
                 {
                     // Opérations qui remanient la structure du diagramme, regroupées.
                     label: 'Modification du diagramme',
@@ -674,6 +685,8 @@ const MenuBar = ({
                     label: 'Matrice',
                     type: 'submenu',
                     submenuId: 'matrice',
+                    disabled: matriceVide,
+                    title: matriceVide ? 'Matrice vide : renseignez les temps interverts dans l\'onglet Matrice' : 'Matrice des temps interverts',
                     submenu: [
                         { label: 'Verrouiller les matrices', action: 'lockMatrices', toggle: true, checked: layoutOptions.matricesLocked, keepSubmenuOpen: true },
                         {
@@ -724,7 +737,10 @@ const MenuBar = ({
                     // conception) que le plan de feu actif n'applique pas.
                     label: 'Analyse du diagramme...',
                     action: 'analyseDiagramme',
-                    title: 'Liste les règles et recommandations que le plan de feu actif n’applique pas : durées, attentes, piétons, matrice, signaux, image (flèches) et capacité.'
+                    disabled: diagrammeSansValeur,
+                    title: diagrammeSansValeur
+                        ? 'Le diagramme n’a pas encore de valeurs : renseignez le formulaire (type, vert, début) pour lancer l’analyse.'
+                        : 'Liste les règles et recommandations que le plan de feu actif n’applique pas : durées, attentes, piétons, matrice, signaux, image (flèches) et capacité.'
                 },
                 { type: 'separator' },
                 {

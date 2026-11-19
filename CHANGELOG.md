@@ -25,6 +25,11 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Modifié
 
+- **Menu Diagramme sur un projet neuf** : « Analyse du diagramme » est grisée tant qu'aucun groupe n'a de
+  vert, « Matrice » tant qu'aucune case de la matrice n'est renseignée, et « Supprimer le diagramme actif »
+  tant qu'il n'y a qu'un seul plan de feu.
+- **Image du carrefour** : cliquer sur une flèche affiche l'éditeur de la flèche, même si un détecteur
+  était sélectionné ; cliquer sur un détecteur fait de même avec son éditeur.
 - **Menu Diagramme ▸ Scénarios** : le libellé devient « Scénarios — aucun enregistré » tant qu'aucun
   scénario n'existe ; l'infobulle renvoie à Simulation (Enregistrer…). Le menu range Capacité des plans de
   feu, Scénarios, Assistant conception, puis Expertise IA, nouvelle ligne annoncée « En cours de
