@@ -53,24 +53,23 @@ export const SEUILS_ANALYSE = {
     retardPietonMaxi: 20,
     vertLong: 40,
     traverseeSansRefuge: 12,
-    retourFlecheComposee: 0.6,
-    retourFlecheSimple: 0.4,
     capaciteUtiliseeAlerte: 90,
     capaciteUtiliseeSaturee: 100
 } as const;
 
-const COURANTS_COMPOSES = new Set(['TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG', 'TD_G_D']);
-const COURANTS_TOURNANTS = new Set(['TàD', 'TàG']);
 const ISR_DUREES = 'ISR, 6e partie, art. 110 C1';
 
 const nomGroupe = (g: Groupe) => `GF${g.id}${g.name ? ` ${g.name}` : ''}`;
 const estPieton = (g: Groupe) => typeFormulaire(g.type) === 'P';
 const estVehicule = (g: Groupe) => ['V', 'B', 'CY'].includes(typeFormulaire(g.type));
 /**
- * Priorité piétons (PP) et flèche lumineuse (FL) : état particulier d'un
- * groupe, sans vert mini ni jaune ; aucune suggestion sur leurs valeurs.
+ * Priorité piétons (PP), flèche lumineuse (FL) et groupe porteur d'un signal
+ * d'aide à la conduite (SAC) : état particulier d'un groupe, sans vert mini ni
+ * jaune ; aucune suggestion sur leurs valeurs.
  */
-const estEtatParticulier = (g: Groupe) => ['PP', 'FL'].includes(typeFormulaire(g.type));
+const estEtatParticulier = (g: Groupe, actionData: ActionMicro[]) =>
+    ['PP', 'FL'].includes(typeFormulaire(g.type))
+    || actionData.some(a => a.action === 'Signal aide conduite' && Number(a.gf) === g.id);
 const estSignalTC = (g: Groupe) => g.signal === 'R17' || g.signal?.startsWith('R18');
 const caseRenseignee = (v: unknown) => v !== '' && v !== null && v !== undefined && !Number.isNaN(Number(v));
 
@@ -86,7 +85,7 @@ export const analyserDiagramme = ({
     let controles = 0;
     const ajouter = (c: Constat) => constats.push(c);
     const S = SEUILS_ANALYSE;
-    const analyses = groups.filter(g => !estEtatParticulier(g));
+    const analyses = groups.filter(g => !estEtatParticulier(g, actionData));
     const avecVert = analyses.filter(g => (g.durations?.green ?? 0) > 0);
 
     // ---------------------------------------------------------------- durées
@@ -227,20 +226,6 @@ export const analyserDiagramme = ({
         id: 'sans-fleche', niveau: 'information', theme: 'Image du carrefour', groupes: sansFleche.map(g => g.id),
         message: `Groupe sans flèche sur l'image : ${sansFleche.map(nomGroupe).join(', ')}.`,
         suggestion: 'Poser une flèche par groupe, sur sa voie, dans l\'axe de la rue.',
-        source: 'Règle de conception TraCflux'
-    });
-
-    controles++;
-    const retours = intersectionArrows.map(a => {
-        const g = analyses.find(x => x.id === a.groupId);
-        const courant = g?.courant ?? '';
-        const attendu = COURANTS_COMPOSES.has(courant) ? S.retourFlecheComposee : COURANTS_TOURNANTS.has(courant) ? S.retourFlecheSimple : null;
-        return { g, attendu, reel: a.turnLength ?? 1 };
-    }).filter(x => x.g && x.attendu !== null && Math.abs(x.reel - (x.attendu as number)) > 0.001);
-    if (retours.length) ajouter({
-        id: 'retour-fleche', niveau: 'information', theme: 'Image du carrefour', groupes: [...new Set(retours.map(x => x.g!.id))],
-        message: `Retour de flèche différent de la valeur de référence : ${retours.map(x => `${nomGroupe(x.g!)} (${x.reel})`).join(', ')}.`,
-        suggestion: `Retour de ${S.retourFlecheComposee} pour les flèches composées (tout droit et tourne), ${S.retourFlecheSimple} pour les tourne-à-gauche et tourne-à-droite simples.`,
         source: 'Règle de conception TraCflux'
     });
 

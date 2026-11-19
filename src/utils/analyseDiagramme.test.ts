@@ -72,13 +72,13 @@ describe('analyserDiagramme', () => {
         expect(r.constats.find(c => c.id === 'signal-type')!.groupes).toEqual([1]);
     });
 
-    it('suggère les retours de flèche 0,6 (composée) et 0,4 (simple), et une flèche par groupe', () => {
+    it('suggère une flèche par groupe, sans contrôler les retours de flèche', () => {
         const r = analyserDiagramme({
             groups: [g(1, 'V', 0, 20, { courant: 'TD_TàD' }), g(2, 'V', 30, 10, { courant: 'TàG' }), g(3, 'V', 45, 8, { courant: 'TD' })],
             cycleLength: 60, conflictMatrix: [['', '', ''], ['', '', ''], ['', '', '']],
             intersectionArrows: [{ id: 1, groupId: 1, x: 0, y: 0, turnLength: 0.5 }, { id: 2, groupId: 2, x: 0, y: 0, turnLength: 0.4 }]
         });
-        expect(r.constats.find(c => c.id === 'retour-fleche')!.groupes).toEqual([1]);
+        expect(r.constats.map(c => c.id)).not.toContain('retour-fleche');
         expect(r.constats.find(c => c.id === 'sans-fleche')!.groupes).toEqual([3]);
     });
 
@@ -86,6 +86,13 @@ describe('analyserDiagramme', () => {
         const pp = g(2, 'PP', 0, 0, { signal: 'A13b', courant: 'PP', minGreen: 0, durations: { green: 0, orange: 0, red: 0 } });
         const r = analyserDiagramme({ groups: [g(1, 'V', 0, 20, { courant: 'TD' }), pp], cycleLength: 60, conflictMatrix: [['', ''], ['', '']],
             intersectionArrows: [{ id: 1, groupId: 1, x: 0, y: 0 }] });
+        expect(r.constats.flatMap(c => c.groupes)).not.toContain(2);
+    });
+
+    it('ne fait aucune suggestion sur un groupe porteur d\'un signal d\'aide à la conduite', () => {
+        const sac = g(2, '', 0, 0, { minGreen: 0, durations: { green: 3, orange: 0, red: 0 } });
+        const r = analyserDiagramme({ groups: [g(1, 'V', 0, 20), sac], cycleLength: 60, conflictMatrix: [['', ''], ['', '']],
+            actionData: [{ id: 1, gf: '2', action: 'Signal aide conduite', deb: 10, fin: 20 }] as never });
         expect(r.constats.flatMap(c => c.groupes)).not.toContain(2);
     });
 
