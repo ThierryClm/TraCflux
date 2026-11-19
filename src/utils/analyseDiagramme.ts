@@ -51,6 +51,7 @@ export const SEUILS_ANALYSE = {
     attenteMaxiTC: 240,
     cycleMini: 40,
     retardPietonMaxi: 20,
+    vertLong: 40,
     traverseeSansRefuge: 12,
     retourFlecheComposee: 0.6,
     retourFlecheSimple: 0.4,
@@ -62,9 +63,14 @@ const COURANTS_COMPOSES = new Set(['TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD
 const COURANTS_TOURNANTS = new Set(['TàD', 'TàG']);
 const ISR_DUREES = 'ISR, 6e partie, art. 110 C1';
 
-const nomGroupe = (g: Groupe) => `G${g.id}${g.name ? ` ${g.name}` : ''}`;
+const nomGroupe = (g: Groupe) => `GF${g.id}${g.name ? ` ${g.name}` : ''}`;
 const estPieton = (g: Groupe) => typeFormulaire(g.type) === 'P';
 const estVehicule = (g: Groupe) => ['V', 'B', 'CY'].includes(typeFormulaire(g.type));
+/**
+ * Priorité piétons (PP) et flèche lumineuse (FL) : état particulier d'un
+ * groupe, sans vert mini ni jaune ; aucune suggestion sur leurs valeurs.
+ */
+const estEtatParticulier = (g: Groupe) => ['PP', 'FL'].includes(typeFormulaire(g.type));
 const estSignalTC = (g: Groupe) => g.signal === 'R17' || g.signal?.startsWith('R18');
 const caseRenseignee = (v: unknown) => v !== '' && v !== null && v !== undefined && !Number.isNaN(Number(v));
 
@@ -80,7 +86,8 @@ export const analyserDiagramme = ({
     let controles = 0;
     const ajouter = (c: Constat) => constats.push(c);
     const S = SEUILS_ANALYSE;
-    const avecVert = groups.filter(g => (g.durations?.green ?? 0) > 0);
+    const analyses = groups.filter(g => !estEtatParticulier(g));
+    const avecVert = analyses.filter(g => (g.durations?.green ?? 0) > 0);
 
     // ---------------------------------------------------------------- durées
     controles++;
@@ -102,7 +109,16 @@ export const analyserDiagramme = ({
     });
 
     controles++;
-    const jauneHorsNorme = groups.filter(g => typeFormulaire(g.type) !== 'P' && estVehicule(g) && !estSignalTC(g)
+    const vertsLongs = avecVert.filter(g => estVehicule(g) && g.durations.green > S.vertLong);
+    if (vertsLongs.length) ajouter({
+        id: 'vert-long', niveau: 'information', theme: 'Durées', groupes: vertsLongs.map(g => g.id),
+        message: `Vert de plus de ${S.vertLong} s : ${vertsLongs.map(g => `${nomGroupe(g)} (${g.durations.green} s)`).join(', ')}.`,
+        suggestion: 'Vérifier que ce vert répond à la demande : au-delà, il n\'écoule plus de trafic supplémentaire et allonge l\'attente des autres usagers, piétons d\'abord. Envisager un cycle plus court ou un adaptatif qui le contracte sans demande.',
+        source: 'Cerema, Durée des cycles et capacité des carrefours à feux, 2016'
+    });
+
+    controles++;
+    const jauneHorsNorme = analyses.filter(g => estVehicule(g) && !estSignalTC(g)
         && g.durations && ![3, 5].includes(Number(g.durations.orange)));
     if (jauneHorsNorme.length) ajouter({
         id: 'jaune', niveau: 'obligation', theme: 'Durées', groupes: jauneHorsNorme.map(g => g.id),
@@ -112,7 +128,7 @@ export const analyserDiagramme = ({
     });
 
     controles++;
-    const disqueHorsNorme = groups.filter(g => estSignalTC(g) && g.durations
+    const disqueHorsNorme = analyses.filter(g => estSignalTC(g) && g.durations
         && (Number(g.durations.orange) < 3 || Number(g.durations.orange) > 8));
     if (disqueHorsNorme.length) ajouter({
         id: 'disque-tc', niveau: 'obligation', theme: 'Durées', groupes: disqueHorsNorme.map(g => g.id),
@@ -141,13 +157,13 @@ export const analyserDiagramme = ({
         });
 
         controles++;
-        const retards = groups.filter(estPieton).filter(g => (g.durations?.green ?? 0) > 0)
+        const retards = analyses.filter(estPieton).filter(g => (g.durations?.green ?? 0) > 0)
             .map(g => ({ g, r: Math.round((cycleLength - g.durations.green) ** 2 / (2 * cycleLength)) }))
             .filter(x => x.r > S.retardPietonMaxi);
         if (retards.length) ajouter({
             id: 'retard-pieton', niveau: 'recommandation', theme: 'Piétons', groupes: retards.map(x => x.g.id),
-            message: `Retard moyen des piétons supérieur à ${S.retardPietonMaxi} s : ${retards.map(x => `${nomGroupe(x.g)} (${x.r} s)`).join(', ')}.`,
-            suggestion: 'Allonger le vert piéton, raccourcir le cycle ou ouvrir la traversée dans une phase supplémentaire. Retard moyen r = (C − V)² / 2C.',
+            message: `Retard moyen des piétons supérieur à ${S.retardPietonMaxi} s au plan nominal : ${retards.map(x => `${nomGroupe(x.g)} (${x.r} s)`).join(', ')}.`,
+            suggestion: 'Calcul hors micro-régulation : les contractions de phase (adaptatifs, escamotages) ne sont pas prises en compte et réduisent ce retard en fonctionnement réel. Sinon : allonger le vert piéton, raccourcir le cycle ou ouvrir la traversée dans une autre phase. Retard moyen r = (C − V)² / 2C.',
             source: 'Certu, 2010, p. 72'
         });
     }
@@ -186,7 +202,7 @@ export const analyserDiagramme = ({
         if (j <= i) return;
         const ab = caseRenseignee(conflictMatrix[i]?.[j]);
         const ba = caseRenseignee(conflictMatrix[j]?.[i]);
-        if (ab !== ba) { asym.push(`G${a.id}/G${b.id}`); asymIds.add(a.id); asymIds.add(b.id); }
+        if (ab !== ba) { asym.push(`GF${a.id}/GF${b.id}`); asymIds.add(a.id); asymIds.add(b.id); }
     }));
     if (asym.length) ajouter({
         id: 'matrice-asymetrique', niveau: 'recommandation', theme: 'Matrice', groupes: [...asymIds],
@@ -197,7 +213,7 @@ export const analyserDiagramme = ({
 
     // ---------------------------------------------------------------- signaux et flèches
     controles++;
-    const signalIncoherent = groups.filter(g => g.signal && g.type && !signalAdmis(g.type, g.signal));
+    const signalIncoherent = analyses.filter(g => g.signal && g.type && !signalAdmis(g.type, g.signal));
     if (signalIncoherent.length) ajouter({
         id: 'signal-type', niveau: 'obligation', theme: 'Signaux', groupes: signalIncoherent.map(g => g.id),
         message: `Signal sans rapport avec le type du groupe : ${signalIncoherent.map(g => `${nomGroupe(g)} (${g.signal})`).join(', ')}.`,
@@ -206,7 +222,7 @@ export const analyserDiagramme = ({
     });
 
     controles++;
-    const sansFleche = groups.filter(g => (g.durations?.green ?? 0) > 0 && !intersectionArrows.some(a => a.groupId === g.id));
+    const sansFleche = avecVert.filter(g => !intersectionArrows.some(a => a.groupId === g.id));
     if (sansFleche.length && intersectionArrows.length) ajouter({
         id: 'sans-fleche', niveau: 'information', theme: 'Image du carrefour', groupes: sansFleche.map(g => g.id),
         message: `Groupe sans flèche sur l'image : ${sansFleche.map(nomGroupe).join(', ')}.`,
@@ -216,7 +232,7 @@ export const analyserDiagramme = ({
 
     controles++;
     const retours = intersectionArrows.map(a => {
-        const g = groups.find(x => x.id === a.groupId);
+        const g = analyses.find(x => x.id === a.groupId);
         const courant = g?.courant ?? '';
         const attendu = COURANTS_COMPOSES.has(courant) ? S.retourFlecheComposee : COURANTS_TOURNANTS.has(courant) ? S.retourFlecheSimple : null;
         return { g, attendu, reel: a.turnLength ?? 1 };

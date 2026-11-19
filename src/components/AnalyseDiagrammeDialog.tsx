@@ -16,6 +16,8 @@ interface AnalyseDiagrammeDialogProps {
     getTrafficData?: (groupId: number) => { trafficVol?: number | string };
     actionData?: ActionMicro[];
     tooltipsEnabled?: boolean;
+    /** Rendu dans une fenêtre détachée du navigateur (déplaçable sur un autre écran). */
+    detachee?: boolean;
 }
 
 const LIBELLES: Record<NiveauConstat, string> = {
@@ -30,7 +32,8 @@ const ORDRE: NiveauConstat[] = ['obligation', 'recommandation', 'information'];
  * de feu actif n'applique pas. Non modale, recalculée à chaque modification.
  */
 const AnalyseDiagrammeDialog = ({
-    isOpen, onClose, planName, groups, cycleLength, conflictMatrix, intersectionArrows, getTrafficData, actionData, tooltipsEnabled = true
+    isOpen, onClose, planName, groups, cycleLength, conflictMatrix, intersectionArrows, getTrafficData, actionData, tooltipsEnabled = true,
+    detachee = false
 }: AnalyseDiagrammeDialogProps) => {
     const { constats, controles } = useMemo(
         () => isOpen
@@ -40,9 +43,8 @@ const AnalyseDiagrammeDialog = ({
     );
     const parNiveau = ORDRE.map(n => ({ n, liste: constats.filter(c => c.niveau === n) })).filter(x => x.liste.length);
 
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} nonModale tooltipsEnabled={tooltipsEnabled}
-            className="analyse-diagramme-dialog" title={`Analyse du diagramme — ${planName || 'plan actif'}`}>
+    const corps = (
+        <>
             <p className="analyse-resume">
                 {constats.length === 0
                     ? `Les ${controles} contrôles sont respectés pour ce plan de feu.`
@@ -66,8 +68,25 @@ const AnalyseDiagrammeDialog = ({
                     </ul>
                 </section>
             ))}
+        </>
+    );
+
+    // Fenêtre détachée : le contenu seul, la fenêtre du navigateur porte le titre.
+    if (detachee) {
+        return isOpen ? (
+            <div className="modal-content analyse-diagramme-dialog analyse-detachee">
+                <div className="modal-body">{corps}</div>
+            </div>
+        ) : null;
+    }
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} nonModale tooltipsEnabled={tooltipsEnabled}
+            className="analyse-diagramme-dialog" title={titreAnalyseDiagramme(planName)}>
+            {corps}
         </Modal>
     );
 };
+
+export const titreAnalyseDiagramme = (planName: string) => `Analyse du diagramme — ${planName || 'plan actif'}`;
 
 export default AnalyseDiagrammeDialog;

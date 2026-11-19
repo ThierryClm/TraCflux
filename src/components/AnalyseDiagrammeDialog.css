@@ -64,3 +64,17 @@
     font-style: italic;
     opacity: 0.65;
 }
+
+/* Fenêtre détachée : le contenu occupe toute la fenêtre du navigateur. */
+.modal-content.analyse-diagramme-dialog.analyse-detachee {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}

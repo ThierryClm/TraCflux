@@ -88,7 +88,7 @@ import type { VertUtileSurvole } from './components/TimelineDiagram';
 import SuggestionCycleDialog, { titreSuggestionCycle } from './components/SuggestionCycleDialog';
 import { ECRAN_MOBILE } from './utils/ecranMobile';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
-import AnalyseDiagrammeDialog from './components/AnalyseDiagrammeDialog';
+import AnalyseDiagrammeDialog, { titreAnalyseDiagramme } from './components/AnalyseDiagrammeDialog';
 import { basculerVerrou, basculerVerrouTout, definirPrefsVerrou, prefsVerrouAEnregistrer, usePrefsVerrou } from './utils/verrouSaisie';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
@@ -754,6 +754,20 @@ function App() {
         width: 820,
         height: 780
     });
+    // Analyse du diagramme : même principe, fenêtre détachée déplaçable sur un
+    // autre écran, dans la page si le navigateur la bloque ou sur un téléphone.
+    const analyseDiagrammePopup = usePopupWindow({
+        geometryKey: 'analyseDiagramme',
+        isOpen: analyseDiagrammeModal && !assistantDansLaPage,
+        onClose: () => setAnalyseDiagrammeModal(false),
+        title: titreAnalyseDiagramme(activePFName),
+        width: 760,
+        height: 720
+    });
+    const ouvrirAnalyseDiagramme = () => {
+        if (analyseDiagrammeModal) { if (!assistantDansLaPage) analyseDiagrammePopup.retryOpen(); }
+        else setAnalyseDiagrammeModal(true);
+    };
     // Redemander la fenêtre déjà ouverte la ramène au premier plan (ou retente
     // l'ouverture qu'un bloqueur avait refusée).
     const prerequisAssistant = useMemo(() => evaluerPrerequisAssistant(groups, conflictMatrix), [groups, conflictMatrix]);
@@ -1594,7 +1608,7 @@ function App() {
                 setCapacityCompareModal(true);
                 break;
             case 'analyseDiagramme':
-                setAnalyseDiagrammeModal(true);
+                ouvrirAnalyseDiagramme();
                 break;
             case 'import':
                 handleImportExcelDirect();
@@ -2236,6 +2250,17 @@ function App() {
     }), [activePFName, groups, conflictMatrix, cycleLength, getTrafficData, activeTrafficDataset, phasageCycle, setPhasageCycle,
         setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, phasageBulleCount, phasageBulleTimes, updateGroupParams, intersectionArrows, ajouterActions,
         microCustomFields, updateMicroCustomField, actionData, dossierReadOnly, activePfReadOnly, tooltipPrefs.assistant]);
+    // « Analyse du diagramme », rendue dans sa fenêtre détachée.
+    const propsAnalyseDiagramme = useMemo(() => ({
+        onClose: () => setAnalyseDiagrammeModal(false),
+        planName: activePFName, groups, cycleLength, conflictMatrix, intersectionArrows, getTrafficData, actionData,
+        tooltipsEnabled: tooltipPrefs.main
+    }), [activePFName, groups, cycleLength, conflictMatrix, intersectionArrows, getTrafficData, actionData, tooltipPrefs.main]);
+    const renderAnalyseDiagramme = analyseDiagrammePopup.renderToPopup;
+    useEffect(() => {
+        if (!analyseDiagrammeModal || assistantDansLaPage) return;
+        renderAnalyseDiagramme(<AnalyseDiagrammeDialog {...propsAnalyseDiagramme} isOpen detachee />);
+    }, [analyseDiagrammeModal, assistantDansLaPage, propsAnalyseDiagramme, renderAnalyseDiagramme]);
     const renderSuggestionCycle = suggestionCyclePopup.renderToPopup;
     useEffect(() => {
         if (!suggestionCycleModal || assistantDansLaPage) return;
@@ -2585,18 +2610,8 @@ function App() {
                 onOuvrirTrafic={() => { setSidebarVisible(true); setActiveTab('traffic'); }}
                 tooltipsEnabled={tooltipPrefs.main}
             />
-            <AnalyseDiagrammeDialog
-                isOpen={analyseDiagrammeModal}
-                onClose={() => setAnalyseDiagrammeModal(false)}
-                planName={activePFName}
-                groups={groups}
-                cycleLength={cycleLength}
-                conflictMatrix={conflictMatrix}
-                intersectionArrows={intersectionArrows}
-                getTrafficData={getTrafficData}
-                actionData={actionData}
-                tooltipsEnabled={tooltipPrefs.main}
-            />
+            <AnalyseDiagrammeDialog {...propsAnalyseDiagramme}
+                isOpen={analyseDiagrammeModal && (assistantDansLaPage || analyseDiagrammePopup.bloquee)} />
             {/* Repli dans la page quand le navigateur bloque la fenêtre détachée. */}
             <SuggestionCycleDialog {...propsSuggestionCycle} isOpen={suggestionCycleModal && (assistantDansLaPage || suggestionCyclePopup.bloquee)} />
             <SupportDialogs

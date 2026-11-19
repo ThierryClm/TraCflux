@@ -49,7 +49,9 @@ describe('analyserDiagramme', () => {
         const court = analyserDiagramme({ groups: [g(1, 'V', 0, 20), g(2, 'P', 24, 8)], cycleLength: 36, conflictMatrix: [['', 4], [6, '']] });
         expect(ids(court)).toContain('cycle-mini');
         const long = analyserDiagramme({ groups: [g(1, 'V', 0, 70), g(2, 'P', 76, 8)], cycleLength: 100, conflictMatrix: [['', 6], [8, '']] });
-        expect(long.constats.find(c => c.id === 'retard-pieton')!.message).toMatch(/G2 Groupe 2 \(42 s\)/);
+        const retard = long.constats.find(c => c.id === 'retard-pieton')!;
+        expect(retard.message).toMatch(/GF2 Groupe 2 \(42 s\)/);
+        expect(retard.suggestion).toMatch(/hors micro-régulation/);
     });
 
     it('recommande un refuge au-delà de 12 m de traversée (dégagement > 12 s)', () => {
@@ -78,6 +80,20 @@ describe('analyserDiagramme', () => {
         });
         expect(r.constats.find(c => c.id === 'retour-fleche')!.groupes).toEqual([1]);
         expect(r.constats.find(c => c.id === 'sans-fleche')!.groupes).toEqual([3]);
+    });
+
+    it('ne fait aucune suggestion sur les groupes Priorité piétons (sans mini ni jaune)', () => {
+        const pp = g(2, 'PP', 0, 0, { signal: 'A13b', courant: 'PP', minGreen: 0, durations: { green: 0, orange: 0, red: 0 } });
+        const r = analyserDiagramme({ groups: [g(1, 'V', 0, 20, { courant: 'TD' }), pp], cycleLength: 60, conflictMatrix: [['', ''], ['', '']],
+            intersectionArrows: [{ id: 1, groupId: 1, x: 0, y: 0 }] });
+        expect(r.constats.flatMap(c => c.groupes)).not.toContain(2);
+    });
+
+    it('suggère de vérifier les verts de plus de 40 s', () => {
+        const r = analyserDiagramme({ groups: [g(1, 'V', 0, 45), g(2, 'P', 50, 6)], cycleLength: 70, conflictMatrix: [['', 4], [6, '']] });
+        const c = r.constats.find(x => x.id === 'vert-long')!;
+        expect(c.niveau).toBe('information');
+        expect(c.groupes).toEqual([1]);
     });
 
     it('classe la capacité : réserve faible en recommandation, saturation en obligation', () => {
