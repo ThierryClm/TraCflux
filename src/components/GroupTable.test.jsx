@@ -57,7 +57,7 @@ describe('formulaire : colonne Signal (ISR, 6e partie)', () => {
     it.each([
         ['V', ['R11v', 'R11j', 'R14d', 'R14tg', 'R14td', 'R14dtg', 'R14dtd', 'R16d', 'R16tg', 'R16td', 'R16dtg', 'R16dtd', 'R22v', 'R22j']],
         ['VL', ['R11v', 'R11j', 'R14d', 'R14tg', 'R14td', 'R14dtg', 'R14dtd', 'R16d', 'R16tg', 'R16td', 'R16dtg', 'R16dtd', 'R22v', 'R22j']],
-        ['B', ['R13b', 'R13bj', 'R15b', 'R17', 'R18tg', 'R18td']],
+        ['B', ['R11v', 'R13b', 'R13bj', 'R15b', 'R17', 'R18tg', 'R18td']],
         ['CY', ['R12m', 'R13c', 'R19']],
         ['P', ['R12', 'R12m', 'R12pps']],
         ['FL', ['A13b']],

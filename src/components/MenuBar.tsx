@@ -719,6 +719,13 @@ const MenuBar = ({
                     disabled: true,
                     title: 'En cours de développement'
                 },
+                {
+                    // Règles et recommandations (ISR, guide Certu, règles de
+                    // conception) que le plan de feu actif n'applique pas.
+                    label: 'Analyse du diagramme...',
+                    action: 'analyseDiagramme',
+                    title: 'Liste les règles et recommandations que le plan de feu actif n’applique pas : durées, attentes, piétons, matrice, signaux, image (flèches) et capacité.'
+                },
                 { type: 'separator' },
                 {
                     label: 'Options',
