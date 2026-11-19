@@ -88,6 +88,7 @@ import type { VertUtileSurvole } from './components/TimelineDiagram';
 import SuggestionCycleDialog, { titreSuggestionCycle } from './components/SuggestionCycleDialog';
 import { ECRAN_MOBILE } from './utils/ecranMobile';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
+import AnalyseDiagrammeDialog from './components/AnalyseDiagrammeDialog';
 import { basculerVerrou, basculerVerrouTout, definirPrefsVerrou, prefsVerrouAEnregistrer, usePrefsVerrou } from './utils/verrouSaisie';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
@@ -739,6 +740,7 @@ function App() {
     // Suggestion de durée du cycle (menu Diagramme) : possible dès que le plan
     // affiché a du trafic dans son jeu.
     const [suggestionCycleModal, setSuggestionCycleModal] = useState(false);
+    const [analyseDiagrammeModal, setAnalyseDiagrammeModal] = useState(false);
     // Elle s'ouvre en fenêtre détachée, déplaçable sur un autre écran pour
     // laisser le diagramme dégagé ; dans la page si le navigateur bloque la
     // fenêtre, ou sur un téléphone : il n'a qu'un écran, et la « fenêtre »
@@ -1590,6 +1592,9 @@ function App() {
                 break;
             case 'compareCapacity':
                 setCapacityCompareModal(true);
+                break;
+            case 'analyseDiagramme':
+                setAnalyseDiagrammeModal(true);
                 break;
             case 'import':
                 handleImportExcelDirect();
@@ -2578,6 +2583,18 @@ function App() {
                 onAssocier={setActiveTrafficDataset}
                 onSuggererCycle={ouvrirSuggestionCycle}
                 onOuvrirTrafic={() => { setSidebarVisible(true); setActiveTab('traffic'); }}
+                tooltipsEnabled={tooltipPrefs.main}
+            />
+            <AnalyseDiagrammeDialog
+                isOpen={analyseDiagrammeModal}
+                onClose={() => setAnalyseDiagrammeModal(false)}
+                planName={activePFName}
+                groups={groups}
+                cycleLength={cycleLength}
+                conflictMatrix={conflictMatrix}
+                intersectionArrows={intersectionArrows}
+                getTrafficData={getTrafficData}
+                actionData={actionData}
                 tooltipsEnabled={tooltipPrefs.main}
             />
             {/* Repli dans la page quand le navigateur bloque la fenêtre détachée. */}
