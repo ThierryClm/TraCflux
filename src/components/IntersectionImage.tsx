@@ -507,12 +507,16 @@ const IntersectionImage = ({
         };
         onArrowsChange([...arrows, newArrow]);
         setSelectedArrow(newArrow.id);
+        setSelectedDetecteur(null);
     };
 
     // Handle arrow drag
     const handleArrowMouseDown = (e: ReactMouseEvent<HTMLDivElement>, arrowId: number) => {
         e.stopPropagation();
         setSelectedArrow(arrowId);
+        // La flèche prend la main sur le détecteur : c'est son éditeur que
+        // l'on veut voir à droite dès qu'on clique sur une flèche.
+        setSelectedDetecteur(null);
         setIsDragging(true);
         setTimeout(() => containerRef.current?.focus(), 0);
 
@@ -1100,6 +1104,7 @@ const IntersectionImage = ({
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedArrow(arrow.id);
+                                        setSelectedDetecteur(null);
                                         setTimeout(() => containerRef.current?.focus(), 0);
                                     }}
                                     onMouseEnter={() => setHoveredArrowGroupId && setHoveredArrowGroupId(arrow.groupId)}
