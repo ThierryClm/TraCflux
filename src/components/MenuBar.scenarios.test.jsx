@@ -51,6 +51,18 @@ describe('MenuBar — menu Diagramme ▸ Scénarios', () => {
         expect(expertise).toBeDisabled();
         expect(expertise).toHaveAttribute('title', 'En cours de développement');
         expect(libelles[index + 2]).toBe('Expertise IA');
+        // L'analyse du diagramme suit, active et sans dépendance au trafic.
+        expect(libelles[index + 3]).toBe('Analyse du diagramme...');
+        expect(screen.getByRole('button', { name: 'Analyse du diagramme...' })).toBeEnabled();
+    });
+
+    it('ouvre l\'analyse du diagramme', () => {
+        vi.useFakeTimers();
+        const onAction = vi.fn();
+        render(<MenuBar onAction={onAction} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Diagramme' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Analyse du diagramme...' }));
+        expect(onAction).toHaveBeenCalledWith('analyseDiagramme');
     });
 
     it('liste les scénarios préparés et envoie plan + nom', () => {

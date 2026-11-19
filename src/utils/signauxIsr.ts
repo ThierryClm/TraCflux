@@ -111,7 +111,8 @@ export const typeFormulaire = (type: string | undefined): string => TYPE_FORMULA
 /** Signaux proposés pour chaque type ; sans type, toute la liste. */
 const SIGNAUX_PAR_TYPE: Record<string, string[]> = {
     V: ['R11v', 'R11j', 'R14d', 'R14tg', 'R14td', 'R14dtg', 'R14dtd', 'R16d', 'R16tg', 'R16td', 'R16dtg', 'R16dtd', 'R22v', 'R22j'],
-    B: ['R13b', 'R13bj', 'R15b', 'R17', 'R18tg', 'R18td'],
+    // Couloir bus : R11v par défaut (voie non exclusive : tricolore obligatoire), sinon R13b ou R17/R18.
+    B: ['R11v', 'R13b', 'R13bj', 'R15b', 'R17', 'R18tg', 'R18td'],
     CY: ['R12m', 'R13c', 'R19'],
     P: ['R12', 'R12m', 'R12pps'],
     FL: ['A13b'],
