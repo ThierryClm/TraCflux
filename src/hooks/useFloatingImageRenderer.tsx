@@ -14,6 +14,7 @@ import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/anim
 import type { SimulationResult } from '../simulation';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
 import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
+import usePopupWindow from './usePopupWindow';
 import useDetectorClock from './useDetectorClock';
 
 interface IntersectionArrow {
@@ -135,6 +136,23 @@ const useFloatingImageRenderer = ({
             setSelection(null);
         }
     }, [showFloatingImage]);
+
+    // Réglages de l'élément sélectionné : fenêtre détachée non modale, que l'on
+    // peut poser sur un autre écran que l'image. Elle vit avec le mode
+    // correction ; la fermer quitte ce mode. Si le navigateur la bloque, le
+    // panneau revient à droite de l'image.
+    const reglagesPopup = usePopupWindow({
+        geometryKey: 'image-reglages',
+        sectionVerrou: 'image',
+        isOpen: showFloatingImage && !!intersectionImage && modeCorrection && !verrouille,
+        onClose: () => {
+            setModeCorrection(false);
+            setSelection(null);
+        },
+        title: 'Réglages — Image du carrefour',
+        width: 300,
+        height: 520
+    });
 
     // Image verrouillée : la correction s'arrête, la fenêtre redevient un miroir.
     useEffect(() => {
@@ -269,8 +287,10 @@ const useFloatingImageRenderer = ({
             }
         };
         const demarrerDeplacement = (e: ReactMouseEvent<HTMLDivElement>, type: 'fleche' | 'detecteur', id: number) => {
-            if (!corriger) return;
+            if (!corriger || e.button !== 0) return;
             e.stopPropagation();
+            // Pas de glisser natif (image, texte) : il avalerait les mouvements.
+            e.preventDefault();
             setSelection({ type, id });
             const boite = (e.currentTarget as HTMLElement).closest('.floating-image-inner') as HTMLElement | null;
             if (!boite) return;
@@ -299,12 +319,16 @@ const useFloatingImageRenderer = ({
                         : d));
                 }
             };
+            // Le geste se déroule dans la fenêtre détachée : c'est SON document
+            // qu'il faut écouter. Écouter celui de la page principale ne
+            // recevait aucun mouvement, et rien ne bougeait.
+            const doc = (e.currentTarget as HTMLElement).ownerDocument;
             const finir = () => {
-                document.removeEventListener('mousemove', bouger);
-                document.removeEventListener('mouseup', finir);
+                doc.removeEventListener('mousemove', bouger);
+                doc.removeEventListener('mouseup', finir);
             };
-            document.addEventListener('mousemove', bouger);
-            document.addEventListener('mouseup', finir);
+            doc.addEventListener('mousemove', bouger);
+            doc.addEventListener('mouseup', finir);
             (boite.closest('[data-correction]') as HTMLElement | null)?.focus();
         };
         const surToucheCorrection = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -346,6 +370,180 @@ const useFloatingImageRenderer = ({
             setDetecteurs?.(detecteurs.map(d => (d.id === id ? { ...d, position: null } : d)));
             setSelection(null);
         };
+
+        const reglagesFleche = flecheSelectionnee && (
+                    <section aria-label="Réglages de la flèche sélectionnée">
+                        <fieldset className="arrow-editor">
+                            <h4>Modifier la flèche</h4>
+                            <div className="editor-row">
+                                <label>Groupe:</label>
+                                <select
+                                    value={flecheSelectionnee.groupId || ''}
+                                    onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, groupId: parseInt(e.target.value, 10) }))}
+                                >
+                                    {groups.map(g => (
+                                        <option key={g.id} value={g.id}>
+                                            GF{g.id} - {g.name} {g.courant ? `(${g.courant})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="editor-row">
+                                <label>Rotation:</label>
+                                <div className="rotation-controls">
+                                    <button type="button" className="slider-btn minus"
+                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(a.rotation || 0, -1) }))}
+                                        title={tip('-1°')}>−</button>
+                                    <input type="range" min="0" max="359" className="rotation-slider"
+                                        value={flecheSelectionnee.rotation || 0}
+                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: Number(e.target.value) }))} />
+                                    <button type="button" className="slider-btn plus"
+                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(a.rotation || 0, 1) }))}
+                                        title={tip('+1°')}>+</button>
+                                    <input type="number" min="0" max="359" className="rotation-input"
+                                        value={flecheSelectionnee.rotation || 0}
+                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(Number(e.target.value) || 0, 0) }))} />
+                                    <span className="rotation-unit">°</span>
+                                </div>
+                            </div>
+                            <div className="editor-row">
+                                <label>Zoom:</label>
+                                <div className="scale-controls">
+                                    <button type="button" className="slider-btn minus"
+                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Math.max(0.5, Number(((a.scale || 1) - 0.1).toFixed(1))) }))}
+                                        title={tip('-0.1')}>−</button>
+                                    <input type="range" min="0.5" max="3" step="0.1" className="scale-slider"
+                                        value={flecheSelectionnee.scale || 1}
+                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Number(e.target.value) }))} />
+                                    <button type="button" className="slider-btn plus"
+                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Math.min(3, Number(((a.scale || 1) + 0.1).toFixed(1))) }))}
+                                        title={tip('+0.1')}>+</button>
+                                    <input type="number" min="0.5" max="3" step="0.1" className="scale-input"
+                                        value={flecheSelectionnee.scale || 1}
+                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Number(e.target.value) }))} />
+                                    <span className="scale-unit">x</span>
+                                </div>
+                            </div>
+                            {AVEC_LONGUEUR.includes(courantFlecheSelectionnee) && (
+                                <div className="editor-row">
+                                    <label>Longueur:</label>
+                                    <div className="length-controls">
+                                        <input type="range" min="1" max="4" step="0.5" className="length-slider"
+                                            value={flecheSelectionnee.length || 1}
+                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, length: Number(e.target.value) }))} />
+                                        <input type="number" min="1" max="4" step="0.5" className="length-input"
+                                            value={flecheSelectionnee.length || 1}
+                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, length: Number(e.target.value) }))} />
+                                        <span className="length-unit">x</span>
+                                    </div>
+                                </div>
+                            )}
+                            {AVEC_RETOUR.includes(courantFlecheSelectionnee) && (
+                                <div className="editor-row">
+                                    <label>Retour:</label>
+                                    <div className="turn-length-controls">
+                                        <input type="range" min="0" max="1" step="0.1" className="turn-length-slider"
+                                            value={flecheSelectionnee.turnLength ?? 1}
+                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, turnLength: Number(e.target.value) }))} />
+                                        <input type="number" min="0" max="1" step="0.1" className="turn-length-input"
+                                            value={flecheSelectionnee.turnLength ?? 1}
+                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, turnLength: Number(e.target.value) }))} />
+                                        <span className="turn-length-unit">x</span>
+                                    </div>
+                                </div>
+                            )}
+                            <button type="button" className="floating-correction-dupliquer" onClick={() => dupliquerFleche(flecheSelectionnee.id)}>
+                                Dupliquer
+                            </button>
+                            <button type="button" className="delete-arrow-btn" onClick={() => supprimerFleche(flecheSelectionnee.id)}>
+                                Supprimer
+                            </button>
+                        </fieldset>
+                    </section>
+        );
+        const reglagesDetecteur = detecteurSelectionne && (
+                    <section aria-label="Réglages du détecteur sélectionné">
+                        <fieldset className="detecteur-editor">
+                            <h4>Modifier le détecteur</h4>
+                            <div className="editor-row">
+                                <label>Nom:</label>
+                                <span>{detecteurSelectionne.nom || `Détecteur ${detecteurSelectionne.id}`}</span>
+                            </div>
+                            <div className="editor-row">
+                                <label>Type:</label>
+                                <select
+                                    className="detecteur-editor-select"
+                                    aria-label="Type du détecteur dans la fenêtre détachée"
+                                    value={detecteurSelectionne.categorie}
+                                    onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => changerCategorie(d, e.target.value as CategorieDetecteur))}
+                                >
+                                    {CATEGORIES_DETECTEUR.map(c => (
+                                        <option key={c.valeur} value={c.valeur}>{c.libelle}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="editor-row">
+                                <label>Rotation:</label>
+                                <div className="rotation-controls">
+                                    <button type="button" className="slider-btn minus"
+                                        onClick={() => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(d.orientation || 0, -1) }))}
+                                        title={tip('-1°')}>−</button>
+                                    <input type="range" min="0" max="359" className="rotation-slider"
+                                        value={detecteurSelectionne.orientation || 0}
+                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: Number(e.target.value) }))} />
+                                    <button type="button" className="slider-btn plus"
+                                        onClick={() => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(d.orientation || 0, 1) }))}
+                                        title={tip('+1°')}>+</button>
+                                    <input type="number" min="0" max="359" className="rotation-input"
+                                        value={detecteurSelectionne.orientation || 0}
+                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(Number(e.target.value) || 0, 0) }))} />
+                                    <span className="rotation-unit">°</span>
+                                </div>
+                            </div>
+                            {dimensionSaisissable(detecteurSelectionne.categorie) && (
+                                <div className="editor-row">
+                                    <label>Longueur:</label>
+                                    <input
+                                        type="number"
+                                        className="detecteur-editor-dimension"
+                                        aria-label="Longueur du détecteur dans la fenêtre détachée"
+                                        value={detecteurSelectionne.dimension ?? ''}
+                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, dimension: dimensionDepuisSaisie(e.target.value, d.categorie) }))}
+                                    />
+                                    <span className="detecteur-editor-unit">m (largeur 1 m)</span>
+                                </div>
+                            )}
+                            {retraitSaisissable(detecteurSelectionne.categorie) && detecteurSelectionne.categorie !== 'bouclePiedFeu' && (
+                                <div className="editor-row">
+                                    <label>Retrait de la boucle:</label>
+                                    <input
+                                        type="number"
+                                        className="detecteur-editor-dimension"
+                                        aria-label="Retrait de la boucle dans la fenêtre détachée"
+                                        placeholder="mesuré sur l'image"
+                                        value={detecteurSelectionne.retrait ?? ''}
+                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, retrait: retraitDepuisSaisie(e.target.value, d.categorie) }))}
+                                    />
+                                    <span className="detecteur-editor-unit">m</span>
+                                </div>
+                            )}
+                            <button type="button" className="delete-arrow-btn" onClick={() => retirerDetecteurDeImage(detecteurSelectionne.id)}>
+                                Retirer de l'image
+                            </button>
+                        </fieldset>
+                    </section>
+        );
+        const contenuReglages = reglagesFleche || reglagesDetecteur || (
+            <div className="floating-correction-vide">
+                <p><strong>Aucun élément sélectionné.</strong></p>
+                <p>Dans l'image détachée, cliquez sur une flèche ou un détecteur pour le régler ici.</p>
+                <ul>
+                    <li>Glisser : déplacer l'élément.</li>
+                    <li>Flèches du clavier : ajuster sa position.</li>
+                    <li>Double-clic : tourner de 45°.</li>
+                </ul>
+            </div>
+        );
 
         floatingImagePopup.renderToPopup(
             <ZoneVerrouSaisie section="image"><div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -562,171 +760,18 @@ const useFloatingImageRenderer = ({
                         </div>
                     </div>
                 </div>
-                {corriger && flecheSelectionnee && (
-                    <aside className="floating-correction-panneau" aria-label="Réglages de la flèche sélectionnée">
-                        <fieldset className="arrow-editor">
-                            <h4>Modifier la flèche</h4>
-                            <div className="editor-row">
-                                <label>Groupe:</label>
-                                <select
-                                    value={flecheSelectionnee.groupId || ''}
-                                    onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, groupId: parseInt(e.target.value, 10) }))}
-                                >
-                                    {groups.map(g => (
-                                        <option key={g.id} value={g.id}>
-                                            GF{g.id} - {g.name} {g.courant ? `(${g.courant})` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="editor-row">
-                                <label>Rotation:</label>
-                                <div className="rotation-controls">
-                                    <button type="button" className="slider-btn minus"
-                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(a.rotation || 0, -1) }))}
-                                        title={tip('-1°')}>−</button>
-                                    <input type="range" min="0" max="359" className="rotation-slider"
-                                        value={flecheSelectionnee.rotation || 0}
-                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: Number(e.target.value) }))} />
-                                    <button type="button" className="slider-btn plus"
-                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(a.rotation || 0, 1) }))}
-                                        title={tip('+1°')}>+</button>
-                                    <input type="number" min="0" max="359" className="rotation-input"
-                                        value={flecheSelectionnee.rotation || 0}
-                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(Number(e.target.value) || 0, 0) }))} />
-                                    <span className="rotation-unit">°</span>
-                                </div>
-                            </div>
-                            <div className="editor-row">
-                                <label>Zoom:</label>
-                                <div className="scale-controls">
-                                    <button type="button" className="slider-btn minus"
-                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Math.max(0.5, Number(((a.scale || 1) - 0.1).toFixed(1))) }))}
-                                        title={tip('-0.1')}>−</button>
-                                    <input type="range" min="0.5" max="3" step="0.1" className="scale-slider"
-                                        value={flecheSelectionnee.scale || 1}
-                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Number(e.target.value) }))} />
-                                    <button type="button" className="slider-btn plus"
-                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Math.min(3, Number(((a.scale || 1) + 0.1).toFixed(1))) }))}
-                                        title={tip('+0.1')}>+</button>
-                                    <input type="number" min="0.5" max="3" step="0.1" className="scale-input"
-                                        value={flecheSelectionnee.scale || 1}
-                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Number(e.target.value) }))} />
-                                    <span className="scale-unit">x</span>
-                                </div>
-                            </div>
-                            {AVEC_LONGUEUR.includes(courantFlecheSelectionnee) && (
-                                <div className="editor-row">
-                                    <label>Longueur:</label>
-                                    <div className="length-controls">
-                                        <input type="range" min="1" max="4" step="0.5" className="length-slider"
-                                            value={flecheSelectionnee.length || 1}
-                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, length: Number(e.target.value) }))} />
-                                        <input type="number" min="1" max="4" step="0.5" className="length-input"
-                                            value={flecheSelectionnee.length || 1}
-                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, length: Number(e.target.value) }))} />
-                                        <span className="length-unit">x</span>
-                                    </div>
-                                </div>
-                            )}
-                            {AVEC_RETOUR.includes(courantFlecheSelectionnee) && (
-                                <div className="editor-row">
-                                    <label>Retour:</label>
-                                    <div className="turn-length-controls">
-                                        <input type="range" min="0" max="1" step="0.1" className="turn-length-slider"
-                                            value={flecheSelectionnee.turnLength ?? 1}
-                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, turnLength: Number(e.target.value) }))} />
-                                        <input type="number" min="0" max="1" step="0.1" className="turn-length-input"
-                                            value={flecheSelectionnee.turnLength ?? 1}
-                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, turnLength: Number(e.target.value) }))} />
-                                        <span className="turn-length-unit">x</span>
-                                    </div>
-                                </div>
-                            )}
-                            <button type="button" className="floating-correction-dupliquer" onClick={() => dupliquerFleche(flecheSelectionnee.id)}>
-                                Dupliquer
-                            </button>
-                            <button type="button" className="delete-arrow-btn" onClick={() => supprimerFleche(flecheSelectionnee.id)}>
-                                Supprimer
-                            </button>
-                        </fieldset>
-                    </aside>
-                )}
-                {corriger && detecteurSelectionne && (
-                    <aside className="floating-correction-panneau" aria-label="Réglages du détecteur sélectionné">
-                        <fieldset className="detecteur-editor">
-                            <h4>Modifier le détecteur</h4>
-                            <div className="editor-row">
-                                <label>Nom:</label>
-                                <span>{detecteurSelectionne.nom || `Détecteur ${detecteurSelectionne.id}`}</span>
-                            </div>
-                            <div className="editor-row">
-                                <label>Type:</label>
-                                <select
-                                    className="detecteur-editor-select"
-                                    aria-label="Type du détecteur dans la fenêtre détachée"
-                                    value={detecteurSelectionne.categorie}
-                                    onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => changerCategorie(d, e.target.value as CategorieDetecteur))}
-                                >
-                                    {CATEGORIES_DETECTEUR.map(c => (
-                                        <option key={c.valeur} value={c.valeur}>{c.libelle}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="editor-row">
-                                <label>Rotation:</label>
-                                <div className="rotation-controls">
-                                    <button type="button" className="slider-btn minus"
-                                        onClick={() => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(d.orientation || 0, -1) }))}
-                                        title={tip('-1°')}>−</button>
-                                    <input type="range" min="0" max="359" className="rotation-slider"
-                                        value={detecteurSelectionne.orientation || 0}
-                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: Number(e.target.value) }))} />
-                                    <button type="button" className="slider-btn plus"
-                                        onClick={() => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(d.orientation || 0, 1) }))}
-                                        title={tip('+1°')}>+</button>
-                                    <input type="number" min="0" max="359" className="rotation-input"
-                                        value={detecteurSelectionne.orientation || 0}
-                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(Number(e.target.value) || 0, 0) }))} />
-                                    <span className="rotation-unit">°</span>
-                                </div>
-                            </div>
-                            {dimensionSaisissable(detecteurSelectionne.categorie) && (
-                                <div className="editor-row">
-                                    <label>Longueur:</label>
-                                    <input
-                                        type="number"
-                                        className="detecteur-editor-dimension"
-                                        aria-label="Longueur du détecteur dans la fenêtre détachée"
-                                        value={detecteurSelectionne.dimension ?? ''}
-                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, dimension: dimensionDepuisSaisie(e.target.value, d.categorie) }))}
-                                    />
-                                    <span className="detecteur-editor-unit">m (largeur 1 m)</span>
-                                </div>
-                            )}
-                            {retraitSaisissable(detecteurSelectionne.categorie) && detecteurSelectionne.categorie !== 'bouclePiedFeu' && (
-                                <div className="editor-row">
-                                    <label>Retrait de la boucle:</label>
-                                    <input
-                                        type="number"
-                                        className="detecteur-editor-dimension"
-                                        aria-label="Retrait de la boucle dans la fenêtre détachée"
-                                        placeholder="mesuré sur l'image"
-                                        value={detecteurSelectionne.retrait ?? ''}
-                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, retrait: retraitDepuisSaisie(e.target.value, d.categorie) }))}
-                                    />
-                                    <span className="detecteur-editor-unit">m</span>
-                                </div>
-                            )}
-                            <button type="button" className="delete-arrow-btn" onClick={() => retirerDetecteurDeImage(detecteurSelectionne.id)}>
-                                Retirer de l'image
-                            </button>
-                        </fieldset>
-                    </aside>
-                )}
+                {corriger && reglagesPopup.bloquee && <aside className="floating-correction-panneau">{contenuReglages}</aside>}
                 </div>
             </div></ZoneVerrouSaisie>
         );
+
+        if (corriger && reglagesPopup.popupOpen) {
+            reglagesPopup.renderToPopup(
+                <ZoneVerrouSaisie section="image">
+                    <aside className="floating-correction-panneau en-fenetre">{contenuReglages}</aside>
+                </ZoneVerrouSaisie>
+            );
+        }
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
         intersectionArrows, detecteurs, detecteurModule, pixelsParMetre, getTrafficData, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
         selectedActions, conflictMatrix,
@@ -735,7 +780,8 @@ const useFloatingImageRenderer = ({
         intersectionDisplay.showCurrents, intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames,
         intersectionDisplay.showSignals, intersectionDisplay.showDetecteurs, intersectionDisplay.showDetecteurNames,
         modeCorrection, selection, verrouille, setIntersectionArrows, setDetecteurs,
-        tooltipsEnabled, detecteurModule, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+        tooltipsEnabled, detecteurModule, floatingImagePopup.renderToPopup,
+        reglagesPopup.renderToPopup, reglagesPopup.popupOpen, reglagesPopup.bloquee]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 
 export default useFloatingImageRenderer;

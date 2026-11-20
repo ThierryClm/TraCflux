@@ -452,6 +452,8 @@ const usePopupWindow = ({
     const lastPosRef = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
     // Dernier contenu à afficher, mis en attente pendant l'édition d'un champ.
     const pendingContentRef = useRef<ReactNode>(null);
+    // Seule la dernière demande de dimensionnement mesure son résidu.
+    const residuJetonRef = useRef(0);
 
     // Applique le contenu en attente, mais seulement si cette popup n'a plus de
     // champ en cours d'édition (sinon on préserve encore le focus — cas du Tab
@@ -509,18 +511,38 @@ const usePopupWindow = ({
                 }
             };
 
-            // 1. La cible annoncée. L'appelant décrit son contenu ; l'éventuel
-            //    bandeau est du chrome ajouté ici, il ne doit pas le rogner.
-            poser(target.width, target.height + bannerHeight);
+            // 1. La cible annoncée, cadre compris. L'appelant décrit son
+            //    contenu ; le bandeau et le cadre de 8 px sont du chrome ajouté
+            //    ici, ils ne doivent pas le rogner. Oublier le cadre laissait la
+            //    zone utile 16 px trop petite après chaque zoom : ascenseurs.
+            const cibleW = target.width + 2 * CADRE_EPAISSEUR;
+            const cibleH = target.height + bannerHeight + 2 * CADRE_EPAISSEUR;
+            poser(cibleW, cibleH);
 
             // 2. Le résidu réellement mesuré — hauteur exacte de la barre
             //    d'outils, mise à l'échelle qui tombe sur une fraction de pixel.
-            //    Ajouté à la CIBLE, et borné par l'écran.
-            const el = popup.document.querySelector('[data-fit-scroll]');
-            if (!el) return;
-            const extraW = Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth));
-            const extraH = Math.max(0, Math.ceil(el.scrollHeight - el.clientHeight));
-            if (extraW || extraH) poser(target.width + extraW, target.height + bannerHeight + extraH);
+            //    Ajouté à la CIBLE, et borné par l'écran. La mesure attend que la
+            //    fenêtre ait pris la taille demandée : resizeTo est asynchrone,
+            //    et une mesure prise sur l'ancienne mise en page (avant un zoom)
+            //    donnait un résidu faux, que la passe suivante effaçait.
+            const jeton = ++residuJetonRef.current;
+            const mesurer = (essai: number) => {
+                if (jeton !== residuJetonRef.current || popup.closed) return;
+                const pret = Math.abs(popup.innerWidth - Math.min(Math.round(cibleW), maxW)) <= 1
+                    && Math.abs(popup.innerHeight - Math.min(Math.round(cibleH), maxH)) <= 1;
+                if (!pret && essai < 8) {
+                    setTimeout(() => mesurer(essai + 1), 40);
+                    return;
+                }
+                const el = popup.document.querySelector('[data-fit-scroll]');
+                if (!el) return;
+                const extraW = Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth));
+                const extraH = Math.max(0, Math.ceil(el.scrollHeight - el.clientHeight));
+                // Au-delà de quelques dizaines de pixels, ce n'est plus un résidu
+                // mais une mise en page pas encore stabilisée : on ne gonfle pas.
+                if ((extraW || extraH) && extraW <= 40 && extraH <= 40) poser(cibleW + extraW, cibleH + extraH);
+            };
+            setTimeout(() => mesurer(0), 0);
         } catch { /* redimensionnement refusé par le navigateur */ }
     }, [bannerHeight]);
 

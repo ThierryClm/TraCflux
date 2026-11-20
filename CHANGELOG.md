@@ -13,7 +13,9 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 - **Fenêtre détachée de l'image, mode correction** : le bouton « ✎ Corriger », à côté des ciseaux, permet
   d'y déplacer et de régler les flèches et les détecteurs : sélection au clic, glisser-déposer, déplacement
-  au clavier, rotation au double-clic, panneau de réglages à droite, dupliquer et supprimer. Par défaut la
+  au clavier, rotation au double-clic, dupliquer et supprimer. Les réglages de l'élément sélectionné
+  s'ouvrent dans leur propre fenêtre détachée, non modale, que l'on peut poser sur un autre écran ; la
+  fermer quitte le mode correction. Le bouton est orange, plein quand le mode est actif. Par défaut la
   fenêtre reste un miroir ; le mode s'arrête à chaque ouverture et quand l'image est verrouillée.
 - **Onglet Détecteurs** : tri croissant ou décroissant par nom, type ou GF en cliquant sur l'en-tête de
   colonne ; un troisième clic revient à l'ordre de saisie. Le tri ne touche pas à l'ordre enregistré.
@@ -28,6 +30,10 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   même avec un trafic très faible, parce que son débit sert à l'animation des boucles.
 
 ### Modifié
+
+- **Fenêtres détachées et zoom** : la taille visée compte le cadre de 8 px ajouté le 11/11. Après un zoom +
+  sur l'image détachée, la fenêtre se recalait 16 px trop petite et affichait des ascenseurs ; elle suit
+  désormais l'agrandissement, dans la limite de l'écran.
 
 - **Menu Diagramme ▸ Scénarios** : le libellé devient « Scénarios — aucun enregistré » tant qu'aucun
   scénario n'existe ; l'infobulle renvoie à Simulation (Enregistrer…). Le menu range Capacité des plans de

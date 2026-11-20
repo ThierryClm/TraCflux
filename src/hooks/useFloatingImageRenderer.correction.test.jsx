@@ -3,6 +3,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import useFloatingImageRenderer from './useFloatingImageRenderer';
 import { definirPrefsVerrou } from '../utils/verrouSaisie';
 
+// Fenêtre des réglages : simulée, pour lire ce qui lui est envoyé.
+const reglages = vi.hoisted(() => ({ renderToPopup: vi.fn(), popupOpen: true, bloquee: false, isOpen: false }));
+vi.mock('./usePopupWindow', () => ({
+    default: (options) => {
+        reglages.isOpen = options.isOpen;
+        return { renderToPopup: reglages.renderToPopup, popupOpen: reglages.popupOpen, bloquee: reglages.bloquee, retryOpen: vi.fn(), popupWindow: { current: null } };
+    }
+}));
+
 const GROUPES = [
     { id: 1, name: 'Nord', type: 'V', courant: 'TD', minGreen: 6, offset: 0, durations: { green: 30, orange: 3, red: 27 } }
 ];
@@ -19,7 +28,7 @@ const DETECTEUR = {
 };
 
 /** Contenu envoyé à la fenêtre détachée, rendu dans la page ; `maj` le rafraîchit. */
-const contenu = (options = {}) => {
+const contenu = (options = {}, { document: doc } = {}) => {
     const renderToPopup = vi.fn();
     const onArrowsChange = vi.fn();
     const onDetecteursChange = vi.fn();
@@ -52,7 +61,9 @@ const contenu = (options = {}) => {
         floatingImagePopup: { renderToPopup },
         ...options
     }));
-    const rendu = render(renderToPopup.mock.lastCall[0]);
+    const rendu = doc
+        ? render(renderToPopup.mock.lastCall[0], { container: doc.body.appendChild(doc.createElement('div')) })
+        : render(renderToPopup.mock.lastCall[0]);
     const maj = () => rendu.rerender(renderToPopup.mock.lastCall[0]);
     const inner = () => rendu.container.querySelector('.floating-image-inner');
     if (inner()) {
@@ -66,8 +77,14 @@ const activerCorrection = ({ maj }) => {
     maj();
 };
 
+/** Contenu envoyé à la fenêtre des réglages. */
+const panneau = () => render(reglages.renderToPopup.mock.lastCall[0]);
+
 afterEach(() => {
     definirPrefsVerrou();
+    reglages.renderToPopup.mockReset();
+    reglages.popupOpen = true;
+    reglages.bloquee = false;
 });
 
 describe('useFloatingImageRenderer — mode correction', () => {
@@ -78,14 +95,36 @@ describe('useFloatingImageRenderer — mode correction', () => {
         expect(container.querySelector('.floating-correction-panneau')).toBeNull();
     });
 
-    it('ouvre le panneau de la flèche cliquée', () => {
+    it('ouvre la fenêtre des réglages avec le mode correction', () => {
+        const contexte = contenu();
+        expect(reglages.isOpen).toBe(false);
+        activerCorrection(contexte);
+        expect(reglages.isOpen).toBe(true);
+        const { getByText } = panneau();
+        expect(getByText('Aucun élément sélectionné.')).toBeInTheDocument();
+    });
+
+    it('règle la flèche cliquée dans la fenêtre des réglages, pas dans l’image', () => {
         const contexte = contenu();
         activerCorrection(contexte);
         expect(screen.getByRole('button', { name: /Corriger/ })).toHaveAttribute('aria-pressed', 'true');
         fireEvent.click(contexte.container.querySelector('.floating-arrow-marker'));
         contexte.maj();
-        expect(screen.getByText('Modifier la flèche')).toBeInTheDocument();
+        expect(contexte.container.querySelector('.floating-correction-panneau')).toBeNull();
         expect(contexte.container.querySelector('.floating-arrow-marker')).toHaveClass('selectionnee');
+        const { getByText } = panneau();
+        expect(getByText('Modifier la flèche')).toBeInTheDocument();
+    });
+
+    it('replace le panneau à droite de l’image si la fenêtre des réglages est bloquée', () => {
+        reglages.popupOpen = false;
+        reglages.bloquee = true;
+        const contexte = contenu();
+        activerCorrection(contexte);
+        fireEvent.click(contexte.container.querySelector('.floating-arrow-marker'));
+        contexte.maj();
+        expect(contexte.container.querySelector('.floating-correction-panneau')).not.toBeNull();
+        expect(screen.getByText('Modifier la flèche')).toBeInTheDocument();
     });
 
     it('tourne la flèche au double-clic', () => {
@@ -108,12 +147,35 @@ describe('useFloatingImageRenderer — mode correction', () => {
         expect(fleches[0].y).toBeGreaterThan(20);
     });
 
+    it('suit la souris dans le document de la fenêtre détachée', () => {
+        // L'image vit dans une autre fenêtre : les mouvements arrivent sur SON
+        // document, jamais sur celui de la page principale.
+        const iframe = document.body.appendChild(document.createElement('iframe'));
+        const doc = iframe.contentDocument;
+        const contexte = contenu({}, { document: doc });
+        fireEvent.click(doc.querySelector('.floating-correction-btn'));
+        contexte.maj();
+        const inner = doc.querySelector('.floating-image-inner');
+        inner.getBoundingClientRect = () => ({ left: 0, top: 0, width: 750, height: 530, right: 750, bottom: 530, x: 0, y: 0, toJSON: () => ({}) });
+        const marqueur = doc.querySelector('.detecteur-marker');
+        fireEvent.mouseDown(marqueur, { clientX: 300, clientY: 318, button: 0 });
+        fireEvent.mouseMove(document, { clientX: 375, clientY: 371 });
+        expect(contexte.onDetecteursChange).not.toHaveBeenCalled();
+        fireEvent.mouseMove(doc, { clientX: 375, clientY: 371 });
+        fireEvent.mouseUp(doc);
+        const position = contexte.onDetecteursChange.mock.calls.at(-1)[0][0].position;
+        expect(position.x).toBeCloseTo(50, 0);
+        expect(position.y).toBeCloseTo(70, 0);
+        iframe.remove();
+    });
+
     it('ouvre le panneau du détecteur cliqué', () => {
         const contexte = contenu();
         activerCorrection(contexte);
         fireEvent.click(contexte.container.querySelector('.detecteur-marker'));
         contexte.maj();
-        expect(screen.getByText('Modifier le détecteur')).toBeInTheDocument();
+        const { getByText } = panneau();
+        expect(getByText('Modifier le détecteur')).toBeInTheDocument();
     });
 
     it('grise le bouton Corriger quand l’image est verrouillée', () => {

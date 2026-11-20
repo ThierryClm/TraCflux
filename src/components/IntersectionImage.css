@@ -1191,6 +1191,26 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     min-height: 0;
 }
 
+/* Couleur imposée : orange franc, celle du liseré de correction, pour qu'on
+   ne confonde jamais les deux états du bouton. */
+.floating-crop-btn.floating-correction-btn {
+    color: #ffb300;
+    border: 1px solid #ffb300;
+    font-weight: 600;
+}
+
+.floating-crop-btn.floating-correction-btn:hover:not(:disabled) {
+    background: rgba(255, 179, 0, 0.18);
+    color: #ffc940;
+}
+
+.floating-crop-btn.floating-correction-btn.active,
+.floating-crop-btn.floating-correction-btn.active:hover {
+    background: #ffb300;
+    border-color: #ffb300;
+    color: #1a1a1a;
+}
+
 .floating-correction-btn:disabled {
     opacity: 0.45;
     cursor: default;
@@ -1254,4 +1274,23 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
 
 .floating-correction-dupliquer:hover {
     background: #3d3d3d;
+}
+
+/* Panneau de réglages dans sa propre fenêtre détachée. */
+.floating-correction-panneau.en-fenetre {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    border-left: none;
+}
+
+.floating-correction-vide {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #ccc;
+}
+
+.floating-correction-vide ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
 }
