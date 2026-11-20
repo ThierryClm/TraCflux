@@ -1294,3 +1294,23 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     margin: 6px 0 0;
     padding-left: 18px;
 }
+
+/* Repli quand la fenêtre des réglages est bloquée : panneau en surimpression. */
+.floating-correction-panneau.en-surimpression {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.45);
+}
+
+.floating-correction-bloquee {
+    margin: 0 0 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(255, 179, 0, 0.15);
+    color: #ffc940;
+    font-size: 12px;
+    line-height: 1.35;
+}

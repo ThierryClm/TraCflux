@@ -151,6 +151,13 @@ const placesOccupees = (popup: Window): PopupRect[] => {
     return rects;
 };
 
+/** Nom de la fenêtre détachée, dérivé de son titre : sert à la retrouver. */
+export const nomFenetre = (title: string) => title.replace(/\s+/g, '_');
+
+/** Caractéristiques passées à window.open pour une fenêtre détachée. */
+export const caracteristiquesFenetre = (width: number, height: number, left?: number, top?: number) =>
+    `width=${width},height=${height}${left == null ? '' : `,left=${left}`}${top == null ? '' : `,top=${top}`},resizable=yes,scrollbars=yes,menubar=no,toolbar=yes,location=yes,status=no`;
+
 const openPopups = new Set<Window>();
 let isBringingToFront = false;
 let lastBringTime = 0;
@@ -620,8 +627,8 @@ const usePopupWindow = ({
 
                 const popup = window.open(
                     '',
-                    title.replace(/\s+/g, '_'),
-                    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,menubar=no,toolbar=yes,location=yes,status=no`
+                    nomFenetre(title),
+                    caracteristiquesFenetre(width, height, left, top)
                 );
 
                 if (!popup) {

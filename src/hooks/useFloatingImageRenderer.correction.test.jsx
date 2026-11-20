@@ -5,7 +5,8 @@ import { definirPrefsVerrou } from '../utils/verrouSaisie';
 
 // Fenêtre des réglages : simulée, pour lire ce qui lui est envoyé.
 const reglages = vi.hoisted(() => ({ renderToPopup: vi.fn(), popupOpen: true, bloquee: false, isOpen: false }));
-vi.mock('./usePopupWindow', () => ({
+vi.mock('./usePopupWindow', async (importOriginal) => ({
+    ...(await importOriginal()),
     default: (options) => {
         reglages.isOpen = options.isOpen;
         return { renderToPopup: reglages.renderToPopup, popupOpen: reglages.popupOpen, bloquee: reglages.bloquee, retryOpen: vi.fn(), popupWindow: { current: null } };
@@ -28,7 +29,7 @@ const DETECTEUR = {
 };
 
 /** Contenu envoyé à la fenêtre détachée, rendu dans la page ; `maj` le rafraîchit. */
-const contenu = (options = {}, { document: doc } = {}) => {
+const contenu = (options = {}, { document: doc, fenetre } = {}) => {
     const renderToPopup = vi.fn();
     const onArrowsChange = vi.fn();
     const onDetecteursChange = vi.fn();
@@ -58,8 +59,8 @@ const contenu = (options = {}, { document: doc } = {}) => {
         imageBrightness: 100,
         imageContrast: 100,
         intersectionDisplay: { showCurrents: true, showGroupNumbers: true, showGroupNames: true, showArrows: false, showSignals: false, showDetecteurs: true, showDetecteurNames: true },
-        floatingImagePopup: { renderToPopup },
-        ...options
+        ...options,
+        floatingImagePopup: { renderToPopup, popupWindow: { current: fenetre ?? null }, popupOpen: true }
     }));
     const rendu = doc
         ? render(renderToPopup.mock.lastCall[0], { container: doc.body.appendChild(doc.createElement('div')) })
@@ -166,6 +167,24 @@ describe('useFloatingImageRenderer — mode correction', () => {
         const position = contexte.onDetecteursChange.mock.calls.at(-1)[0][0].position;
         expect(position.x).toBeCloseTo(50, 0);
         expect(position.y).toBeCloseTo(70, 0);
+        iframe.remove();
+    });
+
+    it('ouvre la fenêtre des réglages depuis la fenêtre de l’image, au clic sur Corriger', () => {
+        // Le geste a lieu dans la fenêtre détachée : c'est elle qui doit appeler
+        // window.open, sinon Edge et Chrome bloquent la fenêtre des réglages.
+        const iframe = document.body.appendChild(document.createElement('iframe'));
+        const fenetre = iframe.contentWindow;
+        const ouvrirDepuisImage = vi.spyOn(fenetre, 'open').mockReturnValue(null);
+        const ouvrirDepuisPage = vi.spyOn(window, 'open');
+        const contexte = contenu({ floatingImagePopup: undefined }, { document: fenetre.document, fenetre });
+        fireEvent.click(fenetre.document.querySelector('.floating-correction-btn'));
+        expect(ouvrirDepuisImage).toHaveBeenCalledWith('', 'Réglages_—_Image_du_carrefour', expect.stringContaining('width=300'));
+        expect(ouvrirDepuisPage).not.toHaveBeenCalled();
+        // Second clic : on quitte le mode, rien à ouvrir.
+        contexte.maj();
+        fireEvent.click(fenetre.document.querySelector('.floating-correction-btn'));
+        expect(ouvrirDepuisImage).toHaveBeenCalledTimes(1);
         iframe.remove();
     });
 

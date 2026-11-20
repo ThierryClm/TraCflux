@@ -1,6 +1,6 @@
 import { ZoneVerrouSaisie, MentionVerrou, usePrefsVerrou } from '../utils/verrouSaisie';
 import { useEffect, useState } from 'react';
-import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode, SetStateAction } from 'react';
+import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject, SetStateAction } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
 import avecPriseSurvol from '../utils/priseFleche';
 import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
@@ -14,7 +14,7 @@ import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/anim
 import type { SimulationResult } from '../simulation';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
 import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
-import usePopupWindow from './usePopupWindow';
+import usePopupWindow, { caracteristiquesFenetre, nomFenetre } from './usePopupWindow';
 import useDetectorClock from './useDetectorClock';
 
 interface IntersectionArrow {
@@ -30,7 +30,41 @@ interface IntersectionArrow {
 
 interface FloatingImagePopup {
     renderToPopup: (content: ReactNode) => void;
+    popupWindow?: RefObject<Window | null>;
+    popupOpen?: boolean;
 }
+
+const TITRE_REGLAGES = 'Réglages — Image du carrefour';
+const LARGEUR_REGLAGES = 300;
+const HAUTEUR_REGLAGES = 520;
+
+type FenetreImage = Window & { __ouvreReglages?: boolean; Function: FunctionConstructor };
+
+/**
+ * Ouvre la fenêtre des réglages depuis la fenêtre de l'image, au clic sur
+ * « Corriger ».
+ *
+ * Le clic a lieu dans la fenêtre détachée : c'est elle qui porte l'activation
+ * de l'utilisateur. Un window.open lancé par le code de la page principale
+ * (son « royaume » JavaScript) n'en bénéficie pas, et Edge comme Chrome le
+ * bloquent ; le panneau retombait alors à droite de l'image, qu'il rognait.
+ * L'écouteur est donc une fonction créée DANS la fenêtre de l'image : le
+ * navigateur y voit un geste de l'utilisateur. La fenêtre ouverte porte le nom
+ * attendu par usePopupWindow, qui la retrouve ensuite sans en créer d'autre.
+ * Phase de capture : il passe avant React, dont l'effet d'ouverture suit.
+ */
+const installerOuvertureReglages = (fenetre: FenetreImage | null | undefined) => {
+    if (!fenetre || fenetre.closed || fenetre.__ouvreReglages) return;
+    try {
+        const ecouteur = new fenetre.Function('e', `
+            var cible = e.target && e.target.closest ? e.target.closest('[data-ouvre-reglages]') : null;
+            if (!cible || cible.disabled || cible.getAttribute('aria-pressed') === 'true') return;
+            window.open('', cible.getAttribute('data-ouvre-reglages'), cible.getAttribute('data-caracteristiques'));
+        `) as EventListener;
+        fenetre.addEventListener('click', ecouteur, true);
+        fenetre.__ouvreReglages = true;
+    } catch { /* fenêtre en cours de fermeture : l'effet d'ouverture prend le relais */ }
+};
 
 interface FloatingImageRendererOptions {
     showFloatingImage: boolean;
@@ -149,9 +183,9 @@ const useFloatingImageRenderer = ({
             setModeCorrection(false);
             setSelection(null);
         },
-        title: 'Réglages — Image du carrefour',
-        width: 300,
-        height: 520
+        title: TITRE_REGLAGES,
+        width: LARGEUR_REGLAGES,
+        height: HAUTEUR_REGLAGES
     });
 
     // Image verrouillée : la correction s'arrête, la fenêtre redevient un miroir.
@@ -545,6 +579,8 @@ const useFloatingImageRenderer = ({
             </div>
         );
 
+        installerOuvertureReglages(floatingImagePopup.popupWindow?.current as FenetreImage | null | undefined);
+
         floatingImagePopup.renderToPopup(
             <ZoneVerrouSaisie section="image"><div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ padding: '6px 12px', background: '#2a2a2a', borderBottom: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -564,6 +600,8 @@ const useFloatingImageRenderer = ({
                         type="button"
                         className={`floating-crop-btn floating-correction-btn ${modeCorrection ? 'active' : ''}`}
                         aria-pressed={modeCorrection}
+                        data-ouvre-reglages={nomFenetre(TITRE_REGLAGES)}
+                        data-caracteristiques={caracteristiquesFenetre(LARGEUR_REGLAGES, HAUTEUR_REGLAGES)}
                         disabled={verrouille}
                         onClick={() => {
                             setModeCorrection(valeur => {
@@ -608,7 +646,7 @@ const useFloatingImageRenderer = ({
                 )}
                 {/* data-fit-scroll : repère lu par usePopupWindow pour absorber
                     un éventuel débordement résiduel dans la taille de la fenêtre. */}
-                <div className="floating-image-ligne" style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+                <div className="floating-image-ligne" style={{ flex: 1, display: 'flex', minHeight: 0, position: 'relative' }}>
                 <div className="floating-image-content" data-fit-scroll style={{ flex: 1, overflow: 'auto' }}>
                     <div
                         className="floating-image-wrapper"
@@ -760,7 +798,16 @@ const useFloatingImageRenderer = ({
                         </div>
                     </div>
                 </div>
-                {corriger && reglagesPopup.bloquee && <aside className="floating-correction-panneau">{contenuReglages}</aside>}
+                {corriger && reglagesPopup.bloquee && (
+                    // Repli : posé PAR-DESSUS l'image, sans lui prendre de largeur —
+                    // sinon la fenêtre, taillée pour l'image, se couvre d'ascenseurs.
+                    <aside className="floating-correction-panneau en-surimpression">
+                        <p className="floating-correction-bloquee">
+                            Fenêtre des réglages bloquée par le navigateur : autorisez les fenêtres pour ce site pour la détacher.
+                        </p>
+                        {contenuReglages}
+                    </aside>
+                )}
                 </div>
             </div></ZoneVerrouSaisie>
         );
@@ -781,6 +828,7 @@ const useFloatingImageRenderer = ({
         intersectionDisplay.showSignals, intersectionDisplay.showDetecteurs, intersectionDisplay.showDetecteurNames,
         modeCorrection, selection, verrouille, setIntersectionArrows, setDetecteurs,
         tooltipsEnabled, detecteurModule, floatingImagePopup.renderToPopup,
+        floatingImagePopup.popupOpen,
         reglagesPopup.renderToPopup, reglagesPopup.popupOpen, reglagesPopup.bloquee]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 
