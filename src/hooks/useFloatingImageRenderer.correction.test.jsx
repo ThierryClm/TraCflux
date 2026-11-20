@@ -179,7 +179,7 @@ describe('useFloatingImageRenderer — mode correction', () => {
         const ouvrirDepuisPage = vi.spyOn(window, 'open');
         const contexte = contenu({ floatingImagePopup: undefined }, { document: fenetre.document, fenetre });
         fireEvent.click(fenetre.document.querySelector('.floating-correction-btn'));
-        expect(ouvrirDepuisImage).toHaveBeenCalledWith('', 'Réglages_—_Image_du_carrefour', expect.stringContaining('width=300'));
+        expect(ouvrirDepuisImage).toHaveBeenCalledWith('', 'Réglages_—_Image_du_carrefour', expect.stringContaining('width=340'));
         expect(ouvrirDepuisPage).not.toHaveBeenCalled();
         // Second clic : on quitte le mode, rien à ouvrir.
         contexte.maj();

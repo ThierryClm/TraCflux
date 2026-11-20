@@ -35,7 +35,7 @@ interface FloatingImagePopup {
 }
 
 const TITRE_REGLAGES = 'Réglages — Image du carrefour';
-const LARGEUR_REGLAGES = 300;
+const LARGEUR_REGLAGES = 340;
 const HAUTEUR_REGLAGES = 520;
 
 type FenetreImage = Window & { __ouvreReglages?: boolean; Function: FunctionConstructor };
