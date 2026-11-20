@@ -11,6 +11,10 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **Fenêtre détachée de l'image, mode correction** : le bouton « ✎ Corriger », à côté des ciseaux, permet
+  d'y déplacer et de régler les flèches et les détecteurs : sélection au clic, glisser-déposer, déplacement
+  au clavier, rotation au double-clic, panneau de réglages à droite, dupliquer et supprimer. Par défaut la
+  fenêtre reste un miroir ; le mode s'arrête à chaque ouverture et quand l'image est verrouillée.
 - **Onglet Détecteurs** : tri croissant ou décroissant par nom, type ou GF en cliquant sur l'en-tête de
   colonne ; un troisième clic revient à l'ordre de saisie. Le tri ne touche pas à l'ordre enregistré.
 - **Aide, navigation entre rubriques** : après un clic sur une rubrique du sommaire, les flèches ▲ et ▼

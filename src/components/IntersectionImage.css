@@ -1184,3 +1184,74 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     color: #888;
     font-size: 0.8em;
 }
+
+/* --- Fenêtre détachée : mode correction --- */
+.floating-image-ligne {
+    display: flex;
+    min-height: 0;
+}
+
+.floating-correction-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.floating-image-inner.correction {
+    outline: 2px dashed rgba(255, 179, 0, 0.85);
+    outline-offset: -3px;
+}
+
+.floating-arrow-marker.corrigeable,
+.detecteur-marker.corrigeable {
+    cursor: move;
+}
+
+.floating-arrow-marker.selectionnee,
+.detecteur-marker.selectionnee {
+    outline: 2px dashed #ffb300;
+    outline-offset: 4px;
+    border-radius: 6px;
+}
+
+.floating-correction-panneau {
+    flex: 0 0 250px;
+    width: 250px;
+    padding: 8px 10px 12px;
+    border-left: 1px solid #444;
+    background: #242424;
+    color: #ddd;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.floating-correction-panneau .arrow-editor,
+.floating-correction-panneau .detecteur-editor {
+    width: 100%;
+    margin: 0;
+}
+
+.floating-correction-panneau .editor-row {
+    flex-wrap: wrap;
+}
+
+.floating-correction-panneau .rotation-controls,
+.floating-correction-panneau .scale-controls,
+.floating-correction-panneau .length-controls,
+.floating-correction-panneau .turn-length-controls {
+    min-width: 0;
+}
+
+.floating-correction-dupliquer {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #666;
+    background: #333;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.floating-correction-dupliquer:hover {
+    background: #3d3d3d;
+}
