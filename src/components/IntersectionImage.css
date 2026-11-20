@@ -1184,3 +1184,186 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     color: #888;
     font-size: 0.8em;
 }
+
+/* --- Fenêtre détachée : mode correction --- */
+.floating-image-ligne {
+    display: flex;
+    min-height: 0;
+}
+
+/* Couleur imposée : orange franc, celle du liseré de correction, pour qu'on
+   ne confonde jamais les deux états du bouton. */
+.floating-crop-btn.floating-correction-btn {
+    color: #ffb300;
+    border: 1px solid #ffb300;
+    font-weight: 600;
+}
+
+.floating-crop-btn.floating-correction-btn:hover:not(:disabled) {
+    background: rgba(255, 179, 0, 0.18);
+    color: #ffc940;
+}
+
+.floating-crop-btn.floating-correction-btn.active,
+.floating-crop-btn.floating-correction-btn.active:hover {
+    background: #ffb300;
+    border-color: #ffb300;
+    color: #1a1a1a;
+}
+
+.floating-correction-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.floating-image-inner.correction {
+    outline: 2px dashed rgba(255, 179, 0, 0.85);
+    outline-offset: -3px;
+}
+
+.floating-arrow-marker.corrigeable,
+.detecteur-marker.corrigeable {
+    cursor: move;
+}
+
+.floating-arrow-marker.selectionnee,
+.detecteur-marker.selectionnee {
+    outline: 2px dashed #ffb300;
+    outline-offset: 4px;
+    border-radius: 6px;
+}
+
+.floating-correction-panneau {
+    flex: 0 0 250px;
+    width: 250px;
+    padding: 8px 10px 12px;
+    border-left: 1px solid #444;
+    background: #242424;
+    color: #ddd;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.floating-correction-panneau .arrow-editor,
+.floating-correction-panneau .detecteur-editor {
+    width: 100%;
+    margin: 0;
+}
+
+.floating-correction-panneau .editor-row {
+    flex-wrap: wrap;
+}
+
+.floating-correction-panneau .rotation-controls,
+.floating-correction-panneau .scale-controls,
+.floating-correction-panneau .length-controls,
+.floating-correction-panneau .turn-length-controls {
+    min-width: 0;
+}
+
+.floating-correction-dupliquer {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #666;
+    background: #333;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.floating-correction-dupliquer:hover {
+    background: #3d3d3d;
+}
+
+/* Panneau de réglages dans sa propre fenêtre détachée. */
+.floating-correction-panneau.en-fenetre {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    border-left: none;
+}
+
+.floating-correction-vide {
+    font-size: 13px;
+    line-height: 1.45;
+    color: #ccc;
+}
+
+.floating-correction-vide ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+/* Repli quand la fenêtre des réglages est bloquée : panneau en surimpression. */
+.floating-correction-panneau.en-surimpression {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.45);
+}
+
+.floating-correction-bloquee {
+    margin: 0 0 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(255, 179, 0, 0.15);
+    color: #ffc940;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+/* Panneau de réglages : tout tient dans sa largeur, sans ascenseur horizontal.
+   Les boutons à 100 % ajoutaient leur marge intérieure et leur bordure, la
+   liste des groupes s'étirait sur le plus long nom, et Chrome impose aux
+   curseurs une largeur minimale : chacun est ramené à la place disponible. */
+.floating-correction-panneau,
+.floating-correction-panneau * {
+    box-sizing: border-box;
+}
+
+.floating-correction-panneau.en-fenetre {
+    overflow-x: hidden;
+}
+
+.floating-correction-panneau .editor-row select,
+.floating-correction-panneau .detecteur-editor-select {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    max-width: 100%;
+    text-overflow: ellipsis;
+}
+
+.floating-correction-panneau .rotation-slider,
+.floating-correction-panneau .scale-slider,
+.floating-correction-panneau .length-slider,
+.floating-correction-panneau .turn-length-slider {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 40px;
+}
+
+.floating-correction-panneau .rotation-controls,
+.floating-correction-panneau .scale-controls,
+.floating-correction-panneau .length-controls,
+.floating-correction-panneau .turn-length-controls {
+    flex: 1 1 0;
+    gap: 6px;
+}
+
+.floating-correction-panneau .rotation-input,
+.floating-correction-panneau .scale-input,
+.floating-correction-panneau .length-input,
+.floating-correction-panneau .turn-length-input {
+    width: 48px;
+    flex: 0 0 48px;
+}
+
+.floating-correction-panneau .floating-correction-dupliquer,
+.floating-correction-panneau .delete-arrow-btn {
+    width: 100%;
+    max-width: 100%;
+}

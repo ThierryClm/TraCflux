@@ -2085,7 +2085,7 @@ function App() {
         floatingCrop, setFloatingCrop,
         floatingZoom, setFloatingZoom,
         showCropControls, setShowCropControls,
-        intersectionArrows, groups, detecteurs, detecteurModule, pixelsParMetre, getTrafficData, imageNaturalDims, imageFondClair,
+        intersectionArrows, setIntersectionArrows, groups, detecteurs, setDetecteurs, detecteurModule, pixelsParMetre, getTrafficData, imageNaturalDims, imageFondClair,
         selectedActions: simulationSelectedActions, conflictMatrix,
         hoveredArrowGroupId, hoveredArrowGroupIds: flechesActionSimulation, setHoveredArrowGroupId, hoveredDiagramTime,
         isPlayingSimulation,

@@ -1,19 +1,20 @@
-import { ZoneVerrouSaisie, MentionVerrou } from '../utils/verrouSaisie';
-import { useEffect } from 'react';
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import { ZoneVerrouSaisie, MentionVerrou, usePrefsVerrou } from '../utils/verrouSaisie';
+import { useEffect, useState } from 'react';
+import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactNode, RefObject, SetStateAction } from 'react';
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
 import avecPriseSurvol from '../utils/priseFleche';
 import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
 import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import SignalModule from '../components/SignalModule';
-import type { ActionMicro, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
+import type { ActionMicro, CategorieDetecteur, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
 import { etiquetteDansBoucle, renderDetecteurSVG, tailleDetecteur } from '../utils/detecteursSymboles';
-import { estBoucle } from '../utils/detecteurs';
+import { CATEGORIES_DETECTEUR, changerCategorie, dimensionDepuisSaisie, dimensionSaisissable, estBoucle, retraitDepuisSaisie, retraitSaisissable } from '../utils/detecteurs';
 import { estOccupee, intervallesDetecteur, type Intervalle } from '../utils/animationDetecteurs';
 import type { SimulationResult } from '../simulation';
 import type { FloatingCrop, ImageDimensions } from './useFloatingImage';
 import type { IntersectionDisplayOptions } from './useIntersectionDisplayOptions';
+import usePopupWindow, { caracteristiquesFenetre, nomFenetre } from './usePopupWindow';
 import useDetectorClock from './useDetectorClock';
 
 interface IntersectionArrow {
@@ -29,7 +30,41 @@ interface IntersectionArrow {
 
 interface FloatingImagePopup {
     renderToPopup: (content: ReactNode) => void;
+    popupWindow?: RefObject<Window | null>;
+    popupOpen?: boolean;
 }
+
+const TITRE_REGLAGES = 'Réglages — Image du carrefour';
+const LARGEUR_REGLAGES = 340;
+const HAUTEUR_REGLAGES = 520;
+
+type FenetreImage = Window & { __ouvreReglages?: boolean; Function: FunctionConstructor };
+
+/**
+ * Ouvre la fenêtre des réglages depuis la fenêtre de l'image, au clic sur
+ * « Corriger ».
+ *
+ * Le clic a lieu dans la fenêtre détachée : c'est elle qui porte l'activation
+ * de l'utilisateur. Un window.open lancé par le code de la page principale
+ * (son « royaume » JavaScript) n'en bénéficie pas, et Edge comme Chrome le
+ * bloquent ; le panneau retombait alors à droite de l'image, qu'il rognait.
+ * L'écouteur est donc une fonction créée DANS la fenêtre de l'image : le
+ * navigateur y voit un geste de l'utilisateur. La fenêtre ouverte porte le nom
+ * attendu par usePopupWindow, qui la retrouve ensuite sans en créer d'autre.
+ * Phase de capture : il passe avant React, dont l'effet d'ouverture suit.
+ */
+const installerOuvertureReglages = (fenetre: FenetreImage | null | undefined) => {
+    if (!fenetre || fenetre.closed || fenetre.__ouvreReglages) return;
+    try {
+        const ecouteur = new fenetre.Function('e', `
+            var cible = e.target && e.target.closest ? e.target.closest('[data-ouvre-reglages]') : null;
+            if (!cible || cible.disabled || cible.getAttribute('aria-pressed') === 'true') return;
+            window.open('', cible.getAttribute('data-ouvre-reglages'), cible.getAttribute('data-caracteristiques'));
+        `) as EventListener;
+        fenetre.addEventListener('click', ecouteur, true);
+        fenetre.__ouvreReglages = true;
+    } catch { /* fenêtre en cours de fermeture : l'effet d'ouverture prend le relais */ }
+};
 
 interface FloatingImageRendererOptions {
     showFloatingImage: boolean;
@@ -41,6 +76,9 @@ interface FloatingImageRendererOptions {
     showCropControls: boolean;
     setShowCropControls: Dispatch<SetStateAction<boolean>>;
     intersectionArrows: IntersectionArrow[];
+    /** Écriture des flèches et des détecteurs, pour le mode correction. */
+    setIntersectionArrows?: (arrows: FlecheCarrefour[]) => void;
+    setDetecteurs?: (detecteurs: Detecteur[]) => void;
     detecteurs?: Detecteur[];
     detecteurModule?: boolean;
     pixelsParMetre?: number;
@@ -82,6 +120,8 @@ const useFloatingImageRenderer = ({
     floatingZoom, setFloatingZoom,
     showCropControls, setShowCropControls,
     intersectionArrows,
+    setIntersectionArrows,
+    setDetecteurs,
     detecteurs = [],
     detecteurModule = false,
     pixelsParMetre = 12,
@@ -116,6 +156,45 @@ const useFloatingImageRenderer = ({
         cycleLength: cycleAnimation,
         playbackSpeed
     });
+
+    // Mode correction : la fenêtre détachée reste un simple miroir tant qu'il
+    // n'est pas activé; il ne survit pas à la fermeture de la fenêtre.
+    const prefsVerrou = usePrefsVerrou();
+    const verrouille = prefsVerrou.image;
+    const [modeCorrection, setModeCorrection] = useState(false);
+    const [selection, setSelection] = useState<{ type: 'fleche' | 'detecteur'; id: number } | null>(null);
+
+    useEffect(() => {
+        if (!showFloatingImage) {
+            setModeCorrection(false);
+            setSelection(null);
+        }
+    }, [showFloatingImage]);
+
+    // Réglages de l'élément sélectionné : fenêtre détachée non modale, que l'on
+    // peut poser sur un autre écran que l'image. Elle vit avec le mode
+    // correction ; la fermer quitte ce mode. Si le navigateur la bloque, le
+    // panneau revient à droite de l'image.
+    const reglagesPopup = usePopupWindow({
+        geometryKey: 'image-reglages',
+        sectionVerrou: 'image',
+        isOpen: showFloatingImage && !!intersectionImage && modeCorrection && !verrouille,
+        onClose: () => {
+            setModeCorrection(false);
+            setSelection(null);
+        },
+        title: TITRE_REGLAGES,
+        width: LARGEUR_REGLAGES,
+        height: HAUTEUR_REGLAGES
+    });
+
+    // Image verrouillée : la correction s'arrête, la fenêtre redevient un miroir.
+    useEffect(() => {
+        if (verrouille) {
+            setModeCorrection(false);
+            setSelection(null);
+        }
+    }, [verrouille]);
 
     useEffect(() => {
         if (!showFloatingImage || !intersectionImage) return;
@@ -214,6 +293,294 @@ const useFloatingImageRenderer = ({
             groups, simulationResult, cycleLength, actionData, selectedActions, conflictMatrix
         };
 
+        // --- Mode correction : déplacer et régler flèches et détecteurs ---
+        const corriger = modeCorrection && !verrouille && !!setIntersectionArrows && !!setDetecteurs;
+        const fleches = intersectionArrows as FlecheCarrefour[];
+        const flecheSelectionnee = selection?.type === 'fleche' ? fleches.find(a => a.id === selection.id) : undefined;
+        const detecteurSelectionne = selection?.type === 'detecteur' ? detecteurs.find(d => d.id === selection.id) : undefined;
+        const courantFlecheSelectionnee = flecheSelectionnee
+            ? (groups.find(g => g.id === flecheSelectionnee.groupId)?.courant || '')
+            : '';
+        const AVEC_LONGUEUR = ['Piéton', 'Cycle', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG', 'TD_G_D'];
+        const AVEC_RETOUR = ['TàD', 'TàG', 'TD_TàD', 'TD_TàG', 'TDTàD', 'TDTàG', 'TD-TàD', 'TD-TàG', 'TD_G_D'];
+        const borner = (valeur: number) => Math.max(0, Math.min(100, valeur));
+        const tournerDe = (rotation: number, pas: number) => ((rotation + pas) % 360 + 360) % 360;
+        const modifierFleche = (id: number, changement: (a: FlecheCarrefour) => FlecheCarrefour) => {
+            setIntersectionArrows?.(fleches.map(a => (a.id === id ? changement(a) : a)));
+        };
+        const modifierDetecteur = (id: number, changement: (d: Detecteur) => Detecteur) => {
+            setDetecteurs?.(detecteurs.map(d => (d.id === id ? changement(d) : d)));
+        };
+        const deplacerDe = (type: 'fleche' | 'detecteur', id: number, dx: number, dy: number) => {
+            if (type === 'fleche') {
+                modifierFleche(id, a => ({ ...a, x: borner(a.x + dx), y: borner(a.y + dy) }));
+            } else {
+                modifierDetecteur(id, d => (d.position
+                    ? { ...d, position: { x: borner(d.position.x + dx), y: borner(d.position.y + dy) } }
+                    : d));
+            }
+        };
+        const demarrerDeplacement = (e: ReactMouseEvent<HTMLDivElement>, type: 'fleche' | 'detecteur', id: number) => {
+            if (!corriger || e.button !== 0) return;
+            e.stopPropagation();
+            // Pas de glisser natif (image, texte) : il avalerait les mouvements.
+            e.preventDefault();
+            setSelection({ type, id });
+            const boite = (e.currentTarget as HTMLElement).closest('.floating-image-inner') as HTMLElement | null;
+            if (!boite) return;
+            // Les positions sont en pourcentage de la boîte 750 × 530 : le
+            // rectangle de l'élément tient compte du zoom de la fenêtre.
+            const rect = boite.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const enPourcent = (clientX: number, clientY: number) => ({
+                x: ((clientX - rect.left) / rect.width) * 100,
+                y: ((clientY - rect.top) / rect.height) * 100
+            });
+            const depart = enPourcent(e.clientX, e.clientY);
+            const origine = type === 'fleche'
+                ? fleches.find(a => a.id === id)
+                : detecteurs.find(d => d.id === id)?.position;
+            if (!origine) return;
+            const dx = depart.x - origine.x;
+            const dy = depart.y - origine.y;
+            const bouger = (ev: MouseEvent) => {
+                const p = enPourcent(ev.clientX, ev.clientY);
+                if (type === 'fleche') {
+                    modifierFleche(id, a => ({ ...a, x: borner(p.x - dx), y: borner(p.y - dy) }));
+                } else {
+                    modifierDetecteur(id, d => (d.position
+                        ? { ...d, position: { x: borner(p.x - dx), y: borner(p.y - dy) } }
+                        : d));
+                }
+            };
+            // Le geste se déroule dans la fenêtre détachée : c'est SON document
+            // qu'il faut écouter. Écouter celui de la page principale ne
+            // recevait aucun mouvement, et rien ne bougeait.
+            const doc = (e.currentTarget as HTMLElement).ownerDocument;
+            const finir = () => {
+                doc.removeEventListener('mousemove', bouger);
+                doc.removeEventListener('mouseup', finir);
+            };
+            doc.addEventListener('mousemove', bouger);
+            doc.addEventListener('mouseup', finir);
+            (boite.closest('[data-correction]') as HTMLElement | null)?.focus();
+        };
+        const surToucheCorrection = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+            if (!corriger || !selection) return;
+            const pas = 0.2;
+            let dx = 0;
+            let dy = 0;
+            if (e.key === 'ArrowLeft') dx = -pas;
+            else if (e.key === 'ArrowRight') dx = pas;
+            else if (e.key === 'ArrowUp') dy = -pas;
+            else if (e.key === 'ArrowDown') dy = pas;
+            else return;
+            e.preventDefault();
+            e.stopPropagation();
+            deplacerDe(selection.type, selection.id, dx, dy);
+        };
+        const tournerSelection = (type: 'fleche' | 'detecteur', id: number) => {
+            if (!corriger) return;
+            if (type === 'fleche') modifierFleche(id, a => ({ ...a, rotation: tournerDe(a.rotation || 0, 45) }));
+            else modifierDetecteur(id, d => ({ ...d, orientation: tournerDe(d.orientation || 0, 45) }));
+        };
+        const supprimerFleche = (id: number) => {
+            setIntersectionArrows?.(fleches.filter(a => a.id !== id));
+            setSelection(null);
+        };
+        const dupliquerFleche = (id: number) => {
+            const originale = fleches.find(a => a.id === id);
+            if (!originale || !setIntersectionArrows) return;
+            const copie: FlecheCarrefour = {
+                ...originale,
+                id: Date.now(),
+                x: borner(originale.x + 3),
+                y: borner(originale.y + 3)
+            };
+            setIntersectionArrows([...fleches, copie]);
+            setSelection({ type: 'fleche', id: copie.id });
+        };
+        const retirerDetecteurDeImage = (id: number) => {
+            setDetecteurs?.(detecteurs.map(d => (d.id === id ? { ...d, position: null } : d)));
+            setSelection(null);
+        };
+
+        const reglagesFleche = flecheSelectionnee && (
+                    <section aria-label="Réglages de la flèche sélectionnée">
+                        <fieldset className="arrow-editor">
+                            <h4>Modifier la flèche</h4>
+                            <div className="editor-row">
+                                <label>Groupe:</label>
+                                <select
+                                    value={flecheSelectionnee.groupId || ''}
+                                    onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, groupId: parseInt(e.target.value, 10) }))}
+                                >
+                                    {groups.map(g => (
+                                        <option key={g.id} value={g.id}>
+                                            GF{g.id} - {g.name} {g.courant ? `(${g.courant})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="editor-row">
+                                <label>Rotation:</label>
+                                <div className="rotation-controls">
+                                    <button type="button" className="slider-btn minus"
+                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(a.rotation || 0, -1) }))}
+                                        title={tip('-1°')}>−</button>
+                                    <input type="range" min="0" max="359" className="rotation-slider"
+                                        value={flecheSelectionnee.rotation || 0}
+                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: Number(e.target.value) }))} />
+                                    <button type="button" className="slider-btn plus"
+                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(a.rotation || 0, 1) }))}
+                                        title={tip('+1°')}>+</button>
+                                    <input type="number" min="0" max="359" className="rotation-input"
+                                        value={flecheSelectionnee.rotation || 0}
+                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, rotation: tournerDe(Number(e.target.value) || 0, 0) }))} />
+                                    <span className="rotation-unit">°</span>
+                                </div>
+                            </div>
+                            <div className="editor-row">
+                                <label>Zoom:</label>
+                                <div className="scale-controls">
+                                    <button type="button" className="slider-btn minus"
+                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Math.max(0.5, Number(((a.scale || 1) - 0.1).toFixed(1))) }))}
+                                        title={tip('-0.1')}>−</button>
+                                    <input type="range" min="0.5" max="3" step="0.1" className="scale-slider"
+                                        value={flecheSelectionnee.scale || 1}
+                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Number(e.target.value) }))} />
+                                    <button type="button" className="slider-btn plus"
+                                        onClick={() => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Math.min(3, Number(((a.scale || 1) + 0.1).toFixed(1))) }))}
+                                        title={tip('+0.1')}>+</button>
+                                    <input type="number" min="0.5" max="3" step="0.1" className="scale-input"
+                                        value={flecheSelectionnee.scale || 1}
+                                        onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, scale: Number(e.target.value) }))} />
+                                    <span className="scale-unit">x</span>
+                                </div>
+                            </div>
+                            {AVEC_LONGUEUR.includes(courantFlecheSelectionnee) && (
+                                <div className="editor-row">
+                                    <label>Longueur:</label>
+                                    <div className="length-controls">
+                                        <input type="range" min="1" max="4" step="0.5" className="length-slider"
+                                            value={flecheSelectionnee.length || 1}
+                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, length: Number(e.target.value) }))} />
+                                        <input type="number" min="1" max="4" step="0.5" className="length-input"
+                                            value={flecheSelectionnee.length || 1}
+                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, length: Number(e.target.value) }))} />
+                                        <span className="length-unit">x</span>
+                                    </div>
+                                </div>
+                            )}
+                            {AVEC_RETOUR.includes(courantFlecheSelectionnee) && (
+                                <div className="editor-row">
+                                    <label>Retour:</label>
+                                    <div className="turn-length-controls">
+                                        <input type="range" min="0" max="1" step="0.1" className="turn-length-slider"
+                                            value={flecheSelectionnee.turnLength ?? 1}
+                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, turnLength: Number(e.target.value) }))} />
+                                        <input type="number" min="0" max="1" step="0.1" className="turn-length-input"
+                                            value={flecheSelectionnee.turnLength ?? 1}
+                                            onChange={(e) => modifierFleche(flecheSelectionnee.id, a => ({ ...a, turnLength: Number(e.target.value) }))} />
+                                        <span className="turn-length-unit">x</span>
+                                    </div>
+                                </div>
+                            )}
+                            <button type="button" className="floating-correction-dupliquer" onClick={() => dupliquerFleche(flecheSelectionnee.id)}>
+                                Dupliquer
+                            </button>
+                            <button type="button" className="delete-arrow-btn" onClick={() => supprimerFleche(flecheSelectionnee.id)}>
+                                Supprimer
+                            </button>
+                        </fieldset>
+                    </section>
+        );
+        const reglagesDetecteur = detecteurSelectionne && (
+                    <section aria-label="Réglages du détecteur sélectionné">
+                        <fieldset className="detecteur-editor">
+                            <h4>Modifier le détecteur</h4>
+                            <div className="editor-row">
+                                <label>Nom:</label>
+                                <span>{detecteurSelectionne.nom || `Détecteur ${detecteurSelectionne.id}`}</span>
+                            </div>
+                            <div className="editor-row">
+                                <label>Type:</label>
+                                <select
+                                    className="detecteur-editor-select"
+                                    aria-label="Type du détecteur dans la fenêtre détachée"
+                                    value={detecteurSelectionne.categorie}
+                                    onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => changerCategorie(d, e.target.value as CategorieDetecteur))}
+                                >
+                                    {CATEGORIES_DETECTEUR.map(c => (
+                                        <option key={c.valeur} value={c.valeur}>{c.libelle}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="editor-row">
+                                <label>Rotation:</label>
+                                <div className="rotation-controls">
+                                    <button type="button" className="slider-btn minus"
+                                        onClick={() => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(d.orientation || 0, -1) }))}
+                                        title={tip('-1°')}>−</button>
+                                    <input type="range" min="0" max="359" className="rotation-slider"
+                                        value={detecteurSelectionne.orientation || 0}
+                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: Number(e.target.value) }))} />
+                                    <button type="button" className="slider-btn plus"
+                                        onClick={() => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(d.orientation || 0, 1) }))}
+                                        title={tip('+1°')}>+</button>
+                                    <input type="number" min="0" max="359" className="rotation-input"
+                                        value={detecteurSelectionne.orientation || 0}
+                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, orientation: tournerDe(Number(e.target.value) || 0, 0) }))} />
+                                    <span className="rotation-unit">°</span>
+                                </div>
+                            </div>
+                            {dimensionSaisissable(detecteurSelectionne.categorie) && (
+                                <div className="editor-row">
+                                    <label>Longueur:</label>
+                                    <input
+                                        type="number"
+                                        className="detecteur-editor-dimension"
+                                        aria-label="Longueur du détecteur dans la fenêtre détachée"
+                                        value={detecteurSelectionne.dimension ?? ''}
+                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, dimension: dimensionDepuisSaisie(e.target.value, d.categorie) }))}
+                                    />
+                                    <span className="detecteur-editor-unit">m (largeur 1 m)</span>
+                                </div>
+                            )}
+                            {retraitSaisissable(detecteurSelectionne.categorie) && detecteurSelectionne.categorie !== 'bouclePiedFeu' && (
+                                <div className="editor-row">
+                                    <label>Retrait de la boucle:</label>
+                                    <input
+                                        type="number"
+                                        className="detecteur-editor-dimension"
+                                        aria-label="Retrait de la boucle dans la fenêtre détachée"
+                                        placeholder="mesuré sur l'image"
+                                        value={detecteurSelectionne.retrait ?? ''}
+                                        onChange={(e) => modifierDetecteur(detecteurSelectionne.id, d => ({ ...d, retrait: retraitDepuisSaisie(e.target.value, d.categorie) }))}
+                                    />
+                                    <span className="detecteur-editor-unit">m</span>
+                                </div>
+                            )}
+                            <button type="button" className="delete-arrow-btn" onClick={() => retirerDetecteurDeImage(detecteurSelectionne.id)}>
+                                Retirer de l'image
+                            </button>
+                        </fieldset>
+                    </section>
+        );
+        const contenuReglages = reglagesFleche || reglagesDetecteur || (
+            <div className="floating-correction-vide">
+                <p><strong>Aucun élément sélectionné.</strong></p>
+                <p>Dans l'image détachée, cliquez sur une flèche ou un détecteur pour le régler ici.</p>
+                <ul>
+                    <li>Glisser : déplacer l'élément.</li>
+                    <li>Flèches du clavier : ajuster sa position.</li>
+                    <li>Double-clic : tourner de 45°.</li>
+                </ul>
+            </div>
+        );
+
+        installerOuvertureReglages(floatingImagePopup.popupWindow?.current as FenetreImage | null | undefined);
+
         floatingImagePopup.renderToPopup(
             <ZoneVerrouSaisie section="image"><div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ padding: '6px 12px', background: '#2a2a2a', borderBottom: '1px solid #444', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
@@ -228,6 +595,27 @@ const useFloatingImageRenderer = ({
                         title={tip("Rogner l'image")}
                     >
                         ✂
+                    </button>
+                    <button
+                        type="button"
+                        className={`floating-crop-btn floating-correction-btn ${modeCorrection ? 'active' : ''}`}
+                        aria-pressed={modeCorrection}
+                        data-ouvre-reglages={nomFenetre(TITRE_REGLAGES)}
+                        data-caracteristiques={caracteristiquesFenetre(LARGEUR_REGLAGES, HAUTEUR_REGLAGES)}
+                        disabled={verrouille}
+                        onClick={() => {
+                            setModeCorrection(valeur => {
+                                if (valeur) setSelection(null);
+                                return !valeur;
+                            });
+                        }}
+                        title={tip(verrouille
+                            ? 'Image verrouillée : correction impossible'
+                            : modeCorrection
+                                ? 'Quitter le mode correction'
+                                : 'Corriger : déplacer et régler les flèches et les détecteurs')}
+                    >
+                        ✎ Corriger
                     </button>
                     <MentionVerrou section="image" />
                 </div>
@@ -258,6 +646,7 @@ const useFloatingImageRenderer = ({
                 )}
                 {/* data-fit-scroll : repère lu par usePopupWindow pour absorber
                     un éventuel débordement résiduel dans la taille de la fenêtre. */}
+                <div className="floating-image-ligne" style={{ flex: 1, display: 'flex', minHeight: 0, position: 'relative' }}>
                 <div className="floating-image-content" data-fit-scroll style={{ flex: 1, overflow: 'auto' }}>
                     <div
                         className="floating-image-wrapper"
@@ -267,7 +656,11 @@ const useFloatingImageRenderer = ({
                         }}
                     >
                         <div
-                            className={`floating-image-inner ${imageFondClair ? 'fond-clair' : 'fond-sombre'}`}
+                            className={`floating-image-inner ${imageFondClair ? 'fond-clair' : 'fond-sombre'}${corriger ? ' correction' : ''}`}
+                            data-correction={corriger ? '' : undefined}
+                            tabIndex={corriger ? 0 : undefined}
+                            onKeyDown={surToucheCorrection}
+                            onClick={() => { if (corriger) setSelection(null); }}
                             style={{
                                 // Les marges décalent la boîte AVANT la mise à
                                 // l'échelle, qui opère ensuite depuis son coin haut
@@ -331,10 +724,13 @@ const useFloatingImageRenderer = ({
                                 return (
                                     <div
                                         key={arrow.id}
-                                        className={`floating-arrow-marker ${isHovered ? 'hovered' : ''} ${isPedestrianOrCycle ? 'side-label' : ''}`}
+                                        className={`floating-arrow-marker ${isHovered ? 'hovered' : ''} ${isPedestrianOrCycle ? 'side-label' : ''}${corriger ? ' corrigeable' : ''}${selection?.type === 'fleche' && selection.id === arrow.id ? ' selectionnee' : ''}`}
                                         style={{ left: `${arrow.x}%`, top: `${arrow.y}%` }}
                                         onMouseEnter={() => setHoveredArrowGroupId && setHoveredArrowGroupId(groupId || null)}
                                         onMouseLeave={() => setHoveredArrowGroupId && setHoveredArrowGroupId(null)}
+                                        onMouseDown={(e) => demarrerDeplacement(e, 'fleche', Number(arrow.id))}
+                                        onClick={(e) => { if (corriger) { e.stopPropagation(); setSelection({ type: 'fleche', id: Number(arrow.id) }); } }}
+                                        onDoubleClick={(e) => { if (corriger) { e.stopPropagation(); tournerSelection('fleche', Number(arrow.id)); } }}
                                     >
                                         <div className="arrow-symbol" style={{ transform: signal ? `scale(${echelleSignal(scale, courant)})` : `rotate(${rotation}deg) scale(${scale})` }}>
                                             {signal ? (
@@ -368,8 +764,11 @@ const useFloatingImageRenderer = ({
                                 return (
                                     <div
                                         key={`fdet-${detecteur.id}`}
-                                        className="detecteur-marker"
+                                        className={`detecteur-marker${corriger ? ' corrigeable' : ''}${selection?.type === 'detecteur' && selection.id === detecteur.id ? ' selectionnee' : ''}`}
                                         style={{ left: `${detecteur.position.x}%`, top: `${detecteur.position.y}%` }}
+                                        onMouseDown={(e) => demarrerDeplacement(e, 'detecteur', detecteur.id)}
+                                        onClick={(e) => { if (corriger) { e.stopPropagation(); setSelection({ type: 'detecteur', id: detecteur.id }); } }}
+                                        onDoubleClick={(e) => { if (corriger) { e.stopPropagation(); tournerSelection('detecteur', detecteur.id); } }}
                                     >
                                         <div
                                             className="detecteur-symbol"
@@ -399,8 +798,27 @@ const useFloatingImageRenderer = ({
                         </div>
                     </div>
                 </div>
+                {corriger && reglagesPopup.bloquee && (
+                    // Repli : posé PAR-DESSUS l'image, sans lui prendre de largeur —
+                    // sinon la fenêtre, taillée pour l'image, se couvre d'ascenseurs.
+                    <aside className="floating-correction-panneau en-surimpression">
+                        <p className="floating-correction-bloquee">
+                            Fenêtre des réglages bloquée par le navigateur : autorisez les fenêtres pour ce site pour la détacher.
+                        </p>
+                        {contenuReglages}
+                    </aside>
+                )}
+                </div>
             </div></ZoneVerrouSaisie>
         );
+
+        if (corriger && reglagesPopup.popupOpen) {
+            reglagesPopup.renderToPopup(
+                <ZoneVerrouSaisie section="image">
+                    <aside className="floating-correction-panneau en-fenetre">{contenuReglages}</aside>
+                </ZoneVerrouSaisie>
+            );
+        }
     }, [showFloatingImage, intersectionImage, floatingCrop, floatingZoom, showCropControls,
         intersectionArrows, detecteurs, detecteurModule, pixelsParMetre, getTrafficData, groups, imageNaturalDims, imageFondClair, hoveredArrowGroupId, hoveredArrowGroupIds, hoveredDiagramTime,
         selectedActions, conflictMatrix,
@@ -408,7 +826,10 @@ const useFloatingImageRenderer = ({
         actionData, cycleLength, imageBrightness, imageContrast,
         intersectionDisplay.showCurrents, intersectionDisplay.showGroupNumbers, intersectionDisplay.showGroupNames,
         intersectionDisplay.showSignals, intersectionDisplay.showDetecteurs, intersectionDisplay.showDetecteurNames,
-        tooltipsEnabled, detecteurModule, floatingImagePopup.renderToPopup]); // eslint-disable-line react-hooks/exhaustive-deps
+        modeCorrection, selection, verrouille, setIntersectionArrows, setDetecteurs,
+        tooltipsEnabled, detecteurModule, floatingImagePopup.renderToPopup,
+        floatingImagePopup.popupOpen,
+        reglagesPopup.renderToPopup, reglagesPopup.popupOpen, reglagesPopup.bloquee]); // eslint-disable-line react-hooks/exhaustive-deps
 };
 
 export default useFloatingImageRenderer;

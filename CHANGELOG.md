@@ -11,6 +11,12 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Ajouté
 
+- **Fenêtre détachée de l'image, mode correction** : le bouton « ✎ Corriger », à côté des ciseaux, permet
+  d'y déplacer et de régler les flèches et les détecteurs : sélection au clic, glisser-déposer, déplacement
+  au clavier, rotation au double-clic, dupliquer et supprimer. Les réglages de l'élément sélectionné
+  s'ouvrent dans leur propre fenêtre détachée, non modale, que l'on peut poser sur un autre écran ; la
+  fermer quitte le mode correction. Le bouton est orange, plein quand le mode est actif. Par défaut la
+  fenêtre reste un miroir ; le mode s'arrête à chaque ouverture et quand l'image est verrouillée.
 - **Onglet Détecteurs** : tri croissant ou décroissant par nom, type ou GF en cliquant sur l'en-tête de
   colonne ; un troisième clic revient à l'ordre de saisie. Le tri ne touche pas à l'ordre enregistré.
 - **Aide, navigation entre rubriques** : après un clic sur une rubrique du sommaire, les flèches ▲ et ▼
@@ -25,6 +31,9 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ### Modifié
 
+- **Fenêtres détachées et zoom** : la taille visée compte le cadre de 8 px ajouté le 11/11. Après un zoom +
+  sur l'image détachée, la fenêtre se recalait 16 px trop petite et affichait des ascenseurs ; elle suit
+  désormais l'agrandissement, dans la limite de l'écran.
 - **Menu Diagramme sur un projet neuf** : « Analyse du diagramme » est grisée tant qu'aucun groupe n'a de
   vert, « Matrice » tant qu'aucune case de la matrice n'est renseignée, et « Supprimer le diagramme actif »
   tant qu'il n'y a qu'un seul plan de feu.
