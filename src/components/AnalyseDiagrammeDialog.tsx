@@ -82,6 +82,11 @@ const AnalyseDiagrammeDialog = ({
                                     </span>
                                     <span className="analyse-message">{c.message}</span>
                                 </div>
+                                {c.details && c.details.length > 0 && (
+                                    <ul className="analyse-details">
+                                        {c.details.map((d, i) => <li key={`${c.id}-${i}`}>{d}</li>)}
+                                    </ul>
+                                )}
                                 <div className="analyse-suggestion">{c.suggestion}</div>
                                 <div className="analyse-source">{c.source}</div>
                             </li>

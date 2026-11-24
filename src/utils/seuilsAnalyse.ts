@@ -45,6 +45,8 @@ export interface SeuilsAnalyse {
     tagOppositionParVoie: number;
     /** Produit TàG × trafic d'en face au-delà duquel la protection devient nécessaire. */
     tagProduitCritique: number;
+    /** Nombre de voies opposées avec lesquelles un TàG peut rester en conflit. */
+    tagVoiesOpposeesMax: number;
 }
 
 export const SEUILS_ANALYSE_DEFAUT: SeuilsAnalyse = {
@@ -65,7 +67,8 @@ export const SEUILS_ANALYSE_DEFAUT: SeuilsAnalyse = {
     tagStockageNaturel: 100,
     tagPhaseProtegee: 150,
     tagOppositionParVoie: 400,
-    tagProduitCritique: 50000
+    tagProduitCritique: 50000,
+    tagVoiesOpposeesMax: 1
 };
 
 /** Clé de stockage locale : préférence d'application, comme les infobulles. */

@@ -11,8 +11,8 @@
 
 .analyse-resume {
     margin: 0 0 12px;
-    font-size: 13px;
-    opacity: 0.85;
+    font-size: 12px;
+    opacity: 0.62;
 }
 
 .analyse-ignores {
@@ -33,19 +33,32 @@
 .analyse-recommandation h4 { color: #e0a33a; }
 .analyse-information h4 { color: #5aa0e0; }
 
-.analyse-niveau ul {
+.analyse-niveau > ul {
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
-.analyse-niveau li {
-    padding: 8px 10px;
-    margin-bottom: 6px;
+/* Un constat par bloc, nettement séparé du suivant. */
+.analyse-niveau > ul > li {
+    padding: 10px 12px;
+    margin-bottom: 10px;
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.05);
     font-size: 13px;
-    line-height: 1.4;
+    line-height: 1.45;
+}
+
+/* Une ligne par groupe : les valeurs à corriger restent en clair. */
+.analyse-details {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+}
+
+.analyse-details li {
+    padding: 1px 0 1px 10px;
+    border-left: 2px solid rgba(255, 255, 255, 0.18);
 }
 
 .analyse-entete {
@@ -70,13 +83,19 @@
 }
 
 .analyse-message { font-weight: 600; }
-.analyse-suggestion { margin-top: 4px; }
+
+/* L'explication ne doit pas concurrencer les valeurs à corriger. */
+.analyse-suggestion {
+    margin-top: 8px;
+    font-size: 11.5px;
+    opacity: 0.55;
+}
 
 .analyse-source {
     margin-top: 4px;
-    font-size: 11px;
+    font-size: 10px;
     font-style: italic;
-    opacity: 0.65;
+    opacity: 0.4;
 }
 
 /* Fenêtre détachée : le contenu occupe toute la fenêtre du navigateur. */

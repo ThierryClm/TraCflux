@@ -61,7 +61,7 @@ describe('analyserDiagramme', () => {
         expect(ids(court)).toContain('cycle-mini');
         const long = analyserDiagramme({ groups: [g(1, 'V', 0, 70), g(2, 'P', 76, 8)], cycleLength: 100, conflictMatrix: [['', 6], [8, '']] });
         const retard = long.constats.find(c => c.id === 'retard-pieton')!;
-        expect(retard.message).toMatch(/GF2 Groupe 2 \(42 s\)/);
+        expect(retard.details).toContain('GF2 Groupe 2 (42 s)');
         expect(retard.suggestion).toMatch(/hors micro-régulation/);
     });
 
@@ -192,9 +192,25 @@ describe('analyserDiagramme', () => {
         // Zone charnière : le trafic d'en face est rappelé.
         const charniere = analyserDiagramme({ groups: deuxGroupes, cycleLength: 60, conflictMatrix: matrice,
             getTrafficData: id => ({ trafficVol: id === 1 ? 120 : 300 }) });
-        expect(charniere.constats.find(c => c.id === 'tag-charniere')!.message)
-            .toMatch(/120 uvp\/h, en face 300 uvp\/h par voie/);
+        expect(charniere.constats.find(c => c.id === 'tag-charniere')!.details)
+            .toContain('GF1 Groupe 1 (120 uvp/h, en face 300 uvp/h par voie)');
         expect(ids(charniere)).not.toContain('tag-phase-necessaire');
+    });
+
+    it('déconseille un TàG en conflit avec deux voies opposées, même à faible trafic', () => {
+        const groupes = [g(1, 'V', 10, 20, { courant: 'TàG', signal: 'R11v' }),
+            g(2, 'V', 0, 30, { courant: 'TD', signal: 'R11v', laneCoef: 1.8 })];
+        const r = analyserDiagramme({ groups: groupes, cycleLength: 60, conflictMatrix: [['', 5], [5, '']],
+            getTrafficData: id => ({ trafficVol: id === 1 ? 40 : 300 }) });
+        const c = r.constats.find(x => x.id === 'tag-conflit-voies')!;
+        expect(c.niveau).toBe('recommandation');
+        expect(c.pointAttention).toBe(true);
+        expect(c.details).toContain('GF1 Groupe 1 (2 voies opposées, 40 uvp/h)');
+        // Une protection R14 à faible trafic ne déclenche pas « phase inutile »
+        // quand deux voies opposées sont en jeu.
+        const protege = analyserDiagramme({ groups: [g(1, 'V', 10, 20, { courant: 'TàG', signal: 'R14tg' }), groupes[1]],
+            cycleLength: 60, conflictMatrix: [['', 5], [5, '']], getTrafficData: id => ({ trafficVol: id === 1 ? 40 : 300 }) });
+        expect(ids(protege)).not.toContain('tag-phase-inutile');
     });
 
     it('affiche les règles non respectées avant les recommandations et les suggestions', () => {
