@@ -5,6 +5,7 @@ import type { SeuilsAnalyse } from '../utils/seuilsAnalyse';
 import './ReglageSeuilsDialog.css';
 
 export const TITRE_REGLAGE_SEUILS = 'Réglage des seuils de l\'analyse';
+const INFOBULLE_TITRE_SEUILS = 'Seuil enregistré au niveau application. Si l\'on modifie une valeur de seuil, cela régénère l\'analyse du diagramme si la fenêtre est ouverte.';
 
 interface ReglageSeuilsDialogProps {
     isOpen: boolean;
@@ -123,20 +124,14 @@ const ReglageSeuilsDialog = ({
         setBrouillon(b => ({ ...b, [cle]: valeur === '' ? '' : Number(valeur) }));
     const problemes = incoherences(brouillon);
 
-    const enregistrer = () => {
+    const appliquer = () => {
         if (problemes.length) return;
         onEnregistrer(versSeuils(brouillon));
-        onClose();
+        // La fenêtre reste ouverte : on règle plusieurs seuils à la suite.
     };
 
     const corps = (
         <>
-            <p className="reglage-seuils-intro">
-                Ces valeurs servent à l'<strong>Analyse du diagramme</strong> et sont enregistrées pour
-                l'application entière : elles s'appliquent à tous les projets ouverts sur ce poste.
-                Une modification n'altère jamais le projet lui-même.
-            </p>
-
             {GROUPES.map(groupe => (
                 <fieldset key={groupe.titre} className="reglage-seuils-groupe">
                     <legend>{groupe.titre}</legend>
@@ -181,11 +176,11 @@ const ReglageSeuilsDialog = ({
                 </button>
                 <button
                     className="modal-btn modal-btn-primary"
-                    onClick={enregistrer}
+                    onClick={appliquer}
                     disabled={problemes.length > 0}
-                    title={tip(problemes.length ? 'Corrigez les seuils incohérents pour enregistrer' : 'Appliquer ces seuils à l’analyse')}
+                    title={tip(problemes.length ? 'Corrigez les seuils incohérents pour appliquer' : 'Appliquer ces seuils à l’analyse, sans fermer la fenêtre')}
                 >
-                    Enregistrer
+                    Appliquer
                 </button>
             </div>
         </>
@@ -195,13 +190,19 @@ const ReglageSeuilsDialog = ({
     if (detachee) {
         return isOpen ? (
             <div className="modal-content reglage-seuils-modal reglage-seuils-detachee">
-                <div className="modal-body">{corps}</div>
+                <div className="modal-body">
+                    <h3 className="reglage-seuils-titre-detache" title={tip(INFOBULLE_TITRE_SEUILS)}>
+                        {TITRE_REGLAGE_SEUILS}
+                    </h3>
+                    {corps}
+                </div>
             </div>
         ) : null;
     }
     return (
         <Modal isOpen={isOpen} onClose={onClose} nonModale tooltipsEnabled={tooltipsEnabled}
-            title={TITRE_REGLAGE_SEUILS} className="reglage-seuils-modal">
+            title={<span title={tip(INFOBULLE_TITRE_SEUILS)}>{TITRE_REGLAGE_SEUILS}</span>}
+            className="reglage-seuils-modal">
             {corps}
         </Modal>
     );
