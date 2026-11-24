@@ -109,12 +109,25 @@ export const analyserDiagramme = ({
     });
 
     controles++;
-    const sousCapacite = avecVert.filter(g => g.durations.green >= S.vertMiniReglementaire && g.durations.green < S.vertCapacite);
+    // Les piétons ont leur propre seuil (vertPietonSouhaite), plus bas par
+    // défaut : on évite ainsi de leur appliquer la bande de confort véhicules.
+    const sousCapacite = avecVert.filter(g => !estPieton(g)
+        && g.durations.green >= S.vertMiniReglementaire && g.durations.green < S.vertCapacite);
     if (sousCapacite.length) ajouter({
         id: 'vert-confort', niveau: 'information', theme: 'Durées', groupes: sousCapacite.map(g => g.id),
         message: `Vert compris entre ${S.vertMiniReglementaire} et ${S.vertCapacite} s : ${sousCapacite.map(g => `${nomGroupe(g)} (${g.durations.green} s)`).join(', ')}.`,
-        suggestion: `${S.vertMiniReglementaire} s est le minimum réglementaire ; ${S.vertConfort} s apporte plus de confort, ${S.vertCapacite} s est plus rationnel en capacité (le minimum réglementaire est peu perçu, surtout des piétons).`,
+        suggestion: `${S.vertMiniReglementaire} s est le minimum réglementaire ; ${S.vertConfort} s apporte plus de confort, ${S.vertCapacite} s est plus rationnel en capacité (le minimum réglementaire est peu perçu).`,
         source: `${CERTU}, p. 68`
+    });
+
+    controles++;
+    const vertsPietonsCourts = avecVert.filter(g => estPieton(g)
+        && g.durations.green >= S.vertMiniReglementaire && g.durations.green < S.vertPietonSouhaite);
+    if (vertsPietonsCourts.length) ajouter({
+        id: 'vert-pieton', niveau: 'information', theme: 'Piétons', groupes: vertsPietonsCourts.map(g => g.id),
+        message: `Vert piéton inférieur à ${S.vertPietonSouhaite} s : ${vertsPietonsCourts.map(g => `${nomGroupe(g)} (${g.durations.green} s)`).join(', ')}.`,
+        suggestion: `Allonger le vert piéton jusqu'à ${S.vertPietonSouhaite} s au moins, si le cycle le permet. À ${S.vertPietonSouhaite} s (minimum réglementaire), seuls les verts réellement insuffisants sont signalés, en rouge.`,
+        source: 'Règle de conception TraCflux'
     });
 
     controles++;
@@ -182,7 +195,7 @@ export const analyserDiagramme = ({
         if (retards.length) ajouter({
             id: 'retard-pieton', niveau: 'recommandation', theme: 'Piétons', groupes: retards.map(x => x.g.id),
             message: `Retard moyen des piétons supérieur à ${S.retardPietonMaxi} s au plan nominal : ${retards.map(x => `${nomGroupe(x.g)} (${x.r} s)`).join(', ')}.`,
-            suggestion: 'Calcul hors micro-régulation : les contractions de phase (adaptatifs, escamotages) ne sont pas prises en compte et réduisent ce retard en fonctionnement réel. Sinon : allonger le vert piéton, raccourcir le cycle ou ouvrir la traversée dans une autre phase. Retard moyen r = (C − V)² / 2C.',
+            suggestion: 'Calcul hors micro-régulation : les contractions de phase (adaptatifs, escamotages) ne sont pas prises en compte et réduisent ce retard en fonctionnement réel. Le guide Certu juge déjà 20 s anormalement long ; le seuil de signalement est réglable. Sinon : allonger le vert piéton, raccourcir le cycle ou ouvrir la traversée dans une autre phase. Retard moyen r = (C − V)² / 2C.',
             source: `${CERTU}, p. 72`
         });
     }
@@ -338,8 +351,8 @@ export const analyserDiagramme = ({
     });
     if (r14Trop.length) ajouter({
         id: 'r14-trop', niveau: 'recommandation', pointAttention: true, theme: 'Signaux', groupes: [...r14TropIds],
-        message: `Plus de trois R14 sur un même courant : ${r14Trop.join(' ; ')}.`,
-        suggestion: 'À vérifier : un couloir reçoit deux ou trois groupes en R14, pas davantage. Si ces groupes partagent la même voie d\'entrée, regroupez les mouvements ou revoyez le découpage des courants.',
+        message: `Plus de trois feux en flèche (R14) sur un même courant : ${r14Trop.join(' ; ')}.`,
+        suggestion: 'À vérifier : un couloir ne porte que deux ou trois groupes en R14, pas davantage. Si ces groupes partagent la même voie d\'entrée, regroupez les mouvements ou revoyez le découpage des courants.',
         source: 'ISR, 6e partie, art. 110-4 §2'
     });
 

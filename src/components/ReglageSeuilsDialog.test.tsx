@@ -8,7 +8,7 @@ describe('ReglageSeuilsDialog', () => {
         const onEnregistrer = vi.fn();
         render(<ReglageSeuilsDialog isOpen onClose={() => {}} seuils={SEUILS_ANALYSE_DEFAUT} onEnregistrer={onEnregistrer} />);
         const champ = screen.getByLabelText('Retard moyen piéton signalé');
-        expect(champ).toHaveValue(20);
+        expect(champ).toHaveValue(30);
         fireEvent.change(champ, { target: { value: '25' } });
         fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
         expect(onEnregistrer).toHaveBeenCalledWith(expect.objectContaining({ retardPietonMaxi: 25 }));

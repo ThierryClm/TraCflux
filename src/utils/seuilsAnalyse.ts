@@ -15,6 +15,8 @@ export interface SeuilsAnalyse {
     vertConfort: number;
     /** Vert plus rationnel en capacité (guide Certu). */
     vertCapacite: number;
+    /** Vert piéton en dessous duquel l'analyse suggère d'allonger. */
+    vertPietonSouhaite: number;
     /** Au-delà, un vert n'écoule plus de trafic supplémentaire. */
     vertLong: number;
     /** Attente maximale de tout usager (ISR, art. 110 C3). */
@@ -41,15 +43,16 @@ export const SEUILS_ANALYSE_DEFAUT: SeuilsAnalyse = {
     vertMiniReglementaire: 6,
     vertConfort: 8,
     vertCapacite: 10,
+    vertPietonSouhaite: 6,
     vertLong: 40,
     attenteMaxi: 120,
     attenteMaxiTC: 240,
     attentePietonMaxi: 50,
-    retardPietonMaxi: 20,
+    retardPietonMaxi: 30,
     cycleMini: 40,
     traverseeSansRefuge: 12,
-    capaciteReserveFaible: 70,
-    capaciteUtiliseeAlerte: 90,
+    capaciteReserveFaible: 75,
+    capaciteUtiliseeAlerte: 85,
     capaciteUtiliseeSaturee: 100
 };
 

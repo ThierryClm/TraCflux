@@ -80,3 +80,17 @@
 }
 
 .reglage-seuils-spacer { flex: 1 1 auto; }
+
+/* Fenêtre détachée : le contenu occupe toute la fenêtre du navigateur. */
+.modal-content.reglage-seuils-modal.reglage-seuils-detachee {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}

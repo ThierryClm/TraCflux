@@ -89,7 +89,7 @@ import SuggestionCycleDialog, { titreSuggestionCycle } from './components/Sugges
 import { ECRAN_MOBILE } from './utils/ecranMobile';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
 import AnalyseDiagrammeDialog, { titreAnalyseDiagramme } from './components/AnalyseDiagrammeDialog';
-import ReglageSeuilsDialog from './components/ReglageSeuilsDialog';
+import ReglageSeuilsDialog, { TITRE_REGLAGE_SEUILS } from './components/ReglageSeuilsDialog';
 import { chargerSeuilsAnalyse, enregistrerSeuilsAnalyse } from './utils/seuilsAnalyse';
 import type { SeuilsAnalyse } from './utils/seuilsAnalyse';
 import { basculerVerrou, basculerVerrouTout, definirPrefsVerrou, prefsVerrouAEnregistrer, usePrefsVerrou } from './utils/verrouSaisie';
@@ -776,6 +776,20 @@ function App() {
     const ouvrirAnalyseDiagramme = () => {
         if (analyseDiagrammeModal) { if (!assistantDansLaPage) analyseDiagrammePopup.retryOpen(); }
         else setAnalyseDiagrammeModal(true);
+    };
+    // Réglage des seuils : même principe, fenêtre non modale détachée pour la
+    // poser sur un autre écran pendant qu'on lit l'analyse.
+    const reglageSeuilsPopup = usePopupWindow({
+        geometryKey: 'reglageSeuils',
+        isOpen: reglageSeuilsModal && !assistantDansLaPage,
+        onClose: () => setReglageSeuilsModal(false),
+        title: TITRE_REGLAGE_SEUILS,
+        width: 700,
+        height: 760
+    });
+    const ouvrirReglageSeuils = () => {
+        if (reglageSeuilsModal) { if (!assistantDansLaPage) reglageSeuilsPopup.retryOpen(); }
+        else setReglageSeuilsModal(true);
     };
     // Redemander la fenêtre déjà ouverte la ramène au premier plan (ou retente
     // l'ouverture qu'un bloqueur avait refusée).
@@ -1620,7 +1634,7 @@ function App() {
                 ouvrirAnalyseDiagramme();
                 break;
             case 'reglageSeuils':
-                setReglageSeuilsModal(true);
+                ouvrirReglageSeuils();
                 break;
             case 'import':
                 handleImportExcelDirect();
@@ -2274,6 +2288,13 @@ function App() {
         if (!analyseDiagrammeModal || assistantDansLaPage) return;
         renderAnalyseDiagramme(<AnalyseDiagrammeDialog {...propsAnalyseDiagramme} isOpen detachee />);
     }, [analyseDiagrammeModal, assistantDansLaPage, propsAnalyseDiagramme, renderAnalyseDiagramme]);
+    // « Réglage des seuils », rendu dans sa fenêtre détachée.
+    const renderReglageSeuils = reglageSeuilsPopup.renderToPopup;
+    useEffect(() => {
+        if (!reglageSeuilsModal || assistantDansLaPage) return;
+        renderReglageSeuils(<ReglageSeuilsDialog isOpen detachee onClose={() => setReglageSeuilsModal(false)}
+            seuils={seuilsAnalyse} onEnregistrer={modifierSeuilsAnalyse} tooltipsEnabled={tooltipPrefs.main} />);
+    }, [reglageSeuilsModal, assistantDansLaPage, seuilsAnalyse, renderReglageSeuils, tooltipPrefs.main]);
     const renderSuggestionCycle = suggestionCyclePopup.renderToPopup;
     useEffect(() => {
         if (!suggestionCycleModal || assistantDansLaPage) return;
@@ -2626,7 +2647,7 @@ function App() {
             <AnalyseDiagrammeDialog {...propsAnalyseDiagramme}
                 isOpen={analyseDiagrammeModal && (assistantDansLaPage || analyseDiagrammePopup.bloquee)} />
             <ReglageSeuilsDialog
-                isOpen={reglageSeuilsModal}
+                isOpen={reglageSeuilsModal && (assistantDansLaPage || reglageSeuilsPopup.bloquee)}
                 onClose={() => setReglageSeuilsModal(false)}
                 seuils={seuilsAnalyse}
                 onEnregistrer={modifierSeuilsAnalyse}

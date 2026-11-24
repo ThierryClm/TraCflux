@@ -4,6 +4,8 @@ import { SEUILS_ANALYSE_DEFAUT } from '../utils/seuilsAnalyse';
 import type { SeuilsAnalyse } from '../utils/seuilsAnalyse';
 import './ReglageSeuilsDialog.css';
 
+export const TITRE_REGLAGE_SEUILS = 'Réglage des seuils de l\'analyse';
+
 interface ReglageSeuilsDialogProps {
     isOpen: boolean;
     onClose: () => void;
@@ -11,6 +13,8 @@ interface ReglageSeuilsDialogProps {
     /** Enregistre les seuils pour l'application entière. */
     onEnregistrer: (seuils: SeuilsAnalyse) => void;
     tooltipsEnabled?: boolean;
+    /** Rendu dans une fenêtre détachée du navigateur (déplaçable sur un autre écran). */
+    detachee?: boolean;
 }
 
 type Brouillon = Record<keyof SeuilsAnalyse, number | ''>;
@@ -35,6 +39,7 @@ const GROUPES: Groupe[] = [
             { cle: 'vertMiniReglementaire', label: 'Vert minimum réglementaire', unite: 's', aide: 'En dessous, la règle ISR n’est pas respectée (6 s).' },
             { cle: 'vertConfort', label: 'Vert de confort', unite: 's', aide: 'Valeur conseillée au-dessus du minimum, plus perceptible.' },
             { cle: 'vertCapacite', label: 'Vert rationnel en capacité', unite: 's', aide: 'En dessous, l’analyse signale le vert comme peu rationnel en capacité.' },
+            { cle: 'vertPietonSouhaite', label: 'Vert piéton souhaité', unite: 's', aide: 'En dessous, l’analyse suggère d’allonger le vert piéton. À 6 s, seuls les verts insuffisants sont signalés, en rouge.' },
             { cle: 'vertLong', label: 'Vert long', unite: 's', aide: 'Au-delà, le vert n’écoule plus de trafic utile et allonge l’attente.' }
         ]
     },
@@ -44,7 +49,7 @@ const GROUPES: Groupe[] = [
             { cle: 'attenteMaxi', label: 'Attente maximale de tout usager', unite: 's', aide: 'Attente réglementaire, tous courants (120 s).' },
             { cle: 'attenteMaxiTC', label: 'Attente maximale des transports en commun', unite: 's', aide: 'Dérogation ponctuelle aux feux R17/R18 (240 s).' },
             { cle: 'attentePietonMaxi', label: 'Attente piétonne maximale (tolérance)', unite: 's', aide: 'Attente C − V d’un piéton arrivé au rouge ; 50 s par défaut.' },
-            { cle: 'retardPietonMaxi', label: 'Retard moyen piéton signalé', unite: 's', aide: 'Retard moyen (C − V)² / 2C au-delà duquel l’analyse recommande d’agir ; 20 s par défaut.' }
+            { cle: 'retardPietonMaxi', label: 'Retard moyen piéton signalé', unite: 's', aide: 'Retard moyen (C − V)² / 2C au-delà duquel l’analyse recommande d’agir. Le guide Certu juge 20 s anormalement long ; 30 s par défaut pour limiter les signalements.' }
         ]
     },
     {
@@ -57,9 +62,9 @@ const GROUPES: Groupe[] = [
     {
         titre: 'Capacité',
         champs: [
-            { cle: 'capaciteReserveFaible', label: 'Réserve de capacité faible', unite: '%', aide: 'Suggestion de surveiller le courant.' },
-            { cle: 'capaciteUtiliseeAlerte', label: 'Capacité utilisée — alerte', unite: '%', aide: 'Point d’attention, affiché en orange.' },
-            { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande.' }
+            { cle: 'capaciteReserveFaible', label: 'Réserve de capacité faible', unite: '%', aide: 'Suggestion de surveiller le courant. Mêmes seuils que les couleurs du tableau Trafic (75 %).' },
+            { cle: 'capaciteUtiliseeAlerte', label: 'Capacité utilisée — alerte', unite: '%', aide: 'Point d’attention, affiché en orange (85 %).' },
+            { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande (100 %).' }
         ]
     }
 ];
@@ -93,7 +98,9 @@ const incoherences = (b: Brouillon): string[] => {
  * l'analyse du diagramme compare aux données du projet. Le réglage vaut pour
  * l'application entière, tous projets confondus.
  */
-const ReglageSeuilsDialog = ({ isOpen, onClose, seuils, onEnregistrer, tooltipsEnabled = true }: ReglageSeuilsDialogProps) => {
+const ReglageSeuilsDialog = ({
+    isOpen, onClose, seuils, onEnregistrer, tooltipsEnabled = true, detachee = false
+}: ReglageSeuilsDialogProps) => {
     const tip = (text: string) => (tooltipsEnabled ? text : undefined);
     const [brouillon, setBrouillon] = useState<Brouillon>(() => versBrouillon(seuils));
 
@@ -112,8 +119,8 @@ const ReglageSeuilsDialog = ({ isOpen, onClose, seuils, onEnregistrer, tooltipsE
         onClose();
     };
 
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Réglage des seuils de l'analyse" className="reglage-seuils-modal">
+    const corps = (
+        <>
             <p className="reglage-seuils-intro">
                 Ces valeurs servent à l'<strong>Analyse du diagramme</strong> et sont enregistrées pour
                 l'application entière : elles s'appliquent à tous les projets ouverts sur ce poste.
@@ -171,6 +178,21 @@ const ReglageSeuilsDialog = ({ isOpen, onClose, seuils, onEnregistrer, tooltipsE
                     Enregistrer
                 </button>
             </div>
+        </>
+    );
+
+    // Fenêtre détachée : le contenu seul, la fenêtre du navigateur porte le titre.
+    if (detachee) {
+        return isOpen ? (
+            <div className="modal-content reglage-seuils-modal reglage-seuils-detachee">
+                <div className="modal-body">{corps}</div>
+            </div>
+        ) : null;
+    }
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} nonModale tooltipsEnabled={tooltipsEnabled}
+            title={TITRE_REGLAGE_SEUILS} className="reglage-seuils-modal">
+            {corps}
         </Modal>
     );
 };

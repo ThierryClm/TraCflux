@@ -56,7 +56,7 @@ describe('analyserDiagramme', () => {
         expect(ids(large)).not.toContain('attente-pieton-maxi');
     });
 
-    it('signale un cycle court et un retard piéton de plus de 20 s', () => {
+    it('signale un cycle court et un retard piéton de plus de 30 s', () => {
         const court = analyserDiagramme({ groups: [g(1, 'V', 0, 20), g(2, 'P', 24, 8)], cycleLength: 36, conflictMatrix: [['', 4], [6, '']] });
         expect(ids(court)).toContain('cycle-mini');
         const long = analyserDiagramme({ groups: [g(1, 'V', 0, 70), g(2, 'P', 76, 8)], cycleLength: 100, conflictMatrix: [['', 6], [8, '']] });
@@ -146,6 +146,16 @@ describe('analyserDiagramme', () => {
         const r = analyserDiagramme({ groups: [g(1, 'V', 10, 20, { signal: 'R11v' }), vide], cycleLength: 60, conflictMatrix: [['', ''], ['', '']] });
         expect(r.groupesIgnores).toBe(1);
         expect(r.constats.flatMap(c => c.groupes)).not.toContain(2);
+    });
+
+    it('applique aux piétons leur propre seuil de vert, à 6 s par défaut', () => {
+        const r = analyserDiagramme({ groups: [g(1, 'V', 0, 30), g(2, 'P', 36, 8)], cycleLength: 60, conflictMatrix: [['', 5], [8, '']] });
+        // À 6 s, un vert piéton de 8 s ne déclenche plus la suggestion de confort.
+        expect(ids(r)).not.toContain('vert-pieton');
+        expect(r.constats.find(c => c.id === 'vert-confort')?.groupes ?? []).not.toContain(2);
+        const strict = analyserDiagramme({ groups: [g(1, 'V', 0, 30), g(2, 'P', 36, 8)], cycleLength: 60,
+            conflictMatrix: [['', 5], [8, '']], seuils: { vertPietonSouhaite: 10 } });
+        expect(strict.constats.find(c => c.id === 'vert-pieton')!.groupes).toEqual([2]);
     });
 
     it('suggère de vérifier les verts de plus de 40 s', () => {
