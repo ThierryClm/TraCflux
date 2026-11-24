@@ -1,0 +1,103 @@
+.reglage-seuils-modal {
+    width: min(520px, 94vw);
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.reglage-seuils-modal .modal-body {
+    overflow-y: auto;
+}
+
+/* Fenêtre détachée : le titre du navigateur est rappelé discrètement, avec
+   l'infobulle qui remplace l'ancien texte d'introduction. */
+.reglage-seuils-titre-detache {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: help;
+}
+
+.reglage-seuils-groupe {
+    border: 1px solid var(--md-text);
+    border-radius: 5px;
+    padding: 6px 10px 8px;
+    margin: 0 0 10px;
+}
+
+.reglage-seuils-groupe legend {
+    padding: 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+
+/* Le Modal pose « .modal-body label { display: block } » : on le surclasse. */
+.reglage-seuils-modal .modal-body .reglage-seuils-champ {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 10px;
+    margin-bottom: 0;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 13px;
+}
+
+.reglage-seuils-champ:last-child { border-bottom: none; }
+
+.reglage-seuils-saisie {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Le Modal impose 80 px aux champs numériques : on surclasse pour gagner 30 %. */
+.reglage-seuils-modal .modal-body input[type="number"] {
+    width: 56px;
+    padding: 4px 6px;
+    margin-left: 0;
+    text-align: right;
+    font-size: 13px;
+}
+
+.reglage-seuils-unite {
+    min-width: 16px;
+    font-size: 12px;
+    opacity: 0.75;
+}
+
+.reglage-seuils-label { flex: 1 1 auto; }
+
+.reglage-seuils-aide {
+    flex: 1 0 100%;
+    font-size: 11px;
+    line-height: 1.25;
+    opacity: 0.65;
+    white-space: pre-line;
+}
+
+.reglage-seuils-erreurs {
+    margin: 0 0 12px;
+    padding-left: 18px;
+    color: #e05a4f;
+    font-size: 12px;
+}
+
+.reglage-seuils-spacer { flex: 1 1 auto; }
+
+/* Fenêtre détachée : le contenu occupe toute la fenêtre du navigateur. */
+.modal-content.reglage-seuils-modal.reglage-seuils-detachee {
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
