@@ -30,6 +30,23 @@ describe('analyserDiagramme', () => {
         expect(confort.groupes).toEqual([2]);
     });
 
+    it('ne contrôle pas le jaune d\'un groupe cycle, temps de dégagement', () => {
+        const r = analyserDiagramme({
+            groups: [g(1, 'CY', 0, 10, { signal: 'R13c', durations: { green: 10, orange: 6, red: 0 } }), g(2, 'V', 20, 20)],
+            cycleLength: 60, conflictMatrix: [['', ''], ['', '']]
+        });
+        expect(ids(r)).not.toContain('jaune');
+    });
+
+    it('ignore les conflits d\'un groupe marqué aiguillage ou escamotage', () => {
+        const matrice: Matrice = [['', 5], ['', '']];
+        const sans = analyserDiagramme({ groups: [g(1, 'V', 0, 30), g(2, 'V', 31, 20)], cycleLength: 60, conflictMatrix: matrice });
+        expect(ids(sans)).toContain('conflits');
+        const avec = analyserDiagramme({ groups: [{ ...g(1, 'V', 0, 30), phaseFlag: 'e' }, g(2, 'V', 31, 20)],
+            cycleLength: 60, conflictMatrix: matrice });
+        expect(ids(avec)).not.toContain('conflits');
+    });
+
     it('contrôle le jaune de 3 ou 5 s, et le disque R17 de 3 à 8 s', () => {
         const r = analyserDiagramme({
             groups: [g(1, 'V', 0, 20, { durations: { green: 20, orange: 4, red: 0 } }),

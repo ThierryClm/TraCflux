@@ -93,6 +93,7 @@ const FLECHES_MEME_AXE = 15;
 
 const nomGroupe = (g: Groupe) => `GF${g.id}${g.name ? ` ${g.name}` : ''}`;
 const estPieton = (g: Groupe) => typeFormulaire(g.type) === 'P';
+const estCycliste = (g: Groupe) => typeFormulaire(g.type) === 'CY';
 const estVehicule = (g: Groupe) => ['V', 'B', 'CY'].includes(typeFormulaire(g.type));
 /**
  * Priorité piétons (PP), flèche lumineuse (FL) et groupe porteur d'un signal
@@ -182,7 +183,9 @@ export const analyserDiagramme = ({
     });
 
     controles++;
-    const jauneHorsNorme = analyses.filter(g => estVehicule(g) && !estSignalTC(g)
+    // Le jaune d'un groupe cycle est un temps de dégagement, comme celui des
+    // piétons : il n'obéit pas à la règle des 3 ou 5 s.
+    const jauneHorsNorme = analyses.filter(g => estVehicule(g) && !estCycliste(g) && !estSignalTC(g)
         && g.durations && ![3, 5].includes(Number(g.durations.orange)));
     if (jauneHorsNorme.length) ajouter({
         id: 'jaune', niveau: 'obligation', theme: 'Durées', groupes: jauneHorsNorme.map(g => g.id),
@@ -264,7 +267,11 @@ export const analyserDiagramme = ({
 
     // ---------------------------------------------------------------- matrice
     controles++;
-    const conflits = cycleLength > 0 ? computeConflicts(groups, conflictMatrix, cycleLength, actionData) : [];
+    // Un groupe marqué aiguillage (« a ») ou escamotage (« e ») gère son
+    // conflit : la liste des conflits de l'application le grise, l'analyse
+    // l'ignore également.
+    const conflits = (cycleLength > 0 ? computeConflicts(groups, conflictMatrix, cycleLength, actionData) : [])
+        .filter(c => !groups.find(g => g.id === c.from)?.phaseFlag);
     if (conflits.length) {
         const ids = [...new Set(conflits.flatMap(c => [c.from, c.to]))];
         const nomParId = (id: number) => {
