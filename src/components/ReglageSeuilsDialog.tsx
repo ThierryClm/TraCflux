@@ -65,7 +65,8 @@ const GROUPES: Groupe[] = [
         champs: [
             { cle: 'capaciteReserveFaible', label: 'Capacité utilisée importante', unite: '%', aide: 'Suggestion de surveiller le courant. Même seuil que les couleurs du tableau Trafic (75 %).' },
             { cle: 'capaciteUtiliseeAlerte', label: 'Capacité utilisée — alerte', unite: '%', aide: 'Point d’attention, affiché en orange (85 %).' },
-            { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande (100 %).' }
+            { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande (100 %).' },
+            { cle: 'fileAttenteMaxi', label: 'File d’attente moyenne signalée', unite: 'm', aide: 'Au-delà, la file peut remonter sur le carrefour amont (100 m).' }
         ]
     },
     {
@@ -190,12 +191,7 @@ const ReglageSeuilsDialog = ({
     if (detachee) {
         return isOpen ? (
             <div className="modal-content reglage-seuils-modal reglage-seuils-detachee">
-                <div className="modal-body">
-                    <h3 className="reglage-seuils-titre-detache" title={tip(INFOBULLE_TITRE_SEUILS)}>
-                        {TITRE_REGLAGE_SEUILS}
-                    </h3>
-                    {corps}
-                </div>
+                <div className="modal-body">{corps}</div>
             </div>
         ) : null;
     }

@@ -29,6 +29,21 @@ export type NiveauConstat = 'obligation' | 'recommandation' | 'information';
 /** Ordre d'affichage : les règles à corriger d'abord. */
 export const ORDRE_NIVEAUX: NiveauConstat[] = ['obligation', 'recommandation', 'information'];
 
+/**
+ * Ordre secondaire : la capacité et les piétons forment un groupe, le
+ * dégagement piéton passant en premier ; les constats liés à l'image du
+ * carrefour ferment les suggestions.
+ */
+const RANG_CONSTAT: Record<string, number> = {
+    capacite: 10,
+    'refuge-12m': 11,
+    'attente-pieton-maxi': 12,
+    'retard-pieton': 13,
+    'fleche-orpheline': 80,
+    'sans-fleche': 81
+};
+const rangConstat = (c: Constat) => RANG_CONSTAT[c.id] ?? 50;
+
 export interface Constat {
     /** Identifiant stable du contrôle (sert de clé d'affichage). */
     id: string;
@@ -553,6 +568,16 @@ export const analyserDiagramme = ({
         }
 
         controles++;
+        const filesLongues = lignes.filter(r => r.queue !== null && r.queue > S.fileAttenteMaxi);
+        if (filesLongues.length) ajouter({
+            id: 'file-attente', niveau: 'information', theme: "Files d'attente", groupes: filesLongues.map(r => r.g.id),
+            message: `File d'attente moyenne supérieure à ${S.fileAttenteMaxi} m :`,
+            details: filesLongues.map(r => `${nomGroupe(r.g)} (${Math.round(r.queue ?? 0)} m)`),
+            suggestion: 'Vérifier le stockage de la voie d\'approche : au-delà de cette longueur, la file peut remonter sur le carrefour amont ou bloquer un accès riverain. Redistribuer les verts ou revoir la géométrie.',
+            source: `${CERTU}, p. 35 et 71`
+        });
+
+        controles++;
         const reserveFaible = lignes.filter(r => (r.capU ?? 0) >= S.capaciteReserveFaible && (r.capU ?? 0) < S.capaciteUtiliseeAlerte);
         if (reserveFaible.length) ajouter({
             id: 'reserve-faible', niveau: 'information', theme: 'Capacité', groupes: reserveFaible.map(r => r.g.id),
@@ -563,6 +588,7 @@ export const analyserDiagramme = ({
         });
     }
 
-    constats.sort((a, b) => ORDRE_NIVEAUX.indexOf(a.niveau) - ORDRE_NIVEAUX.indexOf(b.niveau));
+    constats.sort((a, b) => ORDRE_NIVEAUX.indexOf(a.niveau) - ORDRE_NIVEAUX.indexOf(b.niveau)
+        || rangConstat(a) - rangConstat(b));
     return { constats, controles, groupesIgnores };
 };

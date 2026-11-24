@@ -37,6 +37,8 @@ export interface SeuilsAnalyse {
     capaciteUtiliseeAlerte: number;
     /** Capacité utilisée à partir de laquelle le courant est saturé. */
     capaciteUtiliseeSaturee: number;
+    /** Longueur de file d'attente moyenne signalée (m). */
+    fileAttenteMaxi: number;
     /** Trafic tourne-à-gauche sous lequel le stockage naturel suffit (uvp/h). */
     tagStockageNaturel: number;
     /** Trafic tourne-à-gauche au-delà duquel une protection devient nécessaire. */
@@ -62,6 +64,7 @@ export const SEUILS_ANALYSE_DEFAUT: SeuilsAnalyse = {
     capaciteReserveFaible: 75,
     capaciteUtiliseeAlerte: 85,
     capaciteUtiliseeSaturee: 100,
+    fileAttenteMaxi: 100,
     tagStockageNaturel: 100,
     tagPhaseProtegee: 150,
     tagOppositionParVoie: 400,
