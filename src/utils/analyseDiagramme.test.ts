@@ -99,22 +99,33 @@ describe('analyserDiagramme', () => {
         expect(r.constats.find(c => c.id === 'signal-type')!.groupes).toEqual([1]);
     });
 
-    it('refuse un R11 et un R14 sur le même couloir, et plus de trois R14', () => {
-        const r = analyserDiagramme({
-            groups: [
-                g(1, 'V', 0, 8, { signal: 'R11v', courant: 'TD' }),
-                g(2, 'V', 9, 8, { signal: 'R14d', courant: 'TD' }),
-                g(3, 'V', 18, 8, { signal: 'R14tg', courant: 'TG' }),
-                g(4, 'V', 27, 8, { signal: 'R14td', courant: 'TG' }),
-                g(5, 'V', 36, 8, { signal: 'R14dtg', courant: 'TG' }),
-                g(6, 'V', 45, 8, { signal: 'R14dtd', courant: 'TG' })
-            ],
-            cycleLength: 60, conflictMatrix: []
-        });
-        // Le champ « courant » n'est pas un couloir : ces deux points restent des points d'attention.
-        expect(r.constats.find(c => c.id === 'r11-r14-courant')!.niveau).toBe('recommandation');
-        expect(r.constats.find(c => c.id === 'r11-r14-courant')!.pointAttention).toBe(true);
+    it('repère un R11 et un R14 sur des flèches voisines de même orientation', () => {
+        const groupes = [
+            g(1, 'V', 0, 8, { signal: 'R11v', courant: 'TD' }),
+            g(2, 'V', 9, 8, { signal: 'R14d', courant: 'TD' }),
+            g(3, 'V', 18, 8, { signal: 'R14tg', courant: 'TG' }),
+            g(4, 'V', 27, 8, { signal: 'R14td', courant: 'TG' }),
+            g(5, 'V', 36, 8, { signal: 'R14dtg', courant: 'TG' }),
+            g(6, 'V', 45, 8, { signal: 'R14dtd', courant: 'TG' })
+        ];
+        const fleches = [
+            { id: 1, groupId: 1, x: 40, y: 60, rotation: 90 },
+            { id: 2, groupId: 2, x: 44, y: 61, rotation: 92 }
+        ];
+        const r = analyserDiagramme({ groups: groupes, cycleLength: 60, conflictMatrix: [], intersectionArrows: fleches });
+        expect(r.constats.find(c => c.id === 'r11-r14-image')!.details)
+            .toContain('GF1 Groupe 1 (R11v) et GF2 Groupe 2 (R14d) — flèches à 4.1 % l\'une de l\'autre, 2° d\'écart');
         expect(r.constats.find(c => c.id === 'r14-trop')!.niveau).toBe('recommandation');
+        // Flèches éloignées ou d'orientation différente : rien.
+        const loin = analyserDiagramme({ groups: groupes, cycleLength: 60, conflictMatrix: [],
+            intersectionArrows: [{ id: 1, groupId: 1, x: 10, y: 10, rotation: 90 }, { id: 2, groupId: 2, x: 80, y: 80, rotation: 92 }] });
+        expect(ids(loin)).not.toContain('r11-r14-image');
+        const tournees = analyserDiagramme({ groups: groupes, cycleLength: 60, conflictMatrix: [],
+            intersectionArrows: [{ id: 1, groupId: 1, x: 40, y: 60, rotation: 0 }, { id: 2, groupId: 2, x: 42, y: 61, rotation: 90 }] });
+        expect(ids(tournees)).not.toContain('r11-r14-image');
+        // Sans flèches renseignées, pas de conclusion.
+        const sansImage = analyserDiagramme({ groups: groupes, cycleLength: 60, conflictMatrix: [] });
+        expect(ids(sansImage)).not.toContain('r11-r14-image');
     });
 
     it('suggère une flèche par groupe, sans contrôler les retours de flèche', () => {
@@ -178,7 +189,7 @@ describe('analyserDiagramme', () => {
     it('applique la règle Cerema du tourne-à-gauche selon le trafic et la protection', () => {
         const deuxGroupes = [g(1, 'V', 10, 20, { courant: 'TàG', signal: 'R11v' }), g(2, 'V', 0, 20, { courant: 'TD', signal: 'R11v' })];
         const matrice: Matrice = [['', 5], [5, '']];
-        // Au-delà de 150 uvp/h sans feu en flèche : protection nécessaire.
+        // Au-delà de 150 uvp/h sans feu de type R14 : protection nécessaire.
         const haut = analyserDiagramme({ groups: deuxGroupes, cycleLength: 60, conflictMatrix: matrice,
             getTrafficData: id => ({ trafficVol: id === 1 ? 180 : 300 }) });
         const necessaire = haut.constats.find(c => c.id === 'tag-phase-necessaire')!;

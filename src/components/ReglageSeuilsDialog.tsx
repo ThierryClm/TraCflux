@@ -73,8 +73,7 @@ const GROUPES: Groupe[] = [
             { cle: 'tagStockageNaturel', label: 'TàG — stockage naturel', unite: 'uvp/h', aide: 'En dessous, il s’écoule au cœur du carrefour, en phase commune (100).' },
             { cle: 'tagPhaseProtegee', label: 'TàG — phase protégée', unite: 'uvp/h', aide: 'Au-delà, une voie dédiée et/ou une phase protégée deviennent nécessaires (150).' },
             { cle: 'tagOppositionParVoie', label: 'Trafic d’en face par voie', unite: 'uvp/h', aide: 'En zone charnière, la phase spéciale reste évitable sous cette valeur (400 à 500).' },
-            { cle: 'tagProduitCritique', label: 'Produit TàG × trafic d’en face', unite: '', aide: 'Au-delà, la protection devient nécessaire, même sous 150 uvp/h (50 000).' },
-            { cle: 'tagVoiesOpposeesMax', label: 'Voies opposées tolérées en conflit', unite: 'voie', aide: 'Au-delà, le TàG en conflit est fortement déconseillé, même à faible trafic (1 voie).' }
+            { cle: 'tagProduitCritique', label: 'Produit TàG × trafic d’en face', unite: '', aide: 'Au-delà, la protection devient nécessaire, même sous 150 uvp/h (50 000).' }
         ]
     }
 ];

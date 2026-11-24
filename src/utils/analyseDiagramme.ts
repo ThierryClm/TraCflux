@@ -70,6 +70,11 @@ export { SEUILS_ANALYSE_DEFAUT };
 const ISR_DUREES = 'ISR, 6e partie, art. 110 C1';
 const CERTU = 'Certu, Guide de conception des carrefours à feux, 2010';
 const CEREMA_TAG = 'Règle de conception Cerema';
+/** Un TàG ne devrait pas rester en conflit avec plus d'une voie opposée. */
+const MAX_VOIES_OPPOSEES = 1;
+/** Flèches voisines : distance en % de l'image et écart d'orientation en degrés. */
+const FLECHES_PROCHES = 8;
+const FLECHES_MEME_AXE = 15;
 
 const nomGroupe = (g: Groupe) => `GF${g.id}${g.name ? ` ${g.name}` : ''}`;
 const estPieton = (g: Groupe) => typeFormulaire(g.type) === 'P';
@@ -89,7 +94,7 @@ const normaliserCourant = (courant?: string) => (courant ?? '')
 /** Tourne-à-gauche seul : un courant mixte « TD_TàG » ne donne pas le trafic du TàG. */
 const estTag = (g: Groupe) => normaliserCourant(g.courant).trim() === 'tag';
 const estToutDroit = (g: Groupe) => normaliserCourant(g.courant).includes('td');
-/** Un feu en flèche R14 protège le mouvement ; un R11 le sert en phase commune. */
+/** Un feu de type R14 protège le mouvement ; un R11 le sert en phase commune. */
 const estProtege = (g: Groupe) => !!g.signal?.startsWith('R14');
 const caseRenseignee = (v: unknown) => v !== '' && v !== null && v !== undefined && !Number.isNaN(Number(v));
 const valeurCellule = (v: unknown) => caseRenseignee(v) ? Number(v) : null;
@@ -364,22 +369,38 @@ export const analyserDiagramme = ({
         if (!courant) return;
         parCourant.set(courant, [...(parCourant.get(courant) ?? []), g]);
     });
-    const melanges: string[] = [];
-    const melangesIds = new Set<number>();
-    parCourant.forEach((liste, courant) => {
-        const r11 = liste.filter(g => g.signal?.startsWith('R11'));
-        const r14 = liste.filter(g => g.signal?.startsWith('R14'));
-        if (r11.length && r14.length) {
-            const ids = [...r11, ...r14].map(g => g.id);
-            melanges.push(`${courant} : ${ids.map(id => `GF${id}`).join(', ')}`);
-            ids.forEach(id => melangesIds.add(id));
-        }
-    });
-    if (melanges.length) ajouter({
-        id: 'r11-r14-courant', niveau: 'recommandation', pointAttention: true, theme: 'Signaux', groupes: [...melangesIds],
-        message: 'R11 et R14 sur le même courant :',
-        details: melanges,
-        suggestion: 'À vérifier : un R11 ne peut coexister avec un R14 sur un même couloir. S\'ils le partagent, passez à un R11 unique ou à des R14 pour tous les groupes du couloir (flèches au sol obligatoires) ; sinon, rattachez-les à des courants distincts.',
+
+    // R11 et R14 côte à côte : seule l'image du carrefour permet de se
+    // prononcer. Deux flèches proches et de même orientation désignent la même
+    // voie d'entrée ; c'est là qu'un R11 ne peut coexister avec un R14.
+    controles++;
+    const ecartOrientation = (a?: number, b?: number) => {
+        const d = Math.abs(((a ?? 0) - (b ?? 0)) % 360);
+        return d > 180 ? 360 - d : d;
+    };
+    const pairesFleches: string[] = [];
+    const idsFleches = new Set<number>();
+    intersectionArrows.forEach((fa, i) => intersectionArrows.forEach((fb, j) => {
+        if (j <= i) return;
+        const ga = groups.find(g => g.id === fa.groupId);
+        const gb = groups.find(g => g.id === fb.groupId);
+        if (!ga || !gb || !estRenseigne(ga) || !estRenseigne(gb)) return;
+        const a11 = !!ga.signal?.startsWith('R11');
+        const a14 = !!ga.signal?.startsWith('R14');
+        const b11 = !!gb.signal?.startsWith('R11');
+        const b14 = !!gb.signal?.startsWith('R14');
+        if (!((a11 && b14) || (a14 && b11))) return;
+        const distance = Math.hypot(fa.x - fb.x, fa.y - fb.y);
+        const ecart = ecartOrientation(fa.rotation, fb.rotation);
+        if (distance > FLECHES_PROCHES || ecart > FLECHES_MEME_AXE) return;
+        pairesFleches.push(`${nomGroupe(ga)} (${ga.signal}) et ${nomGroupe(gb)} (${gb.signal}) — flèches à ${distance.toFixed(1)} % l'une de l'autre, ${Math.round(ecart)}° d'écart`);
+        idsFleches.add(ga.id); idsFleches.add(gb.id);
+    }));
+    if (pairesFleches.length) ajouter({
+        id: 'r11-r14-image', niveau: 'recommandation', pointAttention: true, theme: 'Signaux', groupes: [...idsFleches],
+        message: 'R11 et R14 sur des flèches voisines de même orientation :',
+        details: pairesFleches,
+        suggestion: 'À vérifier : ces flèches semblent désigner la même voie d\'entrée, où un R11 ne peut coexister avec un R14. Passez à un R11 unique ou à des R14 pour toutes les voies (flèches au sol obligatoires) ; sinon, corrigez l\'image.',
         source: 'ISR, 6e partie, art. 110-1 §2 et 110-4 §1'
     });
 
@@ -429,17 +450,20 @@ export const analyserDiagramme = ({
 
         const estNecessaire = (x: typeof tags[number]) => !x.protege
             && (x.vol >= S.tagPhaseProtegee || (x.opposition > 0 && x.vol * x.opposition > S.tagProduitCritique));
-        // Plus de voies opposées que toléré : le feu en flèche se justifie, et un
+        // Plus de voies opposées que toléré : le feu de type R14 se justifie, et un
         // TàG qui reste en conflit est déconseillé même à faible trafic.
-        const voiesTrop = (x: typeof tags[number]) => x.voiesOpposees > S.tagVoiesOpposeesMax;
+        const voiesTrop = (x: typeof tags[number]) => x.voiesOpposees > MAX_VOIES_OPPOSEES;
         const tagNecessaires = tags.filter(estNecessaire);
         const tagConflitVoies = tags.filter(x => !x.protege && voiesTrop(x));
 
         controles++;
-        const tagInutiles = tags.filter(x => x.protege && x.vol < S.tagStockageNaturel && !voiesTrop(x));
+        // On ne se prononce que si les voies d'en face sont effectivement connues :
+        // un R14 à faible trafic se justifie dès qu'il y a deux voies opposées.
+        const tagInutiles = tags.filter(x => x.protege && x.vol < S.tagStockageNaturel
+            && x.voiesOpposees >= 1 && !voiesTrop(x));
         if (tagInutiles.length) ajouter({
             id: 'tag-phase-inutile', niveau: 'information', theme: 'Tourne-à-gauche', groupes: tagInutiles.map(x => x.g.id),
-            message: `Tourne-à-gauche sous ${S.tagStockageNaturel} uvp/h avec feu en flèche :`,
+            message: `Tourne-à-gauche sous ${S.tagStockageNaturel} uvp/h avec feu de type R14 :`,
             details: tagInutiles.map(x => `${nomGroupe(x.g)} (${x.vol} uvp/h)`),
             suggestion: 'À ce trafic, le stockage et l\'écoulement au cœur du carrefour pendant la phase commune suffisent en général : une phase spéciale allonge le cycle et pénalise les autres usagers, piétons d\'abord.',
             source: CEREMA_TAG
@@ -461,7 +485,7 @@ export const analyserDiagramme = ({
             ajouter({
                 id: 'tag-phase-necessaire', niveau: 'recommandation', pointAttention: true, theme: 'Tourne-à-gauche',
                 groupes: tagNecessaires.map(x => x.g.id),
-                message: 'Tourne-à-gauche sans feu en flèche :',
+                message: 'Tourne-à-gauche sans feu de type R14 :',
                 details: tagNecessaires.map(x => {
                     const raisons = [`${x.vol} uvp/h`];
                     if (x.opposition > 0 && x.vol * x.opposition > S.tagProduitCritique) {
@@ -481,7 +505,7 @@ export const analyserDiagramme = ({
                 groupes: tagConflitVoies.map(x => x.g.id),
                 message: 'Tourne-à-gauche en conflit avec plusieurs voies opposées :',
                 details: tagConflitVoies.map(x => `${nomGroupe(x.g)} (${x.voiesOpposees} voies opposées${x.vol ? `, ${x.vol} uvp/h` : ''})`),
-                suggestion: `Fortement déconseillé, même à faible trafic : un tourne-à-gauche qui traverse plus de ${S.tagVoiesOpposeesMax} voie opposée expose à un risque accidentogène (véhicule masqué par un autre). Protéger le mouvement par un feu en flèche, ou ne laisser qu'une seule voie en conflit.`,
+                suggestion: `Fortement déconseillé, même à faible trafic : un tourne-à-gauche qui traverse plus d'une voie opposée expose à un risque accidentogène (véhicule masqué par un autre). Protéger le mouvement par un feu de type R14, ou ne laisser qu'une seule voie en conflit.`,
                 source: CEREMA_TAG
             });
         }
