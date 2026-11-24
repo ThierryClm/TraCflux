@@ -175,6 +175,28 @@ describe('analyserDiagramme', () => {
         expect(c.groupes).toEqual([1]);
     });
 
+    it('applique la règle Cerema du tourne-à-gauche selon le trafic et la protection', () => {
+        const deuxGroupes = [g(1, 'V', 10, 20, { courant: 'TàG', signal: 'R11v' }), g(2, 'V', 0, 20, { courant: 'TD', signal: 'R11v' })];
+        const matrice: Matrice = [['', 5], [5, '']];
+        // Au-delà de 150 uvp/h sans feu en flèche : protection nécessaire.
+        const haut = analyserDiagramme({ groups: deuxGroupes, cycleLength: 60, conflictMatrix: matrice,
+            getTrafficData: id => ({ trafficVol: id === 1 ? 180 : 300 }) });
+        const necessaire = haut.constats.find(c => c.id === 'tag-phase-necessaire')!;
+        expect(necessaire.niveau).toBe('recommandation');
+        expect(necessaire.pointAttention).toBe(true);
+        // Sous 100 uvp/h mais avec un R14 : phase spéciale probablement inutile.
+        const avecFleche = [g(1, 'V', 10, 20, { courant: 'TàG', signal: 'R14tg' }), deuxGroupes[1]];
+        const bas = analyserDiagramme({ groups: avecFleche, cycleLength: 60, conflictMatrix: matrice,
+            getTrafficData: id => ({ trafficVol: id === 1 ? 60 : 300 }) });
+        expect(bas.constats.find(c => c.id === 'tag-phase-inutile')!.niveau).toBe('information');
+        // Zone charnière : le trafic d'en face est rappelé.
+        const charniere = analyserDiagramme({ groups: deuxGroupes, cycleLength: 60, conflictMatrix: matrice,
+            getTrafficData: id => ({ trafficVol: id === 1 ? 120 : 300 }) });
+        expect(charniere.constats.find(c => c.id === 'tag-charniere')!.message)
+            .toMatch(/120 uvp\/h, en face 300 uvp\/h par voie/);
+        expect(ids(charniere)).not.toContain('tag-phase-necessaire');
+    });
+
     it('affiche les règles non respectées avant les recommandations et les suggestions', () => {
         const r = analyserDiagramme({
             groups: [g(1, 'V', 0, 4), g(2, 'V', 20, 8), g(3, 'V', 30, 20)],

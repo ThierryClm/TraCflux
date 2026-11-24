@@ -66,6 +66,15 @@ const GROUPES: Groupe[] = [
             { cle: 'capaciteUtiliseeAlerte', label: 'Capacité utilisée — alerte', unite: '%', aide: 'Point d’attention, affiché en orange (85 %).' },
             { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande (100 %).' }
         ]
+    },
+    {
+        titre: 'Tourne-à-gauche (TàG)',
+        champs: [
+            { cle: 'tagStockageNaturel', label: 'TàG — stockage naturel', unite: 'uvp/h', aide: 'En dessous, il s’écoule au cœur du carrefour, en phase commune (100).' },
+            { cle: 'tagPhaseProtegee', label: 'TàG — phase protégée', unite: 'uvp/h', aide: 'Au-delà, une voie dédiée et/ou une phase protégée deviennent nécessaires (150).' },
+            { cle: 'tagOppositionParVoie', label: 'Trafic d’en face par voie', unite: 'uvp/h', aide: 'En zone charnière, la phase spéciale reste évitable sous cette valeur (400 à 500).' },
+            { cle: 'tagProduitCritique', label: 'Produit TàG × trafic d’en face', unite: '', aide: 'Au-delà, la protection devient nécessaire, même sous 150 uvp/h (50 000).' }
+        ]
     }
 ];
 
@@ -90,6 +99,7 @@ const incoherences = (b: Brouillon): string[] => {
     if (s.vertCapacite < s.vertConfort) messages.push('Le vert rationnel en capacité ne peut pas être inférieur au vert de confort.');
     if (s.capaciteUtiliseeAlerte < s.capaciteReserveFaible) messages.push('Le seuil d’alerte de capacité ne peut pas être inférieur au seuil de réserve faible.');
     if (s.capaciteUtiliseeSaturee < s.capaciteUtiliseeAlerte) messages.push('Le seuil de saturation ne peut pas être inférieur au seuil d’alerte.');
+    if (s.tagPhaseProtegee <= s.tagStockageNaturel) messages.push('Le seuil de phase protégée doit être supérieur au seuil de stockage naturel.');
     return messages;
 };
 
@@ -143,7 +153,7 @@ const ReglageSeuilsDialog = ({
                                     title={tip(champ.aide)}
                                     onChange={e => modifier(champ.cle, e.target.value)}
                                 />
-                                <span className="reglage-seuils-unite">{champ.unite}</span>
+                                {champ.unite && <span className="reglage-seuils-unite">{champ.unite}</span>}
                             </span>
                             <span className="reglage-seuils-aide">{champ.aide}</span>
                         </label>

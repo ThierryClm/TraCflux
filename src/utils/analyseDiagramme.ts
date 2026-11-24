@@ -17,6 +17,7 @@ import type { ActionMicro, FlecheCarrefour, Groupe, Matrice } from '../types/pro
 import { computeConflicts } from './conflictUtils';
 import { lignesDiagnostic } from './diagnosticCarrefour';
 import { signalAdmis, typeFormulaire } from './signauxIsr';
+import { parseTrafficVol } from './trafficHelpers';
 import { SEUILS_ANALYSE_DEFAUT, completerSeuils, type SeuilsAnalyse } from './seuilsAnalyse';
 
 /** Règle non respectée (rouge), recommandation (orange) ou suggestion (bleu). */
@@ -75,6 +76,14 @@ const estEtatParticulier = (g: Groupe, actionData: ActionMicro[]) =>
     ['PP', 'FL'].includes(typeFormulaire(g.type))
     || actionData.some(a => a.action === 'Signal aide conduite' && Number(a.gf) === g.id);
 const estSignalTC = (g: Groupe) => g.signal === 'R17' || g.signal?.startsWith('R18');
+/** « TàG » ramené à « tag », accents et casse retirés. */
+const normaliserCourant = (courant?: string) => (courant ?? '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+/** Tourne-à-gauche seul : un courant mixte « TD_TàG » ne donne pas le trafic du TàG. */
+const estTag = (g: Groupe) => normaliserCourant(g.courant).trim() === 'tag';
+const estToutDroit = (g: Groupe) => normaliserCourant(g.courant).includes('td');
+/** Un feu en flèche R14 protège le mouvement ; un R11 le sert en phase commune. */
+const estProtege = (g: Groupe) => !!g.signal?.startsWith('R14');
 const caseRenseignee = (v: unknown) => v !== '' && v !== null && v !== undefined && !Number.isNaN(Number(v));
 const valeurCellule = (v: unknown) => caseRenseignee(v) ? Number(v) : null;
 
@@ -355,6 +364,71 @@ export const analyserDiagramme = ({
         suggestion: 'À vérifier : un couloir ne porte que deux ou trois groupes en R14, pas davantage. Si ces groupes partagent la même voie d\'entrée, regroupez les mouvements ou revoyez le découpage des courants.',
         source: 'ISR, 6e partie, art. 110-4 §2'
     });
+
+    // ---------------------------------------------------------------- tourne-à-gauche
+    // Règle de conception Cerema : éviter les phases spéciales ; le trafic du
+    // TàG et celui de son antagoniste direct décident du stockage, du décalage
+    // à la fermeture ou de la protection.
+    if (getTrafficData) {
+        const trafic = getTrafficData;
+        const tags = groups.map((g, i) => ({ g, i }))
+            .filter(({ g }) => estRenseigne(g) && estVehicule(g) && estTag(g))
+            .map(({ g, i }) => {
+                const vol = parseTrafficVol(trafic(g.id).trafficVol);
+                let opposition = 0;
+                let oppositionParVoie = 0;
+                groups.forEach((o, j) => {
+                    if (j === i || !estRenseigne(o) || !estToutDroit(o)) return;
+                    if (!caseRenseignee(conflictMatrix[i]?.[j])) return;
+                    const t = parseTrafficVol(trafic(o.id).trafficVol);
+                    if (t <= 0) return;
+                    opposition = Math.max(opposition, t);
+                    oppositionParVoie = Math.max(oppositionParVoie, Math.round(t / Math.max(0.1, o.laneCoef ?? 1)));
+                });
+                return { g, vol, protege: estProtege(g), opposition, oppositionParVoie };
+            })
+            .filter(x => x.vol > 0);
+
+        const estNecessaire = (x: typeof tags[number]) => !x.protege
+            && (x.vol >= S.tagPhaseProtegee || (x.opposition > 0 && x.vol * x.opposition > S.tagProduitCritique));
+        const tagNecessaires = tags.filter(estNecessaire);
+
+        controles++;
+        const tagInutiles = tags.filter(x => x.protege && x.vol < S.tagStockageNaturel);
+        if (tagInutiles.length) ajouter({
+            id: 'tag-phase-inutile', niveau: 'information', theme: 'Tourne-à-gauche', groupes: tagInutiles.map(x => x.g.id),
+            message: `Tourne-à-gauche sous ${S.tagStockageNaturel} uvp/h avec feu en flèche : ${tagInutiles.map(x => `${nomGroupe(x.g)} (${x.vol} uvp/h)`).join(', ')}.`,
+            suggestion: 'À ce trafic, le stockage et l\'écoulement au cœur du carrefour pendant la phase commune suffisent en général : une phase spéciale allonge le cycle et pénalise les autres usagers, piétons d\'abord.',
+            source: 'Règle de conception Cerema'
+        });
+
+        controles++;
+        const tagCharniere = tags.filter(x => x.vol >= S.tagStockageNaturel && x.vol < S.tagPhaseProtegee && !estNecessaire(x));
+        if (tagCharniere.length) ajouter({
+            id: 'tag-charniere', niveau: 'information', theme: 'Tourne-à-gauche', groupes: tagCharniere.map(x => x.g.id),
+            message: `Tourne-à-gauche en zone charnière (${S.tagStockageNaturel} à ${S.tagPhaseProtegee} uvp/h) : ${tagCharniere.map(x => `${nomGroupe(x.g)} (${x.vol} uvp/h${x.oppositionParVoie ? `, en face ${x.oppositionParVoie} uvp/h par voie` : ''})`).join(', ')}.`,
+            suggestion: `Éviter la phase spéciale si le trafic d'en face reste sous ${S.tagOppositionParVoie} uvp/h par voie ; sinon, stockage dédié (baïonnette) ou décalage à la fermeture avant d'envisager une phase protégée.`,
+            source: 'Règle de conception Cerema'
+        });
+
+        controles++;
+        if (tagNecessaires.length) {
+            const details = tagNecessaires.map(x => {
+                const raisons = [`${x.vol} uvp/h`];
+                if (x.opposition > 0 && x.vol * x.opposition > S.tagProduitCritique) {
+                    raisons.push(`produit ${x.vol} × ${x.opposition} = ${x.vol * x.opposition}`);
+                }
+                return `${nomGroupe(x.g)} (${raisons.join(', ')})`;
+            });
+            ajouter({
+                id: 'tag-phase-necessaire', niveau: 'recommandation', pointAttention: true, theme: 'Tourne-à-gauche',
+                groupes: tagNecessaires.map(x => x.g.id),
+                message: `Tourne-à-gauche sans feu en flèche : ${details.join(', ')}.`,
+                suggestion: `Au-delà de ${S.tagPhaseProtegee} uvp/h, ou quand le produit TàG × trafic d'en face dépasse ${S.tagProduitCritique}, une voie dédiée et/ou une phase protégée évitent la remontée de file sur la voie directe et les collisions. Ordre : stockage, décalage à la fermeture, voie dédiée, puis phase spéciale.`,
+                source: 'Règle de conception Cerema'
+            });
+        }
+    }
 
     // ---------------------------------------------------------------- image et capacité
     controles++;

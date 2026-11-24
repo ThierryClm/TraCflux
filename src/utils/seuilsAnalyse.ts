@@ -37,6 +37,14 @@ export interface SeuilsAnalyse {
     capaciteUtiliseeAlerte: number;
     /** Capacité utilisée à partir de laquelle le courant est saturé. */
     capaciteUtiliseeSaturee: number;
+    /** Trafic tourne-à-gauche sous lequel le stockage naturel suffit (uvp/h). */
+    tagStockageNaturel: number;
+    /** Trafic tourne-à-gauche au-delà duquel une protection devient nécessaire. */
+    tagPhaseProtegee: number;
+    /** Trafic d'en face par voie sous lequel la phase spéciale reste évitable (uvp/h). */
+    tagOppositionParVoie: number;
+    /** Produit TàG × trafic d'en face au-delà duquel la protection devient nécessaire. */
+    tagProduitCritique: number;
 }
 
 export const SEUILS_ANALYSE_DEFAUT: SeuilsAnalyse = {
@@ -53,7 +61,11 @@ export const SEUILS_ANALYSE_DEFAUT: SeuilsAnalyse = {
     traverseeSansRefuge: 12,
     capaciteReserveFaible: 75,
     capaciteUtiliseeAlerte: 85,
-    capaciteUtiliseeSaturee: 100
+    capaciteUtiliseeSaturee: 100,
+    tagStockageNaturel: 100,
+    tagPhaseProtegee: 150,
+    tagOppositionParVoie: 400,
+    tagProduitCritique: 50000
 };
 
 /** Clé de stockage locale : préférence d'application, comme les infobulles. */
