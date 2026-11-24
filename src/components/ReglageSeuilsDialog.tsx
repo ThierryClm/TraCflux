@@ -1,0 +1,178 @@
+import { useEffect, useState } from 'react';
+import Modal from './Modal';
+import { SEUILS_ANALYSE_DEFAUT } from '../utils/seuilsAnalyse';
+import type { SeuilsAnalyse } from '../utils/seuilsAnalyse';
+import './ReglageSeuilsDialog.css';
+
+interface ReglageSeuilsDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    seuils: SeuilsAnalyse;
+    /** Enregistre les seuils pour l'application entière. */
+    onEnregistrer: (seuils: SeuilsAnalyse) => void;
+    tooltipsEnabled?: boolean;
+}
+
+type Brouillon = Record<keyof SeuilsAnalyse, number | ''>;
+
+interface Champ {
+    cle: keyof SeuilsAnalyse;
+    label: string;
+    unite: string;
+    aide: string;
+}
+
+interface Groupe {
+    titre: string;
+    champs: Champ[];
+}
+
+/** Ce que règle chaque seuil, dans l'ordre où l'analyse les emploie. */
+const GROUPES: Groupe[] = [
+    {
+        titre: 'Durées de vert',
+        champs: [
+            { cle: 'vertMiniReglementaire', label: 'Vert minimum réglementaire', unite: 's', aide: 'En dessous, la règle ISR n’est pas respectée (6 s).' },
+            { cle: 'vertConfort', label: 'Vert de confort', unite: 's', aide: 'Valeur conseillée au-dessus du minimum, plus perceptible.' },
+            { cle: 'vertCapacite', label: 'Vert rationnel en capacité', unite: 's', aide: 'En dessous, l’analyse signale le vert comme peu rationnel en capacité.' },
+            { cle: 'vertLong', label: 'Vert long', unite: 's', aide: 'Au-delà, le vert n’écoule plus de trafic utile et allonge l’attente.' }
+        ]
+    },
+    {
+        titre: 'Attentes',
+        champs: [
+            { cle: 'attenteMaxi', label: 'Attente maximale de tout usager', unite: 's', aide: 'Attente réglementaire, tous courants (120 s).' },
+            { cle: 'attenteMaxiTC', label: 'Attente maximale des transports en commun', unite: 's', aide: 'Dérogation ponctuelle aux feux R17/R18 (240 s).' },
+            { cle: 'attentePietonMaxi', label: 'Attente piétonne maximale (tolérance)', unite: 's', aide: 'Attente C − V d’un piéton arrivé au rouge ; 50 s par défaut.' },
+            { cle: 'retardPietonMaxi', label: 'Retard moyen piéton signalé', unite: 's', aide: 'Retard moyen (C − V)² / 2C au-delà duquel l’analyse recommande d’agir ; 20 s par défaut.' }
+        ]
+    },
+    {
+        titre: 'Cycle et traversées',
+        champs: [
+            { cle: 'cycleMini', label: 'Cycle minimum', unite: 's', aide: 'En dessous, le cycle est jugé trop court pour la sécurité (40 s).' },
+            { cle: 'traverseeSansRefuge', label: 'Traversée sans refuge', unite: 'm', aide: 'Au-delà, un îlot refuge est recommandé (12 m).' }
+        ]
+    },
+    {
+        titre: 'Capacité',
+        champs: [
+            { cle: 'capaciteReserveFaible', label: 'Réserve de capacité faible', unite: '%', aide: 'Suggestion de surveiller le courant.' },
+            { cle: 'capaciteUtiliseeAlerte', label: 'Capacité utilisée — alerte', unite: '%', aide: 'Point d’attention, affiché en orange.' },
+            { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande.' }
+        ]
+    }
+];
+
+const versBrouillon = (seuils: SeuilsAnalyse): Brouillon =>
+    (Object.keys(SEUILS_ANALYSE_DEFAUT) as (keyof SeuilsAnalyse)[])
+        .reduce((b, cle) => ({ ...b, [cle]: seuils[cle] }), {} as Brouillon);
+
+const versSeuils = (b: Brouillon): SeuilsAnalyse => {
+    const s = { ...SEUILS_ANALYSE_DEFAUT };
+    (Object.keys(s) as (keyof SeuilsAnalyse)[]).forEach(cle => {
+        const v = b[cle];
+        if (typeof v === 'number' && Number.isFinite(v)) s[cle] = Math.round(v);
+    });
+    return s;
+};
+
+/** Incohérences entre seuils, qui rendraient l'analyse contradictoire. */
+const incoherences = (b: Brouillon): string[] => {
+    const s = versSeuils(b);
+    const messages: string[] = [];
+    if (s.vertConfort < s.vertMiniReglementaire) messages.push('Le vert de confort ne peut pas être inférieur au vert minimum réglementaire.');
+    if (s.vertCapacite < s.vertConfort) messages.push('Le vert rationnel en capacité ne peut pas être inférieur au vert de confort.');
+    if (s.capaciteUtiliseeAlerte < s.capaciteReserveFaible) messages.push('Le seuil d’alerte de capacité ne peut pas être inférieur au seuil de réserve faible.');
+    if (s.capaciteUtiliseeSaturee < s.capaciteUtiliseeAlerte) messages.push('Le seuil de saturation ne peut pas être inférieur au seuil d’alerte.');
+    return messages;
+};
+
+/**
+ * « Réglage des seuils... » (menu Diagramme ▸ Options) : les valeurs que
+ * l'analyse du diagramme compare aux données du projet. Le réglage vaut pour
+ * l'application entière, tous projets confondus.
+ */
+const ReglageSeuilsDialog = ({ isOpen, onClose, seuils, onEnregistrer, tooltipsEnabled = true }: ReglageSeuilsDialogProps) => {
+    const tip = (text: string) => (tooltipsEnabled ? text : undefined);
+    const [brouillon, setBrouillon] = useState<Brouillon>(() => versBrouillon(seuils));
+
+    // Repart des seuils en vigueur à chaque ouverture (brouillon local).
+    useEffect(() => {
+        if (isOpen) setBrouillon(versBrouillon(seuils));
+    }, [isOpen, seuils]);
+
+    const modifier = (cle: keyof SeuilsAnalyse, valeur: string) =>
+        setBrouillon(b => ({ ...b, [cle]: valeur === '' ? '' : Number(valeur) }));
+    const problemes = incoherences(brouillon);
+
+    const enregistrer = () => {
+        if (problemes.length) return;
+        onEnregistrer(versSeuils(brouillon));
+        onClose();
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Réglage des seuils de l'analyse" className="reglage-seuils-modal">
+            <p className="reglage-seuils-intro">
+                Ces valeurs servent à l'<strong>Analyse du diagramme</strong> et sont enregistrées pour
+                l'application entière : elles s'appliquent à tous les projets ouverts sur ce poste.
+                Une modification n'altère jamais le projet lui-même.
+            </p>
+
+            {GROUPES.map(groupe => (
+                <fieldset key={groupe.titre} className="reglage-seuils-groupe">
+                    <legend>{groupe.titre}</legend>
+                    {groupe.champs.map(champ => (
+                        <label key={champ.cle} className="reglage-seuils-champ">
+                            <span className="reglage-seuils-label">{champ.label}</span>
+                            <span className="reglage-seuils-saisie">
+                                <input
+                                    type="number"
+                                    min={0}
+                                    step={1}
+                                    value={brouillon[champ.cle]}
+                                    aria-label={champ.label}
+                                    title={tip(champ.aide)}
+                                    onChange={e => modifier(champ.cle, e.target.value)}
+                                />
+                                <span className="reglage-seuils-unite">{champ.unite}</span>
+                            </span>
+                            <span className="reglage-seuils-aide">{champ.aide}</span>
+                        </label>
+                    ))}
+                </fieldset>
+            ))}
+
+            {problemes.length > 0 && (
+                <ul className="reglage-seuils-erreurs" role="alert">
+                    {problemes.map(m => <li key={m}>{m}</li>)}
+                </ul>
+            )}
+
+            <div className="modal-actions">
+                <button
+                    className="modal-btn modal-btn-secondary"
+                    onClick={() => setBrouillon(versBrouillon(SEUILS_ANALYSE_DEFAUT))}
+                    title={tip('Rétablir les valeurs par défaut, puis Enregistrer pour les appliquer')}
+                >
+                    Réinitialiser
+                </button>
+                <span className="reglage-seuils-spacer" />
+                <button className="modal-btn modal-btn-secondary" onClick={onClose}>
+                    Annuler
+                </button>
+                <button
+                    className="modal-btn modal-btn-primary"
+                    onClick={enregistrer}
+                    disabled={problemes.length > 0}
+                    title={tip(problemes.length ? 'Corrigez les seuils incohérents pour enregistrer' : 'Appliquer ces seuils à l’analyse')}
+                >
+                    Enregistrer
+                </button>
+            </div>
+        </Modal>
+    );
+};
+
+export default ReglageSeuilsDialog;

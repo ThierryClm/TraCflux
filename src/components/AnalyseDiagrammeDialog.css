@@ -15,6 +15,13 @@
     opacity: 0.85;
 }
 
+.analyse-ignores {
+    margin: 0 0 12px;
+    font-size: 12px;
+    font-style: italic;
+    opacity: 0.7;
+}
+
 .analyse-niveau h4 {
     margin: 12px 0 6px;
     font-size: 14px;
@@ -53,6 +60,13 @@
     text-transform: uppercase;
     letter-spacing: 0.04em;
     opacity: 0.7;
+}
+
+/* Un point d'attention reste orange, mais se distingue d'une recommandation. */
+.analyse-theme.analyse-point-attention {
+    color: #e0a33a;
+    font-weight: 600;
+    opacity: 1;
 }
 
 .analyse-message { font-weight: 600; }

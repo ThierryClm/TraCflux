@@ -89,6 +89,9 @@ import SuggestionCycleDialog, { titreSuggestionCycle } from './components/Sugges
 import { ECRAN_MOBILE } from './utils/ecranMobile';
 import NouveauPlanDialog from './components/NouveauPlanDialog';
 import AnalyseDiagrammeDialog, { titreAnalyseDiagramme } from './components/AnalyseDiagrammeDialog';
+import ReglageSeuilsDialog from './components/ReglageSeuilsDialog';
+import { chargerSeuilsAnalyse, enregistrerSeuilsAnalyse } from './utils/seuilsAnalyse';
+import type { SeuilsAnalyse } from './utils/seuilsAnalyse';
 import { basculerVerrou, basculerVerrouTout, definirPrefsVerrou, prefsVerrouAEnregistrer, usePrefsVerrou } from './utils/verrouSaisie';
 
 /** Options d'un export PNG de section (cf. exportSectionAsPng). */
@@ -682,7 +685,6 @@ function App() {
     });
 
     // Diagram arrow style
-    const [diagramArrowStyle, setDiagramArrowStyle] = useState('solid');
 
 
 
@@ -741,6 +743,13 @@ function App() {
     // affiché a du trafic dans son jeu.
     const [suggestionCycleModal, setSuggestionCycleModal] = useState(false);
     const [analyseDiagrammeModal, setAnalyseDiagrammeModal] = useState(false);
+    // Seuils de l'analyse : préférence d'application, relue dans le stockage local.
+    const [seuilsAnalyse, setSeuilsAnalyse] = useState<SeuilsAnalyse>(chargerSeuilsAnalyse);
+    const [reglageSeuilsModal, setReglageSeuilsModal] = useState(false);
+    const modifierSeuilsAnalyse = (seuils: SeuilsAnalyse) => {
+        setSeuilsAnalyse(seuils);
+        enregistrerSeuilsAnalyse(seuils);
+    };
     // Elle s'ouvre en fenêtre détachée, déplaçable sur un autre écran pour
     // laisser le diagramme dégagé ; dans la page si le navigateur bloque la
     // fenêtre, ou sur un téléphone : il n'a qu'un écran, et la « fenêtre »
@@ -1610,6 +1619,9 @@ function App() {
             case 'analyseDiagramme':
                 ouvrirAnalyseDiagramme();
                 break;
+            case 'reglageSeuils':
+                setReglageSeuilsModal(true);
+                break;
             case 'import':
                 handleImportExcelDirect();
                 break;
@@ -2254,8 +2266,9 @@ function App() {
     const propsAnalyseDiagramme = useMemo(() => ({
         onClose: () => setAnalyseDiagrammeModal(false),
         planName: activePFName, groups, cycleLength, conflictMatrix, intersectionArrows, getTrafficData, actionData,
+        seuils: seuilsAnalyse,
         tooltipsEnabled: tooltipPrefs.main
-    }), [activePFName, groups, cycleLength, conflictMatrix, intersectionArrows, getTrafficData, actionData, tooltipPrefs.main]);
+    }), [activePFName, groups, cycleLength, conflictMatrix, intersectionArrows, getTrafficData, actionData, seuilsAnalyse, tooltipPrefs.main]);
     const renderAnalyseDiagramme = analyseDiagrammePopup.renderToPopup;
     useEffect(() => {
         if (!analyseDiagrammeModal || assistantDansLaPage) return;
@@ -2427,8 +2440,6 @@ function App() {
         <div className={`app-container${(dossierReadOnly || activePfReadOnly) ? ' dossier-readonly' : ''}`}>
             <MenuBar
                     onAction={handleMenuAction}
-                    arrowStyle={diagramArrowStyle}
-                    onArrowStyleChange={setDiagramArrowStyle}
                     importedFiles={importedHTMFiles}
                     recentDirectories={getRecentDirectoriesForMenu()}
                     recentOpenDirs={recentOpenDirs}
@@ -2614,6 +2625,13 @@ function App() {
             />
             <AnalyseDiagrammeDialog {...propsAnalyseDiagramme}
                 isOpen={analyseDiagrammeModal && (assistantDansLaPage || analyseDiagrammePopup.bloquee)} />
+            <ReglageSeuilsDialog
+                isOpen={reglageSeuilsModal}
+                onClose={() => setReglageSeuilsModal(false)}
+                seuils={seuilsAnalyse}
+                onEnregistrer={modifierSeuilsAnalyse}
+                tooltipsEnabled={tooltipPrefs.main}
+            />
             {/* Repli dans la page quand le navigateur bloque la fenêtre détachée. */}
             <SuggestionCycleDialog {...propsSuggestionCycle} isOpen={suggestionCycleModal && (assistantDansLaPage || suggestionCyclePopup.bloquee)} />
             <SupportDialogs

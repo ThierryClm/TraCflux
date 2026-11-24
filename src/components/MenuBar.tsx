@@ -29,8 +29,6 @@ interface ElementMenu {
     submenu?: ElementMenu[];
     /** Entrée de thème de couleur, cochée quand le thème est actif. */
     themeId?: string;
-    /** Entrée de style de flèche, cochée quand le style est actif. */
-    styleId?: string;
     min?: number;
     max?: number;
     value?: number;
@@ -119,8 +117,6 @@ interface RepertoireRecent {
 
 export interface MenuBarProps {
     onAction?: (action: string) => void;
-    arrowStyle?: string;
-    onArrowStyleChange?: (styleId: string) => void;
     importedFiles?: { id: string | number; name: string }[];
     recentDirectories?: RepertoireRecent[];
     recentOpenDirs?: RepertoireRecent[];
@@ -160,8 +156,6 @@ export interface PlanScenariosMenu {
 
 const MenuBar = ({
     onAction,
-    arrowStyle,
-    onArrowStyleChange,
     recentOpenDirs = [],
     recentSaveDirs = [],
     currentUser = null,
@@ -291,15 +285,6 @@ const MenuBar = ({
 
     const handleSubmenuHover = (submenuId: string | undefined) => {
         setOpenSubmenu(submenuId ?? null);
-    };
-
-    const handleArrowStyleSelect = (styleId: string) => {
-        if (onArrowStyleChange) {
-            onArrowStyleChange(styleId);
-        }
-        setOpenMenu(null);
-        setOpenSubmenu(null);
-        setOpenNestedSubmenu(null);
     };
 
     // Build imported files submenu dynamically
@@ -752,15 +737,11 @@ const MenuBar = ({
                         { label: 'Variables Priorité Bus...', action: 'microVariables' },
                         { type: 'separator' },
                         {
-                            label: 'Style de flèche',
-                            type: 'submenu',
-                            submenuId: 'arrowStyle',
-                            submenu: [
-                                { label: 'Trait plein', action: 'arrowStyle:solid', styleId: 'solid' },
-                                { label: 'Trait pointillé', action: 'arrowStyle:dashed', styleId: 'dashed' },
-                                { label: 'Points', action: 'arrowStyle:dotted', styleId: 'dotted' },
-                                { label: 'Double trait', action: 'arrowStyle:double', styleId: 'double' }
-                            ]
+                            // Seuils que l'analyse du diagramme compare aux données
+                            // du projet, enregistrés pour l'application entière.
+                            label: 'Réglage des seuils...',
+                            action: 'reglageSeuils',
+                            title: 'Modifier les seuils de l’analyse du diagramme (vert minimum, attentes, retard piéton, refuge, capacité…).'
                         }
                     ]
                 }
@@ -894,21 +875,6 @@ const MenuBar = ({
                     onClick={() => handleItemClick(subItem.action, subItem.keepSubmenuOpen)}
                 >
                     {isActive && <span className="checkmark">✓</span>}
-                    {subItem.label}
-                </button>
-            );
-        }
-
-        // Check if this is an arrow style item
-        if (subItem.styleId) {
-            const styleId = subItem.styleId;
-            return (
-                <button
-                    key={subIdx}
-                    className={`menu-item ${arrowStyle === styleId ? 'checked' : ''}`}
-                    onClick={() => handleArrowStyleSelect(styleId)}
-                >
-                    {arrowStyle === subItem.styleId && <span className="checkmark">✓</span>}
                     {subItem.label}
                 </button>
             );
