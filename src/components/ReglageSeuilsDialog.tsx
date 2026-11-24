@@ -62,7 +62,7 @@ const GROUPES: Groupe[] = [
     {
         titre: 'Capacité',
         champs: [
-            { cle: 'capaciteReserveFaible', label: 'Réserve de capacité faible', unite: '%', aide: 'Suggestion de surveiller le courant. Mêmes seuils que les couleurs du tableau Trafic (75 %).' },
+            { cle: 'capaciteReserveFaible', label: 'Capacité utilisée importante', unite: '%', aide: 'Suggestion de surveiller le courant. Même seuil que les couleurs du tableau Trafic (75 %).' },
             { cle: 'capaciteUtiliseeAlerte', label: 'Capacité utilisée — alerte', unite: '%', aide: 'Point d’attention, affiché en orange (85 %).' },
             { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande (100 %).' }
         ]

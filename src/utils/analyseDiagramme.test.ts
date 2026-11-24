@@ -113,6 +113,7 @@ describe('analyserDiagramme', () => {
             { id: 2, groupId: 2, x: 44, y: 61, rotation: 92 }
         ];
         const r = analyserDiagramme({ groups: groupes, cycleLength: 60, conflictMatrix: [], intersectionArrows: fleches });
+        expect(r.constats.find(c => c.id === 'r11-r14-image')!.niveau).toBe('obligation');
         expect(r.constats.find(c => c.id === 'r11-r14-image')!.details)
             .toContain('GF1 Groupe 1 (R11v) et GF2 Groupe 2 (R14d) — flèches à 4.1 % l\'une de l\'autre, 2° d\'écart');
         expect(r.constats.find(c => c.id === 'r14-trop')!.niveau).toBe('recommandation');

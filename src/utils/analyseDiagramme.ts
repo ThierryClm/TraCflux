@@ -225,7 +225,7 @@ export const analyserDiagramme = ({
             .filter(x => x.r > S.retardPietonMaxi);
         if (retards.length) ajouter({
             id: 'retard-pieton', niveau: 'recommandation', theme: 'Piétons', groupes: retards.map(x => x.g.id),
-            message: `Retard moyen des piétons supérieur à ${S.retardPietonMaxi} s au plan nominal :`,
+            message: `Retard moyen des piétons supérieur à ${S.retardPietonMaxi} s (hors micro-régulation) :`,
             details: retards.map(x => `${nomGroupe(x.g)} (${x.r} s)`),
             suggestion: 'Calcul hors micro-régulation : les contractions de phase (adaptatifs, escamotages) ne sont pas prises en compte et réduisent ce retard en fonctionnement réel. Le guide Certu juge déjà 20 s anormalement long ; le seuil de signalement est réglable. Sinon : allonger le vert piéton, raccourcir le cycle ou ouvrir la traversée dans une autre phase. Retard moyen r = (C − V)² / 2C.',
             source: `${CERTU}, p. 72`
@@ -280,7 +280,7 @@ export const analyserDiagramme = ({
         // Organe de sécurité : une incompatibilité déclarée d'un seul côté est une
         // règle non respectée, jamais une simple recommandation.
         id: 'matrice-asymetrique', niveau: 'obligation', theme: 'Matrice', groupes: [...asymIds],
-        message: 'Incompatibilité déclarée dans un seul sens :',
+        message: 'Symétrie non respectée :',
         details: asym,
         suggestion: 'Deux courants antagonistes ont un rouge de dégagement dans chaque sens : compléter la case manquante ou vérifier la compatibilité.',
         source: 'ISR, 6e partie, art. 110 A'
@@ -397,10 +397,12 @@ export const analyserDiagramme = ({
         idsFleches.add(ga.id); idsFleches.add(gb.id);
     }));
     if (pairesFleches.length) ajouter({
-        id: 'r11-r14-image', niveau: 'recommandation', pointAttention: true, theme: 'Signaux', groupes: [...idsFleches],
-        message: 'R11 et R14 sur des flèches voisines de même orientation :',
+        // Non-conformité : un R11 ne peut coexister avec un R14 sur la même
+        // voie d'entrée, et l'image le montre.
+        id: 'r11-r14-image', niveau: 'obligation', theme: 'Signaux', groupes: [...idsFleches],
+        message: 'R11 et R14 sur des flèches voisines : le carrefour est non conforme.',
         details: pairesFleches,
-        suggestion: 'À vérifier : ces flèches semblent désigner la même voie d\'entrée, où un R11 ne peut coexister avec un R14. Passez à un R11 unique ou à des R14 pour toutes les voies (flèches au sol obligatoires) ; sinon, corrigez l\'image.',
+        suggestion: 'Ces flèches désignent la même voie d\'entrée, où un R11 ne peut coexister avec un R14. Passez à un R11 unique ou à des R14 pour toutes les voies (flèches au sol obligatoires) ; sinon, corrigez l\'image.',
         source: 'ISR, 6e partie, art. 110-1 §2 et 110-4 §1'
     });
 
@@ -554,7 +556,7 @@ export const analyserDiagramme = ({
         const reserveFaible = lignes.filter(r => (r.capU ?? 0) >= S.capaciteReserveFaible && (r.capU ?? 0) < S.capaciteUtiliseeAlerte);
         if (reserveFaible.length) ajouter({
             id: 'reserve-faible', niveau: 'information', theme: 'Capacité', groupes: reserveFaible.map(r => r.g.id),
-            message: `Réserve de capacité faible, de ${S.capaciteReserveFaible} à ${S.capaciteUtiliseeAlerte} % :`,
+            message: `Capacité utilisée importante, de ${S.capaciteReserveFaible} à ${S.capaciteUtiliseeAlerte} % :`,
             details: reserveFaible.map(r => `${nomGroupe(r.g)} (${Math.round(r.capU ?? 0)} %)`),
             suggestion: 'Surveiller ces courants : une pointe de trafic les fera basculer au-dessus du seuil d\'alerte.',
             source: `${CERTU}, p. 35 et 71`
