@@ -784,8 +784,8 @@ function App() {
         isOpen: reglageSeuilsModal && !assistantDansLaPage,
         onClose: () => setReglageSeuilsModal(false),
         title: TITRE_REGLAGE_SEUILS,
-        width: 700,
-        height: 760
+        width: 560,
+        height: 720
     });
     const ouvrirReglageSeuils = () => {
         if (reglageSeuilsModal) { if (!assistantDansLaPage) reglageSeuilsPopup.retryOpen(); }

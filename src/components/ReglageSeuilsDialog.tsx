@@ -50,7 +50,7 @@ const GROUPES: Groupe[] = [
             { cle: 'attenteMaxi', label: 'Attente maximale de tout usager', unite: 's', aide: 'Attente réglementaire, tous courants (120 s).' },
             { cle: 'attenteMaxiTC', label: 'Attente maximale des transports en commun', unite: 's', aide: 'Dérogation ponctuelle aux feux R17/R18 (240 s).' },
             { cle: 'attentePietonMaxi', label: 'Attente piétonne maximale (tolérance)', unite: 's', aide: 'Attente C − V d’un piéton arrivé au rouge ; 50 s par défaut.' },
-            { cle: 'retardPietonMaxi', label: 'Retard moyen piéton signalé', unite: 's', aide: 'Retard moyen (C − V)² / 2C au-delà duquel l’analyse recommande d’agir. Le guide Certu juge 20 s anormalement long ; 30 s par défaut pour limiter les signalements.' }
+            { cle: 'retardPietonMaxi', label: 'Retard moyen piéton signalé', unite: 's', aide: 'Retard moyen (C − V)² / 2C au-delà duquel l’analyse recommande d’agir.\nLe guide Certu juge 20 s anormalement long ; 30 s par défaut pour limiter les signalements.' }
         ]
     },
     {
