@@ -31,8 +31,6 @@ export interface SeuilsAnalyse {
     cycleMini: number;
     /** Traversée piétonne au-delà de laquelle un refuge est recommandé (m). */
     traverseeSansRefuge: number;
-    /** Réserve de capacité faible, en dessous de laquelle on suggère de vérifier. */
-    capaciteReserveFaible: number;
     /** Capacité utilisée à partir de laquelle on alerte (point d'attention). */
     capaciteUtiliseeAlerte: number;
     /** Capacité utilisée à partir de laquelle le courant est saturé. */
@@ -61,7 +59,6 @@ export const SEUILS_ANALYSE_DEFAUT: SeuilsAnalyse = {
     retardPietonMaxi: 30,
     cycleMini: 40,
     traverseeSansRefuge: 12,
-    capaciteReserveFaible: 75,
     capaciteUtiliseeAlerte: 85,
     capaciteUtiliseeSaturee: 100,
     fileAttenteMaxi: 100,

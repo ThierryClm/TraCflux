@@ -584,15 +584,6 @@ export const analyserDiagramme = ({
             source: `${CERTU}, p. 35 et 71`
         });
 
-        controles++;
-        const reserveFaible = lignes.filter(r => (r.capU ?? 0) >= S.capaciteReserveFaible && (r.capU ?? 0) < S.capaciteUtiliseeAlerte);
-        if (reserveFaible.length) ajouter({
-            id: 'reserve-faible', niveau: 'information', theme: 'Capacité', groupes: reserveFaible.map(r => r.g.id),
-            message: `Capacité utilisée importante, de ${S.capaciteReserveFaible} à ${S.capaciteUtiliseeAlerte} % :`,
-            details: reserveFaible.map(r => `${nomGroupe(r.g)} (${Math.round(r.capU ?? 0)} %)`),
-            suggestion: 'Surveiller ces courants : une pointe de trafic les fera basculer au-dessus du seuil d\'alerte.',
-            source: `${CERTU}, p. 35 et 71`
-        });
     }
 
     constats.sort((a, b) => ORDRE_NIVEAUX.indexOf(a.niveau) - ORDRE_NIVEAUX.indexOf(b.niveau)

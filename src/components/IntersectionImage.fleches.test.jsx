@@ -53,6 +53,12 @@ describe('IntersectionImage — flèches des groupes sans vert', () => {
         expect(numeros).toEqual(['1']);
     });
 
+    it('rappelle le groupe à poser à côté du curseur', () => {
+        const { container } = rendre({ groups: [groupe(1, 30), groupe(2, 20)], arrows: [fleche(1)],
+            displayOptions: { showArrows: true } });
+        expect(container.querySelector('.ajout-repere')).toHaveTextContent('GF2');
+    });
+
     it('cache une flèche dont le groupe n’existe plus', () => {
         const { container } = rendre({ groups: [groupe(1, 30)], arrows: [fleche(1), fleche(7)] });
         expect(marqueurs(container)).toHaveLength(1);

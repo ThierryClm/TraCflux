@@ -1367,3 +1367,17 @@ body.high-contrast-mode .time-slider::-moz-range-thumb {
     width: 100%;
     max-width: 100%;
 }
+
+/* Repère du prochain élément à poser, à côté du curseur en croix : « GF12 »
+   pour une flèche, le nom du détecteur pour un détecteur. */
+.intersection-image-area .ajout-repere {
+    position: absolute;
+    z-index: 30;
+    left: 0;
+    top: 0;
+    bottom: auto;
+    transform: translate(14px, -50%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s;
+}

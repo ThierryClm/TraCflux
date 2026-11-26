@@ -220,6 +220,17 @@ const IntersectionImage = ({
     // cases ne peuvent jamais être cochées ensemble.
     const ajoutDetecteursActif = detecteurModule && ajoutDetecteurs && !showArrows && peutAjouterDetecteur;
 
+    // Ce que le prochain clic posera, rappelé à côté du curseur en croix :
+    // « GF12 » pour une flèche, le nom du détecteur pour un détecteur.
+    const prochainGroupeFleche = showArrows
+        ? groups.find(g => (g.courant || '').trim() && (g.durations?.green || 0) > 0 && !arrows.some(a => a.groupId === g.id))
+        : undefined;
+    const prochainDetecteur = ajoutDetecteursActif ? detecteurs.find(d => !d.position) : undefined;
+    const repereAjout = ajoutDetecteursActif
+        ? (prochainDetecteur ? (prochainDetecteur.nom || `Détecteur ${prochainDetecteur.id}`) : null)
+        : (showArrows && prochainGroupeFleche ? `GF${prochainGroupeFleche.id}` : null);
+    const repereAjoutRef = useRef<HTMLDivElement>(null);
+
     // Plus rien à ajouter : le mode d'ajout de flèche se décoche de lui-même.
     useEffect(() => {
         if (showArrows && !peutAjouterFleche) onDisplayOptionChange?.('showArrows', false);
@@ -430,6 +441,19 @@ const IntersectionImage = ({
                 toast.error("Échec du collage : " + err.message);
             }
         }
+    };
+
+    // Le repère suit le curseur sans re-rendre la scène à chaque mouvement.
+    const handleImageMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
+        const repere = repereAjoutRef.current;
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!repere || !rect || !repereAjout) return;
+        repere.style.left = `${((e.clientX - rect.left) / rect.width) * 100}%`;
+        repere.style.top = `${((e.clientY - rect.top) / rect.height) * 100}%`;
+        repere.style.opacity = '1';
+    };
+    const handleImageMouseLeave = () => {
+        if (repereAjoutRef.current) repereAjoutRef.current.style.opacity = '0';
     };
 
     // Handle click on image to place arrow
@@ -1067,6 +1091,8 @@ const IntersectionImage = ({
                     style={{ outline: 'none' }}
                     onClick={handleImageClick}
                     onKeyDown={handleContainerKeyDown}
+                    onMouseMove={handleImageMouseMove}
+                    onMouseLeave={handleImageMouseLeave}
                 >
                 {imageData ? (
                     <>
@@ -1076,6 +1102,11 @@ const IntersectionImage = ({
                             className="intersection-img"
                             style={{ filter: `brightness(${imageBrightness}%) contrast(${imageContrast}%)` }}
                         />
+                        {repereAjout && (
+                            <div ref={repereAjoutRef} className="arrow-label ajout-repere" aria-hidden="true">
+                                {repereAjout}
+                            </div>
+                        )}
                         {(showCurrents || showSignals) && arrows.map(arrow => {
                             const groupInfo = getGroupInfo(arrow.groupId);
                             // Un groupe sans vert dans le diagramme n'a pas de mouvement

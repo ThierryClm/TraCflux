@@ -234,4 +234,10 @@ describe('IntersectionImage — calque des détecteurs', () => {
             expect.objectContaining({ id: 7, position: null })
         ]);
     });
+
+    it('rappelle le nom du détecteur à poser à côté du curseur', () => {
+        const { container } = rendre({ detecteurs: [{ ...DETECTEUR, nom: 'Boucle est', position: null }] });
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Ajouter' }));
+        expect(container.querySelector('.ajout-repere')).toHaveTextContent('Boucle est');
+    });
 });
