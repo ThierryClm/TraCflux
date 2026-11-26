@@ -48,7 +48,7 @@ describe('MenuBar — Mise en page, trois groupes', () => {
         const menu = menuMiseEnPage();
         const tete = within(menu).getAllByRole('button')
             .map(b => b.textContent.replace(/[✓▶]/g, '').trim());
-        expect(tete.slice(0, 3)).toEqual(['Configuration', 'Diagramme', 'Matrice']);
+        expect(tete.slice(0, 4)).toEqual(['Mode essentiel', 'Configuration', 'Diagramme', 'Matrice']);
     });
 
     it('range Affichage, Nom des GFx du formulaire, Réserve de capacité et Détecteur dans Configuration', () => {
@@ -79,7 +79,7 @@ describe('MenuBar — Mise en page, trois groupes', () => {
             ? '—'
             : el.textContent.replace(/[✓▶]/g, '').trim());
         expect(enfants).toEqual([
-            'Configuration', 'Diagramme', 'Matrice', '—',
+            'Mode essentiel', '—', 'Configuration', 'Diagramme', 'Matrice', '—',
             'Détachement', '—',
             'Options de contraste', 'Verrouillage saisie...', 'Infobulles', 'Notifications'
         ]);
@@ -94,6 +94,22 @@ describe('MenuBar — Mise en page, trois groupes', () => {
         expect(tete).not.toContain('Nom des groupes de feu dans...');
         expect(tete).not.toContain('Affichage des paramètres');
         expect(tete).not.toContain('Panneau Réserve de capacité');
+    });
+
+    it('en mode essentiel, ne garde que Configuration, Diagramme et Détachement utiles', () => {
+        vi.useFakeTimers();
+        render(<MenuBar layoutOptions={{ modeEssentiel: true }} />);
+        const menu = menuMiseEnPage();
+        expect(within(menu).getByRole('button', { name: /Mode essentiel/ })).toHaveClass('checked');
+        expect(within(menu).queryByRole('button', { name: /^Matrice/ })).toBeNull();
+        expect(libellesDe(deplier('Configuration'))).toEqual(['Affichage', 'Nom des GFx']);
+        expect(libellesDe(deplier('Diagramme'))).toEqual(['Dilatation (zoom)']);
+        const detachement = libellesDe(deplier('Détachement'));
+        expect(detachement).not.toContain('Détecteurs');
+        expect(detachement).not.toContain('Réserve de capacité');
+        expect(detachement).not.toContain('Conditions de micro-régulation');
+        expect(detachement).not.toContain('Variables micro');
+        expect(detachement).not.toContain('Remarques du diagramme');
     });
 
     it('donne à chaque case Nom des GFx la section qu’elle commande', () => {

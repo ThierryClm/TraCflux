@@ -361,7 +361,9 @@ function App() {
     const [toastPrefs, setToastPrefsState] = useState(getToastPrefs());
     const [openPropertiesOnNewProject, setOpenPropertiesOnNewProject] = useState(() => {
         const saved = localStorage.getItem('openPropertiesOnNewProject');
-        return saved === null ? true : saved === 'true';
+        // Un nouveau projet s'ouvre sur le Formulaire : les Propriétés ne
+        // s'affichent que si on le demande (menu Mise en page).
+        return saved === null ? false : saved === 'true';
     });
     const [showWrapFlash, setShowWrapFlash] = useState(() => {
         const saved = localStorage.getItem('showWrapFlash');
@@ -440,15 +442,17 @@ function App() {
         showGroupNamesForm, setShowGroupNamesForm,
         showGroupNamesMatrix, setShowGroupNamesMatrix,
         showGroupNamesDiagram, setShowGroupNamesDiagram,
-        descriptionMode, setDescriptionMode
+        descriptionMode, setDescriptionMode,
+        modeEssentiel, setModeEssentiel
     } = useDarkMode();
     // Affichage effectif pour le plan de feux courant : en mode automatique,
-    // seulement si ce plan a des commentaires (resp. une remarque).
-    const showComments = estAffiche(commentsMode, planACommentaires(groups));
-    const showRemarks = estAffiche(remarksMode, texteRenseigne(currentRemarques));
+    // seulement si ce plan a des commentaires (resp. une remarque). Le mode
+    // essentiel masque ces éléments de confort sans toucher aux données.
+    const showComments = !modeEssentiel && estAffiche(commentsMode, planACommentaires(groups));
+    const showRemarks = !modeEssentiel && estAffiche(remarksMode, texteRenseigne(currentRemarques));
     // Colonne Description des conditions : en automatique, seulement si une
     // condition du plan courant a une description.
-    const showActionDescription = estAffiche(descriptionMode, planADescriptions(actionData));
+    const showActionDescription = !modeEssentiel && estAffiche(descriptionMode, planADescriptions(actionData));
     // Une description proposée d'office (point de repos) ne doit pas rester
     // invisible : Masquer passe en Automatique, les autres choix sont gardés.
     const revelerDescription = useCallback(() => {
@@ -606,6 +610,14 @@ function App() {
     const [showFloatingDiagram, setShowFloatingDiagram] = useBooleenMemorise('floating_diagram_visible', false);
     const [showFloatingConflicts, setShowFloatingConflicts] = useBooleenMemorise('floating_conflicts_visible', false);
     const [showCapacityReserve, setShowCapacityReserve] = useBooleenMemorise('show_capacity_reserve', true);
+
+    // Valeurs effectives : le mode essentiel masque les éléments de confort
+    // (noms GF sur la matrice et le diagramme, réserve, détecteurs) sans
+    // modifier les préférences enregistrées, qu'on retrouve en le désactivant.
+    const nomsGroupesMatrice = showGroupNamesMatrix && !modeEssentiel;
+    const nomsGroupesDiagramme = showGroupNamesDiagram && !modeEssentiel;
+    const reserveCapacite = showCapacityReserve && !modeEssentiel;
+    const moduleDetecteurs = detecteurModule && !modeEssentiel;
 
     // V.Utile hover state: { groupId, vUtile } when hovering V.Utile cell
     const [hoveredVUtile, setHoveredVUtile] = useState<VertUtileSurvole | null>(null);
@@ -1328,6 +1340,10 @@ function App() {
                     leaveExampleMode(); // un nouveau projet n'est plus l'exemple
                     resetToNewProject();
                     setDetecteurModule(false);
+                    // Un nouveau projet part nu : Formulaire actif, simulation et
+                    // phasage bulle fermés tant qu'on ne les ouvre pas.
+                    setSimulationEnabled(false);
+                    setPhasageBulleEnabled(false);
                     setActiveTab(openPropertiesOnNewProject ? 'properties' : 'config');
                     resetDiagramHeight();
                     setSidebarVisible(true);
@@ -1632,6 +1648,9 @@ function App() {
                 break;
             case 'analyseDiagramme':
                 ouvrirAnalyseDiagramme();
+                break;
+            case 'toggleModeEssentiel':
+                setModeEssentiel(v => !v);
                 break;
             case 'reglageSeuils':
                 ouvrirReglageSeuils();
@@ -2111,7 +2130,7 @@ function App() {
         floatingCrop, setFloatingCrop,
         floatingZoom, setFloatingZoom,
         showCropControls, setShowCropControls,
-        intersectionArrows, setIntersectionArrows, groups, detecteurs, setDetecteurs, detecteurModule, pixelsParMetre, getTrafficData, imageNaturalDims, imageFondClair,
+        intersectionArrows, setIntersectionArrows, groups, detecteurs, setDetecteurs, detecteurModule: moduleDetecteurs, pixelsParMetre, getTrafficData, imageNaturalDims, imageFondClair,
         selectedActions: simulationSelectedActions, conflictMatrix,
         hoveredArrowGroupId, hoveredArrowGroupIds: flechesActionSimulation, setHoveredArrowGroupId, hoveredDiagramTime,
         isPlayingSimulation,
@@ -2139,7 +2158,7 @@ function App() {
                     pfTabs={pfTabs}
                     biCarrefourSeparator={biCarrefourSeparator}
                     onCellHover={() => {}}
-                    showGroupNames={showGroupNamesMatrix}
+                    showGroupNames={nomsGroupesMatrice}
                     locked={matricesLocked}
                     hoveredGroupId={hoveredArrowGroupId}
                 tooltipsEnabled={tooltipPrefs.matrix}
@@ -2147,7 +2166,7 @@ function App() {
             </div>
         );
     }, [showFloatingMatrix, conflictMatrix, groups, cycleLength, actionData, activePFId,
-        pfTabs, biCarrefourSeparator, showGroupNamesMatrix, matricesLocked, hoveredArrowGroupId, tooltipPrefs.matrix, matrixPopup.renderToPopup]);
+        pfTabs, biCarrefourSeparator, nomsGroupesMatrice, matricesLocked, hoveredArrowGroupId, tooltipPrefs.matrix, matrixPopup.renderToPopup]);
 
     // Render form into popup window
     useEffect(() => {
@@ -2188,7 +2207,7 @@ function App() {
 
     // Render detecteurs into popup window
     useEffect(() => {
-        if (!showFloatingDetecteurs || !detecteurModule) return;
+        if (!showFloatingDetecteurs || !moduleDetecteurs) return;
         detecteursPopup.renderToPopup(
             <div style={{ padding: '12px', height: '100%', boxSizing: 'border-box', overflow: 'auto' }}>
                 <DetecteursTable
@@ -2199,12 +2218,24 @@ function App() {
                 />
             </div>
         );
-    }, [showFloatingDetecteurs, detecteurModule, detecteurs, groups, setDetecteurs, detecteursPopup.renderToPopup]);
+    }, [showFloatingDetecteurs, moduleDetecteurs, detecteurs, groups, setDetecteurs, detecteursPopup.renderToPopup]);
 
     // Le module Détecteur coupé, la fenêtre détachée n'a plus d'objet.
     useEffect(() => {
-        if (!detecteurModule && showFloatingDetecteurs) setShowFloatingDetecteurs(false);
-    }, [detecteurModule, showFloatingDetecteurs, setShowFloatingDetecteurs]);
+        if (!moduleDetecteurs && showFloatingDetecteurs) setShowFloatingDetecteurs(false);
+    }, [moduleDetecteurs, showFloatingDetecteurs, setShowFloatingDetecteurs]);
+
+    // Mode essentiel : on referme les fenêtres et panneaux avancés, et l'onglet
+    // Détecteurs s'il était ouvert. Les préférences enregistrées ne changent pas.
+    useEffect(() => {
+        if (!modeEssentiel) return;
+        setShowFloatingConditions(false);
+        setShowFloatingVariables(false);
+        setShowFloatingDetecteurs(false);
+        setShowFloatingRemarks(false);
+        setShowFloatingDiagnostic(false);
+        if (activeTab === 'detecteurs') setActiveTab('config');
+    }, [modeEssentiel]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Render diagnostic into popup window
     useEffect(() => {
@@ -2364,7 +2395,7 @@ function App() {
                     biCarrefourSeparator={biCarrefourSeparator}
                     showComments={false}
                     showRemarks={false}
-                    showGroupNames={showGroupNamesDiagram}
+                    showGroupNames={nomsGroupesDiagramme}
                     showMicroOnHover={showMicroOnHover}
                     showWrapFlash={false}
                     tooltipsEnabled={tooltipPrefs.diagram}
@@ -2387,7 +2418,7 @@ function App() {
                 />
             </div>
         );
-    }, [showFloatingDiagram, groups, globalTime, pixelsPerSecond, displayConflicts, conflictMatrix, cycleLength, actionData, simulationEnabled, simulationSelectedActions, simulationResult, simulationCurrentTime, isPlayingSimulation, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict, hoveredVUtile, activePFName, biCarrefourSeparator, showGroupNamesDiagram, showMicroOnHover, tooltipPrefs, diagramPopup.renderToPopup]);
+    }, [showFloatingDiagram, groups, globalTime, pixelsPerSecond, displayConflicts, conflictMatrix, cycleLength, actionData, simulationEnabled, simulationSelectedActions, simulationResult, simulationCurrentTime, isPlayingSimulation, hoveredActionId, hoveredArrowGroupId, hoveredArrowGroupSaturated, hoveredConflict, hoveredVUtile, activePFName, biCarrefourSeparator, nomsGroupesDiagramme, showMicroOnHover, tooltipPrefs, diagramPopup.renderToPopup]);
 
     // Render conflicts list into popup window
     useEffect(() => {
@@ -2472,7 +2503,7 @@ function App() {
                     onManageUsers={() => setShowUserManager(true)}
                     accountsEnabled={accountsEnabled}
                     biCarrefourSeparator={biCarrefourSeparator}
-                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix, showGroupNamesDiagram, showActionDescription, descriptionMode, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingDetecteurs, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, detecteurModule, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
+                    layoutOptions={{ showParameters: sidebarVisible, showComments, showRemarks, commentsMode, remarksMode, darkMode, colorTheme, showGroupNamesForm, showGroupNamesMatrix: nomsGroupesMatrice, showGroupNamesDiagram: nomsGroupesDiagramme, showActionDescription, descriptionMode, projectModified, showFloatingImage, hasIntersectionImage: !!intersectionImage, showFloatingMatrix, showFloatingForm, showFloatingProperties, showFloatingDetecteurs, showFloatingTraffic, showFloatingConditions, showFloatingVariables, showFloatingRemarks, showFloatingDiagram, showFloatingConflicts, showFloatingDiagnostic, showFloatingLegend, showCapacityReserve: reserveCapacite, matricesLocked, dossierReadOnly, hasMultiplePf: pfTabs.length > 1, detecteurModule: moduleDetecteurs, modeEssentiel, toastPrefs, openPropertiesOnNewProject, showWrapFlash, showSaveReminder, phasageBulleEnabled, simulationEnabled, activeTab, isExampleProject: isExample, tooltipPrefs }}
                     pixelsPerSecond={pixelsPerSecond}
                     onPixelsPerSecondChange={setPixelsPerSecond}
                     showMicroOnHover={showMicroOnHover}
@@ -2510,7 +2541,7 @@ function App() {
             <main className="split-view" ref={splitViewRef}>
                 <WorkspaceSidebar
                     model={{
-                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs, detecteurModule,
+                        sidebarVisible, phasageBulleEnabled, sidebarWidth, groups, detecteurs, setDetecteurs, detecteurModule: moduleDetecteurs,
                         intersectionArrows,
                         phasageBulleVisibleGroups, hoveredPhasageGroupId, setHoveredPhasageGroupId, togglePhasageBulleGroup, setPhasageBulleVisibleGroups,
                         tip, simulationEnabled, actionData, simulationSelectedActions, toggleSimulationAction, compenserBts, setCompenserBts,
@@ -2523,8 +2554,8 @@ function App() {
                         setActiveTab, setSidebarWidth, intersectionName, setIntersectionName, projectProperties,
                         updateProjectProperty, appCommunes, appMoaLogos, appMoeLogos, setShowFloatingProperties, setShowFloatingDetecteurs,
                         showGroupNamesForm, setShowFloatingForm, activePFId,
-                        pfTabs, biCarrefourSeparator, showGroupNamesMatrix, matricesLocked, setShowFloatingMatrix,
-                        showCapacityReserve, showFloatingDiagnostic, setShowFloatingDiagnostic, displayConflicts, isConflictGrayed,
+                        pfTabs, biCarrefourSeparator, showGroupNamesMatrix: nomsGroupesMatrice, matricesLocked, setShowFloatingMatrix,
+                        showCapacityReserve: reserveCapacite, showFloatingDiagnostic, setShowFloatingDiagnostic, displayConflicts, isConflictGrayed,
                         showFloatingConflicts, setShowFloatingConflicts, recentOpenDirs, recentSaveDirs, recentImportDirs,
                         helpZoneRef,
                     }}
@@ -2540,7 +2571,7 @@ function App() {
                         helpZoneRef, hoveredActionId, hoveredArrowGroupId, flechesActionSimulation, hoveredArrowGroupSaturated, hoveredConflict,
                         hoveredDiagramTime, hoveredPhasageGroupId, hoveredVUtile, imageBrightness, imageContrast,
                         imageFondClair, intersectionArrows, intersectionDisplay, intersectionImage, intersectionName, isPlayingSimulation,
-                        detecteurs, setDetecteurs, detecteurModule, pixelsParMetre, setPixelsParMetre, getTrafficData,
+                        detecteurs, setDetecteurs, detecteurModule: moduleDetecteurs, modeEssentiel, pixelsParMetre, setPixelsParMetre, getTrafficData,
                         isResizing, isResizingDiagram, lastImageDirectoryRef, microCustomFields, pfTabs,
                         phasageBubbleRatio, phasageBubbleScale, phasageBulleCount, phasageBulleEnabled, phasageBulleModal,
                         phasageBulleTimes, phasageBulleVersion, phasageBulleVisibleGroups, phasageEllipseScale, phasageModifie,
@@ -2553,7 +2584,7 @@ function App() {
                         setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
                         setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription, revelerDescription,
                         showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
-                        showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,
+                        showFloatingVariables, showGroupNamesDiagram: nomsGroupesDiagramme, showMicroOnHover, showRemarks, showWrapFlash,
                         sidebarVisible, simulationCurrentTime, simulationEnabled, simulationResult, simulationSelectedActions,
                         simulationSpeed, startDrag, tip, tooltipPrefs, updateActionRow,
                         updateGroupParams, updateMicroCustomField, updatePFRemarques,

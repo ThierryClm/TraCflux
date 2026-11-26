@@ -475,6 +475,18 @@ const MenuBar = ({
             label: 'Mise en page',
             disabled: !hasActiveProject,
             items: [
+                {
+                    // Masque d'un coup les éléments de confort (commentaires,
+                    // remarques, réserve, noms GF, détecteurs, conditions micro,
+                    // variables) sans rien changer aux données.
+                    label: 'Mode essentiel',
+                    action: 'toggleModeEssentiel',
+                    toggle: true,
+                    checked: !!layoutOptions.modeEssentiel,
+                    keepSubmenuOpen: true,
+                    title: 'Allège la fenêtre de travail : masque commentaires, remarques, réserve de capacité, noms GF sur la matrice et le diagramme, détecteurs, conditions micro et variables.'
+                },
+                { type: 'separator' },
                 /* Trois groupes, un par partie de la fenêtre : configuration
                    générale, diagramme, matrice. Chacun porte sa case « Nom des
                    GFx », qui ne vaut que pour lui — l'ancien sous-menu à trois
@@ -486,8 +498,10 @@ const MenuBar = ({
                     submenu: [
                         { label: 'Affichage', action: 'toggleParameters', checked: layoutOptions.showParameters, keepSubmenuOpen: true },
                         { label: 'Nom des GFx', action: 'toggleGroupNamesForm', checked: layoutOptions.showGroupNamesForm, keepSubmenuOpen: true },
-                        { label: 'Réserve de capacité', action: 'toggleCapacityReserve', checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true },
-                        { label: 'Détecteur', action: 'toggleDetecteurModule', checked: layoutOptions.detecteurModule, keepSubmenuOpen: true }
+                        ...(layoutOptions.modeEssentiel ? [] : [
+                            { label: 'Réserve de capacité', action: 'toggleCapacityReserve', checked: layoutOptions.showCapacityReserve, keepSubmenuOpen: true },
+                            { label: 'Détecteur', action: 'toggleDetecteurModule', checked: layoutOptions.detecteurModule, keepSubmenuOpen: true }
+                        ])
                     ]
                 },
                 {
@@ -495,6 +509,7 @@ const MenuBar = ({
                     type: 'submenu',
                     submenuId: 'diagramme',
                     submenu: [
+                        ...(layoutOptions.modeEssentiel ? [] : [
                         { label: 'Nom des GFx', action: 'toggleGroupNamesDiagram', checked: layoutOptions.showGroupNamesDiagram, keepSubmenuOpen: true },
                         {
                             label: 'Commentaires',
@@ -525,7 +540,8 @@ const MenuBar = ({
                                 { label: 'Masquer', action: 'descriptionHide', checked: layoutOptions.descriptionMode === 'masquer', keepSubmenuOpen: true },
                                 { label: 'Automatique (plans qui en ont)', action: 'descriptionAuto', checked: layoutOptions.descriptionMode === 'auto', keepSubmenuOpen: true }
                             ]
-                        },
+                        }
+                        ]),
                         {
                             label: 'Dilatation (zoom)',
                             type: 'submenu',
@@ -536,14 +552,14 @@ const MenuBar = ({
                         }
                     ]
                 },
-                {
+                ...(layoutOptions.modeEssentiel ? [] : [{
                     label: 'Matrice',
                     type: 'submenu',
                     submenuId: 'matrice',
                     submenu: [
                         { label: 'Nom des GFx', action: 'toggleGroupNamesMatrix', checked: layoutOptions.showGroupNamesMatrix, keepSubmenuOpen: true }
                     ]
-                },
+                }]),
                 { type: 'separator' },
                 {
                     label: 'Détachement',
@@ -552,16 +568,24 @@ const MenuBar = ({
                     submenu: [
                         { label: 'Propriétés', action: 'toggleFloatingProperties', checked: layoutOptions.showFloatingProperties, keepSubmenuOpen: true },
                         { label: 'Formulaire', action: 'toggleFloatingForm', checked: layoutOptions.showFloatingForm, keepSubmenuOpen: true },
-                        { label: 'Détecteurs', action: 'toggleFloatingDetecteurs', checked: layoutOptions.showFloatingDetecteurs, disabled: !layoutOptions.detecteurModule, keepSubmenuOpen: true },
+                        ...(layoutOptions.modeEssentiel ? [] : [
+                            { label: 'Détecteurs', action: 'toggleFloatingDetecteurs', checked: layoutOptions.showFloatingDetecteurs, disabled: !layoutOptions.detecteurModule, keepSubmenuOpen: true }
+                        ]),
                         { label: 'Matrice interverts', action: 'toggleFloatingMatrix', checked: layoutOptions.showFloatingMatrix, keepSubmenuOpen: true },
                         { label: 'Conflits', action: 'toggleFloatingConflicts', checked: layoutOptions.showFloatingConflicts, keepSubmenuOpen: true },
                         { label: 'Données trafic', action: 'toggleFloatingTraffic', checked: layoutOptions.showFloatingTraffic, keepSubmenuOpen: true },
-                        { label: 'Réserve de capacité', action: 'toggleFloatingDiagnostic', checked: layoutOptions.showFloatingDiagnostic, keepSubmenuOpen: true },
+                        ...(layoutOptions.modeEssentiel ? [] : [
+                            { label: 'Réserve de capacité', action: 'toggleFloatingDiagnostic', checked: layoutOptions.showFloatingDiagnostic, keepSubmenuOpen: true }
+                        ]),
                         { label: 'Diagramme (miroir lecture seule)', action: 'toggleFloatingDiagram', checked: layoutOptions.showFloatingDiagram, keepSubmenuOpen: true },
-                        { label: 'Conditions de micro-régulation', action: 'toggleFloatingConditions', checked: layoutOptions.showFloatingConditions, keepSubmenuOpen: true },
-                        { label: 'Variables micro', action: 'toggleFloatingVariables', checked: layoutOptions.showFloatingVariables, keepSubmenuOpen: true },
+                        ...(layoutOptions.modeEssentiel ? [] : [
+                            { label: 'Conditions de micro-régulation', action: 'toggleFloatingConditions', checked: layoutOptions.showFloatingConditions, keepSubmenuOpen: true },
+                            { label: 'Variables micro', action: 'toggleFloatingVariables', checked: layoutOptions.showFloatingVariables, keepSubmenuOpen: true }
+                        ]),
                         { label: 'Légende', action: 'toggleLegend', checked: layoutOptions.showFloatingLegend, keepSubmenuOpen: true },
-                        { label: 'Remarques du diagramme', action: 'toggleFloatingRemarks', checked: layoutOptions.showFloatingRemarks, disabled: !layoutOptions.showRemarks, keepSubmenuOpen: true },
+                        ...(layoutOptions.modeEssentiel ? [] : [
+                            { label: 'Remarques du diagramme', action: 'toggleFloatingRemarks', checked: layoutOptions.showFloatingRemarks, disabled: !layoutOptions.showRemarks, keepSubmenuOpen: true }
+                        ]),
                         { label: 'Image du carrefour', action: 'toggleFloatingImage', checked: layoutOptions.showFloatingImage, disabled: !layoutOptions.hasIntersectionImage, keepSubmenuOpen: true }
                     ]
                 },
@@ -734,7 +758,9 @@ const MenuBar = ({
                     submenuId: 'options',
                     submenu: [
                         { label: 'Condition micro au survol', action: 'toggleMicroOnHover', checked: showMicroOnHover },
-                        { label: 'Variables Priorité Bus...', action: 'microVariables' },
+                        ...(layoutOptions.modeEssentiel ? [] : [
+                            { label: 'Variables Priorité Bus...', action: 'microVariables' }
+                        ]),
                         { type: 'separator' },
                         {
                             // Seuils que l'analyse du diagramme compare aux données
@@ -936,6 +962,7 @@ const MenuBar = ({
                     onClick={() => !item.disabled && handleItemClick(item.action, item.keepSubmenuOpen)}
                     onMouseEnter={() => setOpenSubmenu(null)}
                     disabled={item.disabled}
+                    title={tip(item.title)}
                 >
                     <span className="checkmark">{item.checked ? '✓' : '\u00A0\u00A0'}</span>
                     {item.label}

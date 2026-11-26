@@ -60,6 +60,10 @@ const useDarkMode = () => {
     // Colonne Description des conditions de micro-régulation : même réglage
     // à trois valeurs, enregistré avec le projet.
     const [descriptionMode, setDescriptionMode] = useState<ModeAffichage>('afficher');
+    // Mode essentiel : masque les éléments de confort (commentaires, remarques,
+    // réserve, noms GF sur matrice et diagramme, détecteurs, conditions micro,
+    // variables) sans toucher aux données. Préférence d'application.
+    const [modeEssentiel, setModeEssentiel] = useState(() => readBoolLS('modeEssentiel', false));
 
     useEffect(() => {
         try { localStorage.setItem('showGroupNamesForm', String(showGroupNamesForm)); } catch {}
@@ -70,6 +74,9 @@ const useDarkMode = () => {
     useEffect(() => {
         try { localStorage.setItem('showGroupNamesDiagram', String(showGroupNamesDiagram)); } catch {}
     }, [showGroupNamesDiagram]);
+    useEffect(() => {
+        try { localStorage.setItem('modeEssentiel', String(modeEssentiel)); } catch {}
+    }, [modeEssentiel]);
 
     useEffect(() => {
         localStorage.setItem('colorTheme', colorTheme);
@@ -100,7 +107,8 @@ const useDarkMode = () => {
         showGroupNamesForm, setShowGroupNamesForm,
         showGroupNamesMatrix, setShowGroupNamesMatrix,
         showGroupNamesDiagram, setShowGroupNamesDiagram,
-        descriptionMode, setDescriptionMode
+        descriptionMode, setDescriptionMode,
+        modeEssentiel, setModeEssentiel
     };
 };
 

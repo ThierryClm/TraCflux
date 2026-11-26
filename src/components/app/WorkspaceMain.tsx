@@ -135,6 +135,8 @@ interface WorkspaceMainModel {
     setSimulationCurrentTime: NonNullable<IntersectionImageProps['setCurrentTime']>;
     setSimulationEnabled: (value: boolean) => void;
     showActionDescription: boolean;
+    /** Mode essentiel : le panneau des conditions et variables est masqué. */
+    modeEssentiel: boolean;
     /** Description masquée et une description proposée : passer en Automatique. */
     revelerDescription: () => void;
     showComments: boolean;
@@ -190,7 +192,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
         setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
         revelerDescription, showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
-        showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,
+        showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, modeEssentiel, showRemarks, showWrapFlash,
         sidebarVisible, simulationCurrentTime, simulationEnabled, simulationResult, simulationSelectedActions,
         simulationSpeed, startDrag, tip, tooltipPrefs, updateActionRow,
         updateGroupParams, updateMicroCustomField, updatePFRemarques,
@@ -581,7 +583,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 tooltipsEnabled={tooltipPrefs.image}
                             />
                         </div>
-                        <div style={{ display: !phasageBulleEnabled && !simulationEnabled ? 'contents' : 'none' }}>
+                        <div style={{ display: !phasageBulleEnabled && !simulationEnabled && !modeEssentiel ? 'contents' : 'none' }}>
                             <ActionTable
                                 actionData={actionData}
                                 updateActionRow={updateActionRow}
