@@ -9,15 +9,6 @@
     overflow-y: auto;
 }
 
-/* Fenêtre détachée : le titre du navigateur est rappelé discrètement, avec
-   l'infobulle qui remplace l'ancien texte d'introduction. */
-.reglage-seuils-titre-detache {
-    margin: 0 0 12px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: help;
-}
-
 .reglage-seuils-groupe {
     border: 1px solid var(--md-text);
     border-radius: 5px;

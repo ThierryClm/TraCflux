@@ -29,6 +29,21 @@ export type NiveauConstat = 'obligation' | 'recommandation' | 'information';
 /** Ordre d'affichage : les règles à corriger d'abord. */
 export const ORDRE_NIVEAUX: NiveauConstat[] = ['obligation', 'recommandation', 'information'];
 
+/**
+ * Ordre secondaire : la capacité et les piétons forment un groupe, le
+ * dégagement piéton passant en premier ; les constats liés à l'image du
+ * carrefour ferment les suggestions.
+ */
+const RANG_CONSTAT: Record<string, number> = {
+    capacite: 10,
+    'refuge-12m': 11,
+    'attente-pieton-maxi': 12,
+    'retard-pieton': 13,
+    'fleche-orpheline': 80,
+    'sans-fleche': 81
+};
+const rangConstat = (c: Constat) => RANG_CONSTAT[c.id] ?? 50;
+
 export interface Constat {
     /** Identifiant stable du contrôle (sert de clé d'affichage). */
     id: string;
@@ -78,6 +93,7 @@ const FLECHES_MEME_AXE = 15;
 
 const nomGroupe = (g: Groupe) => `GF${g.id}${g.name ? ` ${g.name}` : ''}`;
 const estPieton = (g: Groupe) => typeFormulaire(g.type) === 'P';
+const estCycliste = (g: Groupe) => typeFormulaire(g.type) === 'CY';
 const estVehicule = (g: Groupe) => ['V', 'B', 'CY'].includes(typeFormulaire(g.type));
 /**
  * Priorité piétons (PP), flèche lumineuse (FL) et groupe porteur d'un signal
@@ -167,7 +183,9 @@ export const analyserDiagramme = ({
     });
 
     controles++;
-    const jauneHorsNorme = analyses.filter(g => estVehicule(g) && !estSignalTC(g)
+    // Le jaune d'un groupe cycle est un temps de dégagement, comme celui des
+    // piétons : il n'obéit pas à la règle des 3 ou 5 s.
+    const jauneHorsNorme = analyses.filter(g => estVehicule(g) && !estCycliste(g) && !estSignalTC(g)
         && g.durations && ![3, 5].includes(Number(g.durations.orange)));
     if (jauneHorsNorme.length) ajouter({
         id: 'jaune', niveau: 'obligation', theme: 'Durées', groupes: jauneHorsNorme.map(g => g.id),
@@ -249,7 +267,11 @@ export const analyserDiagramme = ({
 
     // ---------------------------------------------------------------- matrice
     controles++;
-    const conflits = cycleLength > 0 ? computeConflicts(groups, conflictMatrix, cycleLength, actionData) : [];
+    // Un groupe marqué aiguillage (« a ») ou escamotage (« e ») gère son
+    // conflit : la liste des conflits de l'application le grise, l'analyse
+    // l'ignore également.
+    const conflits = (cycleLength > 0 ? computeConflicts(groups, conflictMatrix, cycleLength, actionData) : [])
+        .filter(c => !groups.find(g => g.id === c.from)?.phaseFlag);
     if (conflits.length) {
         const ids = [...new Set(conflits.flatMap(c => [c.from, c.to]))];
         const nomParId = (id: number) => {
@@ -553,16 +575,18 @@ export const analyserDiagramme = ({
         }
 
         controles++;
-        const reserveFaible = lignes.filter(r => (r.capU ?? 0) >= S.capaciteReserveFaible && (r.capU ?? 0) < S.capaciteUtiliseeAlerte);
-        if (reserveFaible.length) ajouter({
-            id: 'reserve-faible', niveau: 'information', theme: 'Capacité', groupes: reserveFaible.map(r => r.g.id),
-            message: `Capacité utilisée importante, de ${S.capaciteReserveFaible} à ${S.capaciteUtiliseeAlerte} % :`,
-            details: reserveFaible.map(r => `${nomGroupe(r.g)} (${Math.round(r.capU ?? 0)} %)`),
-            suggestion: 'Surveiller ces courants : une pointe de trafic les fera basculer au-dessus du seuil d\'alerte.',
+        const filesLongues = lignes.filter(r => r.queue !== null && r.queue > S.fileAttenteMaxi);
+        if (filesLongues.length) ajouter({
+            id: 'file-attente', niveau: 'information', theme: "Files d'attente", groupes: filesLongues.map(r => r.g.id),
+            message: `File d'attente moyenne supérieure à ${S.fileAttenteMaxi} m :`,
+            details: filesLongues.map(r => `${nomGroupe(r.g)} (${Math.round(r.queue ?? 0)} m)`),
+            suggestion: 'Vérifier le stockage de la voie d\'approche : au-delà de cette longueur, la file peut remonter sur le carrefour amont ou bloquer un accès riverain. Redistribuer les verts ou revoir la géométrie.',
             source: `${CERTU}, p. 35 et 71`
         });
+
     }
 
-    constats.sort((a, b) => ORDRE_NIVEAUX.indexOf(a.niveau) - ORDRE_NIVEAUX.indexOf(b.niveau));
+    constats.sort((a, b) => ORDRE_NIVEAUX.indexOf(a.niveau) - ORDRE_NIVEAUX.indexOf(b.niveau)
+        || rangConstat(a) - rangConstat(b));
     return { constats, controles, groupesIgnores };
 };

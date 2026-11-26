@@ -30,6 +30,23 @@ describe('analyserDiagramme', () => {
         expect(confort.groupes).toEqual([2]);
     });
 
+    it('ne contrôle pas le jaune d\'un groupe cycle, temps de dégagement', () => {
+        const r = analyserDiagramme({
+            groups: [g(1, 'CY', 0, 10, { signal: 'R13c', durations: { green: 10, orange: 6, red: 0 } }), g(2, 'V', 20, 20)],
+            cycleLength: 60, conflictMatrix: [['', ''], ['', '']]
+        });
+        expect(ids(r)).not.toContain('jaune');
+    });
+
+    it('ignore les conflits d\'un groupe marqué aiguillage ou escamotage', () => {
+        const matrice: Matrice = [['', 5], ['', '']];
+        const sans = analyserDiagramme({ groups: [g(1, 'V', 0, 30), g(2, 'V', 31, 20)], cycleLength: 60, conflictMatrix: matrice });
+        expect(ids(sans)).toContain('conflits');
+        const avec = analyserDiagramme({ groups: [{ ...g(1, 'V', 0, 30), phaseFlag: 'e' }, g(2, 'V', 31, 20)],
+            cycleLength: 60, conflictMatrix: matrice });
+        expect(ids(avec)).not.toContain('conflits');
+    });
+
     it('contrôle le jaune de 3 ou 5 s, et le disque R17 de 3 à 8 s', () => {
         const r = analyserDiagramme({
             groups: [g(1, 'V', 0, 20, { durations: { green: 20, orange: 4, red: 0 } }),
@@ -223,6 +240,38 @@ describe('analyserDiagramme', () => {
         const protege = analyserDiagramme({ groups: [g(1, 'V', 10, 20, { courant: 'TàG', signal: 'R14tg' }), groupes[1]],
             cycleLength: 60, conflictMatrix: [['', 5], [5, '']], getTrafficData: id => ({ trafficVol: id === 1 ? 40 : 300 }) });
         expect(ids(protege)).not.toContain('tag-phase-inutile');
+    });
+
+    it('signale une file d\'attente moyenne de plus de 100 m', () => {
+        const groups = [g(1, 'V', 0, 60, { laneCoef: 2 })];
+        const r = analyserDiagramme({ groups, cycleLength: 120, conflictMatrix: [['']],
+            getTrafficData: () => ({ trafficVol: 1680 }) });
+        const c = r.constats.find(x => x.id === 'file-attente')!;
+        expect(c.niveau).toBe('information');
+        expect(c.groupes).toEqual([1]);
+        // Seuil réglable : à 300 m, plus rien.
+        const large = analyserDiagramme({ groups, cycleLength: 120, conflictMatrix: [['']],
+            getTrafficData: () => ({ trafficVol: 1680 }), seuils: { fileAttenteMaxi: 300 } });
+        expect(ids(large)).not.toContain('file-attente');
+    });
+
+    it('groupe capacité et piétons, refuge d\'abord, et ferme les suggestions par l\'image', () => {
+        const groups = [
+            g(1, 'V', 0, 20, { laneCoef: 1 }),
+            g(2, 'P', 76, 8),
+            g(3, 'P', 30, 14),
+            g(4, 'V', 50, 8, { signal: 'R11v' })
+        ];
+        const matrice: Matrice = [['', '', '', ''], ['', '', '', ''], [14, '', '', ''], ['', '', '', '']];
+        const r = analyserDiagramme({ groups, cycleLength: 100, conflictMatrix: matrice,
+            intersectionArrows: [{ id: 1, groupId: 1, x: 0, y: 0, rotation: 0 }, { id: 2, groupId: 2, x: 5, y: 0, rotation: 0 },
+                { id: 3, groupId: 4, x: 9, y: 0, rotation: 0 }],
+            getTrafficData: id => ({ trafficVol: id === 1 ? 700 : 50 }) });
+        const orange = r.constats.filter(c => c.niveau === 'recommandation').map(c => c.id);
+        expect(orange.slice(0, 4)).toEqual(['capacite', 'refuge-12m', 'attente-pieton-maxi', 'retard-pieton']);
+        const bleu = r.constats.filter(c => c.niveau === 'information').map(c => c.id);
+        expect(bleu).toContain('vert-confort');
+        expect(bleu[bleu.length - 1]).toBe('sans-fleche');
     });
 
     it('affiche les règles non respectées avant les recommandations et les suggestions', () => {

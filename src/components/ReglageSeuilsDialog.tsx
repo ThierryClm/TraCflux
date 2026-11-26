@@ -63,9 +63,9 @@ const GROUPES: Groupe[] = [
     {
         titre: 'Capacité',
         champs: [
-            { cle: 'capaciteReserveFaible', label: 'Capacité utilisée importante', unite: '%', aide: 'Suggestion de surveiller le courant. Même seuil que les couleurs du tableau Trafic (75 %).' },
             { cle: 'capaciteUtiliseeAlerte', label: 'Capacité utilisée — alerte', unite: '%', aide: 'Point d’attention, affiché en orange (85 %).' },
-            { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande (100 %).' }
+            { cle: 'capaciteUtiliseeSaturee', label: 'Capacité utilisée — saturation', unite: '%', aide: 'Le courant n’écoule plus toute sa demande (100 %).' },
+            { cle: 'fileAttenteMaxi', label: 'File d’attente moyenne signalée', unite: 'm', aide: 'Au-delà, la file peut remonter sur le carrefour amont (100 m).' }
         ]
     },
     {
@@ -98,7 +98,6 @@ const incoherences = (b: Brouillon): string[] => {
     const messages: string[] = [];
     if (s.vertConfort < s.vertMiniReglementaire) messages.push('Le vert de confort ne peut pas être inférieur au vert minimum réglementaire.');
     if (s.vertCapacite < s.vertConfort) messages.push('Le vert rationnel en capacité ne peut pas être inférieur au vert de confort.');
-    if (s.capaciteUtiliseeAlerte < s.capaciteReserveFaible) messages.push('Le seuil d’alerte de capacité ne peut pas être inférieur au seuil de réserve faible.');
     if (s.capaciteUtiliseeSaturee < s.capaciteUtiliseeAlerte) messages.push('Le seuil de saturation ne peut pas être inférieur au seuil d’alerte.');
     if (s.tagPhaseProtegee <= s.tagStockageNaturel) messages.push('Le seuil de phase protégée doit être supérieur au seuil de stockage naturel.');
     return messages;
@@ -190,12 +189,7 @@ const ReglageSeuilsDialog = ({
     if (detachee) {
         return isOpen ? (
             <div className="modal-content reglage-seuils-modal reglage-seuils-detachee">
-                <div className="modal-body">
-                    <h3 className="reglage-seuils-titre-detache" title={tip(INFOBULLE_TITRE_SEUILS)}>
-                        {TITRE_REGLAGE_SEUILS}
-                    </h3>
-                    {corps}
-                </div>
+                <div className="modal-body">{corps}</div>
             </div>
         ) : null;
     }
