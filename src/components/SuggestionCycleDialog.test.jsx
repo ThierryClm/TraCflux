@@ -247,6 +247,18 @@ describe('suggestion de durée du cycle', () => {
         expect(lignes.at(-1).description).toBe('attente bus théorique maxi 12 secondes');
     });
 
+    it('supprime la variable générique TMABx quand la variable indexée existe déjà', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, type: gr.id === 3 ? 'B' : 'V', da: gr.id === 3 ? 'T1' : '', offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        const ajouterActions = vi.fn(lignes => lignes.length);
+        const setVariableMicro = vi.fn();
+        ouvrir({ groups: places, ajouterActions, variablesMicro: ['TMABx = 12', 'TMAB1 = 12'], setVariableMicro, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
+        expect(setVariableMicro).toHaveBeenCalledWith(0, '');
+        // Aucune variable ajoutée : TMAB1 existait déjà.
+        expect(setVariableMicro).not.toHaveBeenCalledWith(2, expect.stringContaining('TMAB'));
+    });
+
     it('à l\'ouverture, seul le tableau des groupes déterminants est déployé ; les autres chapitres montrent leur résumé', () => {
         const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
         const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));

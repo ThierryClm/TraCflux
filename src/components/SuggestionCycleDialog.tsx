@@ -539,6 +539,9 @@ const SuggestionCycleDialog = ({
                         if (a.repos && a.repos.tmab === null) a.repos.tmab = slot;
                         slot += 1;
                     });
+                    // La variable générique n'a plus lieu d'être : les variables
+                    // indexées la remplacent, on supprime la ligne TMABx restante.
+                    if (slotX >= 0 && xDisponible) setVariableMicro(slotX, '');
                 }
                 break;
             default:
