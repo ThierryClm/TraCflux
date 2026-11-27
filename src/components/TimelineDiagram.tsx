@@ -749,6 +749,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                         <IncrustationControleDeFlot
                             ctx={contexteIncrustations}
                             controleFlotActions={controleFlotActions}
+                            repos={simulationResult?.restPoints?.map(r => ({ deb: r.deb, duration: r.duration })) ?? []}
                         />
 
                         <FlechesPointDeRepos ctx={contexteIncrustations} pointReposActions={pointReposActions} />

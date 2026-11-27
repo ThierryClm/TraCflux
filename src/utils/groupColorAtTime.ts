@@ -155,6 +155,45 @@ export const aControleDeFlot = (groupId: number, actionData: ActionMicro[] = [])
         && action.fin !== '' && action.fin !== null && action.fin !== undefined
     );
 
+export interface ReposControleFlot {
+    deb: number;
+    duration: number;
+}
+
+/**
+ * Bornes d'un contrôle de flot, prolongées par les points de repos.
+ *
+ * Au point de repos, l'état du carrefour est tenu pendant la durée de
+ * l'attente : la zone en cours (trame, jaune ou rouge) s'allonge d'autant,
+ * et les zones suivantes sont repoussées. Dans l'exemple, un repos à 44 s
+ * pendant le rouge d'une action finissant à 45 s porte ce rouge à 65 s.
+ */
+export const zonesControleFlot = (
+    deb: number,
+    fin: number,
+    amorce: number,
+    jaune: number,
+    repos: ReposControleFlot[] = []
+): { intermittentEnd: number; orangeEnd: number; fin: number } => {
+    let intermittentEnd = deb + amorce;
+    let orangeEnd = intermittentEnd + jaune;
+    let finEffective = fin;
+    [...repos].sort((a, b) => a.deb - b.deb).forEach(r => {
+        if (r.deb < deb || r.deb >= finEffective || !(r.duration > 0)) return;
+        if (r.deb < intermittentEnd) {
+            intermittentEnd += r.duration;
+            orangeEnd += r.duration;
+            finEffective += r.duration;
+        } else if (r.deb < orangeEnd) {
+            orangeEnd += r.duration;
+            finEffective += r.duration;
+        } else {
+            finEffective += r.duration;
+        }
+    });
+    return { intermittentEnd, orangeEnd, fin: finEffective };
+};
+
 /**
  * Couleur de la flèche d'un groupe à un instant donné.
  *
@@ -222,9 +261,8 @@ export const getGroupColorAtTime = (
         // Une seconde allumée, une seconde grise : l'instant affiché avance
         // en secondes entières, un rythme à la demi-seconde resterait invisible.
         const jauneGris = (valeur: number) => Math.floor(valeur) % 2 === 0 ? 'rgb(255, 255, 0)' : 'rgb(120, 120, 120)';
-        const dansPlage = isTimeInRange(normalizedTime, controleFlot.deb, controleFlot.fin, effectiveCycleLength);
-        if (!dansPlage) return jauneGris(normalizedTime);
         const deb = ((parseInt(String(controleFlot.deb)) % effectiveCycleLength) + effectiveCycleLength) % effectiveCycleLength;
+        const fin = parseInt(String(controleFlot.fin));
         const ecoule = ((normalizedTime - deb) % effectiveCycleLength + effectiveCycleLength) % effectiveCycleLength;
         // Les groupes simulés ne portent pas toujours mini et jaune : on
         // retombe sur le groupe du projet pour rester d'accord avec le diagramme.
@@ -234,8 +272,11 @@ export const getGroupColorAtTime = (
         // réglementaire avant le jaune fixe.
         const amorce = Number(group.minGreen ?? origine?.minGreen) || 0;
         const jaune = Number(group.durations?.orange ?? origine?.durations?.orange) || 0;
-        if (ecoule < amorce) return jauneGris(ecoule);
-        if (ecoule < amorce + jaune) return 'rgb(255, 255, 0)';
+        // Un point de repos tenu pendant la plage prolonge la zone en cours.
+        const zones = zonesControleFlot(deb, fin, amorce, jaune, simulationResult?.restPoints ?? []);
+        if (!isTimeInRange(normalizedTime, deb, zones.fin, effectiveCycleLength)) return jauneGris(normalizedTime);
+        if (ecoule < zones.intermittentEnd - deb) return jauneGris(ecoule);
+        if (ecoule < zones.orangeEnd - deb) return 'rgb(255, 255, 0)';
         return 'rgb(255, 0, 0)';
     }
 

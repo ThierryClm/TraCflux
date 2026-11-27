@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aControleDeFlot, getGroupColorAtTime, isTimeInRange, numeroGroupe } from './groupColorAtTime';
+import { aControleDeFlot, getGroupColorAtTime, isTimeInRange, numeroGroupe, zonesControleFlot } from './groupColorAtTime';
 
 const VERT = 'rgb(0, 255, 0)';
 const JAUNE = 'rgb(255, 255, 0)';
@@ -270,7 +270,41 @@ describe('type FL — courant clignotant', () => {
 
 });
 
+describe('zonesControleFlot — point de repos', () => {
+    it('prolonge la zone en cours, et repousse les suivantes', () => {
+        // Amorce 0-10, jaune 10-15, rouge 15-45 ; repos à 44 de 20 s.
+        expect(zonesControleFlot(0, 45, 10, 5, [{ deb: 44, duration: 20 }]))
+            .toEqual({ intermittentEnd: 10, orangeEnd: 15, fin: 65 });
+        // Repos dans la trame : elle s'allonge, le jaune et le rouge suivent.
+        expect(zonesControleFlot(0, 45, 10, 5, [{ deb: 5, duration: 20 }]))
+            .toEqual({ intermittentEnd: 30, orangeEnd: 35, fin: 65 });
+        // Repos dans le jaune.
+        expect(zonesControleFlot(0, 45, 10, 5, [{ deb: 12, duration: 20 }]))
+            .toEqual({ intermittentEnd: 10, orangeEnd: 35, fin: 65 });
+        // Hors plage : rien.
+        expect(zonesControleFlot(0, 45, 10, 5, [{ deb: 80, duration: 20 }]))
+            .toEqual({ intermittentEnd: 10, orangeEnd: 15, fin: 45 });
+    });
+});
+
 describe('getGroupColorAtTime — point de repos', () => {
+    it('prolonge le rouge d’un contrôle de flot pendant le repos', () => {
+        const sansVert = groupe({ minGreen: 10, durations: { green: 0, orange: 5, red: 40 } });
+        const controle = { id: 1, action: 'Contrôle de flot', gf: '1', deb: '0', fin: '45' };
+        const ctx = contexte({
+            groups: [sansVert],
+            actionData: [controle],
+            simulationResult: {
+                simulatedCycleLength: 65,
+                simulatedGroups: [{ ...sansVert, simulatedOffset: 0, simulatedGreen: 0 }],
+                restPoints: [{ deb: 44, duration: 20, actionId: 9 }],
+            },
+        });
+        expect(getGroupColorAtTime(1, 50, ctx)).toBe(ROUGE);   // rouge tenu pendant le repos
+        expect(getGroupColorAtTime(1, 64, ctx)).toBe(ROUGE);
+        expect(getGroupColorAtTime(1, 67, ctx)).toBe(JAUNE);   // le cycle reprend : clignotant
+    });
+
     it('met le bus au rouge pendant toute la durée du repos', () => {
         const ctx = contexte({
             groups: [groupe()],
