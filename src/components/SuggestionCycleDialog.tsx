@@ -11,7 +11,7 @@ import { proposerAdaptatifs, PASSAGES_MAX, TAUX_VISE_ADAPTATIFS } from '../utils
 import type { AdaptatifPropose, ModeAdaptatifs } from '../utils/adaptatifsVerticaux';
 import { proposerFermetures, SEUIL_CAPACITE_FERMETURE, PART_TEMPS_DISPONIBLE } from '../utils/fermeturesAnticipees';
 import type { FermeturePropose } from '../utils/fermeturesAnticipees';
-import { proposerReposBus, indiceCodeTrajet, lireTmab, variableTmab, DESCRIPTION_REPOS_BUS, FENETRE_REPOS_BUS, TMAB_DEFAUT } from '../utils/reposBus';
+import { proposerReposBus, indiceCodeTrajet, lireTmab, lireTmabX, variableTmab, DESCRIPTION_REPOS_BUS, FENETRE_REPOS_BUS, TMAB_DEFAUT } from '../utils/reposBus';
 import type { ReposPropose } from '../utils/reposBus';
 import type { ActionMicro } from '../types/projet';
 import './SuggestionCycleDialog.css';
@@ -305,7 +305,8 @@ const SuggestionCycleDialog = ({
     const conditionRepos = (r: ReposPropose) => {
         const groupe = groups.find(g => g.id === r.groupe);
         const indice = indiceCodeTrajet(groupe?.da);
-        const tmab = lireTmab(variablesMicro, indice) ?? TMAB_DEFAUT;
+        // La variable générique TMABx, si elle existe encore, sert de valeur de départ.
+        const tmab = lireTmab(variablesMicro, indice) ?? lireTmabX(variablesMicro) ?? TMAB_DEFAUT;
         return {
             gf: String(r.groupe),
             action: 'Point de repos',
@@ -521,8 +522,19 @@ const SuggestionCycleDialog = ({
                     const indices = [...new Set(reposBus.map(r => indiceCodeTrajet(groups.find(g => g.id === r.groupe)?.da)))];
                     const libre = (variablesMicro ?? []).findIndex(v => !v.trim());
                     let slot = libre >= 0 ? libre : (variablesMicro ?? []).length;
+                    // Une variable générique « TMABx » existante est reprise : elle
+                    // prend l'indice du premier code trajet, avec sa valeur.
+                    const slotX = (variablesMicro ?? []).findIndex(v => /^\s*TMABx\s*=/i.test(v));
+                    let xDisponible = slotX >= 0;
                     indices.forEach(ind => {
                         if (lireTmab(variablesMicro, ind) !== null) return;
+                        if (xDisponible) {
+                            const valeur = lireTmabX(variablesMicro) ?? TMAB_DEFAUT;
+                            setVariableMicro(slotX, `TMAB${ind} = ${valeur}`);
+                            if (a.repos && a.repos.tmab === null) a.repos.tmab = slotX;
+                            xDisponible = false;
+                            return;
+                        }
                         setVariableMicro(slot, variableTmab(ind));
                         if (a.repos && a.repos.tmab === null) a.repos.tmab = slot;
                         slot += 1;
