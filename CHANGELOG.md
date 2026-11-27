@@ -7,9 +7,31 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
 
 ---
 
-## [Non publié]
+## [1.7.0] — 2026-11-27
 
 ### Ajouté
+
+- **Analyse du diagramme** : le menu Diagramme ▸ Analyse du diagramme… ouvre une fenêtre détachée qui
+  relit le plan de feu actif et liste ce qu'il n'applique pas — règles ISR (rouge, en premier),
+  recommandations et points d'attention (orange), suggestions (bleu). Une ligne par groupe, la source
+  à chaque constat. Les groupes sans type ou sans vert sont ignorés ; un groupe marqué aiguillage ou
+  escamotage ne produit pas de conflit. Trente contrôles : durées, attentes, traversées, matrice, signaux,
+  image, capacité, files d'attente et tourne-à-gauche.
+- **Réglage des seuils de l'analyse** : menu Diagramme ▸ Options ▸ Réglage des seuils…, fenêtre détachée
+  non modale. Tous les seuils y sont réglables (vert mini et de confort, vert piéton, attentes, retard
+  piéton, cycle, refuge, capacité, file d'attente, tourne-à-gauche) ; ils sont enregistrés pour
+  l'application et le bouton Appliquer laisse la fenêtre ouverte. L'analyse se régénère aussitôt.
+- **Mode essentiel** : Mise en page ▸ Mode essentiel masque d'un coup les commentaires, remarques, réserve
+  de capacité, noms GF sur la matrice et le diagramme, la colonne DA, la colonne Description et la section
+  Variables micro, ainsi que l'onglet Détecteurs. Le tableau des conditions de micro-régulation reste
+  affiché ; les données et les préférences ne changent pas.
+- **Nouveau projet plus nu** : un nouveau projet s'ouvre sur le Formulaire, sans fenêtre détachée, avec les
+  Propriétés, la simulation et le phasage bulle fermés.
+- **Image du carrefour, ajout** : en mode « Ajouter une flèche » ou « Ajouter » un détecteur, le prochain
+  élément à poser est rappelé à côté du curseur (GFx pour une flèche, nom du détecteur).
+- **Assistant conception** : le nom personnalisé des groupes n'est plus exigé (type, mini et jaune
+  suffisent), et la validation du cycle inscrit la répartition calculée en entier — déterminants et
+  groupes associés — puis la restitue si on l'invalide.
 
 - **Fenêtre détachée de l'image, mode correction** : le bouton « ✎ Corriger », à côté des ciseaux, permet
   d'y déplacer et de régler les flèches et les détecteurs : sélection au clic, glisser-déposer, déplacement
@@ -55,6 +77,20 @@ et le projet suit le [versionnage sémantique](VERSIONING.md).
   tourne-à-gauche écarté quand le trafic est faible, par exemple). Tout revient dès qu'un vert est rendu.
 - **Aide, détecteurs** : l'animation des boucles en simulation est présentée comme théorique et purement
   visuelle, fondée sur quelques principes simples, sans prétention de précision.
+- **Suppression d'une condition de micro-régulation** : la confirmation s'affiche dans le panneau des
+  conditions (y compris détaché), avec l'action et le groupe visés (« Voulez-vous supprimer l'action
+  Contrôle de flot du GF1 ? »), sans voile sombre, et la ligne concernée est surlignée.
+- **Plan non vide** : une condition de micro-régulation dont le GF, l'action et le début sont renseignés
+  suffit à activer l'analyse du diagramme.
+
+### Corrigé
+
+- **Assistant conception, dérive du cycle** : valider une durée de cycle plus courte replace les groupes
+  dont le début et le vert débordaient le nouveau cycle, au lieu de laisser chevaucher les phases ; invalider
+  le chapitre restaure le diagramme d'origine.
+- **Analyse du diagramme** : le jaune d'un groupe cycle est traité comme un temps de dégagement (plus
+  d'alerte hors 3 ou 5 s) ; les conflits d'un groupe aiguillage ou escamotage sont ignorés comme dans la
+  liste des conflits ; l'incompatibilité de matrice est une règle non respectée.
 
 ## [1.6.0] — 2026-11-14
 
