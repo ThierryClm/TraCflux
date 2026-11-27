@@ -301,6 +301,13 @@ describe('ActionTable — retrait d’une action', () => {
         CHAMPS.forEach(f => expect(updateActionRow).toHaveBeenCalledWith(1, f, ''));
     });
 
+    it('affiche la confirmation dans le panneau des conditions', async () => {
+        renderTable({ actionData: donnees(remplie) });
+        fireEvent.change(champ(0, COL.action), { target: { value: '' } });
+        const dialogue = await screen.findByRole('dialog', { name: 'Supprimer la ligne' });
+        expect(dialogue.closest('.action-table-container')).not.toBeNull();
+    });
+
     it('garde la ligne intacte si l’on annule', async () => {
         const { updateActionRow } = renderTable({ actionData: donnees(remplie) });
         fireEvent.change(champ(0, COL.action), { target: { value: '' } });

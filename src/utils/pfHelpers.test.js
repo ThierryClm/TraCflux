@@ -4,6 +4,7 @@ import {
     createEmptyActionRow,
     inscrireActions,
     createEmptyActionData,
+    conditionMicroRenseignee,
     buildDiagramFromGroups,
     buildEmptyMatrix,
     createEmptyPF,
@@ -526,5 +527,13 @@ describe('inscrireActions', () => {
     it('rien à inscrire ni à remplacer : table inchangée', () => {
         const data = [ligne(1, { action: 'Point de repos' })];
         expect(inscrireActions(data, [], estAV).data).toBe(data);
+    });
+
+    it('ne considère une condition renseignée qu’avec GF, action et début', () => {
+        expect(conditionMicroRenseignee({ id: 1, action: 'Adaptatif vertical', gf: '2', deb: '10' })).toBe(true);
+        expect(conditionMicroRenseignee({ id: 1, action: 'Adaptatif vertical', gf: '2', deb: 0 })).toBe(true);
+        expect(conditionMicroRenseignee({ id: 1, action: 'Adaptatif vertical', gf: '2', deb: '' })).toBe(false);
+        expect(conditionMicroRenseignee({ id: 1, action: 'Adaptatif vertical', gf: '', deb: '10' })).toBe(false);
+        expect(conditionMicroRenseignee({ id: 1, action: '', gf: '2', deb: '10' })).toBe(false);
     });
 });

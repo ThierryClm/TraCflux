@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import type { CSSProperties, Dispatch, MouseEvent as ReactMouseEvent, SetStateAction } from 'react';
 import usePopupWindow from '../hooks/usePopupWindow';
 import NumericInput from './NumericInput';
-import { useConfirm } from './ConfirmProvider';
 import { useMicroVariables } from './MicroVariablesProvider';
 import { tokenizeMicroText } from '../utils/microVariables';
 import { DESCRIPTION_REPOS_DEFAUT, decouperDescription } from '../simulation/dureeRepos';
@@ -128,7 +127,9 @@ const isRowFilled = ligneActionRemplie;
 const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength = 100, maxGroup = 16, hoveredActionId, setHoveredActionId, microCustomFields = [], updateMicroCustomField, onResizePanel, showFloatingConditions, setShowFloatingConditions, showFloatingVariables, setShowFloatingVariables, showWrapFlash = true, showDescription = true, onDescriptionProposee, actionColWidths = { description: 160, micro: 420 }, setActionColWidths = () => {}, tooltipsEnabled = true }: ActionTableProps) => {
     const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
     const { names: microVariableNames } = useMicroVariables();
-    const askConfirm = useConfirm();
+    // Confirmation locale : elle se place au centre du panneau des conditions,
+    // y compris quand celui-ci est détaché dans sa propre fenêtre.
+    const [suppressionLigne, setSuppressionLigne] = useState<number | null>(null);
 
     // Colonnes redimensionnables (poignee a droite de l'en-tete). Bornes :
     // Desc 100-350 (def 160), Action_Micro 300-700 (def 420), Abrv 38-75
@@ -376,8 +377,19 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
         // Reject invalid values silently
     }, [updateActionRow, maxGroup]);
 
+    const viderLigne = useCallback((rowId: number) => {
+        (['action', 'gf', 'description', 'deb', 'fin', 'abrv', 'micro', 'plage1', 'plage2',
+            'actGf1', 'actGf1Gf2', 'actGf1Gf3', 'actGf1Gf4'] as ChampAction[])
+            .forEach(champ => updateActionRow(rowId, champ, ''));
+    }, [updateActionRow]);
+
+    const confirmerSuppression = useCallback(() => {
+        if (suppressionLigne !== null) viderLigne(suppressionLigne);
+        setSuppressionLigne(null);
+    }, [suppressionLigne, viderLigne]);
+
     // Handle action change - clear disabled fields when action changes
-    const handleActionChange = useCallback(async (rowId: number, newAction: string, currentRow: ActionMicro) => {
+    const handleActionChange = useCallback((rowId: number, newAction: string, currentRow: ActionMicro) => {
         // Si l'action est supprimée et que la ligne contient des données, proposer de supprimer toute la ligne
         if (newAction === '' && currentRow?.action) {
             const hasData = currentRow.gf || currentRow.description || currentRow.deb ||
@@ -386,32 +398,10 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
                            currentRow.actGf1Gf2 || currentRow.actGf1Gf3 || currentRow.actGf1Gf4;
 
             if (hasData) {
-                const confirmDelete = await askConfirm({
-                    title: 'Supprimer la ligne',
-                    message: 'Voulez-vous supprimer toute la ligne ?',
-                    confirmLabel: 'Supprimer',
-                    danger: true,
-                });
-                if (confirmDelete) {
-                    // Effacer tous les champs de la ligne
-                    updateActionRow(rowId, 'action', '');
-                    updateActionRow(rowId, 'gf', '');
-                    updateActionRow(rowId, 'description', '');
-                    updateActionRow(rowId, 'deb', '');
-                    updateActionRow(rowId, 'fin', '');
-                    updateActionRow(rowId, 'abrv', '');
-                    updateActionRow(rowId, 'micro', '');
-                    updateActionRow(rowId, 'plage1', '');
-                    updateActionRow(rowId, 'plage2', '');
-                    updateActionRow(rowId, 'actGf1', '');
-                    updateActionRow(rowId, 'actGf1Gf2', '');
-                    updateActionRow(rowId, 'actGf1Gf3', '');
-                    updateActionRow(rowId, 'actGf1Gf4', '');
-                    return;
-                } else {
-                    // L'utilisateur a annulé, ne rien faire (garder l'action actuelle)
-                    return;
-                }
+                // La confirmation s'affiche dans le panneau ; la ligne n'est
+                // vidée qu'après validation.
+                setSuppressionLigne(rowId);
+                return;
             }
         }
 
@@ -452,7 +442,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             updateActionRow(rowId, 'actGf1Gf3', '');
             updateActionRow(rowId, 'actGf1Gf4', '');
         }
-    }, [updateActionRow, askConfirm, onDescriptionProposee]);
+    }, [updateActionRow, onDescriptionProposee]);
 
     // Handle sort - actually reorder the data permanently
     const handleSort = useCallback((field: 'gf' | 'action' | 'deb', direction: 'asc' | 'desc' = 'asc') => {
@@ -628,6 +618,34 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
                     onMouseDown={handlePanelResizeStart}
                     title={tip("Faites glisser pour redimensionner la zone Plan de feu")}
                 />
+            )}
+
+            {suppressionLigne !== null && (
+                <div
+                    className="action-confirm-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Supprimer la ligne"
+                    onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setSuppressionLigne(null);
+                        }
+                    }}
+                >
+                    <div className="action-confirm-box">
+                        <h4>Supprimer la ligne</h4>
+                        <p>Voulez-vous supprimer toute la ligne ?</p>
+                        <div className="action-confirm-actions">
+                            <button className="modal-btn modal-btn-secondary" onClick={() => setSuppressionLigne(null)}>
+                                Annuler
+                            </button>
+                            <button className="modal-btn action-confirm-danger" onClick={confirmerSuppression} autoFocus>
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
