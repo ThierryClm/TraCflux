@@ -9,7 +9,9 @@ for (const cas of ['matrice vide', '10 groupes sur 13', '11 groupes sur 13'] as 
             for (const pf of projet.pfTabs) pf.conflictMatrix = projet.conflictMatrix;
         } else {
             const complets = cas.startsWith('10') ? 10 : 11;
-            projet.groups.slice(complets).forEach((g: { id: number; name: string }) => { g.name = `Groupe ${g.id}`; });
+            // Le nom d'origine n'est plus un critère : on rend les groupes
+            // incomplets par leur type, comme un formulaire à moitié saisi.
+            projet.groups.slice(complets).forEach((g: { type: string }) => { g.type = ''; });
         }
         await page.route('**/Carrefour_Exemple.json', route => route.fulfill({ json: projet }));
         await ouvrirExemple(page);
