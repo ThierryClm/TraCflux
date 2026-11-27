@@ -293,6 +293,24 @@ describe('getGroupColorAtTime — contrôle de flot', () => {
         expect(getGroupColorAtTime(1, 30, ctx)).toBe(ROUGE);
     });
 
+    it('suit les phases du contrôle de flot avec le cycle simulé', () => {
+        const ctx = contexte({
+            groups: [groupe({ minGreen: 6 })],
+            simulationResult: {
+                simulatedCycleLength: 90,
+                simulatedGroups: [{
+                    ...groupe({ minGreen: 6, durations: { green: 0, orange: 3, red: 87 } }),
+                    simulatedOffset: 0, simulatedGreen: 0,
+                }],
+            },
+            cycleLength: 120,
+            actionData: [action],
+        });
+        expect(getGroupColorAtTime(1, 10, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 16, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 19, ctx)).toBe(ROUGE);
+    });
+
     it('reconnaît une action contrôle de flot complète', () => {
         expect(aControleDeFlot(1, [action])).toBe(true);
         expect(aControleDeFlot(1, [{ ...action, fin: '' }])).toBe(false);
