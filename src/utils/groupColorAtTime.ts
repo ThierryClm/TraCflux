@@ -204,19 +204,25 @@ export const getGroupColorAtTime = (
         && numeroGroupe(action.gf) === groupId
         && action.deb !== '' && action.fin !== ''
     );
-    if (controleFlot && isTimeInRange(normalizedTime, controleFlot.deb, controleFlot.fin, effectiveCycleLength)) {
+    if (controleFlot) {
+        // Feu de contrôle de flot : clignotant d'amorce, jaune fixe, rouge,
+        // puis clignotant de repos jusqu'au prochain DEB. Un feu ne s'éteint
+        // jamais : hors de la plage de l'action, on clignote au lieu de couper.
+        const jauneGris = Math.floor(time * 2) % 2 === 0 ? 'rgb(255, 255, 0)' : 'rgb(120, 120, 120)';
+        const dansPlage = isTimeInRange(normalizedTime, controleFlot.deb, controleFlot.fin, effectiveCycleLength);
+        if (!dansPlage) return jauneGris;
         const deb = ((parseInt(String(controleFlot.deb)) % effectiveCycleLength) + effectiveCycleLength) % effectiveCycleLength;
         const ecoule = ((normalizedTime - deb) % effectiveCycleLength + effectiveCycleLength) % effectiveCycleLength;
         // Les groupes simulés ne portent pas toujours mini et jaune : on
         // retombe sur le groupe du projet pour rester d'accord avec le diagramme.
         const origine = groups.find(g => g.id === groupId);
-        const vertMini = Number(group.minGreen ?? origine?.minGreen) || 0;
+        // Durée d'amorce : même borne que l'incrustation du diagramme, qui lit
+        // le champ « Mini » du groupe — ce n'est pas un vert, c'est l'amorce
+        // réglementaire avant le jaune fixe.
+        const amorce = Number(group.minGreen ?? origine?.minGreen) || 0;
         const jaune = Number(group.durations?.orange ?? origine?.durations?.orange) || 0;
-        if (ecoule < vertMini) {
-            // Bande intermittente jaune/gris du diagramme, à la même cadence.
-            return Math.floor(time * 2) % 2 === 0 ? 'rgb(255, 255, 0)' : 'rgb(120, 120, 120)';
-        }
-        if (ecoule < vertMini + jaune) return 'rgb(255, 255, 0)';
+        if (ecoule < amorce) return jauneGris;
+        if (ecoule < amorce + jaune) return 'rgb(255, 255, 0)';
         return 'rgb(255, 0, 0)';
     }
 
