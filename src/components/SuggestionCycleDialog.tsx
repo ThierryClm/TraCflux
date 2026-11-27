@@ -67,6 +67,10 @@ interface ValidationChapitre {
     /** Raison pour laquelle on ne peut pas (encore) valider ; absente si c'est possible. */
     motif?: string;
     basculer: () => void;
+    /** Libellé du bouton quand une mise à jour attend (ex. « Mettre à jour »). */
+    libelle?: string;
+    /** Fait clignoter le bouton : une action immédiate est attendue. */
+    attention?: boolean;
 }
 
 /**
@@ -87,12 +91,14 @@ const Chapitre = ({ tip, titre, resume, ouvert, basculer, validation, children }
                 {resume && <span className="sc-chapitre-resume" title={tip(typeof resume === 'string' ? resume : undefined)}>{resume}</span>}
             </button>
             {validation && (
-                <button type="button" className={`sc-valider${validation.valide ? ' actif' : ''}`} aria-pressed={validation.valide}
+                <button type="button" className={`sc-valider${validation.valide ? ' actif' : ''}${validation.attention ? ' attention' : ''}`} aria-pressed={validation.valide}
                     disabled={!validation.valide && !!validation.motif} onClick={validation.basculer}
-                    title={tip(validation.valide
-                        ? 'Invalider : le diagramme revient à son état d\'avant la validation'
-                        : validation.motif ?? 'Valider : la proposition s\'applique tout de suite au diagramme')}>
-                    {validation.valide ? '✓ Validé' : 'Valider'}
+                    title={tip(validation.libelle
+                        ? 'Les valeurs proposées ont changé : appliquer la mise à jour au diagramme'
+                        : validation.valide
+                            ? 'Invalider : le diagramme revient à son état d\'avant la validation'
+                            : validation.motif ?? 'Valider : la proposition s\'applique tout de suite au diagramme')}>
+                    {validation.libelle ?? (validation.valide ? '✓ Validé' : 'Valider')}
                 </button>
             )}
         </div>
@@ -245,15 +251,22 @@ const SuggestionCycleDialog = ({
     // Groupes associés placés par « Appliquer le cycle » : ceux qui n'ont pas
     // encore de vert et dont la déduction est sûre. Les groupes déjà réglés ne
     // sont jamais touchés ; ceux « à vérifier » restent à placer à la main.
-    const statutPlacement = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }) => {
+    type StatutPlacement = 'auto' | 'maj' | 'regle' | 'main';
+    const statutPlacement = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }): StatutPlacement => {
         const g = groups.find(gr => gr.id === p.id);
         const cycleRef = resultat?.cycleSuggere ?? cycleLength;
-        // Un groupe déjà réglé reste tel quel, sauf s'il déborde le cycle
-        // proposé : il est alors replacé avec le cycle.
-        if (g && g.durations?.green > 0 && (Number(g.offset) || 0) + g.durations.green <= cycleRef) return 'regle' as const;
-        return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' as const : 'main' as const;
+        if (g && g.durations?.green > 0 && (Number(g.offset) || 0) + g.durations.green <= cycleRef) {
+            // Un groupe déjà placé n'est « réglé » que si sa position correspond
+            // encore à la proposition. Après un changement de trafic ou de cycle,
+            // les valeurs recalculées diffèrent : il est à mettre à jour.
+            const memeOffset = ((Math.round(Number(g.offset) || 0) % cycleRef) + cycleRef) % cycleRef === ((p.debut % cycleRef) + cycleRef) % cycleRef;
+            const memeVert = g.durations.green === p.fin - p.debut;
+            return memeOffset && memeVert || p.aVerifier ? 'regle' : 'maj';
+        }
+        return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' : 'main';
     };
-    const aPlacer = placements.filter(p => statutPlacement(p) === 'auto');
+    const aPlacer = placements.filter(p => ['auto', 'maj'].includes(statutPlacement(p)));
+    const aMettreAJour = placements.filter(p => statutPlacement(p) === 'maj');
     // Adaptatifs verticaux proposés, un par phase, sur la disposition prévue :
     // diagramme actuel, déterminants proposés et groupes placés avec le cycle.
     const [modeAV, setModeAV] = useState<ModeAdaptatifs>('iteratif');
@@ -398,8 +411,9 @@ const SuggestionCycleDialog = ({
     const resumeCycle = resultat && calculable && resultat.cycleSuggere
         ? `cycle proposé ${resultat.cycleSuggere} s (Webster ${fmt(resultat.websterExact ?? 0, 1)} s)${resultat.sature ? ' · saturé' : ''}`
         : undefined;
-    const compte = (statut: 'auto' | 'main' | 'regle') => placements.filter(p => statutPlacement(p) === statut).length;
+    const compte = (statut: StatutPlacement) => placements.filter(p => statutPlacement(p) === statut).length;
     const resumeAssocies = [
+        compte('maj') ? `${compte('maj')} à mettre à jour` : '',
         compte('auto') ? `${compte('auto')} avec le cycle` : '',
         compte('main') ? `${compte('main')} à la main` : '',
         compte('regle') ? `${compte('regle')} déjà réglé${compte('regle') > 1 ? 's' : ''}` : '',
@@ -601,11 +615,23 @@ const SuggestionCycleDialog = ({
         fermetures: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !faUtiles.length ? 'Aucune fermeture à inscrire' : undefined,
         repos: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !reposBus.length ? 'Aucun groupe avec un code trajet (DA)' : undefined,
     };
-    const validation = (id: IdChapitre): ValidationChapitre | undefined => (readOnly ? undefined : {
-        valide: valides[id],
-        motif: motifs[id],
-        basculer: () => (valides[id] ? retirerChapitre(id) : appliquerChapitre(id)),
-    });
+    const validation = (id: IdChapitre): ValidationChapitre | undefined => {
+        if (readOnly) return undefined;
+        // Groupes associés : des valeurs recalculées attendent d'être appliquées.
+        if (id === 'associes' && aMettreAJour.length) {
+            return {
+                valide: valides.associes,
+                basculer: () => appliquerChapitre('associes'),
+                libelle: 'Mettre à jour',
+                attention: true,
+            };
+        }
+        return {
+            valide: valides[id],
+            motif: motifs[id],
+            basculer: () => (valides[id] ? retirerChapitre(id) : appliquerChapitre(id)),
+        };
+    };
 
     // « Appliquer le cycle » : valide d'un coup tous les chapitres qui ont
     // quelque chose à appliquer, dans l'ordre (le cycle avant ce qui en dépend).
@@ -748,7 +774,7 @@ const SuggestionCycleDialog = ({
                                         {p.source && <span className={`sc-badge sc-badge-${p.source}`}>{p.source === 'matrice' ? 'Matrice' : p.source === 'nom' ? 'Nom' : 'Plan'}</span>}
                                         {' '}{p.explication}{p.aVerifier ? ' — à vérifier' : ''}
                                     </td>
-                                    <td className="sc-insecable">{{ auto: 'avec le cycle', regle: 'déjà réglé', main: 'à la main' }[statutPlacement(p)]}</td>
+                                    <td className="sc-insecable">{{ auto: 'avec le cycle', maj: 'à mettre à jour', regle: 'déjà réglé', main: 'à la main' }[statutPlacement(p)]}</td>
                                 </tr>
                             ))}
                         </tbody>

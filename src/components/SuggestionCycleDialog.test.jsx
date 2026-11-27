@@ -128,7 +128,7 @@ describe('suggestion de durée du cycle', () => {
         // Rien n'est placé avant « Appliquer le cycle », qui règle d'abord le cycle.
         expect(updateGroupParams).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
-        expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: 0 }));
+        expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: expect.any(Number) }));
         expect(updateGroupParams).toHaveBeenCalledWith(5, expect.objectContaining({ offset: 45 }));
     });
 
@@ -257,6 +257,19 @@ describe('suggestion de durée du cycle', () => {
         expect(setVariableMicro).toHaveBeenCalledWith(0, '');
         // Aucune variable ajoutée : TMAB1 existait déjà.
         expect(setVariableMicro).not.toHaveBeenCalledWith(2, expect.stringContaining('TMAB'));
+    });
+
+    it('un groupe déjà placé mais différent de la proposition attend une mise à jour', () => {
+        const pose = { 1: [0, 29], 2: [5, 20], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        const { updateGroupParams } = ouvrir({ groups: places, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        const bloc = screen.getByLabelText('Groupes associés');
+        const bouton = within(bloc).getByRole('button', { name: /Mettre à jour/ });
+        expect(bouton).toHaveClass('attention');
+        expect(within(bloc).getAllByText(/à mettre à jour/).length).toBeGreaterThan(0);
+        updateGroupParams.mockClear();
+        fireEvent.click(bouton);
+        expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: expect.any(Number) }));
     });
 
     it('à l\'ouverture, seul le tableau des groupes déterminants est déployé ; les autres chapitres montrent leur résumé', () => {

@@ -161,3 +161,19 @@
 .suggestion-cycle .sc-valider.actif { background: #2e7d32; border-color: #2e7d32; color: #fff; font-weight: bold; }
 .suggestion-cycle .sc-valider.actif:hover { background: #c62828; border-color: #c62828; }
 .suggestion-cycle .sc-chapitre.valide { border-color: #2e7d32; }
+
+/* Mise à jour attendue : le bouton Valider clignote, comme le repère d'un
+   renvoi de l'aide, pour attirer l'œil sur l'action immédiate. */
+.sc-valider.attention {
+    outline: 2px solid #4ecdc4;
+    outline-offset: -2px;
+    animation: repere-valider 0.8s ease-in-out 3;
+}
+
+@keyframes repere-valider {
+    50% { background: rgba(78, 205, 196, 0.35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sc-valider.attention { animation: none; }
+}
