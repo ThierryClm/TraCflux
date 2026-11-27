@@ -10,6 +10,7 @@ import TimelineRow from './timeline/TimelineRow';
 import TimelineSidebar from './timeline/TimelineSidebar';
 import { createTimelineGeometry } from './timeline/timelineGeometry';
 import { createTimelineSimulation } from './timeline/timelineSimulation';
+import { ligneActionRemplie } from '../utils/pfHelpers';
 import { useTimelineDrag } from './timeline/useTimelineDrag';
 import type { ContexteIncrustations } from './timeline/incrustations/contexteIncrustations';
 import IncrustationAdaptatifVertical from './timeline/incrustations/IncrustationAdaptatifVertical';
@@ -646,6 +647,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                     <TimelineEmptyState
                         conflictMatrix={conflictMatrix}
                         groups={groups}
+                        aDesActions={actionData.some(ligneActionRemplie)}
                     />
                     {/* L'instant survolé, qui anime l'image du carrefour, se suit sur
                         tout le conteneur : lignes ET cadres d'action posés par-dessus

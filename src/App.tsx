@@ -5,7 +5,7 @@ import { useBooleenMemorise, usePrefsInfobulles } from './hooks/usePreferencesEs
 import { useImpressionDossier, useMiseEnPageImpression } from './hooks/useImpressionDossier';
 import { recalerCurseur } from './simulation/curseur';
 import { useTrafficLight } from './hooks/useTrafficLight';
-import { MAX_PF, mergePfFromProject } from './utils/pfHelpers';
+import { MAX_PF, ligneActionRemplie, mergePfFromProject } from './utils/pfHelpers';
 import { useAuth } from './hooks/useAuth';
 import TimelineDiagram from './components/TimelineDiagram';
 import ToastContainer from './components/ToastContainer';
@@ -2513,7 +2513,7 @@ function App() {
                     assistantPret={prerequisAssistant.pret}
                     assistantBlocage={prerequisAssistant.message}
                     scenariosPlans={scenariosPlansMenu}
-                    diagrammeSansValeur={groups.every(g => (g.durations?.green || 0) <= 0)}
+                    diagrammeSansValeur={groups.every(g => (g.durations?.green || 0) <= 0) && !actionData.some(ligneActionRemplie)}
                     matriceVide={!conflictMatrix.some(ligne => ligne.some(cellule => cellule !== '' && cellule != null))}
                 />
             <WelcomeScreen

@@ -64,4 +64,15 @@ describe('TimelineGridBackground', () => {
         expect(screen.getByText(/Renseigner le formulaire des groupes/)).toBeInTheDocument();
         expect(screen.getByText(/Renseigner la matrice des temps interverts/)).toBeInTheDocument();
     });
+
+    it('ne signale pas un diagramme vide dès qu’une action est renseignée', () => {
+        const { container } = render(
+            <TimelineEmptyState
+                groups={[{ id: 1, type: '', durations: { green: 0 } }]}
+                conflictMatrix={[['']]}
+                aDesActions
+            />
+        );
+        expect(container).toBeEmptyDOMElement();
+    });
 });
