@@ -22,6 +22,8 @@ interface ColorGroup extends Groupe {
 interface ColorSimulationResult {
     simulatedGroups?: ColorGroup[];
     simulatedCycleLength?: number;
+    /** Points de repos simulés : le bus y est au rouge pendant l'attente. */
+    restPoints?: Array<{ deb: number; duration: number; actionId: number }>;
 }
 
 interface PPLitContext {
@@ -196,6 +198,15 @@ export const getGroupColorAtTime = (
     // Normalize time within cycle
     const normalizedTime = time % effectiveCycleLength;
 
+    // Point de repos du groupe : l'attente se fait au rouge, même si le vert
+    // simulé couvrait l'instant avant que l'opération ne l'arrête.
+    const repos = simulationResult?.restPoints?.find(r => {
+        const action = actionData.find(a => a.id === r.actionId);
+        return !!action && numeroGroupe(action.gf) === groupId
+            && isTimeInRange(normalizedTime, r.deb, r.deb + r.duration, effectiveCycleLength);
+    });
+    if (repos) return 'rgb(255, 0, 0)';
+
     // Contrôle de flot : l'action décrit à elle seule le fonctionnement du
     // groupe — jaune/gris intermittent pendant le vert minimum, puis jaune,
     // puis rouge jusqu'à la fin. Elle prime sur le vert propre au groupe.
@@ -208,9 +219,11 @@ export const getGroupColorAtTime = (
         // Feu de contrôle de flot : clignotant d'amorce, jaune fixe, rouge,
         // puis clignotant de repos jusqu'au prochain DEB. Un feu ne s'éteint
         // jamais : hors de la plage de l'action, on clignote au lieu de couper.
-        const jauneGris = Math.floor(time * 2) % 2 === 0 ? 'rgb(255, 255, 0)' : 'rgb(120, 120, 120)';
+        // Une seconde allumée, une seconde grise : l'instant affiché avance
+        // en secondes entières, un rythme à la demi-seconde resterait invisible.
+        const jauneGris = (valeur: number) => Math.floor(valeur) % 2 === 0 ? 'rgb(255, 255, 0)' : 'rgb(120, 120, 120)';
         const dansPlage = isTimeInRange(normalizedTime, controleFlot.deb, controleFlot.fin, effectiveCycleLength);
-        if (!dansPlage) return jauneGris;
+        if (!dansPlage) return jauneGris(normalizedTime);
         const deb = ((parseInt(String(controleFlot.deb)) % effectiveCycleLength) + effectiveCycleLength) % effectiveCycleLength;
         const ecoule = ((normalizedTime - deb) % effectiveCycleLength + effectiveCycleLength) % effectiveCycleLength;
         // Les groupes simulés ne portent pas toujours mini et jaune : on
@@ -221,7 +234,7 @@ export const getGroupColorAtTime = (
         // réglementaire avant le jaune fixe.
         const amorce = Number(group.minGreen ?? origine?.minGreen) || 0;
         const jaune = Number(group.durations?.orange ?? origine?.durations?.orange) || 0;
-        if (ecoule < amorce) return jauneGris;
+        if (ecoule < amorce) return jauneGris(ecoule);
         if (ecoule < amorce + jaune) return 'rgb(255, 255, 0)';
         return 'rgb(255, 0, 0)';
     }
