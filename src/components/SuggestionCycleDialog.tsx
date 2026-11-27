@@ -266,7 +266,7 @@ const SuggestionCycleDialog = ({
         const dets = brouillon.determinants as number[];
         return groups.map(g => {
             const base = {
-                id: g.id, type: String(g.type ?? ''), vertMini: Number(g.minGreen) || 0,
+                id: g.id, type: String(g.type ?? ''), vertMini: Number(g.minGreen) || 0, da: String(g.da ?? ''),
                 trafic: Number(getTrafficData(g.id)?.trafficVol) || 0, coefVoie: Number(g.laneCoef) || 1,
             };
             const i = dets.indexOf(g.id);
@@ -401,7 +401,7 @@ const SuggestionCycleDialog = ({
     ].filter(Boolean).join(' · ');
     const resumeAdaptatifs = `${avUtiles.length ? avUtiles.map(a => `AV${a.phase} ${a.deb}–${a.fin} s`).join(', ') : 'aucune zone'} · ${tauxAV} % · ${modeAV === 'iteratif' ? 'itératif' : 'prudent'}`;
     const resumeFermetures = `${faUtiles.length ? faUtiles.map((f, k) => `FA${k + 1} ${court(f.groupe)} ${f.deb}–${f.fin} s → ${f.glissements.map(court).join(', ')}`).join(' ; ') : 'aucune'} · seuil ${seuilFA} %`;
-    const resumeRepos = reposBus.length ? reposBus.map(r => `${court(r.groupe)} à ${r.instant} s`).join(', ') : 'aucun groupe bus';
+    const resumeRepos = reposBus.length ? reposBus.map(r => `${court(r.groupe)} à ${r.instant} s`).join(', ') : 'aucun groupe avec un code trajet (DA)';
 
     // ── Validation chapitre par chapitre ────────────────────────────────────
     // Valider un chapitre applique tout de suite sa proposition au diagramme ;
@@ -509,10 +509,9 @@ const SuggestionCycleDialog = ({
                 aPlacer.forEach(p => updateGroupParams(p.id, { offset: p.debut, durations: { green: p.fin - p.debut } }));
                 break;
             case 'repos':
-                a.repos ??= { da: reposBus.map(r => ({ id: r.groupe, da: String(groups.find(g => g.id === r.groupe)?.da ?? '') })), tmab: null };
+                a.repos ??= { da: [], tmab: null };
                 inscrire('repos');
-                // DA du groupe bus : « Tx », x tenant la place du code trajet.
-                reposBus.forEach(r => updateGroupParams(r.groupe, { da: 'Tx' }));
+                // Le groupe porte déjà son code trajet : on le laisse tel quel.
                 // Variable micro TMABx, ajoutée dans la première case libre si le plan ne l'a pas.
                 if (reposBus.length && tmabX === null && setVariableMicro) {
                     const libre = (variablesMicro ?? []).findIndex(v => !v.trim());
@@ -576,7 +575,7 @@ const SuggestionCycleDialog = ({
         associes: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !aPlacer.length ? 'Aucun groupe à placer avec le cycle' : undefined,
         adaptatifs: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !avUtiles.length ? 'Aucune zone à inscrire' : undefined,
         fermetures: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !faUtiles.length ? 'Aucune fermeture à inscrire' : undefined,
-        repos: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !reposBus.length ? 'Aucun groupe bus' : undefined,
+        repos: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !reposBus.length ? 'Aucun groupe avec un code trajet (DA)' : undefined,
     };
     const validation = (id: IdChapitre): ValidationChapitre | undefined => (readOnly ? undefined : {
         valide: valides[id],
@@ -704,7 +703,7 @@ const SuggestionCycleDialog = ({
                         </p>
                     )}
                     <p className="sc-note">Cycle actuel du plan : {cycleLength} s.</p>
-                    {preremplis.length > 0 && <p className="sc-note">Diagramme pré-rempli pour les groupes sans vert : {preremplis.map(id => `GF${id}`).join(', ')} (Ctrl+Z pour annuler).</p>}
+                    {preremplis.length > 0 && <p className="sc-note">Diagramme pré-rempli pour les groupes sans vert : {preremplis.map(id => `GF${id}`).join(', ')}.</p>}
                 </div>
                 </Chapitre>
             )}
@@ -732,7 +731,7 @@ const SuggestionCycleDialog = ({
                     </table>
                     <p className="sc-note">
                         « Appliquer le cycle » règle d'abord la durée du cycle, puis inscrit dans le diagramme les groupes
-                        « avec le cycle » (Ctrl+Z pour annuler). Les groupes déjà réglés ne sont pas modifiés ; ceux
+                        « avec le cycle ». Les groupes déjà réglés ne sont pas modifiés ; ceux
                         « à vérifier » restent à placer à la main.
                     </p>
                 </div>
@@ -855,7 +854,7 @@ const SuggestionCycleDialog = ({
                                 ))}
                             </tbody>
                         </table>
-                    ) : <p className="sc-attente">Aucun groupe bus (type B ou TC) dans le plan.</p>}
+                    ) : <p className="sc-attente">Aucun groupe avec un code trajet (DA) dans le plan.</p>}
                     <p className="sc-note">
                         « Appliquer le cycle » inscrit un point de repos par groupe bus (« Att bus », « {DESCRIPTION_REPOS_BUS} maxi {tmab} secondes »),
                         écrit « Tx » dans la colonne DA du groupe bus{tmabX === null ? <> et ajoute la variable micro « {VARIABLE_TMABX} »</> : ''}. L'indice x tient la place du
@@ -869,7 +868,7 @@ const SuggestionCycleDialog = ({
             {avInscrits !== null && (
                         <p className="sc-note">
                             {avInscrits.length
-                                ? `Inscrits : ${avInscrits.join(', ')} (Ctrl+Z pour annuler). Adaptez les conditions à la détection réelle et vérifiez dans l'onglet Simulation.`
+                                ? `Inscrits : ${avInscrits.join(', ')}. Adaptez les conditions à la détection réelle et vérifiez dans l'onglet Simulation.`
                                 : 'Aucune condition à inscrire.'}
                         </p>
                     )}

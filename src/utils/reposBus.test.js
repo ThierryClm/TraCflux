@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { proposerReposBus, lireTmabX } from './reposBus';
 
-const g = (id, type, debut, vert) => ({ id, type, debut, vert });
+const g = (id, type, debut, vert, da = '') => ({ id, type, debut, vert, da });
 // TD : B3 vert de 33 à 39 s ; P8 et P9 jusqu'à 37 s.
 const td = [
-    g(1, 'V', 0, 29), g(2, 'V', 0, 29), g(3, 'B', 33, 6), g(4, 'V', 45, 19), g(5, 'V', 45, 19),
+    g(1, 'V', 0, 29), g(2, 'V', 0, 29), g(3, 'B', 33, 6, 'T0'), g(4, 'V', 45, 19), g(5, 'V', 45, 19),
     g(6, 'P', 46, 16), g(7, 'P', 44, 16), g(8, 'P', 0, 37), g(9, 'P', 0, 37),
 ];
 
@@ -19,7 +19,7 @@ describe('point de repos bus proposé', () => {
         expect(r[0].n).toBe(4);
     });
 
-    it('pas de groupe bus : rien', () => {
+    it('pas de code trajet : rien', () => {
         expect(proposerReposBus(td.filter(x => x.id !== 3), 70)).toEqual([]);
     });
 
