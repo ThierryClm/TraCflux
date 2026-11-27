@@ -99,6 +99,20 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByRole('button', { name: 'Relire le diagramme' })).toBeInTheDocument();
     });
 
+    it('déterminants qui débordent le nouveau cycle : replacés à la proposition', () => {
+        const poses = { 1: [65, 10], 3: [68, 10], 4: [60, 15] };
+        const debordes = groups.map(gr => poses[gr.id]
+            ? { ...gr, offset: poses[gr.id][0], durations: { ...gr.durations, green: poses[gr.id][1] } }
+            : gr);
+        const { updateGroupParams } = ouvrir({ groups: debordes, cycleLength: 100,
+            phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        updateGroupParams.mockClear();
+        fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
+        expect(updateGroupParams).toHaveBeenCalledWith(1, { offset: 0, durations: { green: 29 } });
+        expect(updateGroupParams).toHaveBeenCalledWith(3, { offset: 33, durations: { green: 6 } });
+        expect(updateGroupParams).toHaveBeenCalledWith(4, { offset: 45, durations: { green: 19 } });
+    });
+
     it('groupes associés : placement déduit de la matrice, avec sa source', () => {
         const vides = groups.map(gr => ({ ...gr, durations: { green: 0, orange: 3, red: 0 } }));
         const m = matrice.map(r => [...r]);

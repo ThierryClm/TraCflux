@@ -7,10 +7,8 @@ const SANS_JAUNE_TRICOLORE = new Set(['P', 'Piéton', 'CY', 'Cycliste', 'FL', 'P
 export function evaluerPrerequisAssistant(groupes: Groupe[], matrice: Matrice) {
     const requis = Math.ceil(groupes.length * 0.8);
     const renseignes = groupes.filter(g => {
-        const nom = g.name?.trim();
         const jaune = g.durations?.orange;
-        return nom && !/^Groupe\s+\d+$/i.test(nom)
-            && TYPES.has(g.type)
+        return TYPES.has(g.type)
             && Number.isFinite(g.minGreen) && g.minGreen > 0
             && Number.isFinite(jaune)
             && (SANS_JAUNE_TRICOLORE.has(g.type) ? jaune >= 0 : jaune > 0);
@@ -25,7 +23,7 @@ export function evaluerPrerequisAssistant(groupes: Groupe[], matrice: Matrice) {
     if (!matriceRenseignee) raisons.push('Renseignez les temps interverts de la matrice (hors diagonale).');
     if (!groupes.length || renseignes < requis) raisons.push(
         `Complétez au moins 80 % des groupes du formulaire : ${renseignes}/${groupes.length} renseignés, ${requis} requis. `
-        + 'Chaque groupe doit avoir un nom personnalisé, un type, un mini positif et un jaune (ou dégagement) renseigné.');
+        + 'Chaque groupe doit avoir un type, un mini positif et un jaune (ou dégagement) renseigné ; le nom peut rester celui d’origine.');
     return { pret: raisons.length === 0, renseignes, requis, matriceRenseignee, message: raisons.join('\n') };
 }
 
