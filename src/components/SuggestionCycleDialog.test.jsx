@@ -288,6 +288,29 @@ const Banc = ({ cycleInitial = 60 }) => {
 };
 const valider = titre => within(screen.getByLabelText(titre)).getByRole('button', { name: /Valider|Validé/ });
 
+const BancDeborde = () => {
+    const poses = { 1: [65, 10], 3: [68, 10], 4: [60, 15] };
+    const [cycle, setCycle] = useState(100);
+    const [gr, setGr] = useState(groups.map(x => ({ ...x, offset: poses[x.id]?.[0] ?? 0, durations: { ...x.durations, green: poses[x.id]?.[1] ?? 10 } })));
+    const updateGroupParams = (id, p) => setGr(prev => prev.map(x => (x.id === id
+        ? { ...x, ...(p.offset !== undefined ? { offset: p.offset } : {}), durations: { ...x.durations, ...p.durations } }
+        : x)));
+    const resume = id => { const x = gr.find(y => y.id === id); return `${x.offset}/${x.durations.green}`; };
+    return (
+        <>
+            <output data-testid="cycle">{cycle}</output>
+            <output data-testid="g1">{resume(1)}</output>
+            <output data-testid="g3">{resume(3)}</output>
+            <output data-testid="g4">{resume(4)}</output>
+            <SuggestionCycleDialog isOpen onClose={() => {}} planName="PF1" groups={gr} conflictMatrix={matrice}
+                cycleLength={cycle} getTrafficData={id => ({ trafficVol: trafic[id] })} trafficDatasetName="HPM"
+                phasageCycle={{ determinants: [1, 3, 4], degagements: [4, 6, 6] }} setPhasageCycle={() => {}}
+                setCycleLength={setCycle} setPhasageBulleCount={() => {}} setPhasageBulleTimes={() => {}}
+                updateGroupParams={updateGroupParams} />
+        </>
+    );
+};
+
 describe('validation chapitre par chapitre', () => {
     it('valider applique au diagramme, invalider rétablit ; le cycle entraîne les chapitres qui en dépendent', () => {
         render(<Banc />);
@@ -309,6 +332,21 @@ describe('validation chapitre par chapitre', () => {
         expect(screen.getByTestId('conditions').textContent).toBe('');
         expect(screen.getByTestId('cycle')).toHaveTextContent('60');
         expect(valider('Adaptatifs verticaux')).toHaveTextContent('Valider');
+    });
+
+    it('valider un cycle plus court replace les groupes, invalider rétablit le diagramme initial', () => {
+        render(<BancDeborde />);
+        toutDeplier();
+        fireEvent.click(valider('Durée de cycle'));
+        expect(screen.getByTestId('cycle')).toHaveTextContent('70');
+        expect(screen.getByTestId('g1')).toHaveTextContent('0/29');
+        expect(screen.getByTestId('g3')).toHaveTextContent('33/6');
+        expect(screen.getByTestId('g4')).toHaveTextContent('45/19');
+        fireEvent.click(valider('Durée de cycle'));
+        expect(screen.getByTestId('cycle')).toHaveTextContent('100');
+        expect(screen.getByTestId('g1')).toHaveTextContent('65/10');
+        expect(screen.getByTestId('g3')).toHaveTextContent('68/10');
+        expect(screen.getByTestId('g4')).toHaveTextContent('60/15');
     });
 
     it('un chapitre validé suit sa proposition en temps réel', () => {
