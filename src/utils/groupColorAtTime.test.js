@@ -288,7 +288,7 @@ describe('zonesControleFlot — point de repos', () => {
 });
 
 describe('getGroupColorAtTime — point de repos', () => {
-    it('prolonge le rouge d’un contrôle de flot pendant le repos', () => {
+    it('clignote pendant la prolongation due au repos, comme le feu réel', () => {
         const sansVert = groupe({ minGreen: 10, durations: { green: 0, orange: 5, red: 40 } });
         const controle = { id: 1, action: 'Contrôle de flot', gf: '1', deb: '0', fin: '45' };
         const ctx = contexte({
@@ -300,25 +300,10 @@ describe('getGroupColorAtTime — point de repos', () => {
                 restPoints: [{ deb: 44, duration: 20, actionId: 9 }],
             },
         });
-        expect(getGroupColorAtTime(1, 50, ctx)).toBe(ROUGE);   // rouge tenu pendant le repos
-        expect(getGroupColorAtTime(1, 64, ctx)).toBe(ROUGE);
-        expect(getGroupColorAtTime(1, 67, ctx)).toBe(JAUNE);   // le cycle reprend : clignotant
-    });
-
-    it('met le bus au rouge pendant toute la durée du repos', () => {
-        const ctx = contexte({
-            groups: [groupe()],
-            simulationResult: {
-                simulatedCycleLength: 70,
-                simulatedGroups: [{ ...groupe(), simulatedOffset: 0, simulatedGreen: 30 }],
-                restPoints: [{ deb: 20, duration: 10, actionId: 1 }],
-            },
-            cycleLength: 60,
-            actionData: [{ id: 1, action: 'Point de repos', gf: '1', deb: '20', description: 'attente maxi 10 secondes' }],
-        });
-        expect(getGroupColorAtTime(1, 25, ctx)).toBe(ROUGE);   // pendant le repos
-        expect(getGroupColorAtTime(1, 29, ctx)).toBe(ROUGE);   // jusqu'à la fin
-        expect(getGroupColorAtTime(1, 31, ctx)).toBe(JAUNE);   // le cycle reprend après
+        // La barre du diagramme prolonge le rouge, mais la flèche clignote.
+        expect(getGroupColorAtTime(1, 50, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 51, ctx)).toBe('rgb(120, 120, 120)');
+        expect(getGroupColorAtTime(1, 64, ctx)).toBe(JAUNE);
     });
 });
 

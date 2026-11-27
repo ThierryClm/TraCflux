@@ -237,15 +237,6 @@ export const getGroupColorAtTime = (
     // Normalize time within cycle
     const normalizedTime = time % effectiveCycleLength;
 
-    // Point de repos du groupe : l'attente se fait au rouge, même si le vert
-    // simulé couvrait l'instant avant que l'opération ne l'arrête.
-    const repos = simulationResult?.restPoints?.find(r => {
-        const action = actionData.find(a => a.id === r.actionId);
-        return !!action && numeroGroupe(action.gf) === groupId
-            && isTimeInRange(normalizedTime, r.deb, r.deb + r.duration, effectiveCycleLength);
-    });
-    if (repos) return 'rgb(255, 0, 0)';
-
     // Contrôle de flot : l'action décrit à elle seule le fonctionnement du
     // groupe — jaune/gris intermittent pendant le vert minimum, puis jaune,
     // puis rouge jusqu'à la fin. Elle prime sur le vert propre au groupe.
@@ -272,11 +263,12 @@ export const getGroupColorAtTime = (
         // réglementaire avant le jaune fixe.
         const amorce = Number(group.minGreen ?? origine?.minGreen) || 0;
         const jaune = Number(group.durations?.orange ?? origine?.durations?.orange) || 0;
-        // Un point de repos tenu pendant la plage prolonge la zone en cours.
-        const zones = zonesControleFlot(deb, fin, amorce, jaune, simulationResult?.restPoints ?? []);
-        if (!isTimeInRange(normalizedTime, deb, zones.fin, effectiveCycleLength)) return jauneGris(normalizedTime);
-        if (ecoule < zones.intermittentEnd - deb) return jauneGris(ecoule);
-        if (ecoule < zones.orangeEnd - deb) return 'rgb(255, 255, 0)';
+        // La flèche suit le feu réel : pendant la prolongation due à un point
+        // de repos, le contrôle est au repos et clignote, alors que la barre du
+        // diagramme, elle, prolonge la zone tenue (cf. zonesControleFlot).
+        if (!isTimeInRange(normalizedTime, deb, fin, effectiveCycleLength)) return jauneGris(normalizedTime);
+        if (ecoule < amorce) return jauneGris(ecoule);
+        if (ecoule < amorce + jaune) return 'rgb(255, 255, 0)';
         return 'rgb(255, 0, 0)';
     }
 
