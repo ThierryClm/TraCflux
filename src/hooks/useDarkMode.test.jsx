@@ -64,4 +64,12 @@ describe('useDarkMode', () => {
         act(() => result.current.setShowGroupNamesDiagram(false));
         expect(localStorage.getItem('showGroupNamesDiagram')).toBe('false');
     });
+
+    it('charge et persiste le mode essentiel', () => {
+        localStorage.setItem('modeEssentiel', 'true');
+        const { result } = renderHook(() => useDarkMode());
+        expect(result.current.modeEssentiel).toBe(true);
+        act(() => result.current.setModeEssentiel(false));
+        expect(localStorage.getItem('modeEssentiel')).toBe('false');
+    });
 });

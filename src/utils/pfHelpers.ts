@@ -61,6 +61,17 @@ export const ligneActionRemplie = (row: ActionMicro): boolean => Boolean(
     row.abrv || row.micro || row.plage1 || row.plage2 ||
     row.actGf1 || row.actGf1Gf2 || row.actGf1Gf3 || row.actGf1Gf4);
 
+/**
+ * Une condition de micro-régulation est renseignée quand son groupe, son
+ * action et au moins son début sont saisis ; la fin peut rester vide.
+ */
+export const conditionMicroRenseignee = (row: ActionMicro): boolean => {
+    const gf = String(row.gf ?? '').trim();
+    const action = String(row.action ?? '').trim();
+    return !!gf && !!action
+        && row.deb !== '' && row.deb !== null && row.deb !== undefined;
+};
+
 /** Nombre de lignes de la table d'actions d'un plan. */
 export const LIGNES_ACTIONS_MAX = 30;
 

@@ -31,6 +31,8 @@ interface TimelineSidebarProps {
     phaseFlagTooltipId?: number | null;
     readOnly?: boolean;
     showGroupNames: boolean;
+    /** Mode essentiel : la colonne DA (code trajet bus) est masquée. */
+    showDA?: boolean;
     showWrapFlash: boolean;
     simulationResult?: TimelineSimulationResult | null;
     updateGroupParams: UpdateTimelineGroup;
@@ -55,6 +57,7 @@ const TimelineSidebar = ({
     phaseFlagTooltipId,
     readOnly,
     showGroupNames,
+    showDA = true,
     showWrapFlash,
     simulationResult,
     updateGroupParams,
@@ -67,9 +70,11 @@ const TimelineSidebar = ({
         <div className="sidebar-header-row">
             <span className="col-label col-grp">GF</span>
             {showGroupNames && <span className="col-label col-name">Nom</span>}
-            <CustomTooltip text={tip("Code trajet (2 caractères) concernant la procédure d'approche bus.")}>
-                <span className="col-label col-da">DA</span>
-            </CustomTooltip>
+            {showDA && (
+                <CustomTooltip text={tip("Code trajet (2 caractères) concernant la procédure d'approche bus.")}>
+                    <span className="col-label col-da">DA</span>
+                </CustomTooltip>
+            )}
             <span className="col-label col-time">Déb</span>
             <span className="col-label col-time">Fin</span>
             <span className="col-label col-time">Durée</span>
@@ -133,7 +138,7 @@ const TimelineSidebar = ({
                             )}
                         </div>
                     )}
-                    {(group.type === 'V' || group.type === 'B') ? (
+                    {showDA && ((group.type === 'V' || group.type === 'B') ? (
                         <CustomTooltip text={tip('Code trajet')}>
                             <LocalInput
                                 className="input-da"
@@ -151,7 +156,7 @@ const TimelineSidebar = ({
                         </CustomTooltip>
                     ) : (
                         <span className="input-da-placeholder" />
-                    )}
+                    ))}
                     {group.type ? (
                         <>
                             <NumericInput

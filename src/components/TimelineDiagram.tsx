@@ -10,6 +10,7 @@ import TimelineRow from './timeline/TimelineRow';
 import TimelineSidebar from './timeline/TimelineSidebar';
 import { createTimelineGeometry } from './timeline/timelineGeometry';
 import { createTimelineSimulation } from './timeline/timelineSimulation';
+import { conditionMicroRenseignee } from '../utils/pfHelpers';
 import { useTimelineDrag } from './timeline/useTimelineDrag';
 import type { ContexteIncrustations } from './timeline/incrustations/contexteIncrustations';
 import IncrustationAdaptatifVertical from './timeline/incrustations/IncrustationAdaptatifVertical';
@@ -90,6 +91,8 @@ export interface TimelineDiagramProps {
     showComments?: boolean;
     showRemarks?: boolean;
     showGroupNames?: boolean;
+    /** Mode essentiel : la colonne DA du diagramme est masquée. */
+    showDA?: boolean;
     showMicroOnHover?: boolean;
     showWrapFlash?: boolean;
     cycleLengthInput?: string | number;
@@ -108,7 +111,7 @@ export interface TimelineDiagramProps {
     titreEnBandeau?: boolean;
 }
 
-const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId = () => {}, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, actionTooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, flechesBasAuPied = false, titreEnBandeau = false }: TimelineDiagramProps) => {
+const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3, conflicts, conflictMatrix = [], updateGroupParams, cycleLength, actionData = [], updateActionRow, startDrag, endDrag, showDependencies = false, dependencyGap = 20, hoveredActionId, setHoveredActionId = () => {}, simulationFilter = null, simulationResult = null, simulationCurrentTime = null, isPlayingSimulation = false, playbackTime = null, setIsPlayingSimulation, setSimulationCurrentTime, simulationSpeed = 1, cycleSimulationSpeed = null, hoveredArrowGroupId = null, hoveredArrowGroupSaturated = false, hoveredConflict = null, setHoveredGroupId: setHoveredGroupIdProp = null, setHoveredDiagramTime = null, hoveredVUtile = null, planName = '', activePFName = '', remarques = '', updateRemarques = null, biCarrefourSeparator = null, showComments = true, showRemarks = true, showGroupNames = true, showDA = true, showMicroOnHover = true, showWrapFlash = true, cycleLengthInput, setCycleLengthInput, setCycleLength, onDragConflicts, remarquesDetached = false, tooltipsEnabled = true, actionTooltipsEnabled = true, readOnly = false, onDetach = null, scrollable = false, flechesBasAuPied = false, titreEnBandeau = false }: TimelineDiagramProps) => {
     const { names: microVariableNames } = useMicroVariables();
     // Le verrou de saisie interdit les déplacements comme le miroir en lecture
     // seule, sans retirer le champ cycle ni les commandes de présentation.
@@ -636,6 +639,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                     phaseFlagTooltipId={phaseFlagTooltipId}
                     readOnly={readOnly}
                     showGroupNames={showGroupNames}
+                    showDA={showDA}
                     showWrapFlash={showWrapFlash}
                     simulationResult={simulationResult}
                     updateGroupParams={updateGroupParams}
@@ -646,6 +650,7 @@ const TimelineDiagram = ({ groups, onGroupClick = () => {}, pixelsPerSecond = 3,
                     <TimelineEmptyState
                         conflictMatrix={conflictMatrix}
                         groups={groups}
+                        aDesActions={actionData.some(conditionMicroRenseignee)}
                     />
                     {/* L'instant survolé, qui anime l'image du carrefour, se suit sur
                         tout le conteneur : lignes ET cadres d'action posés par-dessus

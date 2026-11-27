@@ -99,6 +99,20 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByRole('button', { name: 'Relire le diagramme' })).toBeInTheDocument();
     });
 
+    it('déterminants qui débordent le nouveau cycle : replacés à la proposition', () => {
+        const poses = { 1: [65, 10], 3: [68, 10], 4: [60, 15] };
+        const debordes = groups.map(gr => poses[gr.id]
+            ? { ...gr, offset: poses[gr.id][0], durations: { ...gr.durations, green: poses[gr.id][1] } }
+            : gr);
+        const { updateGroupParams } = ouvrir({ groups: debordes, cycleLength: 100,
+            phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        updateGroupParams.mockClear();
+        fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
+        expect(updateGroupParams).toHaveBeenCalledWith(1, { offset: 0, durations: { green: 29 } });
+        expect(updateGroupParams).toHaveBeenCalledWith(3, { offset: 33, durations: { green: 6 } });
+        expect(updateGroupParams).toHaveBeenCalledWith(4, { offset: 45, durations: { green: 19 } });
+    });
+
     it('groupes associés : placement déduit de la matrice, avec sa source', () => {
         const vides = groups.map(gr => ({ ...gr, durations: { green: 0, orange: 3, red: 0 } }));
         const m = matrice.map(r => [...r]);
@@ -274,6 +288,29 @@ const Banc = ({ cycleInitial = 60 }) => {
 };
 const valider = titre => within(screen.getByLabelText(titre)).getByRole('button', { name: /Valider|Validé/ });
 
+const BancDeborde = () => {
+    const poses = { 1: [65, 10], 3: [68, 10], 4: [60, 15] };
+    const [cycle, setCycle] = useState(100);
+    const [gr, setGr] = useState(groups.map(x => ({ ...x, offset: poses[x.id]?.[0] ?? 0, durations: { ...x.durations, green: poses[x.id]?.[1] ?? 10 } })));
+    const updateGroupParams = (id, p) => setGr(prev => prev.map(x => (x.id === id
+        ? { ...x, ...(p.offset !== undefined ? { offset: p.offset } : {}), durations: { ...x.durations, ...p.durations } }
+        : x)));
+    const resume = id => { const x = gr.find(y => y.id === id); return `${x.offset}/${x.durations.green}`; };
+    return (
+        <>
+            <output data-testid="cycle">{cycle}</output>
+            <output data-testid="g1">{resume(1)}</output>
+            <output data-testid="g3">{resume(3)}</output>
+            <output data-testid="g4">{resume(4)}</output>
+            <SuggestionCycleDialog isOpen onClose={() => {}} planName="PF1" groups={gr} conflictMatrix={matrice}
+                cycleLength={cycle} getTrafficData={id => ({ trafficVol: trafic[id] })} trafficDatasetName="HPM"
+                phasageCycle={{ determinants: [1, 3, 4], degagements: [4, 6, 6] }} setPhasageCycle={() => {}}
+                setCycleLength={setCycle} setPhasageBulleCount={() => {}} setPhasageBulleTimes={() => {}}
+                updateGroupParams={updateGroupParams} />
+        </>
+    );
+};
+
 describe('validation chapitre par chapitre', () => {
     it('valider applique au diagramme, invalider rétablit ; le cycle entraîne les chapitres qui en dépendent', () => {
         render(<Banc />);
@@ -295,6 +332,21 @@ describe('validation chapitre par chapitre', () => {
         expect(screen.getByTestId('conditions').textContent).toBe('');
         expect(screen.getByTestId('cycle')).toHaveTextContent('60');
         expect(valider('Adaptatifs verticaux')).toHaveTextContent('Valider');
+    });
+
+    it('valider un cycle plus court replace les groupes, invalider rétablit le diagramme initial', () => {
+        render(<BancDeborde />);
+        toutDeplier();
+        fireEvent.click(valider('Durée de cycle'));
+        expect(screen.getByTestId('cycle')).toHaveTextContent('70');
+        expect(screen.getByTestId('g1')).toHaveTextContent('0/29');
+        expect(screen.getByTestId('g3')).toHaveTextContent('33/6');
+        expect(screen.getByTestId('g4')).toHaveTextContent('45/19');
+        fireEvent.click(valider('Durée de cycle'));
+        expect(screen.getByTestId('cycle')).toHaveTextContent('100');
+        expect(screen.getByTestId('g1')).toHaveTextContent('65/10');
+        expect(screen.getByTestId('g3')).toHaveTextContent('68/10');
+        expect(screen.getByTestId('g4')).toHaveTextContent('60/15');
     });
 
     it('un chapitre validé suit sa proposition en temps réel', () => {

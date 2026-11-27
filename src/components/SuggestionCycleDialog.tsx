@@ -225,15 +225,16 @@ const SuggestionCycleDialog = ({
     // Groupes associés : position déduite de la matrice, sinon du nom, sinon du plan.
     const placements = useMemo(() => {
         if (!resultat || !calculable || !complet) return [];
-        const dets = (brouillon.determinants as number[]).map((id, i) => {
-            const g = groups.find(gr => gr.id === id);
-            if (g && g.durations?.green > 0) return { id, debut: Number(g.offset) || 0, fin: (Number(g.offset) || 0) + g.durations.green };
-            return debuts[i] === undefined ? null : { id, debut: debuts[i], fin: debuts[i] + resultat.verts[i] };
-        });
-        if (dets.some(d => d === null)) return [];
         // Calage sur le cycle qu'appliquera « Appliquer le cycle », et non sur
         // le cycle actuel du plan : les fermetures qui rebouclent en dépendent.
         const cycleRef = resultat.cycleSuggere ?? cycleLength;
+        // Référence : la disposition proposée des déterminants (débuts et verts
+        // calculés), celle que « Appliquer le cycle » inscrira. Prendre leurs
+        // positions actuelles fausserait le placement des groupes associés dès
+        // que les verts du diagramme diffèrent de la répartition calculée.
+        const dets = (brouillon.determinants as number[]).map((id, i) =>
+            debuts[i] === undefined ? null : { id, debut: debuts[i], fin: debuts[i] + resultat.verts[i] });
+        if (dets.some(d => d === null)) return [];
         return placerGroupesAssocies(groups.map(g => ({
             id: g.id, nom: g.name || `GF${g.id}`, offset: Number(g.offset) || 0, vert: Number(g.durations?.green) || 0,
             vertMini: Number(g.minGreen) || 0, trafic: Number(getTrafficData(g.id)?.trafficVol) || 0,
@@ -246,7 +247,10 @@ const SuggestionCycleDialog = ({
     // sont jamais touchés ; ceux « à vérifier » restent à placer à la main.
     const statutPlacement = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }) => {
         const g = groups.find(gr => gr.id === p.id);
-        if (g && g.durations?.green > 0) return 'regle' as const;
+        const cycleRef = resultat?.cycleSuggere ?? cycleLength;
+        // Un groupe déjà réglé reste tel quel, sauf s'il déborde le cycle
+        // proposé : il est alors replacé avec le cycle.
+        if (g && g.durations?.green > 0 && (Number(g.offset) || 0) + g.durations.green <= cycleRef) return 'regle' as const;
         return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' as const : 'main' as const;
     };
     const aPlacer = placements.filter(p => statutPlacement(p) === 'auto');
@@ -258,15 +262,19 @@ const SuggestionCycleDialog = ({
     // et groupes placés avec le cycle. Base des adaptatifs et des fermetures.
     const disposition = useMemo(() => {
         if (!resultat || !calculable || !complet || !resultat.cycleSuggere) return null;
+        const cycleRef = resultat.cycleSuggere;
         const dets = brouillon.determinants as number[];
         return groups.map(g => {
             const base = {
                 id: g.id, type: String(g.type ?? ''), vertMini: Number(g.minGreen) || 0,
                 trafic: Number(getTrafficData(g.id)?.trafficVol) || 0, coefVoie: Number(g.laneCoef) || 1,
             };
-            if (g.durations?.green > 0) return { ...base, debut: Number(g.offset) || 0, vert: g.durations.green };
             const i = dets.indexOf(g.id);
             if (i >= 0 && debuts[i] !== undefined) return { ...base, debut: debuts[i], vert: resultat.verts[i] };
+            const debutActuel = Number(g.offset) || 0;
+            if (g.durations?.green > 0 && debutActuel + g.durations.green <= cycleRef) {
+                return { ...base, debut: debutActuel, vert: g.durations.green };
+            }
             const p = aPlacer.find(x => x.id === g.id);
             return p ? { ...base, debut: p.debut, vert: p.fin - p.debut } : { ...base, debut: 0, vert: 0 };
         });
@@ -455,11 +463,44 @@ const SuggestionCycleDialog = ({
                 a.phases ??= { phasage: phasageCycle, bulleCount: phasageBulleCount, bulleTimes: phasageBulleTimes };
                 enregistrer();
                 break;
-            case 'cycle':
+            case 'cycle': {
                 if (!resultat?.cycleSuggere) return;
                 a.cycle ??= cycleLength;
-                if (resultat.cycleSuggere !== cycleLength) setCycleLength(resultat.cycleSuggere);
+                const nouveau = resultat.cycleSuggere;
+                if (nouveau !== cycleLength) {
+                    // La répartition calculée est inscrite d'un bloc : tous les
+                    // déterminants à leur début et vert proposés, puis les
+                    // groupes associés qui n'ont pas de vert ou qui débordent le
+                    // nouveau cycle. Sans cela, un mélange d'anciens verts et de
+                    // débuts recalculés chevaucherait les phases et la matrice.
+                    const dets = brouillon.determinants as number[];
+                    const corrections: { id: number; offset: number; vert: number }[] = [];
+                    dets.forEach((id, i) => {
+                        if (debuts[i] === undefined || resultat.verts[i] === undefined) return;
+                        corrections.push({ id, offset: debuts[i], vert: resultat.verts[i] });
+                    });
+                    placements.forEach(p => {
+                        if (dets.includes(p.id) || p.aVerifier || p.phases.length === 0 || p.fin <= p.debut) return;
+                        const g = groups.find(gr => gr.id === p.id);
+                        if (!g) return;
+                        const vert = Number(g.durations?.green) || 0;
+                        const offset = Number(g.offset) || 0;
+                        if (vert > 0 && offset + vert <= nouveau) return;
+                        corrections.push({ id: p.id, offset: p.debut, vert: p.fin - p.debut });
+                    });
+                    if (corrections.length) {
+                        a.associes = [...(a.associes ?? []), ...corrections
+                            .filter(c => !a.associes?.some(x => x.id === c.id))
+                            .map(c => {
+                                const g = groups.find(gr => gr.id === c.id);
+                                return { id: c.id, offset: Number(g?.offset) || 0, vert: Number(g?.durations?.green) || 0 };
+                            })];
+                        corrections.forEach(c => updateGroupParams(c.id, { offset: c.offset, durations: { green: c.vert } }));
+                    }
+                    setCycleLength(nouveau);
+                }
                 break;
+            }
             case 'associes':
                 if (!aPlacer.length) return;
                 a.associes = [...(a.associes ?? []), ...aPlacer
@@ -499,7 +540,10 @@ const SuggestionCycleDialog = ({
                 break;
             case 'cycle':
                 // Les chapitres calculés sur le cycle proposé partent avec lui.
-                (['repos', 'fermetures', 'adaptatifs', 'associes'] as const).forEach(aval => { if (valides[aval]) retirerChapitre(aval); });
+                (['repos', 'fermetures', 'adaptatifs'] as const).forEach(aval => { if (valides[aval]) retirerChapitre(aval); });
+                // Les groupes replacés par la validation du cycle sont restaurés
+                // même si le chapitre « associés » n'a pas été validé à part.
+                if (a.associes?.length) retirerChapitre('associes');
                 if (a.cycle !== undefined) setCycleLength(a.cycle);
                 break;
             case 'associes':

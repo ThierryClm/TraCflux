@@ -42,4 +42,12 @@ describe('AnalyseDiagrammeDialog', () => {
             cycleLength={60} conflictMatrix={[]} />);
         expect(container).toBeEmptyDOMElement();
     });
+
+    it('dit qu’il n’y a rien à contrôler quand aucun groupe n’est renseigné', () => {
+        const vide: Groupe = { id: 1, name: 'G1', type: '' as Groupe['type'], minGreen: 0, offset: 0, durations: { green: 0, orange: 0, red: 0 } };
+        render(<AnalyseDiagrammeDialog isOpen onClose={() => {}} planName="PF1" groups={[vide]}
+            cycleLength={60} conflictMatrix={[['']]} />);
+        expect(screen.getByText(/Aucun groupe renseigné/)).toBeInTheDocument();
+        expect(screen.queryByText(/contrôles sont respectés/)).toBeNull();
+    });
 });

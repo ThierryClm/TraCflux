@@ -12,19 +12,19 @@ describe('prérequis de l’assistant conception', () => {
         expect(evaluerPrerequisAssistant(groupes(5), Array.from({ length: 5 }, () => Array(5).fill(''))).pret).toBe(false);
         expect(evaluerPrerequisAssistant(groupes(5), [[4]]).pret).toBe(false);
     });
-    it('ne compte ni la diagonale seule ni un nom automatique comme des données renseignées', () => {
+    it('ne compte pas la diagonale seule, mais accepte les noms d’origine', () => {
         expect(evaluerPrerequisAssistant(groupes(2), [[4, ''], ['', 4]]).pret).toBe(false);
         const g = groupes(5).map(x => ({ ...x, name: `Groupe ${x.id}` }));
-        expect(evaluerPrerequisAssistant(g, matrice(5)).renseignes).toBe(0);
+        expect(evaluerPrerequisAssistant(g, matrice(5))).toMatchObject({ renseignes: 5, pret: true });
     });
     it('ouvre à 80 % exactement, arrondit le nombre requis au supérieur et ne demande pas de verts déjà dessinés', () => {
-        const g = groupes(5); g[0].name = '';
+        const g = groupes(5);
         expect(evaluerPrerequisAssistant(g, matrice(5)).pret).toBe(true);
-        g[1].type = '';
-        expect(evaluerPrerequisAssistant(g, matrice(5)).pret).toBe(false);
-        const treize = groupes(13); treize.slice(10).forEach(x => { x.name = ''; });
+        g[0].type = ''; g[1].type = '';
+        expect(evaluerPrerequisAssistant(g, matrice(5))).toMatchObject({ pret: false, renseignes: 3, requis: 4 });
+        const treize = groupes(13); treize.slice(10).forEach(x => { x.type = ''; });
         expect(evaluerPrerequisAssistant(treize, matrice(13))).toMatchObject({ pret: false, requis: 11, renseignes: 10 });
-        treize[10].name = 'P11';
+        treize[10].type = 'V';
         expect(evaluerPrerequisAssistant(treize, matrice(13)).pret).toBe(true);
     });
     it('exige type, mini et jaune, tout en permettant un dégagement nul pour un groupe sans jaune tricolore', () => {

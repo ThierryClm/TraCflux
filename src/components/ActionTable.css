@@ -563,3 +563,52 @@
 .action-table th.col-resizable .col-resize-handle:hover::before {
     opacity: 1;
 }
+
+/* Confirmation de suppression d'une condition : centrée dans le panneau des
+   conditions (ou dans sa fenêtre détachée), et non sur la page entière. */
+.action-table-container {
+    position: relative;
+}
+
+.action-confirm-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    /* Pas de voile sombre : le panneau des conditions reste lisible. */
+    background: transparent;
+}
+
+/* Ligne visée par la suppression, laissée en évidence sous la confirmation. */
+.action-table tbody tr.row-suppression {
+    background: rgba(198, 40, 40, 0.22);
+    box-shadow: inset 0 0 0 1px #c62828;
+}
+
+.action-confirm-box {
+    width: min(340px, 90%);
+    padding: 14px 16px;
+    border: 1px solid #666;
+    border-radius: 6px;
+    background: #3a3a3a;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+    color: #e0e0e0;
+}
+
+.action-confirm-box h4 { margin: 0 0 8px; font-size: 14px; }
+.action-confirm-box p { margin: 0 0 14px; font-size: 13px; }
+.action-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.action-confirm-danger {
+    background: #c62828;
+    color: #fff;
+    border: 1px solid #a01818;
+}
+
+/* Fenêtre détachée : l'overlay couvre tout le document du popup. */
+.action-confirm-overlay.fixed {
+    position: fixed;
+}

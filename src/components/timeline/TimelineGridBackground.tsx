@@ -6,12 +6,16 @@ import type { TimelineSimulationResult } from './timelineTypes';
 interface TimelineEmptyStateProps {
     conflictMatrix: Matrice;
     groups: Array<Pick<Groupe, 'type' | 'durations'>>;
+    /** Au moins une action de micro-régulation : le plan n'est pas vide. */
+    aDesActions?: boolean;
 }
 
 // Le titre de l'état vide est un texte affiché, pas une infobulle : il ne
 // dépend donc pas des préférences « Infobulles ».
-export const TimelineEmptyState = ({ conflictMatrix, groups }: TimelineEmptyStateProps) => {
-    if (groups.length === 0 || groups.some((group) => (group.durations?.green || 0) > 0)) return null;
+export const TimelineEmptyState = ({ conflictMatrix, groups, aDesActions = false }: TimelineEmptyStateProps) => {
+    // Une action de micro-régulation renseignée suffit à considérer le plan
+    // comme non vide, même sans aucune durée de vert.
+    if (aDesActions || groups.length === 0 || groups.some((group) => (group.durations?.green || 0) > 0)) return null;
 
     const formEmpty = groups.every((group) => !group.type);
     const matrixEmpty = Array.isArray(conflictMatrix)

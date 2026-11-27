@@ -44,6 +44,10 @@ const AnalyseDiagrammeDialog = ({
             : { constats: [], controles: 0, groupesIgnores: 0 },
         [isOpen, groups, cycleLength, conflictMatrix, intersectionArrows, getTrafficData, actionData, seuils]
     );
+    // Aucun groupe renseigné : rien à contrôler, même si le plan porte des
+    // actions de micro-régulation.
+    const aucunGroupeRenseigne = groups.length > 0
+        && groups.every(g => !g.type || (g.durations?.green ?? 0) <= 0);
     const parNiveau = ORDRE_NIVEAUX
         .map(n => ({
             n,
@@ -58,7 +62,9 @@ const AnalyseDiagrammeDialog = ({
         <>
             <p className="analyse-resume">
                 {constats.length === 0
-                    ? `Les ${controles} contrôles sont respectés pour ce plan de feu.`
+                    ? (aucunGroupeRenseigne
+                        ? "Aucun groupe renseigné : l'analyse n'a rien à contrôler pour l'instant."
+                        : `Les ${controles} contrôles sont respectés pour ce plan de feu.`)
                     : `${constats.length} point${constats.length > 1 ? 's' : ''} à examiner sur ${controles} contrôles.`}
                 {' '}Les règles non respectées, à corriger en priorité, sont en rouge et viennent en premier ;
                 les recommandations et points d'attention en orange ; les suggestions en bleu.

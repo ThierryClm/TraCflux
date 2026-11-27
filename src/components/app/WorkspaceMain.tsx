@@ -135,6 +135,8 @@ interface WorkspaceMainModel {
     setSimulationCurrentTime: NonNullable<IntersectionImageProps['setCurrentTime']>;
     setSimulationEnabled: (value: boolean) => void;
     showActionDescription: boolean;
+    /** Mode essentiel : le panneau des conditions et variables est masqué. */
+    modeEssentiel: boolean;
     /** Description masquée et une description proposée : passer en Automatique. */
     revelerDescription: () => void;
     showComments: boolean;
@@ -190,7 +192,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
         setPhasageEllipseScale, setSelectedGroupId, setShowFloatingConditions, setShowFloatingDiagram, openFloatingImage,
         setShowFloatingVariables, setSidebarWidth, setSimulationCurrentTime, setSimulationEnabled, showActionDescription,
         revelerDescription, showComments, showDependencies, showFloatingConditions, showFloatingDiagram, showFloatingRemarks,
-        showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, showRemarks, showWrapFlash,
+        showFloatingVariables, showGroupNamesDiagram, showMicroOnHover, modeEssentiel, showRemarks, showWrapFlash,
         sidebarVisible, simulationCurrentTime, simulationEnabled, simulationResult, simulationSelectedActions,
         simulationSpeed, startDrag, tip, tooltipPrefs, updateActionRow,
         updateGroupParams, updateMicroCustomField, updatePFRemarques,
@@ -326,6 +328,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                             <TimelineDiagram
                                 scrollable
                                 readOnly={dossierReadOnly || activePfReadOnly}
+                                showDA={!modeEssentiel}
                                 groups={groups}
                                 globalTime={globalTime}
                                 onGroupClick={(g: Groupe) => setSelectedGroupId(g.id)}
@@ -598,6 +601,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 showFloatingVariables={showFloatingVariables}
                                 setShowFloatingVariables={setShowFloatingVariables}
                                 showWrapFlash={showWrapFlash}
+                                masquerVariablesMicro={modeEssentiel}
                                 showDescription={showActionDescription}
                                 onDescriptionProposee={revelerDescription}
                                 actionColWidths={actionColWidths}
