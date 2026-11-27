@@ -208,28 +208,55 @@ describe('suggestion de durée du cycle', () => {
         expect(onClose).toHaveBeenCalled();
     });
 
-    it('point de repos bus : proposé en fin de vert bus, inscrit avec « Tx » en DA du groupe bus', () => {
+    it('point de repos bus : proposé pour un groupe à code trajet, sans toucher à son DA', () => {
         const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
-        const places = groups.map(gr => ({ ...gr, type: gr.id === 3 ? 'B' : 'V', offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        const places = groups.map(gr => ({ ...gr, type: gr.id === 3 ? 'B' : 'V', da: gr.id === 3 ? 'T0' : '', offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
         const ajouterActions = vi.fn(lignes => lignes.length);
         const setVariableMicro = vi.fn();
         const { updateGroupParams } = ouvrir({ groups: places, ajouterActions, variablesMicro: ['TMAB1 = 12'], setVariableMicro, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
         const bloc = screen.getByLabelText('Points de repos bus');
-        expect(within(bloc).getByText('Attente quittée si TPPh_L3 + DAx > 4 + TMABx')).toBeInTheDocument();
+        expect(within(bloc).getByText('Attente quittée si TPPh_L3 + DA0 > 4 + TMAB0')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
         // Une inscription par chapitre (adaptatifs, fermetures, repos), chacune remplaçant ses propres lignes.
         const lignes = ajouterActions.mock.calls.flatMap(c => c[0]);
         const remplacer = row => ajouterActions.mock.calls.some(c => c[1](row));
         expect(lignes.at(-1)).toEqual({
             gf: '3', action: 'Point de repos', deb: '38', fin: '', abrv: 'Att bus',
-            description: 'attente bus théorique maxi 10 secondes', micro: 'Attente quittée si TPPh_L3 + DAx > 4 + TMABx',
+            description: 'attente bus théorique maxi 10 secondes', micro: 'Attente quittée si TPPh_L3 + DA0 > 4 + TMAB0',
         });
-        expect(updateGroupParams).toHaveBeenCalledWith(3, { da: 'Tx' });
+        // Le code trajet du groupe est conservé.
+        expect(updateGroupParams).not.toHaveBeenCalledWith(3, { da: 'Tx' });
         // TMABx manquait : ajouté après TMAB1.
-        expect(setVariableMicro).toHaveBeenCalledWith(1, 'TMABx = 10');
+        expect(setVariableMicro).toHaveBeenCalledWith(1, 'TMAB0 = 10');
         // Le repos écrit à la main (« attente bus maxi 10 secondes ») n'est pas remplacé.
         expect(remplacer({ action: 'Point de repos', description: 'attente bus maxi 10 secondes', abrv: 'Att bus' })).toBe(false);
         expect(remplacer({ action: 'Point de repos', description: 'attente bus théorique maxi 10 secondes', abrv: 'Att bus' })).toBe(true);
+    });
+
+    it('reprend la variable générique TMABx et l’indice d’après le code trajet', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, type: gr.id === 3 ? 'B' : 'V', da: gr.id === 3 ? 'T1' : '', offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        const ajouterActions = vi.fn(lignes => lignes.length);
+        const setVariableMicro = vi.fn();
+        ouvrir({ groups: places, ajouterActions, variablesMicro: ['TMABx = 12'], setVariableMicro, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        const bloc = screen.getByLabelText('Points de repos bus');
+        expect(within(bloc).getByText('Attente quittée si TPPh_L3 + DA1 > 4 + TMAB1')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
+        expect(setVariableMicro).toHaveBeenCalledWith(0, 'TMAB1 = 12');
+        const lignes = ajouterActions.mock.calls.flatMap(c => c[0]);
+        expect(lignes.at(-1).description).toBe('attente bus théorique maxi 12 secondes');
+    });
+
+    it('supprime la variable générique TMABx quand la variable indexée existe déjà', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, type: gr.id === 3 ? 'B' : 'V', da: gr.id === 3 ? 'T1' : '', offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        const ajouterActions = vi.fn(lignes => lignes.length);
+        const setVariableMicro = vi.fn();
+        ouvrir({ groups: places, ajouterActions, variablesMicro: ['TMABx = 12', 'TMAB1 = 12'], setVariableMicro, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
+        expect(setVariableMicro).toHaveBeenCalledWith(0, '');
+        // Aucune variable ajoutée : TMAB1 existait déjà.
+        expect(setVariableMicro).not.toHaveBeenCalledWith(2, expect.stringContaining('TMAB'));
     });
 
     it('à l\'ouverture, seul le tableau des groupes déterminants est déployé ; les autres chapitres montrent leur résumé', () => {

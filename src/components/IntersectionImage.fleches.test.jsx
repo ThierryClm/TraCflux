@@ -13,7 +13,7 @@ const groupe = (id, green) => ({
 });
 const fleche = (groupId) => ({ id: groupId * 10, groupId, x: 10 * groupId, y: 10 * groupId });
 
-const rendre = ({ groups, arrows = groups.map(g => fleche(g.id)), simulationResult = null, displayOptions = {} }) => render(
+const rendre = ({ groups, arrows = groups.map(g => fleche(g.id)), simulationResult = null, displayOptions = {}, actionData = [] }) => render(
     <IntersectionImage
         groups={groups}
         imageData="data:image/png;base64,AA=="
@@ -23,7 +23,7 @@ const rendre = ({ groups, arrows = groups.map(g => fleche(g.id)), simulationResu
         cycleLength={60}
         currentTime={0}
         simulationResult={simulationResult}
-        actionData={[]}
+        actionData={actionData}
         selectedActions={[]}
         conflictMatrix={[]}
         displayOptions={{ showGroupNumbers: true, showGroupNames: true, showArrows: false, showSignals: false, showDetecteurs: true, showDetecteurNames: true, ...displayOptions }}
@@ -51,6 +51,13 @@ describe('IntersectionImage — flèches des groupes sans vert', () => {
         const { container } = rendre({ groups: [groupe(1, 30), groupe(2, 0)] });
         const numeros = [...container.querySelectorAll('.group-number-centroid')].map(el => el.textContent);
         expect(numeros).toEqual(['1']);
+    });
+
+    it('garde la flèche d’un groupe sans vert piloté par un contrôle de flot', () => {
+        const actionData = [{ id: 9, action: 'Contrôle de flot', gf: '1', deb: '10', fin: '40' }];
+        const { container } = rendre({ groups: [groupe(1, 0)], actionData });
+        expect(marqueurs(container)).toHaveLength(1);
+        expect(screen.getByTitle(/^GF1 /)).toBeInTheDocument();
     });
 
     it('rappelle le groupe à poser à côté du curseur', () => {

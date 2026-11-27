@@ -22,6 +22,8 @@ interface ColorGroup extends Groupe {
 interface ColorSimulationResult {
     simulatedGroups?: ColorGroup[];
     simulatedCycleLength?: number;
+    /** Points de repos simulés : le bus y est au rouge pendant l'attente. */
+    restPoints?: Array<{ deb: number; duration: number; actionId: number }>;
 }
 
 interface PPLitContext {
@@ -141,6 +143,58 @@ export const isTimeInRange = (
 };
 
 /**
+ * Le groupe est-il servi par une action « Contrôle de flot » ? Ces groupes
+ * n'ont pas de vert à eux : c'est l'action qui dessine leur fonctionnement,
+ * et leur flèche doit rester visible même sans Déb/Fin dans le formulaire.
+ */
+export const aControleDeFlot = (groupId: number, actionData: ActionMicro[] = []): boolean =>
+    actionData.some(action =>
+        action.action === 'Contrôle de flot'
+        && numeroGroupe(action.gf) === groupId
+        && action.deb !== '' && action.deb !== null && action.deb !== undefined
+        && action.fin !== '' && action.fin !== null && action.fin !== undefined
+    );
+
+export interface ReposControleFlot {
+    deb: number;
+    duration: number;
+}
+
+/**
+ * Bornes d'un contrôle de flot, prolongées par les points de repos.
+ *
+ * Au point de repos, l'état du carrefour est tenu pendant la durée de
+ * l'attente : la zone en cours (trame, jaune ou rouge) s'allonge d'autant,
+ * et les zones suivantes sont repoussées. Dans l'exemple, un repos à 44 s
+ * pendant le rouge d'une action finissant à 45 s porte ce rouge à 65 s.
+ */
+export const zonesControleFlot = (
+    deb: number,
+    fin: number,
+    amorce: number,
+    jaune: number,
+    repos: ReposControleFlot[] = []
+): { intermittentEnd: number; orangeEnd: number; fin: number } => {
+    let intermittentEnd = deb + amorce;
+    let orangeEnd = intermittentEnd + jaune;
+    let finEffective = fin;
+    [...repos].sort((a, b) => a.deb - b.deb).forEach(r => {
+        if (r.deb < deb || r.deb >= finEffective || !(r.duration > 0)) return;
+        if (r.deb < intermittentEnd) {
+            intermittentEnd += r.duration;
+            orangeEnd += r.duration;
+            finEffective += r.duration;
+        } else if (r.deb < orangeEnd) {
+            orangeEnd += r.duration;
+            finEffective += r.duration;
+        } else {
+            finEffective += r.duration;
+        }
+    });
+    return { intermittentEnd, orangeEnd, fin: finEffective };
+};
+
+/**
  * Couleur de la flèche d'un groupe à un instant donné.
  *
  * @param {number} groupId - Identifiant du groupe de feux
@@ -182,6 +236,41 @@ export const getGroupColorAtTime = (
 
     // Normalize time within cycle
     const normalizedTime = time % effectiveCycleLength;
+
+    // Contrôle de flot : l'action décrit à elle seule le fonctionnement du
+    // groupe — jaune/gris intermittent pendant le vert minimum, puis jaune,
+    // puis rouge jusqu'à la fin. Elle prime sur le vert propre au groupe.
+    const controleFlot = actionData.find(action =>
+        action.action === 'Contrôle de flot'
+        && numeroGroupe(action.gf) === groupId
+        && action.deb !== '' && action.fin !== ''
+    );
+    if (controleFlot) {
+        // Feu de contrôle de flot : clignotant d'amorce, jaune fixe, rouge,
+        // puis clignotant de repos jusqu'au prochain DEB. Un feu ne s'éteint
+        // jamais : hors de la plage de l'action, on clignote au lieu de couper.
+        // Une seconde allumée, une seconde grise : l'instant affiché avance
+        // en secondes entières, un rythme à la demi-seconde resterait invisible.
+        const jauneGris = (valeur: number) => Math.floor(valeur) % 2 === 0 ? 'rgb(255, 255, 0)' : 'rgb(120, 120, 120)';
+        const deb = ((parseInt(String(controleFlot.deb)) % effectiveCycleLength) + effectiveCycleLength) % effectiveCycleLength;
+        const fin = parseInt(String(controleFlot.fin));
+        const ecoule = ((normalizedTime - deb) % effectiveCycleLength + effectiveCycleLength) % effectiveCycleLength;
+        // Les groupes simulés ne portent pas toujours mini et jaune : on
+        // retombe sur le groupe du projet pour rester d'accord avec le diagramme.
+        const origine = groups.find(g => g.id === groupId);
+        // Durée d'amorce : même borne que l'incrustation du diagramme, qui lit
+        // le champ « Mini » du groupe — ce n'est pas un vert, c'est l'amorce
+        // réglementaire avant le jaune fixe.
+        const amorce = Number(group.minGreen ?? origine?.minGreen) || 0;
+        const jaune = Number(group.durations?.orange ?? origine?.durations?.orange) || 0;
+        // La flèche suit le feu réel : pendant la prolongation due à un point
+        // de repos, le contrôle est au repos et clignote, alors que la barre du
+        // diagramme, elle, prolonge la zone tenue (cf. zonesControleFlot).
+        if (!isTimeInRange(normalizedTime, deb, fin, effectiveCycleLength)) return jauneGris(normalizedTime);
+        if (ecoule < amorce) return jauneGris(ecoule);
+        if (ecoule < amorce + jaune) return 'rgb(255, 255, 0)';
+        return 'rgb(255, 0, 0)';
+    }
 
     // Seconde lucarne : action DÉCLARATIVE. calculateSimulatedDiagram ne la
     // traite pas — la cocher dans le panneau de simulation ne change rien au

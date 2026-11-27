@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getGroupColorAtTime, isTimeInRange, numeroGroupe } from './groupColorAtTime';
+import { aControleDeFlot, getGroupColorAtTime, isTimeInRange, numeroGroupe, zonesControleFlot } from './groupColorAtTime';
 
 const VERT = 'rgb(0, 255, 0)';
 const JAUNE = 'rgb(255, 255, 0)';
@@ -266,5 +266,95 @@ describe('type FL — courant clignotant', () => {
 
     it('ne touche pas aux groupes des autres types', () => {
         expect(getGroupColorAtTime(1, 10, contexte())).toBe(VERT);
+    });
+
+});
+
+describe('zonesControleFlot — point de repos', () => {
+    it('prolonge la zone en cours, et repousse les suivantes', () => {
+        // Amorce 0-10, jaune 10-15, rouge 15-45 ; repos à 44 de 20 s.
+        expect(zonesControleFlot(0, 45, 10, 5, [{ deb: 44, duration: 20 }]))
+            .toEqual({ intermittentEnd: 10, orangeEnd: 15, fin: 65 });
+        // Repos dans la trame : elle s'allonge, le jaune et le rouge suivent.
+        expect(zonesControleFlot(0, 45, 10, 5, [{ deb: 5, duration: 20 }]))
+            .toEqual({ intermittentEnd: 30, orangeEnd: 35, fin: 65 });
+        // Repos dans le jaune.
+        expect(zonesControleFlot(0, 45, 10, 5, [{ deb: 12, duration: 20 }]))
+            .toEqual({ intermittentEnd: 10, orangeEnd: 35, fin: 65 });
+        // Hors plage : rien.
+        expect(zonesControleFlot(0, 45, 10, 5, [{ deb: 80, duration: 20 }]))
+            .toEqual({ intermittentEnd: 10, orangeEnd: 15, fin: 45 });
+    });
+});
+
+describe('getGroupColorAtTime — point de repos', () => {
+    it('clignote pendant la prolongation due au repos, comme le feu réel', () => {
+        const sansVert = groupe({ minGreen: 10, durations: { green: 0, orange: 5, red: 40 } });
+        const controle = { id: 1, action: 'Contrôle de flot', gf: '1', deb: '0', fin: '45' };
+        const ctx = contexte({
+            groups: [sansVert],
+            actionData: [controle],
+            simulationResult: {
+                simulatedCycleLength: 65,
+                simulatedGroups: [{ ...sansVert, simulatedOffset: 0, simulatedGreen: 0 }],
+                restPoints: [{ deb: 44, duration: 20, actionId: 9 }],
+            },
+        });
+        // La barre du diagramme prolonge le rouge, mais la flèche clignote.
+        expect(getGroupColorAtTime(1, 50, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 51, ctx)).toBe('rgb(120, 120, 120)');
+        expect(getGroupColorAtTime(1, 64, ctx)).toBe(JAUNE);
+    });
+});
+
+describe('getGroupColorAtTime — contrôle de flot', () => {
+    // Groupe sans vert propre : l'action décrit tout son fonctionnement.
+    const sansVert = () => groupe({ minGreen: 6, durations: { green: 0, orange: 3, red: 57 } });
+    const action = { id: 1, action: 'Contrôle de flot', gf: '1', deb: '10', fin: '40' };
+
+    it('anime le jaune/gris, le jaune puis le rouge dans la plage de l’action', () => {
+        const ctx = contexte({ groups: [sansVert()], actionData: [action] });
+        expect(getGroupColorAtTime(1, 10, ctx)).toBe(JAUNE);          // trame allumée
+        expect(getGroupColorAtTime(1, 11, ctx)).toBe('rgb(120, 120, 120)'); // trame éteinte
+        expect(getGroupColorAtTime(1, 16, ctx)).toBe(JAUNE);          // après le vert mini
+        expect(getGroupColorAtTime(1, 19, ctx)).toBe(ROUGE);          // après le jaune
+        expect(getGroupColorAtTime(1, 39, ctx)).toBe(ROUGE);          // jusqu'à la fin
+        // Hors action, le feu ne s'éteint pas : il clignote jusqu'au prochain DEB.
+        expect(getGroupColorAtTime(1, 46, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 47, ctx)).toBe('rgb(120, 120, 120)');
+    });
+
+    it('gère une action qui enjambe la fin de cycle', () => {
+        const ctx = contexte({ groups: [sansVert()], actionData: [{ ...action, deb: '50', fin: '20' }] });
+        expect(getGroupColorAtTime(1, 50, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 56, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 2, ctx)).toBe(ROUGE);
+        // Entre FIN (20) et DEB (50), on clignote au lieu de couper.
+        expect(getGroupColorAtTime(1, 30, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 31, ctx)).toBe('rgb(120, 120, 120)');
+    });
+
+    it('suit les phases du contrôle de flot avec le cycle simulé', () => {
+        const ctx = contexte({
+            groups: [groupe({ minGreen: 6 })],
+            simulationResult: {
+                simulatedCycleLength: 90,
+                simulatedGroups: [{
+                    ...groupe({ minGreen: 6, durations: { green: 0, orange: 3, red: 87 } }),
+                    simulatedOffset: 0, simulatedGreen: 0,
+                }],
+            },
+            cycleLength: 120,
+            actionData: [action],
+        });
+        expect(getGroupColorAtTime(1, 10, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 16, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 19, ctx)).toBe(ROUGE);
+    });
+
+    it('reconnaît une action contrôle de flot complète', () => {
+        expect(aControleDeFlot(1, [action])).toBe(true);
+        expect(aControleDeFlot(1, [{ ...action, fin: '' }])).toBe(false);
+        expect(aControleDeFlot(2, [action])).toBe(false);
     });
 });

@@ -3,14 +3,17 @@ import type { CSSProperties } from 'react';
 import type { ContexteIncrustations } from './contexteIncrustations';
 import type { ActionMicro } from '../../../types/projet';
 import { entier } from '../../../utils/entier';
+import { zonesControleFlot, type ReposControleFlot } from '../../../utils/groupColorAtTime';
 
 interface IncrustationControleDeFlotProps {
     ctx: ContexteIncrustations;
     controleFlotActions: ActionMicro[];
+    /** Points de repos simulés : l'état tenu prolonge la zone en cours. */
+    repos?: ReposControleFlot[];
 }
 
 /** Contrôles de flot. */
-const IncrustationControleDeFlot = ({ ctx, controleFlotActions }: IncrustationControleDeFlotProps) => {
+const IncrustationControleDeFlot = ({ ctx, controleFlotActions, repos = [] }: IncrustationControleDeFlotProps) => {
     const { groups, pixelsPerSecond, RULER_HEIGHT, ROW_HEIGHT, ROW_TOTAL_HEIGHT, hoveredActionId, setHoveredActionId, dragState, handleActionDragStart } = ctx;
 
     return (
@@ -32,22 +35,20 @@ const IncrustationControleDeFlot = ({ ctx, controleFlotActions }: IncrustationCo
                 const minGreen = group.minGreen || 0;
                 const orangeDuration = group.durations?.orange || 3;
 
-                // Calculate the three zones:
-                // 1. Intermittent yellow/gray: from DEB to (DEB + minGreen)
-                // 2. Orange/Yellow solid: from (DEB + minGreen) to (DEB + minGreen + orangeDuration)
-                // 3. Red: from (DEB + minGreen + orangeDuration) to FIN
-
-                const intermittentEnd = deb + minGreen;
-                const orangeEnd = intermittentEnd + orangeDuration;
+                // Trois zones : trame d'amorce, jaune fixe, rouge. Un point de
+                // repos tombant dans la plage tient l'état en cours et prolonge
+                // la zone correspondante (le rouge va alors jusqu'au-delà de FIN).
+                const zones = zonesControleFlot(deb, fin, minGreen, orangeDuration, repos);
+                const finEffective = zones.fin;
 
                 // Positions in pixels
                 const intermittentLeft = deb * pixelsPerSecond;
-                const intermittentWidth = minGreen * pixelsPerSecond;
-                const orangeLeft = intermittentEnd * pixelsPerSecond;
-                const orangeWidth = orangeDuration * pixelsPerSecond;
-                const redLeft = orangeEnd * pixelsPerSecond;
-                const redWidth = Math.max(0, (fin - orangeEnd)) * pixelsPerSecond;
-                const totalWidth = (fin - deb) * pixelsPerSecond;
+                const intermittentWidth = (zones.intermittentEnd - deb) * pixelsPerSecond;
+                const orangeLeft = zones.intermittentEnd * pixelsPerSecond;
+                const orangeWidth = (zones.orangeEnd - zones.intermittentEnd) * pixelsPerSecond;
+                const redLeft = zones.orangeEnd * pixelsPerSecond;
+                const redWidth = Math.max(0, (finEffective - zones.orangeEnd)) * pixelsPerSecond;
+                const totalWidth = (finEffective - deb) * pixelsPerSecond;
 
                 // Stripe width for intermittent pattern (1 second)
                 const stripeWidth = pixelsPerSecond;
