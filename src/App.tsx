@@ -2373,6 +2373,7 @@ function App() {
                     titreEnBandeau
                     scrollable
                     readOnly
+                    showDA={!modeEssentiel}
                     groups={groups}
                     globalTime={globalTime}
                     pixelsPerSecond={pixelsPerSecond}

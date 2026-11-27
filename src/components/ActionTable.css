@@ -600,3 +600,8 @@
     color: #fff;
     border: 1px solid #a01818;
 }
+
+/* Fenêtre détachée : l'overlay couvre tout le document du popup. */
+.action-confirm-overlay.fixed {
+    position: fixed;
+}

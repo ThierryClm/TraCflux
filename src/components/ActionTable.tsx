@@ -37,6 +37,8 @@ export interface ActionTableProps {
     setShowFloatingVariables: Dispatch<SetStateAction<boolean>>;
     showWrapFlash?: boolean;
     showDescription?: boolean;
+    /** Mode essentiel : la section Variables micro est masquée. */
+    masquerVariablesMicro?: boolean;
     /**
      * Une description vient d'être proposée (point de repos) : l'application
      * rend la colonne visible si elle était masquée.
@@ -124,7 +126,7 @@ const FIN_DISABLED_ACTIONS = [
 
 const isRowFilled = ligneActionRemplie;
 
-const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength = 100, maxGroup = 16, hoveredActionId, setHoveredActionId, microCustomFields = [], updateMicroCustomField, onResizePanel, showFloatingConditions, setShowFloatingConditions, showFloatingVariables, setShowFloatingVariables, showWrapFlash = true, showDescription = true, onDescriptionProposee, actionColWidths = { description: 160, micro: 420 }, setActionColWidths = () => {}, tooltipsEnabled = true }: ActionTableProps) => {
+const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength = 100, maxGroup = 16, hoveredActionId, setHoveredActionId, microCustomFields = [], updateMicroCustomField, onResizePanel, showFloatingConditions, setShowFloatingConditions, showFloatingVariables, setShowFloatingVariables, showWrapFlash = true, showDescription = true, masquerVariablesMicro = false, onDescriptionProposee, actionColWidths = { description: 160, micro: 420 }, setActionColWidths = () => {}, tooltipsEnabled = true }: ActionTableProps) => {
     const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
     const { names: microVariableNames } = useMicroVariables();
     // Confirmation locale : elle se place au centre du panneau des conditions,
@@ -550,17 +552,51 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
         </div>
     </ZoneVerrouSaisie>);
 
+    // Confirmation de suppression : dans la page, elle se centre sur le
+    // panneau ; dans la fenêtre détachée, en position fixe pour couvrir toute
+    // la fenêtre du navigateur.
+    const confirmationSuppression = (fixed: boolean) => suppressionLigne !== null && (
+        <div
+            className={`action-confirm-overlay${fixed ? ' fixed' : ''}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Supprimer la ligne"
+            onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setSuppressionLigne(null);
+                }
+            }}
+        >
+            <div className="action-confirm-box">
+                <h4>Supprimer la ligne</h4>
+                <p>Voulez-vous supprimer toute la ligne ?</p>
+                <div className="action-confirm-actions">
+                    <button className="modal-btn modal-btn-secondary" onClick={() => setSuppressionLigne(null)}>
+                        Annuler
+                    </button>
+                    <button className="modal-btn action-confirm-danger" onClick={confirmerSuppression} autoFocus>
+                        Supprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     // Render content into popup windows when open
     useEffect(() => {
         if (showFloatingConditions) {
             conditionsPopup.renderToPopup(
-                <div className="popup-content-wrapper">
-                    <div className="popup-add-condition-row">{addConditionButton}</div>
-                    {renderTableContent()}
-                </div>
+                <>
+                    <div className="popup-content-wrapper">
+                        <div className="popup-add-condition-row">{addConditionButton}</div>
+                        {renderTableContent()}
+                    </div>
+                    {confirmationSuppression(true)}
+                </>
             );
         }
-    }, [showFloatingConditions, visibleRows, actionData, hoveredActionId, tooltipsEnabled, conditionsPopup.renderToPopup]);
+    }, [showFloatingConditions, visibleRows, actionData, hoveredActionId, tooltipsEnabled, suppressionLigne, conditionsPopup.renderToPopup]);
 
     useEffect(() => {
         if (showFloatingVariables) {
@@ -586,7 +622,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             )}
 
             {/* Resizable horizontal separator */}
-            {!showFloatingConditions && !showFloatingVariables && (
+            {!masquerVariablesMicro && !showFloatingConditions && !showFloatingVariables && (
                 <div
                     className={`action-table-separator-horizontal ${isResizing ? 'resizing' : ''}`}
                     onMouseDown={handleSeparatorMouseDown}
@@ -595,7 +631,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             )}
 
             {/* Bottom section: Variables micro - title row with button */}
-            {!showFloatingVariables && (
+            {!masquerVariablesMicro && !showFloatingVariables && (
                 <div className="action-table-bottom-section" style={{
                     height: showFloatingConditions ? 'auto' : (variablesHeight > 0 ? `${variablesHeight}px` : '0px'),
                     flex: showFloatingConditions ? 1 : undefined,
@@ -620,33 +656,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
                 />
             )}
 
-            {suppressionLigne !== null && (
-                <div
-                    className="action-confirm-overlay"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Supprimer la ligne"
-                    onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                            e.preventDefault();
-                            setSuppressionLigne(null);
-                        }
-                    }}
-                >
-                    <div className="action-confirm-box">
-                        <h4>Supprimer la ligne</h4>
-                        <p>Voulez-vous supprimer toute la ligne ?</p>
-                        <div className="action-confirm-actions">
-                            <button className="modal-btn modal-btn-secondary" onClick={() => setSuppressionLigne(null)}>
-                                Annuler
-                            </button>
-                            <button className="modal-btn action-confirm-danger" onClick={confirmerSuppression} autoFocus>
-                                Supprimer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {!showFloatingConditions && confirmationSuppression(false)}
         </div>
     );
 };

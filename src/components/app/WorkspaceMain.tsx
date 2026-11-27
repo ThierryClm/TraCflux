@@ -328,6 +328,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                             <TimelineDiagram
                                 scrollable
                                 readOnly={dossierReadOnly || activePfReadOnly}
+                                showDA={!modeEssentiel}
                                 groups={groups}
                                 globalTime={globalTime}
                                 onGroupClick={(g: Groupe) => setSelectedGroupId(g.id)}
@@ -583,7 +584,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 tooltipsEnabled={tooltipPrefs.image}
                             />
                         </div>
-                        <div style={{ display: !phasageBulleEnabled && !simulationEnabled && !modeEssentiel ? 'contents' : 'none' }}>
+                        <div style={{ display: !phasageBulleEnabled && !simulationEnabled ? 'contents' : 'none' }}>
                             <ActionTable
                                 actionData={actionData}
                                 updateActionRow={updateActionRow}
@@ -600,6 +601,7 @@ export default function WorkspaceMain({ model }: WorkspaceMainProps) {
                                 showFloatingVariables={showFloatingVariables}
                                 setShowFloatingVariables={setShowFloatingVariables}
                                 showWrapFlash={showWrapFlash}
+                                masquerVariablesMicro={modeEssentiel}
                                 showDescription={showActionDescription}
                                 onDescriptionProposee={revelerDescription}
                                 actionColWidths={actionColWidths}
