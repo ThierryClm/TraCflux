@@ -995,6 +995,22 @@ const HelpContent = ({ initialAnchor = null, tooltipsEnabled = true, onFermer }:
 
             <h3 style={{ color: '#4ecdc4', borderBottom: '1px solid #4ecdc4', paddingBottom: '8px', marginTop: '32px', marginBottom: '16px' }}>Chapitre 6 — Aide à la conception et à l'optimisation</h3>
 
+            <section id="help-atelier-assistant" className="help-section">
+                <h4>Atelier : construire un carrefour avec l'assistant</h4>
+                <p>Cet atelier suit l'ordre réel d'une étude simple, du projet vierge au dossier imprimé. Comptez une demi-heure de lecture, ou une heure en manipulant. Gardez le <strong>carrefour exemple</strong> ouvert à côté pour comparer.</p>
+                <ol>
+                    <li><strong>Créer le projet et décrire les groupes.</strong> <VoirMenu chemin="Fichier → Nouveau projet" />, puis onglet <em>Formulaire</em> : nom, type, signal, courant, mini et jaune. Pour un bus, renseignez son <strong>code trajet</strong> dans DA (T0, T1…) : c'est lui qui ouvrira le point de repos bus. <em>À voir :</em> les groupes encore vides sont ignorés par l'analyse ; la matrice vide, elle, est signalée.</li>
+                    <li><strong>Saisir les trafics.</strong> Onglet <em>Trafic</em> : volumes du jeu actif et coefficients de voie. <em>À voir :</em> la capacité utilisée se dessine, un courant saturé passe au noir.</li>
+                    <li><strong>Remplir la matrice.</strong> Onglet <em>Matrice</em> : temps interverts des paires antagonistes. Une case manquante ou une asymétrie est signalée. <em>À voir :</em> plus aucun fond rouge dans le diagramme.</li>
+                    <li><strong>Ouvrir l'assistant.</strong> <VoirMenu chemin="Diagramme → Assistant conception..." />, actif si type, mini et jaune sont renseignés sur 80 % des groupes et si la matrice l'est (voir « <VoirSection titre="Assistant conception" /> »). Choisissez le nombre de phases et le groupe déterminant de chacune ; lisez la capacité utilisée et les dégagements proposés.</li>
+                    <li><strong>Valider le cycle.</strong> <em>Valider</em> dans le chapitre <em>Durée de cycle</em> inscrit toute la répartition : débuts et verts des déterminants, puis groupes associés. Invalider le chapitre restitue le diagramme d'origine.</li>
+                    <li><strong>Groupes associés, puis points de repos bus.</strong> Validez les groupes associés proposés, puis le chapitre <em>Points de repos bus</em> : un repos par groupe à code trajet, description « attente bus théorique maxi 10 secondes », condition indicée d'après le DA (T1 → DA1, TMAB1). <em>À voir :</em> la bande de repos, et le rouge du contrôle de flot prolongé pendant l'attente.</li>
+                    <li><strong>Lire les propositions de micro-régulation.</strong> Adaptatifs, fermetures, repos : appliquez-les, puis adaptez chaque condition à la détection réelle. <em>À voir :</em> le résultat dans l'onglet <em>Simulation</em>, et les flèches de l'image du carrefour.</li>
+                    <li><strong>Contrôler et imprimer.</strong> <VoirMenu chemin="Diagramme → Analyse du diagramme..." /> : règles non respectées d'abord, puis recommandations et suggestions. Corrigez, puis <VoirMenu chemin="Fichier → Imprimer le projet..." />.</li>
+                </ol>
+                <p><strong>Ce que l'atelier ne remplace pas.</strong> Les données d'entrée restent les vôtres ; l'assistant propose, il ne certifie pas. Le phasage, la priorité bus, la coordination et la connaissance du site restent au concepteur ; l'analyse du diagramme est un contrôle, pas une validation réglementaire.</p>
+            </section>
+
             <section id="help-demarche" className="help-section">
                 <h4>Démarche conseillée sur un nouveau carrefour</h4>
                 <p>L'application est structurée pour suivre une démarche progressive. Voici une séquence qui fonctionne bien :</p>
