@@ -519,7 +519,7 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             </thead>
             <tbody>
                 {visibleRows.map((row) => (
-                    <tr key={row.id} className={hoveredActionId === row.id ? 'row-highlighted' : ''} onMouseEnter={() => isRowFilled(row) && setHoveredActionId(row.id)} onMouseLeave={() => setHoveredActionId(null)}>
+                    <tr key={row.id} className={`${hoveredActionId === row.id ? 'row-highlighted' : ''} ${suppressionLigne === row.id ? 'row-suppression' : ''}`} onMouseEnter={() => isRowFilled(row) && setHoveredActionId(row.id)} onMouseLeave={() => setHoveredActionId(null)}>
                         <td><input ref={isRowFilled(row) ? undefined : addRowInputRef} type="number" min="0" max={maxGroup} className="input-gf" value={row.gf} onChange={(e) => handleGroupFieldChange(row.id, 'gf', e.target.value)} /></td>
                         <td><select className="input-action" value={row.action} onChange={(e) => handleActionChange(row.id, e.target.value, row)}>{ACTION_OPTIONS.map((opt) => (<option key={opt} value={opt}>{opt || '—'}</option>))}</select></td>
                         {showDescription && <td>{row.action === 'Point de repos' ? (
@@ -554,13 +554,14 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
 
     // Confirmation de suppression : dans la page, elle se centre sur le
     // panneau ; dans la fenêtre détachée, en position fixe pour couvrir toute
-    // la fenêtre du navigateur.
+    // la fenêtre du navigateur. La ligne visée reste surlignée.
+    const ligneASupprimer = suppressionLigne === null ? null : actionData.find(row => row.id === suppressionLigne) ?? null;
     const confirmationSuppression = (fixed: boolean) => suppressionLigne !== null && (
         <div
             className={`action-confirm-overlay${fixed ? ' fixed' : ''}`}
             role="dialog"
             aria-modal="true"
-            aria-label="Supprimer la ligne"
+            aria-label="Supprimer une action de micro-régulation"
             onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                     e.preventDefault();
@@ -569,8 +570,12 @@ const ActionTable = ({ actionData, updateActionRow, reorderActions, cycleLength 
             }}
         >
             <div className="action-confirm-box">
-                <h4>Supprimer la ligne</h4>
-                <p>Voulez-vous supprimer toute la ligne ?</p>
+                <h4>Supprimer une action de micro-régulation</h4>
+                <p>
+                    {ligneASupprimer?.action
+                        ? `Voulez-vous supprimer l'action ${ligneASupprimer.action}${ligneASupprimer.gf ? ` du GF${ligneASupprimer.gf}` : ''} ?`
+                        : 'Voulez-vous supprimer toute la ligne ?'}
+                </p>
                 <div className="action-confirm-actions">
                     <button className="modal-btn modal-btn-secondary" onClick={() => setSuppressionLigne(null)}>
                         Annuler

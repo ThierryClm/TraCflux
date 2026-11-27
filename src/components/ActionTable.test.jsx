@@ -294,7 +294,8 @@ describe('ActionTable — retrait d’une action', () => {
     it('demande confirmation puis efface toute la ligne', async () => {
         const { updateActionRow } = renderTable({ actionData: donnees(remplie) });
         fireEvent.change(champ(0, COL.action), { target: { value: '' } });
-        expect(await screen.findByText('Voulez-vous supprimer toute la ligne ?')).toBeInTheDocument();
+        expect(await screen.findByText(/Voulez-vous supprimer l.action Escamotage du GF2/)).toBeInTheDocument();
+        expect(ligne(0).className).toContain('row-suppression');
         expect(updateActionRow).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
         await vi.waitFor(() => expect(updateActionRow).toHaveBeenCalledTimes(CHAMPS.length));
@@ -304,7 +305,7 @@ describe('ActionTable — retrait d’une action', () => {
     it('affiche la confirmation dans le panneau des conditions', async () => {
         renderTable({ actionData: donnees(remplie) });
         fireEvent.change(champ(0, COL.action), { target: { value: '' } });
-        const dialogue = await screen.findByRole('dialog', { name: 'Supprimer la ligne' });
+        const dialogue = await screen.findByRole('dialog', { name: 'Supprimer une action de micro-régulation' });
         expect(dialogue.closest('.action-table-container')).not.toBeNull();
     });
 
@@ -312,7 +313,7 @@ describe('ActionTable — retrait d’une action', () => {
         const { updateActionRow } = renderTable({ actionData: donnees(remplie) });
         fireEvent.change(champ(0, COL.action), { target: { value: '' } });
         fireEvent.click(await screen.findByRole('button', { name: 'Annuler' }));
-        await vi.waitFor(() => expect(screen.queryByText('Voulez-vous supprimer toute la ligne ?')).toBeNull());
+        await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(updateActionRow).not.toHaveBeenCalled();
     });
 
@@ -320,7 +321,7 @@ describe('ActionTable — retrait d’une action', () => {
         const { updateActionRow } = renderTable({ actionData: donnees({ action: 'Escamotage' }) });
         fireEvent.change(champ(0, COL.action), { target: { value: '' } });
         await vi.waitFor(() => expect(updateActionRow).toHaveBeenCalledWith(1, 'action', ''));
-        expect(screen.queryByText('Voulez-vous supprimer toute la ligne ?')).toBeNull();
+        expect(screen.queryByRole('dialog')).toBeNull();
     });
 });
 
