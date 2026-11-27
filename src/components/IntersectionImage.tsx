@@ -5,7 +5,7 @@ import { compressImageDataUrl, dataUrlBytes, formatBytes, ALERT_ABOVE_BYTES } fr
 import { toast } from '../utils/toast';
 import { setMainOverlayOpen } from '../hooks/usePopupWindow';
 import avecPriseSurvol from '../utils/priseFleche';
-import { getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
+import { aControleDeFlot, getGroupColorAtTime as computeGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { getNewIntersectionArrowDefaults } from '../utils/intersectionArrowDefaults';
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import { demarrerHorloge } from '../utils/horlogeLecture';
@@ -726,10 +726,13 @@ const IntersectionImage = ({
     // exemple). En simulation, un groupe escamoté compte comme supprimé, comme
     // dans le diagramme simulé.
     const groupeAvecVert = (groupId: number) => {
+        // Un groupe piloté par un « Contrôle de flot » n'a pas de vert propre :
+        // l'action dessine son fonctionnement, sa flèche reste donc visible.
+        const controle = aControleDeFlot(groupId, actionData);
         const simule = simulationResult?.simulatedGroups.find(g => g.id === groupId);
-        if (simule) return !simule.isEscamoted && (simule.simulatedGreen ?? 0) > 0;
+        if (simule) return !simule.isEscamoted && ((simule.simulatedGreen ?? 0) > 0 || controle);
         const group = groups.find(g => g.id === groupId);
-        return !!group && (group.durations?.green || 0) > 0;
+        return !!group && ((group.durations?.green || 0) > 0 || controle);
     };
 
     // Get group info for display

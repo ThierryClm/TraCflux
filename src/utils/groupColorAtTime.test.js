@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getGroupColorAtTime, isTimeInRange, numeroGroupe } from './groupColorAtTime';
+import { aControleDeFlot, getGroupColorAtTime, isTimeInRange, numeroGroupe } from './groupColorAtTime';
 
 const VERT = 'rgb(0, 255, 0)';
 const JAUNE = 'rgb(255, 255, 0)';
@@ -266,5 +266,36 @@ describe('type FL — courant clignotant', () => {
 
     it('ne touche pas aux groupes des autres types', () => {
         expect(getGroupColorAtTime(1, 10, contexte())).toBe(VERT);
+    });
+
+});
+
+describe('getGroupColorAtTime — contrôle de flot', () => {
+    // Groupe sans vert propre : l'action décrit tout son fonctionnement.
+    const sansVert = () => groupe({ minGreen: 6, durations: { green: 0, orange: 3, red: 57 } });
+    const action = { id: 1, action: 'Contrôle de flot', gf: '1', deb: '10', fin: '40' };
+
+    it('anime le jaune/gris, le jaune puis le rouge dans la plage de l’action', () => {
+        const ctx = contexte({ groups: [sansVert()], actionData: [action] });
+        expect(getGroupColorAtTime(1, 10, ctx)).toBe(JAUNE);          // trame allumée
+        expect(getGroupColorAtTime(1, 10.5, ctx)).toBe('rgb(120, 120, 120)'); // trame éteinte
+        expect(getGroupColorAtTime(1, 16, ctx)).toBe(JAUNE);          // après le vert mini
+        expect(getGroupColorAtTime(1, 19, ctx)).toBe(ROUGE);          // après le jaune
+        expect(getGroupColorAtTime(1, 39, ctx)).toBe(ROUGE);          // jusqu'à la fin
+        expect(getGroupColorAtTime(1, 45, ctx)).toBe(ROUGE);          // hors action
+    });
+
+    it('gère une action qui enjambe la fin de cycle', () => {
+        const ctx = contexte({ groups: [sansVert()], actionData: [{ ...action, deb: '50', fin: '20' }] });
+        expect(getGroupColorAtTime(1, 50, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 56, ctx)).toBe(JAUNE);
+        expect(getGroupColorAtTime(1, 2, ctx)).toBe(ROUGE);
+        expect(getGroupColorAtTime(1, 30, ctx)).toBe(ROUGE);
+    });
+
+    it('reconnaît une action contrôle de flot complète', () => {
+        expect(aControleDeFlot(1, [action])).toBe(true);
+        expect(aControleDeFlot(1, [{ ...action, fin: '' }])).toBe(false);
+        expect(aControleDeFlot(2, [action])).toBe(false);
     });
 });

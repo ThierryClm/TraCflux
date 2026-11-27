@@ -4,7 +4,7 @@ import type { Dispatch, KeyboardEvent as ReactKeyboardEvent, MouseEvent as React
 import renderFloatingArrowSVG from '../utils/renderArrowSVG';
 import avecPriseSurvol from '../utils/priseFleche';
 import { BOX_W, BOX_H, fitDetachedImageBox } from '../utils/floatingImageBox';
-import { getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
+import { aControleDeFlot, getGroupColorAtTime, isPPLit } from '../utils/groupColorAtTime';
 import { auMoinsUnSignal, decalageNumeroSignal, echelleSignal, signalDessinable } from '../utils/aspectSignal';
 import SignalModule from '../components/SignalModule';
 import type { ActionMicro, CategorieDetecteur, Detecteur, FlecheCarrefour, Groupe, Matrice } from '../types/projet';
@@ -216,10 +216,13 @@ const useFloatingImageRenderer = ({
         // signal sont masqués. En simulation, un groupe escamoté compte comme
         // supprimé, comme dans le diagramme simulé.
         const mouvementServi = (groupId: number) => {
+            // Un groupe piloté par un « Contrôle de flot » reste affiché même
+            // sans vert propre : l'action décrit son fonctionnement.
+            const controle = aControleDeFlot(groupId, actionData);
             const simule = (simulationResult as SimulationResult | null)?.simulatedGroups.find(g => g.id === groupId);
-            if (simule) return !simule.isEscamoted && (simule.simulatedGreen ?? 0) > 0;
+            if (simule) return !simule.isEscamoted && ((simule.simulatedGreen ?? 0) > 0 || controle);
             const group = groups.find(g => g.id === groupId);
-            return !!group && (group.durations?.green || 0) > 0;
+            return !!group && ((group.durations?.green || 0) > 0 || controle);
         };
 
         // Compute group number centroids

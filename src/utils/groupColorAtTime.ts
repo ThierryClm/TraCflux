@@ -141,6 +141,19 @@ export const isTimeInRange = (
 };
 
 /**
+ * Le groupe est-il servi par une action « Contrôle de flot » ? Ces groupes
+ * n'ont pas de vert à eux : c'est l'action qui dessine leur fonctionnement,
+ * et leur flèche doit rester visible même sans Déb/Fin dans le formulaire.
+ */
+export const aControleDeFlot = (groupId: number, actionData: ActionMicro[] = []): boolean =>
+    actionData.some(action =>
+        action.action === 'Contrôle de flot'
+        && numeroGroupe(action.gf) === groupId
+        && action.deb !== '' && action.deb !== null && action.deb !== undefined
+        && action.fin !== '' && action.fin !== null && action.fin !== undefined
+    );
+
+/**
  * Couleur de la flèche d'un groupe à un instant donné.
  *
  * @param {number} groupId - Identifiant du groupe de feux
@@ -182,6 +195,30 @@ export const getGroupColorAtTime = (
 
     // Normalize time within cycle
     const normalizedTime = time % effectiveCycleLength;
+
+    // Contrôle de flot : l'action décrit à elle seule le fonctionnement du
+    // groupe — jaune/gris intermittent pendant le vert minimum, puis jaune,
+    // puis rouge jusqu'à la fin. Elle prime sur le vert propre au groupe.
+    const controleFlot = actionData.find(action =>
+        action.action === 'Contrôle de flot'
+        && numeroGroupe(action.gf) === groupId
+        && action.deb !== '' && action.fin !== ''
+    );
+    if (controleFlot && isTimeInRange(normalizedTime, controleFlot.deb, controleFlot.fin, effectiveCycleLength)) {
+        const deb = ((parseInt(String(controleFlot.deb)) % effectiveCycleLength) + effectiveCycleLength) % effectiveCycleLength;
+        const ecoule = ((normalizedTime - deb) % effectiveCycleLength + effectiveCycleLength) % effectiveCycleLength;
+        // Les groupes simulés ne portent pas toujours mini et jaune : on
+        // retombe sur le groupe du projet pour rester d'accord avec le diagramme.
+        const origine = groups.find(g => g.id === groupId);
+        const vertMini = Number(group.minGreen ?? origine?.minGreen) || 0;
+        const jaune = Number(group.durations?.orange ?? origine?.durations?.orange) || 0;
+        if (ecoule < vertMini) {
+            // Bande intermittente jaune/gris du diagramme, à la même cadence.
+            return Math.floor(time * 2) % 2 === 0 ? 'rgb(255, 255, 0)' : 'rgb(120, 120, 120)';
+        }
+        if (ecoule < vertMini + jaune) return 'rgb(255, 255, 0)';
+        return 'rgb(255, 0, 0)';
+    }
 
     // Seconde lucarne : action DÉCLARATIVE. calculateSimulatedDiagram ne la
     // traite pas — la cocher dans le panneau de simulation ne change rien au
