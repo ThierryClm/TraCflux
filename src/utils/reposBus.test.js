@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { proposerReposBus, lireTmabX } from './reposBus';
+import { proposerReposBus, lireTmabX, lireTmab, indiceCodeTrajet } from './reposBus';
 
 const g = (id, type, debut, vert, da = '') => ({ id, type, debut, vert, da });
 // TD : B3 vert de 33 à 39 s ; P8 et P9 jusqu'à 37 s.
@@ -26,5 +26,14 @@ describe('point de repos bus proposé', () => {
     it('TMABx lu dans les variables micro, sinon absent', () => {
         expect(lireTmabX(['TMAB1 = 12', 'TMABx = 15'])).toBe(15);
         expect(lireTmabX(['TMAB1 = 12'])).toBeNull();
+    });
+
+    it('indice du code trajet et lecture de TMAB indexée', () => {
+        expect(indiceCodeTrajet('T1')).toBe('1');
+        expect(indiceCodeTrajet(' T12 ')).toBe('12');
+        expect(indiceCodeTrajet('T')).toBe('x');
+        expect(indiceCodeTrajet(undefined)).toBe('x');
+        expect(lireTmab(['TMAB1 = 12'], '1')).toBe(12);
+        expect(lireTmab(['TMAB1 = 12'], '0')).toBeNull();
     });
 });

@@ -60,6 +60,26 @@ export const proposerReposBus = (groupes: GroupeRepos[], cycle: number): ReposPr
 };
 
 export const TMAB_DEFAUT = 10;
+
+/** Indice du code trajet : « T1 » → « 1 » ; sans chiffre, « x » (à remplacer). */
+export const indiceCodeTrajet = (da?: string): string => {
+    const m = String(da ?? '').match(/(\d+)/);
+    return m ? m[1] : 'x';
+};
+
+/** Variable micro de durée d'attente pour un indice de code trajet. */
+export const variableTmab = (indice: string) => `TMAB${indice} = ${TMAB_DEFAUT}`;
+
+/** Valeur de TMAB<indice> dans les variables micro du plan, ou null si absente. */
+export const lireTmab = (variables: string[] | undefined, indice: string): number | null => {
+    const re = new RegExp(`^\\s*TMAB${indice}\\s*=\\s*(\\d+)`, 'i');
+    for (const v of variables ?? []) {
+        const m = re.exec(v);
+        if (m) return parseInt(m[1], 10);
+    }
+    return null;
+};
+
 /** Variable micro ajoutée au plan quand elle manque. */
 export const VARIABLE_TMABX = `TMABx = ${TMAB_DEFAUT}`;
 

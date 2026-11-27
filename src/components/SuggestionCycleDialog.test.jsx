@@ -215,19 +215,19 @@ describe('suggestion de durée du cycle', () => {
         const setVariableMicro = vi.fn();
         const { updateGroupParams } = ouvrir({ groups: places, ajouterActions, variablesMicro: ['TMAB1 = 12'], setVariableMicro, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
         const bloc = screen.getByLabelText('Points de repos bus');
-        expect(within(bloc).getByText('Attente quittée si TPPh_L3 + DAx > 4 + TMABx')).toBeInTheDocument();
+        expect(within(bloc).getByText('Attente quittée si TPPh_L3 + DA0 > 4 + TMAB0')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
         // Une inscription par chapitre (adaptatifs, fermetures, repos), chacune remplaçant ses propres lignes.
         const lignes = ajouterActions.mock.calls.flatMap(c => c[0]);
         const remplacer = row => ajouterActions.mock.calls.some(c => c[1](row));
         expect(lignes.at(-1)).toEqual({
             gf: '3', action: 'Point de repos', deb: '38', fin: '', abrv: 'Att bus',
-            description: 'attente bus théorique maxi 10 secondes', micro: 'Attente quittée si TPPh_L3 + DAx > 4 + TMABx',
+            description: 'attente bus théorique maxi 10 secondes', micro: 'Attente quittée si TPPh_L3 + DA0 > 4 + TMAB0',
         });
         // Le code trajet du groupe est conservé.
         expect(updateGroupParams).not.toHaveBeenCalledWith(3, { da: 'Tx' });
         // TMABx manquait : ajouté après TMAB1.
-        expect(setVariableMicro).toHaveBeenCalledWith(1, 'TMABx = 10');
+        expect(setVariableMicro).toHaveBeenCalledWith(1, 'TMAB0 = 10');
         // Le repos écrit à la main (« attente bus maxi 10 secondes ») n'est pas remplacé.
         expect(remplacer({ action: 'Point de repos', description: 'attente bus maxi 10 secondes', abrv: 'Att bus' })).toBe(false);
         expect(remplacer({ action: 'Point de repos', description: 'attente bus théorique maxi 10 secondes', abrv: 'Att bus' })).toBe(true);

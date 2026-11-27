@@ -11,7 +11,7 @@ import { proposerAdaptatifs, PASSAGES_MAX, TAUX_VISE_ADAPTATIFS } from '../utils
 import type { AdaptatifPropose, ModeAdaptatifs } from '../utils/adaptatifsVerticaux';
 import { proposerFermetures, SEUIL_CAPACITE_FERMETURE, PART_TEMPS_DISPONIBLE } from '../utils/fermeturesAnticipees';
 import type { FermeturePropose } from '../utils/fermeturesAnticipees';
-import { proposerReposBus, lireTmabX, DESCRIPTION_REPOS_BUS, FENETRE_REPOS_BUS, TMAB_DEFAUT, VARIABLE_TMABX } from '../utils/reposBus';
+import { proposerReposBus, indiceCodeTrajet, lireTmab, variableTmab, DESCRIPTION_REPOS_BUS, FENETRE_REPOS_BUS, TMAB_DEFAUT } from '../utils/reposBus';
 import type { ReposPropose } from '../utils/reposBus';
 import type { ActionMicro } from '../types/projet';
 import './SuggestionCycleDialog.css';
@@ -295,23 +295,27 @@ const SuggestionCycleDialog = ({
     const reposBus = useMemo(() => (disposition && resultat?.cycleSuggere ? proposerReposBus(disposition, resultat.cycleSuggere) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [disposition]);
-    const tmabX = lireTmabX(variablesMicro);
-    const tmab = tmabX ?? TMAB_DEFAUT;
     const avUtiles = propositionAV?.adaptatifs.filter(a => a.duree > 0) ?? [];
     const [avInscrits, setAvInscrits] = useState<string[] | null>(null);
     // Ligne de condition renseignée avec ce que l'assistant sait de la zone ;
     // la condition de contraction reste à adapter à la détection réelle.
     const court = (id: number) => nomCourt(groups.find(g => g.id === id)?.name, id);
-    // Point de repos bus : x tient la place du code trajet, à remplacer.
-    const conditionRepos = (r: ReposPropose) => ({
-        gf: String(r.groupe),
-        action: 'Point de repos',
-        deb: String(r.instant),
-        fin: '',
-        abrv: 'Att bus',
-        description: `${DESCRIPTION_REPOS_BUS} maxi ${tmab} secondes`,
-        micro: `Attente quittée si TPPh_L${r.groupe} + DAx > ${r.n} + TMABx`,
-    });
+    // Point de repos bus : les variables sont indicées d'après le code trajet
+    // du groupe (T1 → DA1, TMAB1, AVert1) ; sans chiffre, x reste à remplacer.
+    const conditionRepos = (r: ReposPropose) => {
+        const groupe = groups.find(g => g.id === r.groupe);
+        const indice = indiceCodeTrajet(groupe?.da);
+        const tmab = lireTmab(variablesMicro, indice) ?? TMAB_DEFAUT;
+        return {
+            gf: String(r.groupe),
+            action: 'Point de repos',
+            deb: String(r.instant),
+            fin: '',
+            abrv: 'Att bus',
+            description: `${DESCRIPTION_REPOS_BUS} maxi ${tmab} secondes`,
+            micro: `Attente quittée si TPPh_L${r.groupe} + DA${indice} > ${r.n} + TMAB${indice}`,
+        };
+    };
     // Fermeture anticipée : FA1, FA2… dans l'ordre du tableau, glissements en Action GF.
     const conditionFermeture = (f: FermeturePropose, k: number) => ({
         gf: String(f.groupe),
@@ -512,12 +516,17 @@ const SuggestionCycleDialog = ({
                 a.repos ??= { da: [], tmab: null };
                 inscrire('repos');
                 // Le groupe porte déjà son code trajet : on le laisse tel quel.
-                // Variable micro TMABx, ajoutée dans la première case libre si le plan ne l'a pas.
-                if (reposBus.length && tmabX === null && setVariableMicro) {
+                // Variable micro TMAB<indice>, ajoutée par code trajet si le plan ne l'a pas.
+                if (reposBus.length && setVariableMicro) {
+                    const indices = [...new Set(reposBus.map(r => indiceCodeTrajet(groups.find(g => g.id === r.groupe)?.da)))];
                     const libre = (variablesMicro ?? []).findIndex(v => !v.trim());
-                    const index = libre >= 0 ? libre : (variablesMicro ?? []).length;
-                    setVariableMicro(index, VARIABLE_TMABX);
-                    a.repos.tmab = index;
+                    let slot = libre >= 0 ? libre : (variablesMicro ?? []).length;
+                    indices.forEach(ind => {
+                        if (lireTmab(variablesMicro, ind) !== null) return;
+                        setVariableMicro(slot, variableTmab(ind));
+                        if (a.repos && a.repos.tmab === null) a.repos.tmab = slot;
+                        slot += 1;
+                    });
                 }
                 break;
             default:
@@ -856,9 +865,9 @@ const SuggestionCycleDialog = ({
                         </table>
                     ) : <p className="sc-attente">Aucun groupe avec un code trajet (DA) dans le plan.</p>}
                     <p className="sc-note">
-                        « Appliquer le cycle » inscrit un point de repos par groupe bus (« Att bus », « {DESCRIPTION_REPOS_BUS} maxi {tmab} secondes »),
-                        écrit « Tx » dans la colonne DA du groupe bus{tmabX === null ? <> et ajoute la variable micro « {VARIABLE_TMABX} »</> : ''}. L'indice x tient la place du
-                        code trajet : remplacez-le dans DAx, TMABx et Tx. Les repos d'un passage précédent sont remplacés ; les autres ne
+                        « Appliquer le cycle » inscrit un point de repos par groupe à code trajet (« Att bus », « {DESCRIPTION_REPOS_BUS} maxi 10 secondes »),
+                        en conservant son DA. Les variables sont indicées d'après le code trajet : pour T1, la condition utilise DA1 et TMAB1,
+                        et « TMAB1 = 10 » est ajoutée au plan si elle manque. Les repos d'un passage précédent sont remplacés ; les autres ne
                         sont pas touchés.
                     </p>
                 </div>
