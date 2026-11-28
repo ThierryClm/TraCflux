@@ -79,6 +79,23 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByText(/Diagramme pré-rempli/)).toBeInTheDocument();
     });
 
+    it('Cap. U prévue : calculée au cycle et au vert proposés, l’actuelle en infobulle', () => {
+        // GF8 à 10 s de vert sur un cycle de 50 s : 99 % de capacité utilisée
+        // dans le diagramme. Le cycle proposé (40 s) lui donne un vert plus long
+        // et le ramène sous le seuil : c'est cette valeur qui doit s'afficher.
+        const locaux = [
+            { id: 1, name: 'V1', type: 'V', minGreen: 8, offset: 25, laneCoef: 0.8, durations: { green: 20, orange: 3, red: 27 } },
+            { id: 8, name: 'V8', type: 'V', minGreen: 6, offset: 0, laneCoef: 0.85, durations: { green: 10, orange: 3, red: 37 } },
+        ];
+        const m8 = Array.from({ length: 8 }, () => Array(8).fill(''));
+        m8[7][0] = 4; m8[0][7] = 4;
+        ouvrir({ groups: locaux, conflictMatrix: m8, cycleLength: 50, getTrafficData: id => ({ trafficVol: id === 8 ? 303 : 386 }) });
+        const cellule = document.querySelector('.sc-table td[title*="diagramme actuel : 99 %"]');
+        expect(cellule).not.toBeNull();
+        const prevue = parseInt(cellule.textContent, 10);
+        expect(prevue).toBeLessThan(85);
+    });
+
     it('case décochée : le phasage bulle n\'est pas modifié', () => {
         const { setPhasageBulleCount } = ouvrir({ phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
         fireEvent.click(screen.getByRole('checkbox', { name: /phasage bulle/ }));
@@ -95,7 +112,10 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByLabelText('Groupe déterminant de la phase 2')).toHaveValue('3');
         expect(screen.getByLabelText('Groupe déterminant de la phase 3')).toHaveValue('4');
         expect(screen.getByLabelText('Dégagement de la phase 1 vers la phase 2')).toHaveValue(4);
-        expect(within(document.querySelector('.sc-table')).getByText('83 %')).toBeInTheDocument();
+        // La colonne donne la capacité au cycle proposé ; celle du diagramme
+        // actuel (83 %) reste lisible en infobulle.
+        expect(document.querySelector('.sc-table').textContent).toMatch(/\d+ %/);
+        expect(document.querySelector('.sc-table [title*="diagramme actuel : 83 %"]')).not.toBeNull();
         expect(screen.getByRole('button', { name: 'Relire le diagramme' })).toBeInTheDocument();
     });
 

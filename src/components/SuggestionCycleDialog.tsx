@@ -3,10 +3,11 @@ import type { ReactNode } from 'react';
 import Modal from './Modal';
 import type { Groupe, Matrice } from '../types/projet';
 import {
-    calculerSuggestionCycle, debutsDesPhases, nomCourt, degagementMatrice, detecterCheminCritique, placerGroupesAssocies, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
+    calculerSuggestionCycle, debutsDesPhases, nomCourt, degagementMatrice, detecterCheminCritique, placerGroupesAssocies, instantsPhasageBulle, dizaineSuperieure, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
     NB_PHASES_MAX, NB_PHASES_MIN, TAUX_VISE_DEFAUT,
 } from '../utils/suggestionCycle';
 import type { PhasageCycle } from '../utils/suggestionCycle';
+import { SATURATION_FLOW } from '../utils/capacityCalc';
 import { proposerAdaptatifs, PASSAGES_MAX, TAUX_VISE_ADAPTATIFS } from '../utils/adaptatifsVerticaux';
 import type { AdaptatifPropose, ModeAdaptatifs } from '../utils/adaptatifsVerticaux';
 import { proposerFermetures, SEUIL_CAPACITE_FERMETURE, PART_TEMPS_DISPONIBLE } from '../utils/fermeturesAnticipees';
@@ -233,6 +234,17 @@ const SuggestionCycleDialog = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [complet, brouillon, groupesDonnees]);
 
+    // Capacité utilisée du déterminant de la phase i au cycle proposé, avec le
+    // vert que la répartition lui donne : c'est elle qui dit si le taux visé
+    // est tenu. Celle du diagramme actuel ne décrit que l'état de départ.
+    const capaciteProposee = (i: number) => {
+        const p = resultat?.phases[i];
+        const cycle = resultat?.cycleSuggere;
+        const vert = resultat?.verts[i];
+        if (!p || !p.trafic || !cycle || !vert) return null;
+        return (p.trafic * cycle) / (SATURATION_FLOW * (p.coefVoie || 1) * vert) * 100;
+    };
+
     const sansTrafic = resultat !== null && resultat.Y === 0;
     const calculable = resultat !== null && resultat.degagementsManquants.length === 0 && !sansTrafic;
     const horsBornes = (c: number | null) => c !== null && (c < CYCLE_MIN_CONSEILLE || c > CYCLE_MAX_CONSEILLE);
@@ -446,8 +458,12 @@ const SuggestionCycleDialog = ({
     });
     const basculer = (id: IdChapitre) => () => setOuverts(o => ({ ...o, [id]: !o[id] }));
     const resumePhases = `${nbPhases} phases : ${brouillon.determinants.map(d => (d === null ? '—' : court(d))).join(', ')} · taux visé ${brouillon.tauxVise} %`;
+    const saturationImpose = resultat != null && resultat.cycleSuggere !== null && resultat.websterExact !== null
+        && resultat.cycleSuggere > dizaineSuperieure(resultat.websterExact);
     const resumeCycle = resultat && calculable && resultat.cycleSuggere
-        ? `cycle proposé ${resultat.cycleSuggere} s (Webster ${fmt(resultat.websterExact ?? 0, 1)} s)${resultat.sature ? ' · saturé' : ''}`
+        ? `cycle proposé ${resultat.cycleSuggere} s (${saturationImpose
+            ? `saturation ${brouillon.tauxVise} %`
+            : `Webster ${fmt(resultat.websterExact ?? 0, 1)} s`})${resultat.sature ? ' · saturé' : ''}`
         : undefined;
     const compte = (statut: StatutPlacement) => placements.filter(p => statutPlacement(p) === statut).length;
     const resumeAssocies = [
@@ -759,7 +775,8 @@ const SuggestionCycleDialog = ({
 
             <table className="sc-table">
                 <thead>
-                    <tr><th>Phase</th><th>Groupe déterminant</th><th>Trafic (uvp/h)</th><th>Coef. voie</th><th>Cap. U</th><th>y</th>
+                    <tr><th>Phase</th><th>Groupe déterminant</th><th>Trafic (uvp/h)</th><th>Coef. voie</th>
+                        <th title={tip("Au cycle proposé et avec le vert proposé ; la valeur du diagramme actuel est rappelée au survol")}>Cap. U prévue</th><th>y</th>
                         <th>Vert mini</th><th>Dégagement vers la phase suivante</th></tr>
                 </thead>
                 <tbody>
@@ -768,6 +785,12 @@ const SuggestionCycleDialog = ({
                         const g = det !== null ? groupesDonnees.find(x => x.id === det) : undefined;
                         const manque = brouillon.degagements[i].trim() === '';
                         const suivante = (i + 1) % nbPhases + 1;
+                        const uPrevue = det !== null ? capaciteProposee(i) : null;
+                        const uActuelle = det !== null ? chemin?.capaciteUtilisee[det] : undefined;
+                        const infobulleCap = uPrevue !== null
+                            ? `Cycle proposé de ${resultat?.cycleSuggere} s, vert proposé de ${resultat?.verts[i]} s`
+                                + (uActuelle !== undefined ? ` ; diagramme actuel : ${Math.round(uActuelle)} %` : '')
+                            : undefined;
                         return (
                             <tr key={i}>
                                 <td>{i + 1}</td>
@@ -780,7 +803,11 @@ const SuggestionCycleDialog = ({
                                 </td>
                                 <td>{g ? g.trafic : ''}</td>
                                 <td>{g ? g.coefVoie : ''}</td>
-                                <td>{det !== null && chemin?.capaciteUtilisee[det] !== undefined ? `${Math.round(chemin.capaciteUtilisee[det])} %` : ''}</td>
+                                <td title={tip(infobulleCap)}>
+                                    {uPrevue !== null
+                                        ? <span className={uPrevue > brouillon.tauxVise ? 'sc-depasse' : ''}>{Math.round(uPrevue)} %</span>
+                                        : (uActuelle !== undefined ? `${Math.round(uActuelle)} %` : '')}
+                                </td>
                                 <td>{p ? fmt(p.y) : ''}</td>
                                 <td>{g ? `${g.vertMini} s` : ''}</td>
                                 <td className={manque && det !== null ? 'sc-manque' : ''}>
@@ -820,10 +847,16 @@ const SuggestionCycleDialog = ({
                         <ul>
                             <li>Cycle minimal (saturation à 100 %) : <b>{resultat.cycleMinimal} s</b></li>
                             <li>Cycle optimal de Webster (1,5 L + 5) / (1 − Y) : {fmt(resultat.websterExact ?? 0, 1)} s,
-                                soit un <b>cycle proposé de {resultat.cycleSuggere} s</b> (dizaine supérieure)
+                                soit un <b>cycle proposé de {resultat.cycleSuggere} s</b> (arrondi à la dizaine supérieure)
                                 {horsBornes(resultat.cycleSuggere) && <span className="sc-alerte"> hors de la plage usuelle {CYCLE_MIN_CONSEILLE}–{CYCLE_MAX_CONSEILLE} s</span>}</li>
                             <li>Cycle pour une saturation de {brouillon.tauxVise} % : <b>{resultat.cycleTauxVise ?? '—'}{resultat.cycleTauxVise !== null ? ' s' : ''}</b></li>
                         </ul>
+                    )}
+                    {resultat.cycleTauxVise !== null && resultat.websterExact !== null && resultat.cycleTauxVise > resultat.websterExact && (
+                        <p className="sc-note">
+                            Le cycle de saturation dépasse celui de Webster : c'est lui qui est proposé, pour garder chaque
+                            déterminant sous {brouillon.tauxVise} % de capacité utilisée.
+                        </p>
                     )}
                     {resultat.cycleWebster !== null && (
                         <p>Verts proposés pour {resultat.cycleSuggere} s :{' '}

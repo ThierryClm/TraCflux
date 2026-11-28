@@ -116,13 +116,33 @@ export const calculerSuggestionCycle = (
     const cycleMinimal = possible ? parExces(L / (1 - Y)) : null;
     const websterExact = possible ? (1.5 * L + 5) / (1 - Y) : null;
     const cycleWebster = websterExact === null ? null : arrondi(websterExact);
-    const cycleSuggere = websterExact === null ? null : dizaineSuperieure(websterExact);
     const cycleTauxVise = Y < taux && taux > 0 ? parExces(L / (1 - Y / taux)) : null;
+    // Le cycle proposé tient les deux exigences : celui de Webster, optimal
+    // pour le retard, et le cycle minimal qui garde chaque phase sous le taux
+    // de saturation visé. Webster seul peut laisser un déterminant au-dessus
+    // du seuil (Y élevé), d'où le maximum.
+    let cycleSuggere = websterExact === null ? null
+        : dizaineSuperieure(Math.max(websterExact, cycleTauxVise ?? 0));
+    let verts = cycleSuggere ? repartirVerts(phases, cycleSuggere - L) : phases.map(p => p.vertMini);
+    // Les verts minimaux peuvent prendre plus que leur part et laisser un
+    // déterminant au-dessus du taux visé, même au cycle de saturation : on
+    // allonge alors le cycle de dix en dix jusqu'à ce que toutes les phases
+    // repassent sous le seuil (200 s au plus, garde-fou).
+    if (cycleSuggere !== null && taux > 0) {
+        let cycle = cycleSuggere;
+        // Tolérance d'un demi-point, pour l'arrondi des verts à la seconde.
+        const depasse = () => phases.some((p, i) => verts[i] > 0 && (p.y * cycle) / verts[i] > taux + 0.005);
+        while (depasse() && cycle < 200) {
+            cycle += 10;
+            verts = repartirVerts(phases, cycle - L);
+        }
+        cycleSuggere = cycle;
+    }
 
     return {
         phases, Y, L, cycleMinimal, websterExact, cycleWebster, cycleSuggere, cycleTauxVise,
         sature: Y >= Y_SATURE,
-        verts: cycleSuggere ? repartirVerts(phases, cycleSuggere - L) : phases.map(p => p.vertMini),
+        verts,
         degagementsManquants,
     };
 };
@@ -259,12 +279,22 @@ export const detecterCheminCritique = (
     regrouper(aTrafic, phases);
     const pietons: GroupeDiagramme[] = [];
     verts.filter(g => !(g.trafic > 0)).forEach(g => {
-        let meilleure = -1, max = 0;
+        let meilleure = -1, max = 0, plusCourt = 0;
         phases.forEach((ph, i) => {
-            const r = recouvrement(g.id, ph.filter(id => (parId.get(id)!.trafic > 0)));
-            if (r > max) { max = r; meilleure = i; }
+            const trafic = ph.filter(id => (parId.get(id)!.trafic > 0));
+            const r = recouvrement(g.id, trafic);
+            if (r > max) {
+                max = r; meilleure = i;
+                plusCourt = Math.min(...trafic.map(id => parId.get(id)!.vert));
+            }
         });
-        if (meilleure >= 0 && max >= g.vert / 2) phases[meilleure].push(g.id); else pietons.push(g);
+        // Un vert piéton (ou cycliste) est souvent plus long que celui de la
+        // phase qu'il accompagne : on le compare au plus court des verts de la
+        // phase, comme pour les groupes à trafic. Comparer à son propre vert
+        // détachait une traversée de 19 s recouvrant 8 s d'une phase de 10 s,
+        // d'où une phase « piéton » parasite et un déterminant sans trafic.
+        const seuil = Math.max(1, Math.min(g.vert, plusCourt)) / 2;
+        if (meilleure >= 0 && max >= seuil) phases[meilleure].push(g.id); else pietons.push(g);
     });
     const phasesPietons: number[][] = [];
     regrouper(pietons, phasesPietons);
