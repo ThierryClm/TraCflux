@@ -270,7 +270,12 @@ const SuggestionCycleDialog = ({
         }
         return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' : 'main';
     };
-    const aPlacer = placements.filter(p => ['auto', 'maj'].includes(statutPlacement(p)));
+    // Groupes « à la main » cochés : l'utilisateur choisit ceux qu'il veut
+    // placer avec la proposition, malgré une déduction incertaine.
+    const [mainsCochees, setMainsCochees] = useState<Set<number>>(new Set());
+    const estCochable = (p: typeof placements[number]) => statutPlacement(p) === 'main';
+    const aPlacer = placements.filter(p => ['auto', 'maj'].includes(statutPlacement(p))
+        || (estCochable(p) && mainsCochees.has(p.id)));
     const aMettreAJour = placements.filter(p => statutPlacement(p) === 'maj');
     // Adaptatifs verticaux proposés, un par phase, sur la disposition prévue :
     // diagramme actuel, déterminants proposés et groupes placés avec le cycle.
@@ -420,7 +425,7 @@ const SuggestionCycleDialog = ({
     const resumeAssocies = [
         compte('maj') ? `${compte('maj')} à mettre à jour` : '',
         compte('auto') ? `${compte('auto')} avec le cycle` : '',
-        compte('main') ? `${compte('main')} à la main` : '',
+        compte('main') ? `${compte('main')} à la main${mainsCochees.size ? ` (${placements.filter(p => estCochable(p) && mainsCochees.has(p.id)).length} coché${mainsCochees.size > 1 ? 's' : ''})` : ''}` : '',
         compte('regle') ? `${compte('regle')} déjà réglé${compte('regle') > 1 ? 's' : ''}` : '',
     ].filter(Boolean).join(' · ');
     const resumeAdaptatifs = `${avUtiles.length ? avUtiles.map(a => `AV${a.phase} ${a.deb}–${a.fin} s`).join(', ') : 'aucune zone'} · ${tauxAV} % · ${modeAV === 'iteratif' ? 'itératif' : 'prudent'}`;
@@ -794,7 +799,7 @@ const SuggestionCycleDialog = ({
                 <div className="sc-associes">
                     {resultat?.cycleSuggere ? <p className="sc-note">Calés sur le cycle proposé de {resultat.cycleSuggere} s.</p> : null}
                     <table className="sc-table">
-                        <thead><tr><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th><th>Placement</th></tr></thead>
+                        <thead><tr><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th><th>Placer</th><th>Placement</th></tr></thead>
                         <tbody>
                             {placements.map(p => (
                                 <tr key={p.id} className={p.aVerifier ? 'sc-a-verifier' : ''}>
@@ -804,6 +809,20 @@ const SuggestionCycleDialog = ({
                                     <td className="sc-gauche sc-source">
                                         {p.source && <span className={`sc-badge sc-badge-${p.source}`}>{p.source === 'matrice' ? 'Matrice' : p.source === 'nom' ? 'Nom' : 'Plan'}</span>}
                                         {' '}{p.explication}{p.aVerifier ? ' — à vérifier' : ''}
+                                    </td>
+                                    <td className="sc-insecable">
+                                        {estCochable(p) ? (
+                                            <input type="checkbox" checked={mainsCochees.has(p.id)}
+                                                aria-label={`Placer ${nomGroupe(p.id)}`}
+                                                title={tip(p.aVerifier
+                                                    ? 'Déduction à vérifier : cochez pour l’appliquer quand même ; elle peut ne pas respecter tous les dégagements.'
+                                                    : 'Cocher pour placer ce groupe avec le cycle proposé.')}
+                                                onChange={e => setMainsCochees(prev => {
+                                                    const suivant = new Set(prev);
+                                                    if (e.target.checked) suivant.add(p.id); else suivant.delete(p.id);
+                                                    return suivant;
+                                                })} />
+                                        ) : '—'}
                                     </td>
                                     <td className="sc-insecable">{{ auto: 'avec le cycle', maj: 'à mettre à jour', regle: 'déjà réglé', main: 'à la main' }[statutPlacement(p)]}</td>
                                 </tr>
