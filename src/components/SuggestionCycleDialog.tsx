@@ -49,6 +49,10 @@ export interface SuggestionCycleDialogProps {
     /** Écrit une variable micro du plan (index, texte) : ajout de « TMABx = 10 » s'il manque. */
     setVariableMicro?: (index: number, value: string) => void;
     readOnly?: boolean;
+    /** L'assistant est-il ouvert sur le plan de feu actif ? Sinon, une validation le réactive d'abord. */
+    estPlanActif?: boolean;
+    /** Ramène le plan de feu qui a ouvert l'assistant au premier plan. */
+    demanderActivation?: () => void;
     /** Rendu dans une fenêtre détachée du navigateur (usePopupWindow), sans cadre de modale. */
     detachee?: boolean;
     /** Case « Assistant conception » de Mise en page → Infobulles. */
@@ -134,6 +138,7 @@ const SuggestionCycleDialog = ({
     trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
     setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, variablesMicro, setVariableMicro, readOnly = false, detachee = false,
     phasageBulleCount, phasageBulleTimes, actionData, tooltipsEnabled = true,
+    estPlanActif = true, demanderActivation,
 }: SuggestionCycleDialogProps) => {
     const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
     const [remplirBulle, setRemplirBulle] = useState(true);
@@ -621,7 +626,7 @@ const SuggestionCycleDialog = ({
         if (id === 'associes' && aMettreAJour.length) {
             return {
                 valide: valides.associes,
-                basculer: () => appliquerChapitre('associes'),
+                basculer: () => executerChapitre('associes'),
                 libelle: 'Mettre à jour',
                 attention: true,
             };
@@ -629,7 +634,7 @@ const SuggestionCycleDialog = ({
         return {
             valide: valides[id],
             motif: motifs[id],
-            basculer: () => (valides[id] ? retirerChapitre(id) : appliquerChapitre(id)),
+            basculer: () => executerChapitre(id),
         };
     };
 
@@ -645,6 +650,32 @@ const SuggestionCycleDialog = ({
             setAvInscrits([...lignesChapitre.adaptatifs, ...lignesChapitre.fermetures, ...lignesChapitre.repos].map(l => String(l.abrv)));
         }
     };
+
+    // Une validation alors qu'un autre plan est affiché : on ramène d'abord le
+    // plan de l'assistant au premier plan, puis on applique au rendu suivant,
+    // avec les fonctions à jour (le plan synchronisé).
+    const ordreEnAttente = useRef<{ type: 'chapitre'; id: IdChapitre } | { type: 'appliquer' } | null>(null);
+    const actionsCourantes = useRef<(ordre: { type: 'chapitre'; id: IdChapitre } | { type: 'appliquer' }) => void>(() => {});
+    actionsCourantes.current = ordre => {
+        if (ordre.type === 'appliquer') appliquer();
+        else if (valides[ordre.id]) retirerChapitre(ordre.id);
+        else appliquerChapitre(ordre.id);
+    };
+    const lancer = (ordre: { type: 'chapitre'; id: IdChapitre } | { type: 'appliquer' }) => {
+        if (estPlanActif) { actionsCourantes.current(ordre); return; }
+        ordreEnAttente.current = ordre;
+        demanderActivation?.();
+    };
+    const executerChapitre = (id: IdChapitre) => lancer({ type: 'chapitre', id });
+    const executerGlobal = () => lancer({ type: 'appliquer' });
+    useEffect(() => {
+        if (!estPlanActif || !ordreEnAttente.current) return;
+        const ordre = ordreEnAttente.current;
+        ordreEnAttente.current = null;
+        // Laisse le plan réactivé se synchroniser (groupes, cycle) avant d'écrire.
+        const t = setTimeout(() => actionsCourantes.current(ordre), 0);
+        return () => clearTimeout(t);
+    }, [estPlanActif]);
 
     const corps = (
         <>
@@ -942,7 +973,7 @@ const SuggestionCycleDialog = ({
                         aPlacer.length ? `place ${aPlacer.length} groupe${aPlacer.length > 1 ? 's' : ''} associé${aPlacer.length > 1 ? 's' : ''}` : '',
                         avUtiles.length || faUtiles.length || reposBus.length
                             ? `inscrit ${[...avUtiles.map(a => `AV${a.phase}`), ...faUtiles.map((_, k) => `FA${k + 1}`), ...reposBus.map(() => 'Att bus')].join(', ')}` : ''].filter(Boolean).join(', puis '))}
-                    onClick={appliquer}>
+                    onClick={executerGlobal}>
                     Appliquer le cycle{calculable && resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
                 </button>
             </div>

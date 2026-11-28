@@ -389,6 +389,26 @@ describe('validation chapitre par chapitre', () => {
         expect(screen.getByTestId('g4')).toHaveTextContent('60/15');
     });
 
+    it('une validation sur un autre plan réactive le plan de l’assistant avant d’appliquer', async () => {
+        const setCycleLength = vi.fn();
+        const demanderActivation = vi.fn();
+        const commun = {
+            isOpen: true, onClose: () => {}, planName: 'PF1', groups, conflictMatrix: matrice,
+            cycleLength: 60, getTrafficData: id => ({ trafficVol: trafic[id] }), trafficDatasetName: 'HPM',
+            phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] }, setPhasageCycle: vi.fn(),
+            setCycleLength, setPhasageBulleCount: vi.fn(), setPhasageBulleTimes: vi.fn(),
+            updateGroupParams: vi.fn(), ajouterActions: vi.fn(() => 0),
+        };
+        const { rerender } = render(<SuggestionCycleDialog {...commun} estPlanActif={false} demanderActivation={demanderActivation} />);
+        toutDeplier();
+        fireEvent.click(valider('Durée de cycle'));
+        expect(demanderActivation).toHaveBeenCalled();
+        expect(setCycleLength).not.toHaveBeenCalled();
+        // Le plan est revenu au premier plan : l'application reprend d'elle-même.
+        rerender(<SuggestionCycleDialog {...commun} estPlanActif demanderActivation={demanderActivation} />);
+        await vi.waitFor(() => expect(setCycleLength).toHaveBeenCalledWith(70));
+    });
+
     it('un chapitre validé suit sa proposition en temps réel', () => {
         render(<Banc cycleInitial={70} />);
         toutDeplier();
