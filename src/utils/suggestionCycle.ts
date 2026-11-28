@@ -457,10 +457,15 @@ export const placerGroupesAssocies = (
         connus.forEach((iv, a) => {
             if (a === g.id || !conflit(g.id, a)) return;
             const mA = iv.debut + mod(iv.fin - iv.debut, cycle) / 2;
-            if (ecart(milieu, mA, cycle) >= 0) return;
             const v = degagementMatrice(matrice, a, g.id);
             if (v === null) return;
             const t = milieu + ecart(milieu, iv.fin + v, cycle);
+            // Antagoniste situé après dans le cycle : il contraint normalement la
+            // fin, pas le début. Mais son dégagement peut retomber dans la
+            // fenêtre de la phase par bouclage (fin de GF1 à 44 s, + 8 s → 2 s) :
+            // il contraint alors le début.
+            const dansFenetre = mod(t - w0, cycle) <= mod(w1 - w0, cycle);
+            if (ecart(milieu, mA, cycle) >= 0 && !dansFenetre) return;
             if (!contraint || ecart(debut, t, cycle) > 0) { debut = t; contraint = true; contraintes.push(`${nomDe(a)}→${nomDe(g.id)} ${v} s`); }
         });
         // Fin : au plus tard avant les dégagements vers les antagonistes qui suivent.

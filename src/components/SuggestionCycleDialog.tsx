@@ -270,12 +270,10 @@ const SuggestionCycleDialog = ({
         }
         return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' : 'main';
     };
-    // Groupes « à la main » cochés : l'utilisateur choisit ceux qu'il veut
-    // placer avec la proposition, malgré une déduction incertaine.
-    const [mainsCochees, setMainsCochees] = useState<Set<number>>(new Set());
+    // Groupes « à la main » : cocher leur case les place tout de suite, malgré
+    // une déduction incertaine.
     const estCochable = (p: typeof placements[number]) => statutPlacement(p) === 'main';
-    const aPlacer = placements.filter(p => ['auto', 'maj'].includes(statutPlacement(p))
-        || (estCochable(p) && mainsCochees.has(p.id)));
+    const aPlacer = placements.filter(p => ['auto', 'maj'].includes(statutPlacement(p)));
     const aMettreAJour = placements.filter(p => statutPlacement(p) === 'maj');
     // Adaptatifs verticaux proposés, un par phase, sur la disposition prévue :
     // diagramme actuel, déterminants proposés et groupes placés avec le cycle.
@@ -425,7 +423,7 @@ const SuggestionCycleDialog = ({
     const resumeAssocies = [
         compte('maj') ? `${compte('maj')} à mettre à jour` : '',
         compte('auto') ? `${compte('auto')} avec le cycle` : '',
-        compte('main') ? `${compte('main')} à la main${mainsCochees.size ? ` (${placements.filter(p => estCochable(p) && mainsCochees.has(p.id)).length} coché${mainsCochees.size > 1 ? 's' : ''})` : ''}` : '',
+        compte('main') ? `${compte('main')} à la main` : '',
         compte('regle') ? `${compte('regle')} déjà réglé${compte('regle') > 1 ? 's' : ''}` : '',
     ].filter(Boolean).join(' · ');
     const resumeAdaptatifs = `${avUtiles.length ? avUtiles.map(a => `AV${a.phase} ${a.deb}–${a.fin} s`).join(', ') : 'aucune zone'} · ${tauxAV} % · ${modeAV === 'iteratif' ? 'itératif' : 'prudent'}`;
@@ -659,14 +657,28 @@ const SuggestionCycleDialog = ({
     // Une validation alors qu'un autre plan est affiché : on ramène d'abord le
     // plan de l'assistant au premier plan, puis on applique au rendu suivant,
     // avec les fonctions à jour (le plan synchronisé).
-    const ordreEnAttente = useRef<{ type: 'chapitre'; id: IdChapitre } | { type: 'appliquer' } | null>(null);
-    const actionsCourantes = useRef<(ordre: { type: 'chapitre'; id: IdChapitre } | { type: 'appliquer' }) => void>(() => {});
+    type Ordre = { type: 'chapitre'; id: IdChapitre } | { type: 'appliquer' } | { type: 'placer'; id: number };
+    const ordreEnAttente = useRef<Ordre | null>(null);
+    const actionsCourantes = useRef<(ordre: Ordre) => void>(() => {});
+    const placerMain = (id: number) => {
+        const p = placements.find(x => x.id === id);
+        if (!p || p.fin <= p.debut) return;
+        const a = avant.current;
+        a.associes = [...(a.associes ?? []), ...(a.associes?.some(x => x.id === id) ? [] : [{
+            id, offset: Number(groups.find(g => g.id === id)?.offset) || 0,
+            vert: Number(groups.find(g => g.id === id)?.durations?.green) || 0,
+        }])];
+        updateGroupParams(id, { offset: p.debut, durations: { green: p.fin - p.debut } });
+        appliques.current.associes = signatures.associes;
+        setValides(v => ({ ...v, associes: true }));
+    };
     actionsCourantes.current = ordre => {
         if (ordre.type === 'appliquer') appliquer();
+        else if (ordre.type === 'placer') placerMain(ordre.id);
         else if (valides[ordre.id]) retirerChapitre(ordre.id);
         else appliquerChapitre(ordre.id);
     };
-    const lancer = (ordre: { type: 'chapitre'; id: IdChapitre } | { type: 'appliquer' }) => {
+    const lancer = (ordre: Ordre) => {
         if (estPlanActif) { actionsCourantes.current(ordre); return; }
         ordreEnAttente.current = ordre;
         demanderActivation?.();
@@ -812,16 +824,12 @@ const SuggestionCycleDialog = ({
                                     </td>
                                     <td className="sc-insecable">
                                         {estCochable(p) ? (
-                                            <input type="checkbox" checked={mainsCochees.has(p.id)}
+                                            <input type="checkbox" checked={false}
                                                 aria-label={`Placer ${nomGroupe(p.id)}`}
                                                 title={tip(p.aVerifier
-                                                    ? 'Déduction à vérifier : cochez pour l’appliquer quand même ; elle peut ne pas respecter tous les dégagements.'
-                                                    : 'Cocher pour placer ce groupe avec le cycle proposé.')}
-                                                onChange={e => setMainsCochees(prev => {
-                                                    const suivant = new Set(prev);
-                                                    if (e.target.checked) suivant.add(p.id); else suivant.delete(p.id);
-                                                    return suivant;
-                                                })} />
+                                                    ? 'Déduction à vérifier : cochez pour l’appliquer tout de suite ; elle peut ne pas respecter tous les dégagements.'
+                                                    : 'Cocher pour placer ce groupe tout de suite avec le cycle proposé.')}
+                                                onChange={e => { if (e.target.checked) lancer({ type: 'placer', id: p.id }); }} />
                                         ) : '—'}
                                     </td>
                                     <td className="sc-insecable">{{ auto: 'avec le cycle', maj: 'à mettre à jour', regle: 'déjà réglé', main: 'à la main' }[statutPlacement(p)]}</td>

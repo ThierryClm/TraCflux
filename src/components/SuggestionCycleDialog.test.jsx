@@ -272,7 +272,7 @@ describe('suggestion de durée du cycle', () => {
         expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: expect.any(Number) }));
     });
 
-    it('coche un groupe à la main et le place par Valider', () => {
+    it('coche un groupe à la main et le place tout de suite', () => {
         const locaux = [
             { id: 1, name: 'V1', type: 'V', minGreen: 6, offset: 0, laneCoef: 1, durations: { green: 10, orange: 3, red: 47 } },
             { id: 2, name: 'V2', type: 'V', minGreen: 6, offset: 30, laneCoef: 1, durations: { green: 10, orange: 3, red: 47 } },
@@ -285,10 +285,9 @@ describe('suggestion de durée du cycle', () => {
             phasageCycle: { determinants: [1, 2], degagements: [5, 5] } });
         const bloc = screen.getByLabelText('Groupes associés');
         fireEvent.click(within(bloc).getByRole('checkbox', { name: /Placer/ }));
-        const valider = within(bloc).getByRole('button', { name: /Valider/ });
-        expect(valider).toBeEnabled();
-        fireEvent.click(valider);
+        // Cocher place tout de suite, sans passer par Valider.
         expect(updateGroupParams).toHaveBeenCalledWith(3, expect.objectContaining({ offset: expect.any(Number) }));
+        expect(within(bloc).getByRole('button', { name: /Validé/ })).toBeInTheDocument();
     });
 
     it('à l\'ouverture, seul le tableau des groupes déterminants est déployé ; les autres chapitres montrent leur résumé', () => {
