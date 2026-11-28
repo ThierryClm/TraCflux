@@ -779,8 +779,8 @@ function App() {
         isOpen: suggestionCycleModal && !assistantDansLaPage,
         onClose: fermerSuggestionCycle,
         title: titreSuggestionCycle(activePFName),
-        width: 820,
-        height: 780
+        width: 600,
+        height: 900
     });
     // Analyse du diagramme : même principe, fenêtre détachée déplaçable sur un
     // autre écran, dans la page si le navigateur la bloque ou sur un téléphone.
