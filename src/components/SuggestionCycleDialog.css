@@ -1,6 +1,9 @@
 .suggestion-cycle .sc-intro { font-size: 0.9em; margin: 0 0 10px; line-height: 1.4; }
 .suggestion-cycle .sc-nb { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 0.9em; }
 .suggestion-cycle .sc-nb input[type="number"] { width: 60px; margin-left: 0; }
+.suggestion-cycle .sc-ligne-taux { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.suggestion-cycle .sc-enregistrer-phasage { padding: 3px 10px; font-size: 0.85em; margin: 0; }
+.suggestion-cycle .sc-enregistrer-phasage:disabled { opacity: 0.55; }
 .suggestion-cycle .sc-table { width: 100%; border-collapse: collapse; font-size: 0.88em; margin: 6px 0 10px; }
 .suggestion-cycle .sc-table th, .suggestion-cycle .sc-table td { border: 1px solid var(--md-separator, #555); padding: 4px 6px; text-align: center; }
 .suggestion-cycle .sc-table td input[type="number"] { width: 52px; margin-left: 0; padding: 3px 6px; }
@@ -49,11 +52,25 @@
 .suggestion-cycle .sc-associes h4 { margin: 10px 0 4px; font-size: 0.95em; }
 .suggestion-cycle .sc-associes .sc-gauche { text-align: left; }
 .suggestion-cycle .sc-associes .sc-source { font-size: 0.92em; }
-.suggestion-cycle .sc-a-verifier td { background: rgba(255, 152, 0, 0.12); }
 .suggestion-cycle .sc-badge { display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 0.85em; font-weight: bold; color: #fff; }
 .suggestion-cycle .sc-badge-matrice { background: #2e7d6f; }
 .suggestion-cycle .sc-badge-nom { background: #6d5bb7; }
 .suggestion-cycle .sc-badge-plan { background: #b07a1e; }
+.suggestion-cycle .sc-badge-saisi { background: #3f6d8c; }
+/* La déduction n'est plus qu'une explication quand les valeurs viennent du
+   diagramme : elle passe au second plan derrière le badge « Saisi ». */
+.suggestion-cycle .sc-badge-secondaire { opacity: 0.55; }
+.suggestion-cycle .sc-verif { margin-left: 6px; padding: 0 6px; border: 1px solid #ff9800; border-radius: 8px; font-size: 0.85em; color: #ffb74d; white-space: nowrap; }
+
+/* État du placement : une pastille par statut, rappelée par la légende. */
+.suggestion-cycle .sc-etat { display: inline-block; padding: 0 7px; border-radius: 8px; border: 1px solid; font-size: 0.9em; font-weight: bold; white-space: nowrap; }
+.suggestion-cycle .sc-etat-regle { background: rgba(76, 175, 80, 0.16); border-color: #4caf50; color: #81c784; }
+.suggestion-cycle .sc-etat-auto { background: rgba(33, 150, 243, 0.16); border-color: #2196f3; color: #64b5f6; }
+.suggestion-cycle .sc-etat-main { background: rgba(255, 152, 0, 0.14); border-color: #ff9800; color: #ffb74d; }
+.suggestion-cycle .sc-etat-maj { background: rgba(255, 193, 7, 0.16); border-color: #f0a500; color: #ffca28; }
+.suggestion-cycle .sc-legende { margin: 2px 0 6px; font-size: 0.82em; color: var(--md-muted, #aaa); line-height: 1.8; }
+.suggestion-cycle .sc-legende p { margin: 0; }
+.suggestion-cycle .sc-legende .sc-etat, .suggestion-cycle .sc-legende .sc-badge { margin-right: 4px; font-weight: normal; }
 .suggestion-cycle .sc-associes > button { margin-top: 6px; }
 
 .suggestion-cycle .sc-associes .sc-nom { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -161,3 +178,27 @@
 .suggestion-cycle .sc-valider.actif { background: #2e7d32; border-color: #2e7d32; color: #fff; font-weight: bold; }
 .suggestion-cycle .sc-valider.actif:hover { background: #c62828; border-color: #c62828; }
 .suggestion-cycle .sc-chapitre.valide { border-color: #2e7d32; }
+
+/* Mise à jour attendue : le bouton Valider clignote, comme le repère d'un
+   renvoi de l'aide, pour attirer l'œil sur l'action immédiate. */
+.sc-valider.attention {
+    outline: 2px solid #4ecdc4;
+    outline-offset: -2px;
+    animation: repere-valider 0.8s ease-in-out 3;
+}
+
+@keyframes repere-valider {
+    50% { background: rgba(78, 205, 196, 0.35); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sc-valider.attention { animation: none; }
+}
+
+/* Groupe sans aucune case de matrice : le placement suit la phase. */
+.sc-sans-sujetion {
+    margin-top: 2px;
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.7;
+}

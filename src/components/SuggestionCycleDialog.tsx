@@ -3,10 +3,11 @@ import type { ReactNode } from 'react';
 import Modal from './Modal';
 import type { Groupe, Matrice } from '../types/projet';
 import {
-    calculerSuggestionCycle, debutsDesPhases, nomCourt, degagementMatrice, detecterCheminCritique, placerGroupesAssocies, instantsPhasageBulle, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
+    calculerSuggestionCycle, debutsDesPhases, nomCourt, degagementMatrice, detecterCheminCritique, placerGroupesAssocies, instantsPhasageBulle, dizaineSuperieure, CYCLE_MAX_CONSEILLE, CYCLE_MIN_CONSEILLE,
     NB_PHASES_MAX, NB_PHASES_MIN, TAUX_VISE_DEFAUT,
 } from '../utils/suggestionCycle';
 import type { PhasageCycle } from '../utils/suggestionCycle';
+import { SATURATION_FLOW } from '../utils/capacityCalc';
 import { proposerAdaptatifs, PASSAGES_MAX, TAUX_VISE_ADAPTATIFS } from '../utils/adaptatifsVerticaux';
 import type { AdaptatifPropose, ModeAdaptatifs } from '../utils/adaptatifsVerticaux';
 import { proposerFermetures, SEUIL_CAPACITE_FERMETURE, PART_TEMPS_DISPONIBLE } from '../utils/fermeturesAnticipees';
@@ -15,6 +16,13 @@ import { proposerReposBus, indiceCodeTrajet, lireTmab, lireTmabX, variableTmab, 
 import type { ReposPropose } from '../utils/reposBus';
 import type { ActionMicro } from '../types/projet';
 import './SuggestionCycleDialog.css';
+
+// Libellés des badges de source : ils disent d'où vient la position proposée.
+const LIBELLE_SOURCE: Record<'matrice' | 'nom' | 'plan', string> = {
+    matrice: 'Matrice',
+    nom: 'Même voie',
+    plan: 'Flèche opposée',
+};
 
 export interface SuggestionCycleDialogProps {
     isOpen: boolean;
@@ -49,6 +57,10 @@ export interface SuggestionCycleDialogProps {
     /** Écrit une variable micro du plan (index, texte) : ajout de « TMABx = 10 » s'il manque. */
     setVariableMicro?: (index: number, value: string) => void;
     readOnly?: boolean;
+    /** L'assistant est-il ouvert sur le plan de feu actif ? Sinon, une validation le réactive d'abord. */
+    estPlanActif?: boolean;
+    /** Ramène le plan de feu qui a ouvert l'assistant au premier plan. */
+    demanderActivation?: () => void;
     /** Rendu dans une fenêtre détachée du navigateur (usePopupWindow), sans cadre de modale. */
     detachee?: boolean;
     /** Case « Assistant conception » de Mise en page → Infobulles. */
@@ -67,6 +79,10 @@ interface ValidationChapitre {
     /** Raison pour laquelle on ne peut pas (encore) valider ; absente si c'est possible. */
     motif?: string;
     basculer: () => void;
+    /** Libellé du bouton quand une mise à jour attend (ex. « Mettre à jour »). */
+    libelle?: string;
+    /** Fait clignoter le bouton : une action immédiate est attendue. */
+    attention?: boolean;
 }
 
 /**
@@ -87,12 +103,14 @@ const Chapitre = ({ tip, titre, resume, ouvert, basculer, validation, children }
                 {resume && <span className="sc-chapitre-resume" title={tip(typeof resume === 'string' ? resume : undefined)}>{resume}</span>}
             </button>
             {validation && (
-                <button type="button" className={`sc-valider${validation.valide ? ' actif' : ''}`} aria-pressed={validation.valide}
+                <button type="button" className={`sc-valider${validation.valide ? ' actif' : ''}${validation.attention ? ' attention' : ''}`} aria-pressed={validation.valide}
                     disabled={!validation.valide && !!validation.motif} onClick={validation.basculer}
-                    title={tip(validation.valide
-                        ? 'Invalider : le diagramme revient à son état d\'avant la validation'
-                        : validation.motif ?? 'Valider : la proposition s\'applique tout de suite au diagramme')}>
-                    {validation.valide ? '✓ Validé' : 'Valider'}
+                    title={tip(validation.libelle
+                        ? 'Les valeurs proposées ont changé : appliquer la mise à jour au diagramme'
+                        : validation.valide
+                            ? 'Invalider : le diagramme revient à son état d\'avant la validation'
+                            : validation.motif ?? 'Valider : la proposition s\'applique tout de suite au diagramme')}>
+                    {validation.libelle ?? (validation.valide ? '✓ Validé' : 'Valider')}
                 </button>
             )}
         </div>
@@ -128,6 +146,7 @@ const SuggestionCycleDialog = ({
     trafficDatasetName, phasageCycle, setPhasageCycle, setCycleLength,
     setPhasageBulleCount, setPhasageBulleTimes, updateGroupParams, intersectionArrows = [], ajouterActions, variablesMicro, setVariableMicro, readOnly = false, detachee = false,
     phasageBulleCount, phasageBulleTimes, actionData, tooltipsEnabled = true,
+    estPlanActif = true, demanderActivation,
 }: SuggestionCycleDialogProps) => {
     const tip = (text: string | undefined) => tooltipsEnabled ? text : undefined;
     const [remplirBulle, setRemplirBulle] = useState(true);
@@ -215,6 +234,28 @@ const SuggestionCycleDialog = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [complet, brouillon, groupesDonnees]);
 
+    // Capacité utilisée du déterminant de la phase i au cycle proposé, avec le
+    // vert que la répartition lui donne : c'est elle qui dit si le taux visé
+    // est tenu. Celle du diagramme actuel ne décrit que l'état de départ.
+    const capaciteProposee = (i: number) => {
+        const p = resultat?.phases[i];
+        const cycle = resultat?.cycleSuggere;
+        const vert = resultat?.verts[i];
+        if (!p || !p.trafic || !cycle || !vert) return null;
+        return (p.trafic * cycle) / (SATURATION_FLOW * (p.coefVoie || 1) * vert) * 100;
+    };
+
+    // Le plan garde-t-il déjà exactement ce phasage ? Le bouton se grise alors
+    // jusqu'à la prochaine modification : phase, dégagement ou taux visé.
+    const phasageIdentique = !!phasageCycle && complet
+        && phasageCycle.determinants.length === brouillon.determinants.length
+        && phasageCycle.determinants.every((d, i) => d === brouillon.determinants[i])
+        && brouillon.degagements.every((d, i) => {
+            const enregistre = phasageCycle.degagements[i];
+            return (Number.isFinite(enregistre) ? enregistre : 0) === (d.trim() === '' ? 0 : Number(d));
+        })
+        && (phasageCycle.tauxVise ?? TAUX_VISE_DEFAUT) === brouillon.tauxVise;
+
     const sansTrafic = resultat !== null && resultat.Y === 0;
     const calculable = resultat !== null && resultat.degagementsManquants.length === 0 && !sansTrafic;
     const horsBornes = (c: number | null) => c !== null && (c < CYCLE_MIN_CONSEILLE || c > CYCLE_MAX_CONSEILLE);
@@ -245,15 +286,48 @@ const SuggestionCycleDialog = ({
     // Groupes associés placés par « Appliquer le cycle » : ceux qui n'ont pas
     // encore de vert et dont la déduction est sûre. Les groupes déjà réglés ne
     // sont jamais touchés ; ceux « à vérifier » restent à placer à la main.
-    const statutPlacement = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }) => {
+    type StatutPlacement = 'auto' | 'maj' | 'regle' | 'main';
+    const LIBELLE_ETAT: Record<StatutPlacement, string> = {
+        auto: 'avec le cycle',
+        maj: 'à mettre à jour',
+        regle: 'déjà réglé',
+        main: 'à la main',
+    };
+    const statutPlacement = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }): StatutPlacement => {
         const g = groups.find(gr => gr.id === p.id);
         const cycleRef = resultat?.cycleSuggere ?? cycleLength;
-        // Un groupe déjà réglé reste tel quel, sauf s'il déborde le cycle
-        // proposé : il est alors replacé avec le cycle.
-        if (g && g.durations?.green > 0 && (Number(g.offset) || 0) + g.durations.green <= cycleRef) return 'regle' as const;
-        return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' as const : 'main' as const;
+        if (g && g.durations?.green > 0 && (Number(g.offset) || 0) + g.durations.green <= cycleRef) {
+            // Un groupe déjà placé n'est « réglé » que si sa position correspond
+            // encore à la proposition. Après un changement de trafic ou de cycle,
+            // les valeurs recalculées diffèrent : il est à mettre à jour.
+            const memeOffset = ((Math.round(Number(g.offset) || 0) % cycleRef) + cycleRef) % cycleRef === ((p.debut % cycleRef) + cycleRef) % cycleRef;
+            const memeVert = g.durations.green === p.fin - p.debut;
+            return memeOffset && memeVert || p.aVerifier ? 'regle' : 'maj';
+        }
+        return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' : 'main';
     };
-    const aPlacer = placements.filter(p => statutPlacement(p) === 'auto');
+    // Groupe dont le vert est déjà inscrit dans le diagramme : ses valeurs
+    // viennent d'une saisie (ou d'un placement déjà validé), pas de la
+    // déduction affichée à côté, qui n'est plus qu'une explication.
+    const saisi = (id: number) => {
+        const g = groups.find(gr => gr.id === id);
+        const cycleRef = resultat?.cycleSuggere ?? cycleLength;
+        return !!g && (Number(g.durations?.green) || 0) > 0
+            && (Number(g.offset) || 0) + g.durations.green <= cycleRef;
+    };
+    // Groupes « à la main » : cocher leur case les place tout de suite, malgré
+    // une déduction incertaine.
+    const estCochable = (p: typeof placements[number]) => statutPlacement(p) === 'main' && p.fin > p.debut;
+    // Un groupe dont la ligne et la colonne de matrice sont vides n'a aucune
+    // sujétion de temps : l'assistant le place avec la phase, et le dit.
+    const sansSujetion = (id: number) => {
+        const renseignee = (v: unknown) => v !== '' && v !== null && v !== undefined && !Number.isNaN(Number(v));
+        const ligne = conflictMatrix[id - 1] ?? [];
+        const colonne = conflictMatrix.map(r => r?.[id - 1]);
+        return ![...ligne, ...colonne].some(renseignee);
+    };
+    const aPlacer = placements.filter(p => ['auto', 'maj'].includes(statutPlacement(p)));
+    const aMettreAJour = placements.filter(p => statutPlacement(p) === 'maj');
     // Adaptatifs verticaux proposés, un par phase, sur la disposition prévue :
     // diagramme actuel, déterminants proposés et groupes placés avec le cycle.
     const [modeAV, setModeAV] = useState<ModeAdaptatifs>('iteratif');
@@ -395,11 +469,16 @@ const SuggestionCycleDialog = ({
     });
     const basculer = (id: IdChapitre) => () => setOuverts(o => ({ ...o, [id]: !o[id] }));
     const resumePhases = `${nbPhases} phases : ${brouillon.determinants.map(d => (d === null ? '—' : court(d))).join(', ')} · taux visé ${brouillon.tauxVise} %`;
+    const saturationImpose = resultat != null && resultat.cycleSuggere !== null && resultat.websterExact !== null
+        && resultat.cycleSuggere > dizaineSuperieure(resultat.websterExact);
     const resumeCycle = resultat && calculable && resultat.cycleSuggere
-        ? `cycle proposé ${resultat.cycleSuggere} s (Webster ${fmt(resultat.websterExact ?? 0, 1)} s)${resultat.sature ? ' · saturé' : ''}`
+        ? `cycle proposé ${resultat.cycleSuggere} s (${saturationImpose
+            ? `saturation ${brouillon.tauxVise} %`
+            : `Webster ${fmt(resultat.websterExact ?? 0, 1)} s`})${resultat.sature ? ' · saturé' : ''}`
         : undefined;
-    const compte = (statut: 'auto' | 'main' | 'regle') => placements.filter(p => statutPlacement(p) === statut).length;
+    const compte = (statut: StatutPlacement) => placements.filter(p => statutPlacement(p) === statut).length;
     const resumeAssocies = [
+        compte('maj') ? `${compte('maj')} à mettre à jour` : '',
         compte('auto') ? `${compte('auto')} avec le cycle` : '',
         compte('main') ? `${compte('main')} à la main` : '',
         compte('regle') ? `${compte('regle')} déjà réglé${compte('regle') > 1 ? 's' : ''}` : '',
@@ -601,11 +680,23 @@ const SuggestionCycleDialog = ({
         fermetures: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !faUtiles.length ? 'Aucune fermeture à inscrire' : undefined,
         repos: !cycleEnPlace ? 'Validez d\'abord la durée de cycle' : !reposBus.length ? 'Aucun groupe avec un code trajet (DA)' : undefined,
     };
-    const validation = (id: IdChapitre): ValidationChapitre | undefined => (readOnly ? undefined : {
-        valide: valides[id],
-        motif: motifs[id],
-        basculer: () => (valides[id] ? retirerChapitre(id) : appliquerChapitre(id)),
-    });
+    const validation = (id: IdChapitre): ValidationChapitre | undefined => {
+        if (readOnly) return undefined;
+        // Groupes associés : des valeurs recalculées attendent d'être appliquées.
+        if (id === 'associes' && aMettreAJour.length) {
+            return {
+                valide: valides.associes,
+                basculer: () => executerChapitre('associes'),
+                libelle: 'Mettre à jour',
+                attention: true,
+            };
+        }
+        return {
+            valide: valides[id],
+            motif: motifs[id],
+            basculer: () => executerChapitre(id),
+        };
+    };
 
     // « Appliquer le cycle » : valide d'un coup tous les chapitres qui ont
     // quelque chose à appliquer, dans l'ordre (le cycle avant ce qui en dépend).
@@ -619,6 +710,46 @@ const SuggestionCycleDialog = ({
             setAvInscrits([...lignesChapitre.adaptatifs, ...lignesChapitre.fermetures, ...lignesChapitre.repos].map(l => String(l.abrv)));
         }
     };
+
+    // Une validation alors qu'un autre plan est affiché : on ramène d'abord le
+    // plan de l'assistant au premier plan, puis on applique au rendu suivant,
+    // avec les fonctions à jour (le plan synchronisé).
+    type Ordre = { type: 'chapitre'; id: IdChapitre } | { type: 'appliquer' } | { type: 'placer'; id: number };
+    const ordreEnAttente = useRef<Ordre | null>(null);
+    const actionsCourantes = useRef<(ordre: Ordre) => void>(() => {});
+    const placerMain = (id: number) => {
+        const p = placements.find(x => x.id === id);
+        if (!p || p.fin <= p.debut) return;
+        const a = avant.current;
+        a.associes = [...(a.associes ?? []), ...(a.associes?.some(x => x.id === id) ? [] : [{
+            id, offset: Number(groups.find(g => g.id === id)?.offset) || 0,
+            vert: Number(groups.find(g => g.id === id)?.durations?.green) || 0,
+        }])];
+        updateGroupParams(id, { offset: p.debut, durations: { green: p.fin - p.debut } });
+        appliques.current.associes = signatures.associes;
+        setValides(v => ({ ...v, associes: true }));
+    };
+    actionsCourantes.current = ordre => {
+        if (ordre.type === 'appliquer') appliquer();
+        else if (ordre.type === 'placer') placerMain(ordre.id);
+        else if (valides[ordre.id]) retirerChapitre(ordre.id);
+        else appliquerChapitre(ordre.id);
+    };
+    const lancer = (ordre: Ordre) => {
+        if (estPlanActif) { actionsCourantes.current(ordre); return; }
+        ordreEnAttente.current = ordre;
+        demanderActivation?.();
+    };
+    const executerChapitre = (id: IdChapitre) => lancer({ type: 'chapitre', id });
+    const executerGlobal = () => lancer({ type: 'appliquer' });
+    useEffect(() => {
+        if (!estPlanActif || !ordreEnAttente.current) return;
+        const ordre = ordreEnAttente.current;
+        ordreEnAttente.current = null;
+        // Laisse le plan réactivé se synchroniser (groupes, cycle) avant d'écrire.
+        const t = setTimeout(() => actionsCourantes.current(ordre), 0);
+        return () => clearTimeout(t);
+    }, [estPlanActif]);
 
     const corps = (
         <>
@@ -655,7 +786,8 @@ const SuggestionCycleDialog = ({
 
             <table className="sc-table">
                 <thead>
-                    <tr><th>Phase</th><th>Groupe déterminant</th><th>Trafic (uvp/h)</th><th>Coef. voie</th><th>Cap. U</th><th>y</th>
+                    <tr><th>Phase</th><th>Groupe déterminant</th><th>Trafic (uvp/h)</th><th>Coef. voie</th>
+                        <th title={tip("Au cycle proposé et avec le vert proposé ; la valeur du diagramme actuel est rappelée au survol")}>Cap. U prévue</th><th>y</th>
                         <th>Vert mini</th><th>Dégagement vers la phase suivante</th></tr>
                 </thead>
                 <tbody>
@@ -664,6 +796,12 @@ const SuggestionCycleDialog = ({
                         const g = det !== null ? groupesDonnees.find(x => x.id === det) : undefined;
                         const manque = brouillon.degagements[i].trim() === '';
                         const suivante = (i + 1) % nbPhases + 1;
+                        const uPrevue = det !== null ? capaciteProposee(i) : null;
+                        const uActuelle = det !== null ? chemin?.capaciteUtilisee[det] : undefined;
+                        const infobulleCap = uPrevue !== null
+                            ? `Cycle proposé de ${resultat?.cycleSuggere} s, vert proposé de ${resultat?.verts[i]} s`
+                                + (uActuelle !== undefined ? ` ; diagramme actuel : ${Math.round(uActuelle)} %` : '')
+                            : undefined;
                         return (
                             <tr key={i}>
                                 <td>{i + 1}</td>
@@ -676,7 +814,11 @@ const SuggestionCycleDialog = ({
                                 </td>
                                 <td>{g ? g.trafic : ''}</td>
                                 <td>{g ? g.coefVoie : ''}</td>
-                                <td>{det !== null && chemin?.capaciteUtilisee[det] !== undefined ? `${Math.round(chemin.capaciteUtilisee[det])} %` : ''}</td>
+                                <td title={tip(infobulleCap)}>
+                                    {uPrevue !== null
+                                        ? <span className={uPrevue > brouillon.tauxVise ? 'sc-depasse' : ''}>{Math.round(uPrevue)} %</span>
+                                        : (uActuelle !== undefined ? `${Math.round(uActuelle)} %` : '')}
+                                </td>
                                 <td>{p ? fmt(p.y) : ''}</td>
                                 <td>{g ? `${g.vertMini} s` : ''}</td>
                                 <td className={manque && det !== null ? 'sc-manque' : ''}>
@@ -695,11 +837,21 @@ const SuggestionCycleDialog = ({
                 </tbody>
             </table>
 
-            <label className="sc-nb">
-                Taux de saturation visé :
-                <input type="number" min={50} max={99} value={brouillon.tauxVise} aria-label="Taux de saturation visé"
-                    onChange={e => setBrouillon(b => ({ ...b, tauxVise: Math.max(50, Math.min(99, parseInt(e.target.value, 10) || TAUX_VISE_DEFAUT)) }))} /> %
-            </label>
+            <div className="sc-ligne-taux">
+                <label className="sc-nb">
+                    Taux de saturation visé :
+                    <input type="number" min={50} max={99} value={brouillon.tauxVise} aria-label="Taux de saturation visé"
+                        onChange={e => setBrouillon(b => ({ ...b, tauxVise: Math.max(50, Math.min(99, parseInt(e.target.value, 10) || TAUX_VISE_DEFAUT)) }))} /> %
+                </label>
+                <button type="button" className="modal-btn modal-btn-secondary sc-enregistrer-phasage"
+                    disabled={!complet || readOnly || phasageIdentique}
+                    title={tip(phasageIdentique
+                        ? 'Le plan de feu garde ce phasage ; le bouton redevient actif dès qu’une phase, un dégagement ou le taux change.'
+                        : 'Garder ces groupes déterminants avec le plan de feu (ils servent aussi au phasage bulle)')}
+                    onClick={() => executerChapitre('phases')}>
+                    {phasageIdentique ? 'Phasage enregistré' : 'Enregistrer le phasage'}
+                </button>
+            </div>
             </Chapitre>
 
             {!complet && <p className="sc-attente">Choisissez un groupe déterminant pour chaque phase.</p>}
@@ -716,10 +868,16 @@ const SuggestionCycleDialog = ({
                         <ul>
                             <li>Cycle minimal (saturation à 100 %) : <b>{resultat.cycleMinimal} s</b></li>
                             <li>Cycle optimal de Webster (1,5 L + 5) / (1 − Y) : {fmt(resultat.websterExact ?? 0, 1)} s,
-                                soit un <b>cycle proposé de {resultat.cycleSuggere} s</b> (dizaine supérieure)
+                                soit un <b>cycle proposé de {resultat.cycleSuggere} s</b> (arrondi à la dizaine supérieure)
                                 {horsBornes(resultat.cycleSuggere) && <span className="sc-alerte"> hors de la plage usuelle {CYCLE_MIN_CONSEILLE}–{CYCLE_MAX_CONSEILLE} s</span>}</li>
                             <li>Cycle pour une saturation de {brouillon.tauxVise} % : <b>{resultat.cycleTauxVise ?? '—'}{resultat.cycleTauxVise !== null ? ' s' : ''}</b></li>
                         </ul>
+                    )}
+                    {resultat.cycleTauxVise !== null && resultat.websterExact !== null && resultat.cycleTauxVise > resultat.websterExact && (
+                        <p className="sc-note">
+                            Le cycle de saturation dépasse celui de Webster : c'est lui qui est proposé, pour garder chaque
+                            déterminant sous {brouillon.tauxVise} % de capacité utilisée.
+                        </p>
                     )}
                     {resultat.cycleWebster !== null && (
                         <p>Verts proposés pour {resultat.cycleSuggere} s :{' '}
@@ -737,22 +895,54 @@ const SuggestionCycleDialog = ({
                 <div className="sc-associes">
                     {resultat?.cycleSuggere ? <p className="sc-note">Calés sur le cycle proposé de {resultat.cycleSuggere} s.</p> : null}
                     <table className="sc-table">
-                        <thead><tr><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th><th>Placement</th></tr></thead>
+                        <thead><tr><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th><th>Placer</th><th>Placement</th></tr></thead>
                         <tbody>
                             {placements.map(p => (
-                                <tr key={p.id} className={p.aVerifier ? 'sc-a-verifier' : ''}>
+                                <tr key={p.id}>
                                     <td className="sc-gauche sc-nom" title={tip(nomGroupe(p.id))}>GF{p.id} {nomGroupe(p.id)}</td>
                                     <td>{p.phases.length ? p.phases.map(i => i + 1).join(', ') : '—'}</td>
                                     <td className="sc-insecable">{p.fin > p.debut ? `${p.debut} – ${p.fin} s` : '—'}</td>
                                     <td className="sc-gauche sc-source">
-                                        {p.source && <span className={`sc-badge sc-badge-${p.source}`}>{p.source === 'matrice' ? 'Matrice' : p.source === 'nom' ? 'Nom' : 'Plan'}</span>}
-                                        {' '}{p.explication}{p.aVerifier ? ' — à vérifier' : ''}
+                                        {saisi(p.id) && <span className="sc-badge sc-badge-saisi">Saisi</span>}
+                                        {saisi(p.id) && p.source && ' '}
+                                        {p.source && <span className={`sc-badge sc-badge-${p.source}${saisi(p.id) ? ' sc-badge-secondaire' : ''}`}>{LIBELLE_SOURCE[p.source]}</span>}
+                                        {' '}{p.explication}
+                                        {p.aVerifier && <span className="sc-verif">à vérifier</span>}
+                                        {sansSujetion(p.id) && (
+                                            <div className="sc-sans-sujetion">Aucune sujétion de temps : placé avec la phase.</div>
+                                        )}
                                     </td>
-                                    <td className="sc-insecable">{{ auto: 'avec le cycle', regle: 'déjà réglé', main: 'à la main' }[statutPlacement(p)]}</td>
+                                    <td className="sc-insecable">
+                                        {estCochable(p) ? (
+                                            <input type="checkbox" checked={false}
+                                                aria-label={`Placer ${nomGroupe(p.id)}`}
+                                                title={tip(p.aVerifier
+                                                    ? 'Déduction à vérifier : cochez pour l’appliquer tout de suite ; elle peut ne pas respecter tous les dégagements.'
+                                                    : 'Cocher pour placer ce groupe tout de suite avec le cycle proposé.')}
+                                                onChange={e => { if (e.target.checked) lancer({ type: 'placer', id: p.id }); }} />
+                                        ) : '—'}
+                                    </td>
+                                    <td className="sc-insecable">
+                                        <span className={`sc-etat sc-etat-${statutPlacement(p)}`}>{LIBELLE_ETAT[statutPlacement(p)]}</span>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    <div className="sc-legende">
+                        <p>
+                            <span className="sc-etat sc-etat-regle">déjà réglé</span> valeurs du diagramme, conformes à la proposition ·
+                            <span className="sc-etat sc-etat-maj">à mettre à jour</span> valeurs du diagramme, différentes de la proposition ·
+                            <span className="sc-etat sc-etat-auto">avec le cycle</span> inscrit par « Appliquer le cycle » ·
+                            <span className="sc-etat sc-etat-main">à la main</span> déduction incertaine, à cocher pour placer
+                        </p>
+                        <p>
+                            <span className="sc-badge sc-badge-saisi">Saisi</span> valeurs entrées dans le diagramme ·
+                            <span className="sc-badge sc-badge-matrice">Matrice</span> temps interverts ·
+                            <span className="sc-badge sc-badge-nom">Même voie</span> libellé commun ·
+                            <span className="sc-badge sc-badge-plan">Flèche opposée</span> sens opposé sur l’image
+                        </p>
+                    </div>
                     <p className="sc-note">
                         « Appliquer le cycle » règle d'abord la durée du cycle, puis inscrit dans le diagramme les groupes
                         « avec le cycle ». Les groupes déjà réglés ne sont pas modifiés ; ceux
@@ -906,17 +1096,13 @@ const SuggestionCycleDialog = ({
 
             <div className="modal-actions">
                 <button className="modal-btn modal-btn-secondary" onClick={onClose}>Fermer</button>
-                <button className="modal-btn modal-btn-secondary" disabled={!complet || readOnly} onClick={() => appliquerChapitre('phases')}
-                    title={tip("Garder ces groupes déterminants avec le plan de feu (ils servent aussi au phasage bulle)")}>
-                    Enregistrer le phasage
-                </button>
                 <button className="modal-btn modal-btn-primary"
                     disabled={!calculable || resultat?.cycleSuggere == null || readOnly}
                     title={tip(['Règle la durée du cycle du plan',
                         aPlacer.length ? `place ${aPlacer.length} groupe${aPlacer.length > 1 ? 's' : ''} associé${aPlacer.length > 1 ? 's' : ''}` : '',
                         avUtiles.length || faUtiles.length || reposBus.length
                             ? `inscrit ${[...avUtiles.map(a => `AV${a.phase}`), ...faUtiles.map((_, k) => `FA${k + 1}`), ...reposBus.map(() => 'Att bus')].join(', ')}` : ''].filter(Boolean).join(', puis '))}
-                    onClick={appliquer}>
+                    onClick={executerGlobal}>
                     Appliquer le cycle{calculable && resultat?.cycleSuggere ? ` (${resultat.cycleSuggere} s)` : ''}
                 </button>
             </div>

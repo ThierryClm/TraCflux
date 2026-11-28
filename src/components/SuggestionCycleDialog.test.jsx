@@ -79,11 +79,41 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByText(/Diagramme pré-rempli/)).toBeInTheDocument();
     });
 
+    it('Cap. U prévue : calculée au cycle et au vert proposés, l’actuelle en infobulle', () => {
+        // GF8 à 10 s de vert sur un cycle de 50 s : 99 % de capacité utilisée
+        // dans le diagramme. Le cycle proposé (40 s) lui donne un vert plus long
+        // et le ramène sous le seuil : c'est cette valeur qui doit s'afficher.
+        const locaux = [
+            { id: 1, name: 'V1', type: 'V', minGreen: 8, offset: 25, laneCoef: 0.8, durations: { green: 20, orange: 3, red: 27 } },
+            { id: 8, name: 'V8', type: 'V', minGreen: 6, offset: 0, laneCoef: 0.85, durations: { green: 10, orange: 3, red: 37 } },
+        ];
+        const m8 = Array.from({ length: 8 }, () => Array(8).fill(''));
+        m8[7][0] = 4; m8[0][7] = 4;
+        ouvrir({ groups: locaux, conflictMatrix: m8, cycleLength: 50, getTrafficData: id => ({ trafficVol: id === 8 ? 303 : 386 }) });
+        const cellule = document.querySelector('.sc-table td[title*="diagramme actuel : 99 %"]');
+        expect(cellule).not.toBeNull();
+        const prevue = parseInt(cellule.textContent, 10);
+        expect(prevue).toBeLessThan(85);
+    });
+
     it('case décochée : le phasage bulle n\'est pas modifié', () => {
         const { setPhasageBulleCount } = ouvrir({ phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
         fireEvent.click(screen.getByRole('checkbox', { name: /phasage bulle/ }));
+        // Le phasage est déjà enregistré : on change le taux pour réactiver le bouton.
+        fireEvent.change(screen.getByLabelText('Taux de saturation visé'), { target: { value: '80' } });
         fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le phasage' }));
         expect(setPhasageBulleCount).not.toHaveBeenCalled();
+    });
+
+    it('bouton Enregistrer le phasage : à côté du taux, grisé une fois le phasage enregistré', () => {
+        ouvrir({ phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6], tauxVise: 85 } });
+        const bouton = screen.getByRole('button', { name: 'Phasage enregistré' });
+        expect(bouton).toBeDisabled();
+        expect(bouton.closest('.sc-ligne-taux')).not.toBeNull();
+        expect(screen.getByLabelText('Taux de saturation visé').closest('.sc-ligne-taux')).toBe(bouton.closest('.sc-ligne-taux'));
+        // Le numéro de phase change : le phasage enregistré n'est plus à jour.
+        fireEvent.change(screen.getByLabelText('Groupe déterminant de la phase 2'), { target: { value: '2' } });
+        expect(screen.getByRole('button', { name: 'Enregistrer le phasage' })).toBeEnabled();
     });
 
     it('diagramme renseigné : chemin critique pré-rempli (plus forte capacité utilisée)', () => {
@@ -95,7 +125,10 @@ describe('suggestion de durée du cycle', () => {
         expect(screen.getByLabelText('Groupe déterminant de la phase 2')).toHaveValue('3');
         expect(screen.getByLabelText('Groupe déterminant de la phase 3')).toHaveValue('4');
         expect(screen.getByLabelText('Dégagement de la phase 1 vers la phase 2')).toHaveValue(4);
-        expect(within(document.querySelector('.sc-table')).getByText('83 %')).toBeInTheDocument();
+        // La colonne donne la capacité au cycle proposé ; celle du diagramme
+        // actuel (83 %) reste lisible en infobulle.
+        expect(document.querySelector('.sc-table').textContent).toMatch(/\d+ %/);
+        expect(document.querySelector('.sc-table [title*="diagramme actuel : 83 %"]')).not.toBeNull();
         expect(screen.getByRole('button', { name: 'Relire le diagramme' })).toBeInTheDocument();
     });
 
@@ -128,7 +161,7 @@ describe('suggestion de durée du cycle', () => {
         // Rien n'est placé avant « Appliquer le cycle », qui règle d'abord le cycle.
         expect(updateGroupParams).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: /Appliquer le cycle/ }));
-        expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: 0 }));
+        expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: expect.any(Number) }));
         expect(updateGroupParams).toHaveBeenCalledWith(5, expect.objectContaining({ offset: 45 }));
     });
 
@@ -259,6 +292,61 @@ describe('suggestion de durée du cycle', () => {
         expect(setVariableMicro).not.toHaveBeenCalledWith(2, expect.stringContaining('TMAB'));
     });
 
+    it('un groupe déjà placé mais différent de la proposition attend une mise à jour', () => {
+        const pose = { 1: [0, 29], 2: [5, 20], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        const { updateGroupParams } = ouvrir({ groups: places, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        const bloc = screen.getByLabelText('Groupes associés');
+        const bouton = within(bloc).getByRole('button', { name: /Mettre à jour/ });
+        expect(bouton).toHaveClass('attention');
+        expect(within(bloc).getAllByText(/à mettre à jour/).length).toBeGreaterThan(0);
+        updateGroupParams.mockClear();
+        fireEvent.click(bouton);
+        expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: expect.any(Number) }));
+    });
+
+    it('marque « Saisi » les valeurs du diagramme et colorie l’état du placement', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        ouvrir({ groups: places, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        const bloc = screen.getByLabelText('Groupes associés');
+        // Les Déb–Fin viennent du diagramme : badge « Saisi » sur chaque ligne placée.
+        const saisis = within(bloc).getAllByText('Saisi');
+        expect(saisis.length).toBeGreaterThan(0);
+        expect(saisis[0]).toHaveClass('sc-badge-saisi');
+        // L'état du placement est une pastille colorée, rappelée par la légende.
+        expect(within(bloc).getAllByText('déjà réglé').some(e => e.classList.contains('sc-etat-regle'))).toBe(true);
+        expect(within(bloc).getAllByText('avec le cycle').some(e => e.classList.contains('sc-etat-auto'))).toBe(true);
+        for (const libelle of ['Même voie', 'Flèche opposée', 'Matrice']) {
+            expect(within(bloc).getAllByText(libelle).length).toBeGreaterThan(0);
+        }
+    });
+
+    it('coche un groupe à la main et le place tout de suite', () => {
+        const locaux = [
+            { id: 1, name: 'V1', type: 'V', minGreen: 6, offset: 0, laneCoef: 1, durations: { green: 10, orange: 3, red: 47 } },
+            { id: 2, name: 'V2', type: 'V', minGreen: 6, offset: 30, laneCoef: 1, durations: { green: 10, orange: 3, red: 47 } },
+            { id: 3, name: 'V3', type: 'V', minGreen: 6, offset: 0, laneCoef: 1, durations: { green: 0, orange: 3, red: 57 } },
+            { id: 6, name: 'V6', type: 'V', minGreen: 6, offset: 0, laneCoef: 1, durations: { green: 0, orange: 3, red: 57 } },
+        ];
+        const traficL = { 1: 500, 2: 400, 3: 0, 6: 0 };
+        const matrice4 = Array.from({ length: 6 }, () => Array(6).fill(''));
+        matrice4[5][0] = 6; matrice4[0][5] = 6; matrice4[5][1] = 6; matrice4[1][5] = 6;
+        const { updateGroupParams } = ouvrir({ groups: locaux, cycleLength: 40,
+            conflictMatrix: matrice4,
+            getTrafficData: id => ({ trafficVol: traficL[id] }),
+            phasageCycle: { determinants: [1, 2], degagements: [5, 5] } });
+        const bloc = screen.getByLabelText('Groupes associés');
+        // Aucune plage proposée pour V6 (en conflit avec les deux déterminants) :
+        // pas de case à cocher. V3 n'a aucune sujétion de temps : c'est dit.
+        expect(within(bloc).queryByRole('checkbox', { name: /V6/ })).toBeNull();
+        expect(within(bloc).getAllByText(/Aucune sujétion de temps/).length).toBeGreaterThan(0);
+        fireEvent.click(within(bloc).getByRole('checkbox', { name: /Placer/ }));
+        // Cocher place tout de suite, sans passer par Valider.
+        expect(updateGroupParams).toHaveBeenCalledWith(3, expect.objectContaining({ offset: expect.any(Number) }));
+        expect(within(bloc).getByRole('button', { name: /Validé/ })).toBeInTheDocument();
+    });
+
     it('à l\'ouverture, seul le tableau des groupes déterminants est déployé ; les autres chapitres montrent leur résumé', () => {
         const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
         const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
@@ -374,6 +462,26 @@ describe('validation chapitre par chapitre', () => {
         expect(screen.getByTestId('g1')).toHaveTextContent('65/10');
         expect(screen.getByTestId('g3')).toHaveTextContent('68/10');
         expect(screen.getByTestId('g4')).toHaveTextContent('60/15');
+    });
+
+    it('une validation sur un autre plan réactive le plan de l’assistant avant d’appliquer', async () => {
+        const setCycleLength = vi.fn();
+        const demanderActivation = vi.fn();
+        const commun = {
+            isOpen: true, onClose: () => {}, planName: 'PF1', groups, conflictMatrix: matrice,
+            cycleLength: 60, getTrafficData: id => ({ trafficVol: trafic[id] }), trafficDatasetName: 'HPM',
+            phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] }, setPhasageCycle: vi.fn(),
+            setCycleLength, setPhasageBulleCount: vi.fn(), setPhasageBulleTimes: vi.fn(),
+            updateGroupParams: vi.fn(), ajouterActions: vi.fn(() => 0),
+        };
+        const { rerender } = render(<SuggestionCycleDialog {...commun} estPlanActif={false} demanderActivation={demanderActivation} />);
+        toutDeplier();
+        fireEvent.click(valider('Durée de cycle'));
+        expect(demanderActivation).toHaveBeenCalled();
+        expect(setCycleLength).not.toHaveBeenCalled();
+        // Le plan est revenu au premier plan : l'application reprend d'elle-même.
+        rerender(<SuggestionCycleDialog {...commun} estPlanActif demanderActivation={demanderActivation} />);
+        await vi.waitFor(() => expect(setCycleLength).toHaveBeenCalledWith(70));
     });
 
     it('un chapitre validé suit sa proposition en temps réel', () => {

@@ -31,6 +31,21 @@ describe('suggestion de durée du cycle', () => {
         expect(r.verts.reduce((a, b) => a + b, 0) + r.L).toBe(70);
     });
 
+    it('cycle proposé : le cycle de saturation l\'emporte quand Webster laisserait dépasser le seuil', () => {
+        // Y = 0,8 et L = 10 s : Webster donne 100 s, où chaque phase serait à
+        // 100 % de capacité utilisée ; le seuil de 85 % demande 170 s.
+        const trafics = [
+            { id: 1, nom: 'V1', trafic: 720, coefVoie: 1, vertMini: 6 },
+            { id: 2, nom: 'V2', trafic: 720, coefVoie: 1, vertMini: 6 },
+        ];
+        const r = calculerSuggestionCycle({ determinants: [1, 2], degagements: [5, 5], tauxVise: 85 }, trafics);
+        expect(r.cycleWebster).toBe(100);
+        expect(r.cycleTauxVise).toBe(170);
+        expect(r.cycleSuggere).toBe(170);
+        // Chaque déterminant reste sous le taux visé avec son vert proposé.
+        r.phases.forEach((p, i) => expect((p.y * 170) / r.verts[i]).toBeLessThanOrEqual(0.85));
+    });
+
     it('un dégagement manquant est signalé', () => {
         const r = calculerSuggestionCycle({ determinants: [1, 3, 4], degagements: [null, 6, 6] }, groupes);
         expect(r.degagementsManquants).toEqual([0]);
@@ -102,6 +117,20 @@ describe('chemin critique lu sur le diagramme', () => {
         expect(Math.round(c.capaciteUtilisee[1])).toBe(83);
     });
 
+    it('une traversée plus longue que sa phase y reste rattachée (pas de phase piéton parasite)', () => {
+        // Piéton 2–21 s (19 s) accompagnant la phase 0–10 s : il la recouvre
+        // sur 8 s, plus de la moitié du vert de la phase. Comparé à son propre
+        // vert, il formait une troisième phase dont il était le déterminant.
+        const g = [
+            { id: 2, offset: 0, vert: 10, jaune: 3, vertMini: 6, trafic: 230, coefVoie: 1 },
+            { id: 1, offset: 25, vert: 20, jaune: 3, vertMini: 8, trafic: 386, coefVoie: 1 },
+            { id: 7, offset: 2, vert: 19, jaune: 10, vertMini: 8, trafic: 0, coefVoie: 1 },
+        ];
+        const c = detecterCheminCritique(g, undefined, 50);
+        expect(c.phases).toEqual([[2, 7], [1]]);
+        expect(c.determinants).toEqual([2, 1]);
+    });
+
     it('une phase de piétons seuls est déterminante, par sa traversée la plus défavorable', () => {
         const g = [G(1, 0, 30, 3, 8, 600), G(4, 40, 20, 3, 8, 380), G(6, 66, 10, 8, 7, 0), G(7, 66, 10, 10, 8, 0)];
         const c = detecterCheminCritique(g, M, 80);
@@ -144,6 +173,25 @@ describe('placement des groupes associés', () => {
         expect(p[2].source).toBe('matrice');
         expect(p[2].explication).toContain('V2→B3 4 s');
         expect(Object.values(p).every(x => !x.aVerifier)).toBe(true);
+    });
+
+    it('un dégagement qui boucle contraint le début du groupe', () => {
+        // GF1 est placé en phase 2 et finit à 48 s ; la matrice donne GF1→GF7 8 s,
+        // soit un début de GF7 à 56 s, ramené à 6 s : dans la fenêtre de la phase 1.
+        const M = Array.from({ length: 7 }, () => Array(7).fill(''));
+        M[0][1] = 6;  // GF1 ↔ GF2
+        M[0][6] = 8;  // GF1 → GF7
+        M[6][0] = 6;  // GF7 → GF1
+        M[6][3] = 6;  // GF7 → GF4
+        const locaux = [
+            { id: 1, nom: 'GF1', offset: 0, vert: 0, vertMini: 8, trafic: 500 },
+            { id: 2, nom: 'GF2', offset: 0, vert: 0, vertMini: 8, trafic: 500 },
+            { id: 4, nom: 'GF4', offset: 0, vert: 0, vertMini: 8, trafic: 400 },
+            { id: 7, nom: 'GF7', offset: 0, vert: 0, vertMini: 6, trafic: 0 },
+        ];
+        const dets = [{ id: 2, debut: 0, fin: 20 }, { id: 4, debut: 40, fin: 48 }];
+        const p = placerGroupesAssocies(locaux, dets, M, 50).find(x => x.id === 7);
+        expect(p.debut).toBe(2);
     });
 
     it('la voie se lit dans le nom', () => {

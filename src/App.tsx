@@ -754,6 +754,13 @@ function App() {
     // Suggestion de durée du cycle (menu Diagramme) : possible dès que le plan
     // affiché a du trafic dans son jeu.
     const [suggestionCycleModal, setSuggestionCycleModal] = useState(false);
+    // Plan de feu qui a ouvert l'assistant : il y reste attaché, même si l'on
+    // consulte un autre onglet de plan.
+    const [pfAssistantId, setPfAssistantId] = useState<number | null>(null);
+    const fermerSuggestionCycle = useCallback(() => {
+        setSuggestionCycleModal(false);
+        setPfAssistantId(null);
+    }, []);
     const [analyseDiagrammeModal, setAnalyseDiagrammeModal] = useState(false);
     // Seuils de l'analyse : préférence d'application, relue dans le stockage local.
     const [seuilsAnalyse, setSeuilsAnalyse] = useState<SeuilsAnalyse>(chargerSeuilsAnalyse);
@@ -770,10 +777,10 @@ function App() {
     const suggestionCyclePopup = usePopupWindow({
         geometryKey: 'suggestionCycle',
         isOpen: suggestionCycleModal && !assistantDansLaPage,
-        onClose: () => setSuggestionCycleModal(false),
+        onClose: fermerSuggestionCycle,
         title: titreSuggestionCycle(activePFName),
-        width: 820,
-        height: 780
+        width: 600,
+        height: 900
     });
     // Analyse du diagramme : même principe, fenêtre détachée déplaçable sur un
     // autre écran, dans la page si le navigateur la bloque ou sur un téléphone.
@@ -812,7 +819,7 @@ function App() {
             return;
         }
         if (suggestionCycleModal) { if (!assistantDansLaPage) suggestionCyclePopup.retryOpen(); }
-        else setSuggestionCycleModal(true);
+        else { setPfAssistantId(activePFId); setSuggestionCycleModal(true); }
     };
     // Nouveau plan de feu (menu Diagramme) : choix du jeu de trafic du plan créé.
     const [nouveauPlanModal, setNouveauPlanModal] = useState(false);
@@ -2295,18 +2302,47 @@ function App() {
     }, [showFloatingLegend, legendPopup.renderToPopup]);
 
     // « Assistant conception », rendu dans sa fenêtre détachée.
+    // L'assistant reste attaché au plan qui l'a ouvert : ses lectures viennent
+    // de ce plan, et une validation y ramène avant d'écrire.
+    const pfAssistant = useMemo(() => pfTabs.find(pf => pf.id === pfAssistantId) ?? null, [pfTabs, pfAssistantId]);
+    const groupesAssistant = useMemo(() => {
+        if (!pfAssistant) return groups;
+        const lignes = new Map(pfAssistant.diagram.map(l => [l.groupId, l]));
+        return groups.map(g => {
+            const l = lignes.get(g.id);
+            return l ? { ...g, offset: l.offset, durations: { ...g.durations, green: l.greenDuration }, da: l.da ?? g.da } : g;
+        });
+    }, [groups, pfAssistant]);
+    const jeuAssistant = pfAssistant ? (pfTrafficDatasetMap[pfAssistant.id] ?? activeTrafficDataset) : activeTrafficDataset;
+    const getTrafficDataAssistant = useCallback((id: number) => {
+        if (!pfAssistant) return getTrafficData(id);
+        return { trafficVol: trafficDatasets[jeuAssistant]?.[id]?.trafficVol };
+    }, [pfAssistant, jeuAssistant, trafficDatasets, getTrafficData]);
+    const estPlanAssistantActif = pfAssistantId === null || pfAssistantId === activePFId;
+    const demanderActivationAssistant = useCallback(() => {
+        if (pfAssistantId !== null) setActivePFId(pfAssistantId);
+    }, [pfAssistantId, setActivePFId]);
     const propsSuggestionCycle = useMemo(() => ({
-        onClose: () => setSuggestionCycleModal(false),
-        planName: activePFName,
-        groups, conflictMatrix, cycleLength, getTrafficData,
-        trafficDatasetName: activeTrafficDataset,
-        phasageCycle, setPhasageCycle, setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, phasageBulleCount, phasageBulleTimes,
-        updateGroupParams, intersectionArrows, ajouterActions, variablesMicro: microCustomFields, setVariableMicro: updateMicroCustomField,
-        actionData, readOnly: dossierReadOnly || activePfReadOnly,
+        onClose: fermerSuggestionCycle,
+        planName: pfAssistant?.name ?? activePFName,
+        groups: groupesAssistant,
+        conflictMatrix: pfAssistant?.conflictMatrix ?? conflictMatrix,
+        cycleLength: pfAssistant?.cycleLength ?? cycleLength,
+        getTrafficData: getTrafficDataAssistant,
+        trafficDatasetName: jeuAssistant,
+        phasageCycle: pfAssistant?.phasageCycle ?? phasageCycle, setPhasageCycle,
+        setCycleLength, setPhasageBulleCount, setPhasageBulleTimes,
+        phasageBulleCount: pfAssistant?.phasageBulleCount ?? phasageBulleCount,
+        phasageBulleTimes: pfAssistant?.phasageBulleTimes ?? phasageBulleTimes,
+        updateGroupParams, intersectionArrows, ajouterActions,
+        variablesMicro: pfAssistant?.microCustomFields ?? microCustomFields, setVariableMicro: updateMicroCustomField,
+        actionData: pfAssistant?.data ?? actionData, readOnly: dossierReadOnly || activePfReadOnly,
+        estPlanActif: estPlanAssistantActif, demanderActivation: demanderActivationAssistant,
         tooltipsEnabled: tooltipPrefs.assistant,
-    }), [activePFName, groups, conflictMatrix, cycleLength, getTrafficData, activeTrafficDataset, phasageCycle, setPhasageCycle,
-        setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, phasageBulleCount, phasageBulleTimes, updateGroupParams, intersectionArrows, ajouterActions,
-        microCustomFields, updateMicroCustomField, actionData, dossierReadOnly, activePfReadOnly, tooltipPrefs.assistant]);
+    }), [fermerSuggestionCycle, pfAssistant, activePFName, groupesAssistant, conflictMatrix, cycleLength, getTrafficDataAssistant, jeuAssistant,
+        phasageCycle, setPhasageCycle, setCycleLength, setPhasageBulleCount, setPhasageBulleTimes, phasageBulleCount, phasageBulleTimes,
+        updateGroupParams, intersectionArrows, ajouterActions, microCustomFields, updateMicroCustomField, actionData,
+        dossierReadOnly, activePfReadOnly, estPlanAssistantActif, demanderActivationAssistant, tooltipPrefs.assistant]);
     // « Analyse du diagramme », rendue dans sa fenêtre détachée.
     const propsAnalyseDiagramme = useMemo(() => ({
         onClose: () => setAnalyseDiagrammeModal(false),
@@ -2686,7 +2722,8 @@ function App() {
                 tooltipsEnabled={tooltipPrefs.main}
             />
             {/* Repli dans la page quand le navigateur bloque la fenêtre détachée. */}
-            <SuggestionCycleDialog {...propsSuggestionCycle} isOpen={suggestionCycleModal && (assistantDansLaPage || suggestionCyclePopup.bloquee)} />
+            <SuggestionCycleDialog {...propsSuggestionCycle} isOpen={suggestionCycleModal && (assistantDansLaPage || suggestionCyclePopup.bloquee)}
+                onClose={fermerSuggestionCycle} />
             <SupportDialogs
                 model={{
                         aboutModal, actionData, activePFId, activePfReadOnly, conflictMatrix,
