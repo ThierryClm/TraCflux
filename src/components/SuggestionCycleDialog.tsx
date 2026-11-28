@@ -16,6 +16,13 @@ import type { ReposPropose } from '../utils/reposBus';
 import type { ActionMicro } from '../types/projet';
 import './SuggestionCycleDialog.css';
 
+// Libellés des badges de source : ils disent d'où vient la position proposée.
+const LIBELLE_SOURCE: Record<'matrice' | 'nom' | 'plan', string> = {
+    matrice: 'Matrice',
+    nom: 'Même voie',
+    plan: 'Flèche opposée',
+};
+
 export interface SuggestionCycleDialogProps {
     isOpen: boolean;
     onClose: () => void;
@@ -257,6 +264,12 @@ const SuggestionCycleDialog = ({
     // encore de vert et dont la déduction est sûre. Les groupes déjà réglés ne
     // sont jamais touchés ; ceux « à vérifier » restent à placer à la main.
     type StatutPlacement = 'auto' | 'maj' | 'regle' | 'main';
+    const LIBELLE_ETAT: Record<StatutPlacement, string> = {
+        auto: 'avec le cycle',
+        maj: 'à mettre à jour',
+        regle: 'déjà réglé',
+        main: 'à la main',
+    };
     const statutPlacement = (p: { id: number; aVerifier: boolean; fin: number; debut: number; phases: number[] }): StatutPlacement => {
         const g = groups.find(gr => gr.id === p.id);
         const cycleRef = resultat?.cycleSuggere ?? cycleLength;
@@ -269,6 +282,15 @@ const SuggestionCycleDialog = ({
             return memeOffset && memeVert || p.aVerifier ? 'regle' : 'maj';
         }
         return !p.aVerifier && p.phases.length > 0 && p.fin > p.debut ? 'auto' : 'main';
+    };
+    // Groupe dont le vert est déjà inscrit dans le diagramme : ses valeurs
+    // viennent d'une saisie (ou d'un placement déjà validé), pas de la
+    // déduction affichée à côté, qui n'est plus qu'une explication.
+    const saisi = (id: number) => {
+        const g = groups.find(gr => gr.id === id);
+        const cycleRef = resultat?.cycleSuggere ?? cycleLength;
+        return !!g && (Number(g.durations?.green) || 0) > 0
+            && (Number(g.offset) || 0) + g.durations.green <= cycleRef;
     };
     // Groupes « à la main » : cocher leur case les place tout de suite, malgré
     // une déduction incertaine.
@@ -822,13 +844,16 @@ const SuggestionCycleDialog = ({
                         <thead><tr><th>Groupe</th><th>Phase</th><th>Déb – Fin</th><th>Source de la déduction</th><th>Placer</th><th>Placement</th></tr></thead>
                         <tbody>
                             {placements.map(p => (
-                                <tr key={p.id} className={p.aVerifier ? 'sc-a-verifier' : ''}>
+                                <tr key={p.id}>
                                     <td className="sc-gauche sc-nom" title={tip(nomGroupe(p.id))}>GF{p.id} {nomGroupe(p.id)}</td>
                                     <td>{p.phases.length ? p.phases.map(i => i + 1).join(', ') : '—'}</td>
                                     <td className="sc-insecable">{p.fin > p.debut ? `${p.debut} – ${p.fin} s` : '—'}</td>
                                     <td className="sc-gauche sc-source">
-                                        {p.source && <span className={`sc-badge sc-badge-${p.source}`}>{p.source === 'matrice' ? 'Matrice' : p.source === 'nom' ? 'Nom' : 'Plan'}</span>}
-                                        {' '}{p.explication}{p.aVerifier ? ' — à vérifier' : ''}
+                                        {saisi(p.id) && <span className="sc-badge sc-badge-saisi">Saisi</span>}
+                                        {saisi(p.id) && p.source && ' '}
+                                        {p.source && <span className={`sc-badge sc-badge-${p.source}${saisi(p.id) ? ' sc-badge-secondaire' : ''}`}>{LIBELLE_SOURCE[p.source]}</span>}
+                                        {' '}{p.explication}
+                                        {p.aVerifier && <span className="sc-verif">à vérifier</span>}
                                         {sansSujetion(p.id) && (
                                             <div className="sc-sans-sujetion">Aucune sujétion de temps : placé avec la phase.</div>
                                         )}
@@ -843,11 +868,27 @@ const SuggestionCycleDialog = ({
                                                 onChange={e => { if (e.target.checked) lancer({ type: 'placer', id: p.id }); }} />
                                         ) : '—'}
                                     </td>
-                                    <td className="sc-insecable">{{ auto: 'avec le cycle', maj: 'à mettre à jour', regle: 'déjà réglé', main: 'à la main' }[statutPlacement(p)]}</td>
+                                    <td className="sc-insecable">
+                                        <span className={`sc-etat sc-etat-${statutPlacement(p)}`}>{LIBELLE_ETAT[statutPlacement(p)]}</span>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    <div className="sc-legende">
+                        <p>
+                            <span className="sc-etat sc-etat-regle">déjà réglé</span> valeurs du diagramme, conformes à la proposition ·
+                            <span className="sc-etat sc-etat-maj">à mettre à jour</span> valeurs du diagramme, différentes de la proposition ·
+                            <span className="sc-etat sc-etat-auto">avec le cycle</span> inscrit par « Appliquer le cycle » ·
+                            <span className="sc-etat sc-etat-main">à la main</span> déduction incertaine, à cocher pour placer
+                        </p>
+                        <p>
+                            <span className="sc-badge sc-badge-saisi">Saisi</span> valeurs entrées dans le diagramme ·
+                            <span className="sc-badge sc-badge-matrice">Matrice</span> temps interverts ·
+                            <span className="sc-badge sc-badge-nom">Même voie</span> libellé commun ·
+                            <span className="sc-badge sc-badge-plan">Flèche opposée</span> sens opposé sur l’image
+                        </p>
+                    </div>
                     <p className="sc-note">
                         « Appliquer le cycle » règle d'abord la durée du cycle, puis inscrit dans le diagramme les groupes
                         « avec le cycle ». Les groupes déjà réglés ne sont pas modifiés ; ceux

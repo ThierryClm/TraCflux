@@ -49,11 +49,25 @@
 .suggestion-cycle .sc-associes h4 { margin: 10px 0 4px; font-size: 0.95em; }
 .suggestion-cycle .sc-associes .sc-gauche { text-align: left; }
 .suggestion-cycle .sc-associes .sc-source { font-size: 0.92em; }
-.suggestion-cycle .sc-a-verifier td { background: rgba(255, 152, 0, 0.12); }
 .suggestion-cycle .sc-badge { display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 0.85em; font-weight: bold; color: #fff; }
 .suggestion-cycle .sc-badge-matrice { background: #2e7d6f; }
 .suggestion-cycle .sc-badge-nom { background: #6d5bb7; }
 .suggestion-cycle .sc-badge-plan { background: #b07a1e; }
+.suggestion-cycle .sc-badge-saisi { background: #3f6d8c; }
+/* La déduction n'est plus qu'une explication quand les valeurs viennent du
+   diagramme : elle passe au second plan derrière le badge « Saisi ». */
+.suggestion-cycle .sc-badge-secondaire { opacity: 0.55; }
+.suggestion-cycle .sc-verif { margin-left: 6px; padding: 0 6px; border: 1px solid #ff9800; border-radius: 8px; font-size: 0.85em; color: #ffb74d; white-space: nowrap; }
+
+/* État du placement : une pastille par statut, rappelée par la légende. */
+.suggestion-cycle .sc-etat { display: inline-block; padding: 0 7px; border-radius: 8px; border: 1px solid; font-size: 0.9em; font-weight: bold; white-space: nowrap; }
+.suggestion-cycle .sc-etat-regle { background: rgba(76, 175, 80, 0.16); border-color: #4caf50; color: #81c784; }
+.suggestion-cycle .sc-etat-auto { background: rgba(33, 150, 243, 0.16); border-color: #2196f3; color: #64b5f6; }
+.suggestion-cycle .sc-etat-main { background: rgba(255, 152, 0, 0.14); border-color: #ff9800; color: #ffb74d; }
+.suggestion-cycle .sc-etat-maj { background: rgba(255, 193, 7, 0.16); border-color: #f0a500; color: #ffca28; }
+.suggestion-cycle .sc-legende { margin: 2px 0 6px; font-size: 0.82em; color: var(--md-muted, #aaa); line-height: 1.8; }
+.suggestion-cycle .sc-legende p { margin: 0; }
+.suggestion-cycle .sc-legende .sc-etat, .suggestion-cycle .sc-legende .sc-badge { margin-right: 4px; font-weight: normal; }
 .suggestion-cycle .sc-associes > button { margin-top: 6px; }
 
 .suggestion-cycle .sc-associes .sc-nom { max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

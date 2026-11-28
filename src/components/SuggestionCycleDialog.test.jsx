@@ -272,6 +272,23 @@ describe('suggestion de durée du cycle', () => {
         expect(updateGroupParams).toHaveBeenCalledWith(2, expect.objectContaining({ offset: expect.any(Number) }));
     });
 
+    it('marque « Saisi » les valeurs du diagramme et colorie l’état du placement', () => {
+        const pose = { 1: [0, 29], 2: [0, 29], 3: [33, 6], 4: [45, 19], 5: [45, 19] };
+        const places = groups.map(gr => ({ ...gr, offset: pose[gr.id][0], durations: { ...gr.durations, green: pose[gr.id][1] } }));
+        ouvrir({ groups: places, phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
+        const bloc = screen.getByLabelText('Groupes associés');
+        // Les Déb–Fin viennent du diagramme : badge « Saisi » sur chaque ligne placée.
+        const saisis = within(bloc).getAllByText('Saisi');
+        expect(saisis.length).toBeGreaterThan(0);
+        expect(saisis[0]).toHaveClass('sc-badge-saisi');
+        // L'état du placement est une pastille colorée, rappelée par la légende.
+        expect(within(bloc).getAllByText('déjà réglé').some(e => e.classList.contains('sc-etat-regle'))).toBe(true);
+        expect(within(bloc).getAllByText('avec le cycle').some(e => e.classList.contains('sc-etat-auto'))).toBe(true);
+        for (const libelle of ['Même voie', 'Flèche opposée', 'Matrice']) {
+            expect(within(bloc).getAllByText(libelle).length).toBeGreaterThan(0);
+        }
+    });
+
     it('coche un groupe à la main et le place tout de suite', () => {
         const locaux = [
             { id: 1, name: 'V1', type: 'V', minGreen: 6, offset: 0, laneCoef: 1, durations: { green: 10, orange: 3, red: 47 } },
