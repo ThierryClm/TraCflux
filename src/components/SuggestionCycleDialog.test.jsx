@@ -277,13 +277,20 @@ describe('suggestion de durée du cycle', () => {
             { id: 1, name: 'V1', type: 'V', minGreen: 6, offset: 0, laneCoef: 1, durations: { green: 10, orange: 3, red: 47 } },
             { id: 2, name: 'V2', type: 'V', minGreen: 6, offset: 30, laneCoef: 1, durations: { green: 10, orange: 3, red: 47 } },
             { id: 3, name: 'V3', type: 'V', minGreen: 6, offset: 0, laneCoef: 1, durations: { green: 0, orange: 3, red: 57 } },
+            { id: 6, name: 'V6', type: 'V', minGreen: 6, offset: 0, laneCoef: 1, durations: { green: 0, orange: 3, red: 57 } },
         ];
-        const traficL = { 1: 500, 2: 400, 3: 0 };
+        const traficL = { 1: 500, 2: 400, 3: 0, 6: 0 };
+        const matrice4 = Array.from({ length: 6 }, () => Array(6).fill(''));
+        matrice4[5][0] = 6; matrice4[0][5] = 6; matrice4[5][1] = 6; matrice4[1][5] = 6;
         const { updateGroupParams } = ouvrir({ groups: locaux, cycleLength: 40,
-            conflictMatrix: [['', '', ''], ['', '', ''], ['', '', '']],
+            conflictMatrix: matrice4,
             getTrafficData: id => ({ trafficVol: traficL[id] }),
             phasageCycle: { determinants: [1, 2], degagements: [5, 5] } });
         const bloc = screen.getByLabelText('Groupes associés');
+        // Aucune plage proposée pour V6 (en conflit avec les deux déterminants) :
+        // pas de case à cocher. V3 n'a aucune sujétion de temps : c'est dit.
+        expect(within(bloc).queryByRole('checkbox', { name: /V6/ })).toBeNull();
+        expect(within(bloc).getAllByText(/Aucune sujétion de temps/).length).toBeGreaterThan(0);
         fireEvent.click(within(bloc).getByRole('checkbox', { name: /Placer/ }));
         // Cocher place tout de suite, sans passer par Valider.
         expect(updateGroupParams).toHaveBeenCalledWith(3, expect.objectContaining({ offset: expect.any(Number) }));

@@ -272,7 +272,15 @@ const SuggestionCycleDialog = ({
     };
     // Groupes « à la main » : cocher leur case les place tout de suite, malgré
     // une déduction incertaine.
-    const estCochable = (p: typeof placements[number]) => statutPlacement(p) === 'main';
+    const estCochable = (p: typeof placements[number]) => statutPlacement(p) === 'main' && p.fin > p.debut;
+    // Un groupe dont la ligne et la colonne de matrice sont vides n'a aucune
+    // sujétion de temps : l'assistant le place avec la phase, et le dit.
+    const sansSujetion = (id: number) => {
+        const renseignee = (v: unknown) => v !== '' && v !== null && v !== undefined && !Number.isNaN(Number(v));
+        const ligne = conflictMatrix[id - 1] ?? [];
+        const colonne = conflictMatrix.map(r => r?.[id - 1]);
+        return ![...ligne, ...colonne].some(renseignee);
+    };
     const aPlacer = placements.filter(p => ['auto', 'maj'].includes(statutPlacement(p)));
     const aMettreAJour = placements.filter(p => statutPlacement(p) === 'maj');
     // Adaptatifs verticaux proposés, un par phase, sur la disposition prévue :
@@ -821,6 +829,9 @@ const SuggestionCycleDialog = ({
                                     <td className="sc-gauche sc-source">
                                         {p.source && <span className={`sc-badge sc-badge-${p.source}`}>{p.source === 'matrice' ? 'Matrice' : p.source === 'nom' ? 'Nom' : 'Plan'}</span>}
                                         {' '}{p.explication}{p.aVerifier ? ' — à vérifier' : ''}
+                                        {sansSujetion(p.id) && (
+                                            <div className="sc-sans-sujetion">Aucune sujétion de temps : placé avec la phase.</div>
+                                        )}
                                     </td>
                                     <td className="sc-insecable">
                                         {estCochable(p) ? (

@@ -177,3 +177,11 @@
 @media (prefers-reduced-motion: reduce) {
     .sc-valider.attention { animation: none; }
 }
+
+/* Groupe sans aucune case de matrice : le placement suit la phase. */
+.sc-sans-sujetion {
+    margin-top: 2px;
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.7;
+}
