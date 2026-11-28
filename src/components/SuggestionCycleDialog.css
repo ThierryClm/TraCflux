@@ -1,6 +1,9 @@
 .suggestion-cycle .sc-intro { font-size: 0.9em; margin: 0 0 10px; line-height: 1.4; }
 .suggestion-cycle .sc-nb { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 0.9em; }
 .suggestion-cycle .sc-nb input[type="number"] { width: 60px; margin-left: 0; }
+.suggestion-cycle .sc-ligne-taux { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.suggestion-cycle .sc-enregistrer-phasage { padding: 3px 10px; font-size: 0.85em; margin: 0; }
+.suggestion-cycle .sc-enregistrer-phasage:disabled { opacity: 0.55; }
 .suggestion-cycle .sc-table { width: 100%; border-collapse: collapse; font-size: 0.88em; margin: 6px 0 10px; }
 .suggestion-cycle .sc-table th, .suggestion-cycle .sc-table td { border: 1px solid var(--md-separator, #555); padding: 4px 6px; text-align: center; }
 .suggestion-cycle .sc-table td input[type="number"] { width: 52px; margin-left: 0; padding: 3px 6px; }

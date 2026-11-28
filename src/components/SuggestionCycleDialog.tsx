@@ -245,6 +245,17 @@ const SuggestionCycleDialog = ({
         return (p.trafic * cycle) / (SATURATION_FLOW * (p.coefVoie || 1) * vert) * 100;
     };
 
+    // Le plan garde-t-il déjà exactement ce phasage ? Le bouton se grise alors
+    // jusqu'à la prochaine modification : phase, dégagement ou taux visé.
+    const phasageIdentique = !!phasageCycle && complet
+        && phasageCycle.determinants.length === brouillon.determinants.length
+        && phasageCycle.determinants.every((d, i) => d === brouillon.determinants[i])
+        && brouillon.degagements.every((d, i) => {
+            const enregistre = phasageCycle.degagements[i];
+            return (Number.isFinite(enregistre) ? enregistre : 0) === (d.trim() === '' ? 0 : Number(d));
+        })
+        && (phasageCycle.tauxVise ?? TAUX_VISE_DEFAUT) === brouillon.tauxVise;
+
     const sansTrafic = resultat !== null && resultat.Y === 0;
     const calculable = resultat !== null && resultat.degagementsManquants.length === 0 && !sansTrafic;
     const horsBornes = (c: number | null) => c !== null && (c < CYCLE_MIN_CONSEILLE || c > CYCLE_MAX_CONSEILLE);
@@ -826,11 +837,21 @@ const SuggestionCycleDialog = ({
                 </tbody>
             </table>
 
-            <label className="sc-nb">
-                Taux de saturation visé :
-                <input type="number" min={50} max={99} value={brouillon.tauxVise} aria-label="Taux de saturation visé"
-                    onChange={e => setBrouillon(b => ({ ...b, tauxVise: Math.max(50, Math.min(99, parseInt(e.target.value, 10) || TAUX_VISE_DEFAUT)) }))} /> %
-            </label>
+            <div className="sc-ligne-taux">
+                <label className="sc-nb">
+                    Taux de saturation visé :
+                    <input type="number" min={50} max={99} value={brouillon.tauxVise} aria-label="Taux de saturation visé"
+                        onChange={e => setBrouillon(b => ({ ...b, tauxVise: Math.max(50, Math.min(99, parseInt(e.target.value, 10) || TAUX_VISE_DEFAUT)) }))} /> %
+                </label>
+                <button type="button" className="modal-btn modal-btn-secondary sc-enregistrer-phasage"
+                    disabled={!complet || readOnly || phasageIdentique}
+                    title={tip(phasageIdentique
+                        ? 'Le plan de feu garde ce phasage ; le bouton redevient actif dès qu’une phase, un dégagement ou le taux change.'
+                        : 'Garder ces groupes déterminants avec le plan de feu (ils servent aussi au phasage bulle)')}
+                    onClick={() => executerChapitre('phases')}>
+                    {phasageIdentique ? 'Phasage enregistré' : 'Enregistrer le phasage'}
+                </button>
+            </div>
             </Chapitre>
 
             {!complet && <p className="sc-attente">Choisissez un groupe déterminant pour chaque phase.</p>}
@@ -1075,10 +1096,6 @@ const SuggestionCycleDialog = ({
 
             <div className="modal-actions">
                 <button className="modal-btn modal-btn-secondary" onClick={onClose}>Fermer</button>
-                <button className="modal-btn modal-btn-secondary" disabled={!complet || readOnly} onClick={() => appliquerChapitre('phases')}
-                    title={tip("Garder ces groupes déterminants avec le plan de feu (ils servent aussi au phasage bulle)")}>
-                    Enregistrer le phasage
-                </button>
                 <button className="modal-btn modal-btn-primary"
                     disabled={!calculable || resultat?.cycleSuggere == null || readOnly}
                     title={tip(['Règle la durée du cycle du plan',

@@ -99,8 +99,21 @@ describe('suggestion de durée du cycle', () => {
     it('case décochée : le phasage bulle n\'est pas modifié', () => {
         const { setPhasageBulleCount } = ouvrir({ phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6] } });
         fireEvent.click(screen.getByRole('checkbox', { name: /phasage bulle/ }));
+        // Le phasage est déjà enregistré : on change le taux pour réactiver le bouton.
+        fireEvent.change(screen.getByLabelText('Taux de saturation visé'), { target: { value: '80' } });
         fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le phasage' }));
         expect(setPhasageBulleCount).not.toHaveBeenCalled();
+    });
+
+    it('bouton Enregistrer le phasage : à côté du taux, grisé une fois le phasage enregistré', () => {
+        ouvrir({ phasageCycle: { determinants: [1, 3, 4], degagements: [4, 6, 6], tauxVise: 85 } });
+        const bouton = screen.getByRole('button', { name: 'Phasage enregistré' });
+        expect(bouton).toBeDisabled();
+        expect(bouton.closest('.sc-ligne-taux')).not.toBeNull();
+        expect(screen.getByLabelText('Taux de saturation visé').closest('.sc-ligne-taux')).toBe(bouton.closest('.sc-ligne-taux'));
+        // Le numéro de phase change : le phasage enregistré n'est plus à jour.
+        fireEvent.change(screen.getByLabelText('Groupe déterminant de la phase 2'), { target: { value: '2' } });
+        expect(screen.getByRole('button', { name: 'Enregistrer le phasage' })).toBeEnabled();
     });
 
     it('diagramme renseigné : chemin critique pré-rempli (plus forte capacité utilisée)', () => {
